@@ -14,7 +14,9 @@ class MSG91Service:
         self.sender_id = os.getenv("MSG91_SENDER_ID", "PROPNT")
         self.sms_api_url = "https://api.msg91.com/api/v5/flow/"
         self.whatsapp_api_url = "https://api.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/"
+        self.whatsapp_template_api_url = "https://control.msg91.com/api/v5/whatsapp/whatsapp-outbound-message/bulk/"
         self.whatsapp_integrated_number = os.getenv("MSG91_WHATSAPP_INTEGRATED_NUMBER", "").strip()
+        self.whatsapp_template_namespace = os.getenv("MSG91_WHATSAPP_TEMPLATE_NAMESPACE", "").strip()
         
         demo_mode = os.getenv("MSG91_DEMO_MODE", "").strip().lower()
         demo_values = {
@@ -263,39 +265,56 @@ class MSG91Service:
                     "error": "MSG91_WHATSAPP_INTEGRATED_NUMBER is not configured",
                 }
 
-            clean_phone = phone.replace("+", "").replace(" ", "")
-            body_parameters = [
-                {"type": "text", "text": str(value if value is not None else "")}
-                for value in parameters
-            ]
+            clean_phone = self._clean_indian_phone(phone)
+            components = {
+                f"body_{index}": {
+                    "type": "text",
+                    "value": str(value if value is not None else ""),
+                }
+                for index, value in enumerate(parameters, start=1)
+            }
+            template = {
+                "name": template_name,
+                "language": {
+                    "code": "en",
+                    "policy": "deterministic",
+                },
+                "to_and_components": [
+                    {
+                        "to": [clean_phone],
+                        "components": components,
+                    }
+                ],
+            }
+            if self.whatsapp_template_namespace:
+                template["namespace"] = self.whatsapp_template_namespace
+
             payload = {
                 "integrated_number": self.whatsapp_integrated_number,
                 "content_type": "template",
+                "CRQID": f"xspace_{template_name}_{int(datetime.now(timezone.utc).timestamp())}",
                 "payload": {
-                    "to": clean_phone,
+                    "messaging_product": "whatsapp",
                     "type": "template",
-                    "template": {
-                        "name": template_name,
-                        "language": {
-                            "code": "en",
-                            "policy": "deterministic",
-                        },
-                        "components": [
-                            {
-                                "type": "body",
-                                "parameters": body_parameters,
-                            }
-                        ],
-                    },
+                    "template": template,
                 },
             }
             headers = {
+                "accept": "application/json",
                 "authkey": self.authkey,
                 "Content-Type": "application/json",
             }
 
+            logger.info(
+                "Sending MSG91 WhatsApp template=%s from=%s to=%s component_keys=%s",
+                template_name,
+                self.whatsapp_integrated_number,
+                clean_phone,
+                sorted(components.keys()),
+            )
+
             response = requests.post(
-                self.whatsapp_api_url,
+                self.whatsapp_template_api_url,
                 json=payload,
                 headers=headers,
                 timeout=10,
@@ -325,6 +344,13 @@ class MSG91Service:
                 "success": False,
                 "error": str(e),
             }
+
+    @staticmethod
+    def _clean_indian_phone(phone: str) -> str:
+        clean_phone = "".join(ch for ch in str(phone or "") if ch.isdigit())
+        if len(clean_phone) == 10:
+            return f"91{clean_phone}"
+        return clean_phone
     
     def send_otp_sms(self, phone: str, otp: str) -> Dict:
         """Send OTP via SMS."""

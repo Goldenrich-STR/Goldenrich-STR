@@ -36,6 +36,15 @@ CHARGE_LABELS = {
     "gateway_charge": "Gateway Charges",
 }
 
+PLATFORM_FEE_CONTEXT_DEFAULT = "default"
+PLATFORM_FEE_CONTEXT_BROKER = "broker_mapped"
+PLATFORM_FEE_CONTEXT_RM = "rm_mapped"
+PLATFORM_FEE_CONTEXTS = {
+    PLATFORM_FEE_CONTEXT_DEFAULT,
+    PLATFORM_FEE_CONTEXT_BROKER,
+    PLATFORM_FEE_CONTEXT_RM,
+}
+
 
 def money(value: Any) -> Decimal:
     try:
@@ -227,9 +236,9 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
 
 def _default_platform_fee_percent() -> float:
     try:
-        value = float(os.getenv("BOOKING_PLATFORM_FEE_PERCENT", "10"))
+        value = float(os.getenv("BOOKING_PLATFORM_FEE_PERCENT", "0"))
     except ValueError:
-        value = 10.0
+        value = 0.0
     return max(0.0, min(100.0, value))
 
 
@@ -272,6 +281,52 @@ def _sanitize_charge(key: str, raw: Optional[Dict[str, Any]], *, default_enabled
         "value": as_float(value),
         "label": (raw.get("label") or CHARGE_LABELS.get(key) or key.replace("_", " ").title()).strip(),
     }
+
+
+def _sanitize_platform_fee_overrides(raw: Optional[Dict[str, Any]], platform_fee: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    raw = raw or {}
+    base_value = platform_fee["value"] if platform_fee.get("charge_type") == PERCENTAGE else _default_platform_fee_percent()
+    defaults = {
+        PLATFORM_FEE_CONTEXT_BROKER: {
+            "enabled": True,
+            "charge_type": PERCENTAGE,
+            "value": base_value,
+            "label": "Broker Mapped Platform Fee",
+        },
+        PLATFORM_FEE_CONTEXT_RM: {
+            "enabled": True,
+            "charge_type": PERCENTAGE,
+            "value": base_value,
+            "label": "RM Mapped Platform Fee",
+        },
+    }
+    overrides: Dict[str, Dict[str, Any]] = {}
+    for key, default in defaults.items():
+        override = _sanitize_charge("platform_fee", {**default, **dict(raw.get(key) or {})}, default_enabled=False)
+        override["charge_type"] = PERCENTAGE
+        override["label"] = (raw.get(key) or {}).get("label") or default["label"]
+        overrides[key] = override
+    return overrides
+
+
+def _sanitize_commission_rules(raw: Optional[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    raw = raw or {}
+    defaults = {
+        "broker": {"label": "Broker Commission"},
+        "employee": {"label": "RM / Employee Commission"},
+        "branch_manager": {"label": "Branch Manager Commission"},
+    }
+    rules: Dict[str, Dict[str, Any]] = {}
+    for key, default in defaults.items():
+        rule = _sanitize_charge(
+            key,
+            {**default, **dict(raw.get(key) or {})},
+            default_enabled=False,
+        )
+        rule["charge_type"] = PERCENTAGE
+        rule["label"] = (raw.get(key) or {}).get("label") or default["label"]
+        rules[key] = rule
+    return rules
 
 
 def normalize_booking_payment_config(config: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
@@ -319,10 +374,14 @@ def normalize_booking_payment_config(config: Optional[Dict[str, Any]] = None) ->
     }
 
     platform_fee = charges["platform_fee"]
+    platform_fee_overrides = _sanitize_platform_fee_overrides(config.get("platform_fee_overrides"), platform_fee)
+    commission_rules = _sanitize_commission_rules(config.get("commission_rules"))
     return {
-        **{k: v for k, v in config.items() if k not in {"charges", "coupon_discount", "host_payout"}},
+        **{k: v for k, v in config.items() if k not in {"charges", "coupon_discount", "host_payout", "commission_rules"}},
         "platform_fee_percent": platform_fee["value"] if platform_fee["charge_type"] == PERCENTAGE else 0,
         "platform_fee_label": platform_fee["label"],
+        "platform_fee_overrides": platform_fee_overrides,
+        "commission_rules": commission_rules,
         "charges": charges,
         "host_payout": payout_config,
     }
@@ -382,15 +441,33 @@ def calculate_configured_charge(base: Decimal, config: Dict[str, Any]) -> Decima
     return value
 
 
+def resolve_platform_fee_charge(config: Dict[str, Any], context: Optional[str] = None) -> Dict[str, Any]:
+    charge_config = dict(config["charges"]["platform_fee"])
+    context = context if context in PLATFORM_FEE_CONTEXTS else PLATFORM_FEE_CONTEXT_DEFAULT
+    override = dict((config.get("platform_fee_overrides") or {}).get(context) or {})
+    if context != PLATFORM_FEE_CONTEXT_DEFAULT and override.get("enabled"):
+        charge_config.update({
+            "enabled": True,
+            "charge_type": PERCENTAGE,
+            "value": override.get("value", charge_config.get("value", 0)),
+            "label": override.get("label") or charge_config.get("label") or CHARGE_LABELS["platform_fee"],
+        })
+    charge_config["context"] = context
+    return charge_config
+
+
 def calculate_configured_charges_total(
     base: Decimal,
     config: Dict[str, Any],
     *,
     legacy_service_fee_percent: Optional[float] = None,
+    platform_fee_context: Optional[str] = None,
 ) -> Decimal:
     total = Decimal("0.00")
     for key in BOOKING_CHARGE_KEYS:
         charge_config = dict(config["charges"][key])
+        if key == "platform_fee":
+            charge_config = resolve_platform_fee_charge(config, platform_fee_context)
         if key == "platform_fee" and legacy_service_fee_percent is not None:
             charge_config["enabled"] = True
             charge_config["charge_type"] = PERCENTAGE
@@ -409,6 +486,7 @@ async def calculate_booking_breakdown(
     tax_slab_base_amount: Optional[float] = None,
     pricing_units: Optional[int] = 1,
     extra_guest_amount: float = 0,
+    platform_fee_context: Optional[str] = None,
 ) -> Dict[str, Any]:
     config = await get_booking_payment_config(db)
     host_price = money(host_amount)
@@ -422,6 +500,8 @@ async def calculate_booking_breakdown(
     total_charges = Decimal("0.00")
     for key in BOOKING_CHARGE_KEYS:
         charge_config = dict(config["charges"][key])
+        if key == "platform_fee":
+            charge_config = resolve_platform_fee_charge(config, platform_fee_context)
         if key == "platform_fee" and legacy_service_fee_percent is not None:
             charge_config["enabled"] = True
             charge_config["charge_type"] = PERCENTAGE
@@ -436,6 +516,7 @@ async def calculate_booking_breakdown(
             "charge_type": charge_config["charge_type"],
             "rate": charge_config["value"] if charge_config["charge_type"] == PERCENTAGE else None,
             "value": charge_config["value"],
+            "context": charge_config.get("context"),
             "unit_amount": as_float(unit_amount),
             "amount": as_float(amount),
         })
@@ -452,6 +533,7 @@ async def calculate_booking_breakdown(
         unit_host_price,
         config,
         legacy_service_fee_percent=legacy_service_fee_percent,
+        platform_fee_context=platform_fee_context,
     ))
     final_nightly_price = money(unit_host_price + unit_charges_total)
     # GST slab selection is based on the customer-facing nightly price after

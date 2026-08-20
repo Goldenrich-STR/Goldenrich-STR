@@ -814,7 +814,11 @@ class EmailService:
         elif template == "refund":
             subject = f"Refund update - Booking {booking_id}"
             title = "Refund processed"
-            body = f"<p>Dear {_text(name)},</p><p>Your refund has been processed. Details are below.</p>{details}"
+            body = (
+                f"<p>Dear {_text(name)},</p>"
+                f"<p>Your refund has been processed. Details are below.</p>"
+                f"{details}{data.get('credit_note_html') or ''}"
+            )
         elif template == "booking_cancellation":
             subject = f"Booking cancelled - {property_title}"
             title = "Booking cancelled"
@@ -839,7 +843,7 @@ class EmailService:
         else:
             body = f"<p>Dear {_text(name)},</p><p>{_text(data.get('message', 'You have a new update from X-Space360.'))}</p>{details}"
 
-        if self.provider == "msg91" and not self.is_demo_mode:
+        if self.provider == "msg91" and not self.is_demo_mode and not (template == "refund" and data.get("credit_note_html")):
             return self._send_msg91_template(to_email, template, subject, title, cta_url, data)
 
         return self.send_email(to_email, subject, self._wrap(title, body, cta_label, cta_url))

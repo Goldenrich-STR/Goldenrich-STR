@@ -31,9 +31,12 @@ const DEFAULT_CONTEXT_TEXTS = {
 4. **Fees & Charges**: Bookings are subject to base rates, applicable platform services fees, GST remittances, and security deposits (if configured).`,
 
   booking_cancellation: `### Cancellation & Refund Policy
-1. **Policy Enforcement**: Cancellations are governed by the specific policy tier (Flexible, Moderate, or Strict) selected by the host and visible at checkout.
-2. **Refund Authentication**: Approved refunds are settled compliantly to the original payment source within standard banking windows.
-3. **Host Cancellations**: Host-initiated cancellations are strictly monitored and may trigger penalties, listing visibility downgrades, or RM reviews.`,
+1. **Policy Display**: The cancellation policy applicable to each property is displayed before booking confirmation.
+2. **Guest Cancellation Timeline**: Within 24 hours of booking, when check-in is more than 7 days away, or 7 days or more before check-in, the guest is eligible for a 100% refund. Cancellations 3 to 6 days before check-in are eligible for a 50% refund.
+3. **No Refund Cases**: Less than 72 hours before check-in, on check-in day, no-show cases, and non-refundable bookings are not eligible for refund.
+4. **Non-Refundable Charges**: Platform Convenience Fees, Payment Gateway Charges, and government taxes where legally non-refundable normally remain non-refundable unless specifically approved by X-SPACE360.
+5. **Host Cancellation or Property Unavailability**: If the host cancels or the property becomes unavailable, X-SPACE360 may provide a 100% refund or arrange alternative accommodation subject to availability.
+6. **Refund Processing**: Refunds are credited only to the original payment source. Approved refunds are verified within 24-48 working hours, and banks or payment gateways may take 8-10 business days to credit the amount.`,
 
   host_verification: `### Host ID & Property Verification Agreement
 1. **Mandatory Audit**: Hosts agree to schedule and coordinate an on-site audit visit with a Relationship Manager to verify coordinates, physical standards, and legitimacy.

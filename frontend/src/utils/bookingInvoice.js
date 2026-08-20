@@ -1,5 +1,44 @@
 const plainMoney = (value) => Math.round(Number(value || 0)).toLocaleString('en-IN');
 
+const usefulInvoiceText = (...values) => {
+  for (const value of values) {
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text && !['NA', 'N/A', '-'].includes(text.toUpperCase())) return text;
+  }
+  return null;
+};
+
+const invoiceFinancialYear = (value) => {
+  const date = value ? new Date(value) : new Date();
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  const year = safeDate.getFullYear();
+  const startYear = safeDate.getMonth() + 1 >= 4 ? year : year - 1;
+  return `${String(startYear).slice(-2)}-${String(startYear + 1).slice(-2)}`;
+};
+
+const bookingIdSuffix = (...values) => {
+  const value = usefulInvoiceText(...values);
+  if (!value) return null;
+  const compact = String(value).replace(/[^a-z0-9]/gi, '').toUpperCase();
+  return compact ? compact.slice(-5) : null;
+};
+
+const customerBookingInvoiceNo = (booking = {}) => {
+  const explicit = usefulInvoiceText(
+    booking.customer_invoice_no,
+    booking.tax_invoice_no,
+    booking.booking_invoice_no,
+    booking.invoice_no,
+    booking.invoice_number,
+  );
+  if (explicit?.toUpperCase().startsWith('STRC/')) return explicit;
+  const suffix = bookingIdSuffix(booking.booking_id, booking.id, booking.transaction_id);
+  if (suffix) return `STRC/${invoiceFinancialYear(booking.invoice_date || booking.created_at)}/${suffix}`;
+  if (explicit?.toUpperCase().startsWith('STRB/')) return `STRC/${explicit.split('/').slice(1).join('/')}`;
+  return explicit || 'NA';
+};
+
 const formatDate = (value) => {
   if (!value) return 'NA';
   const date = new Date(value);
@@ -101,12 +140,12 @@ const getExtraChargeEntries = (booking = {}, totalExtraCharges = 0) => {
   const amountFor = (...keys) => keys.reduce((sum, key) => (
     sum + Number(source[key] ?? booking[key] ?? 0)
   ), 0);
-  const platformAmount = amountFor('platform_fee', 'service_fee');
-  const gatewayAmount = amountFor('payment_gateway_charge', 'gateway_charge');
-  const convenienceAmount = amountFor('convenience_fee');
-  const insuranceAmount = amountFor('insurance_fee');
+  const platformAmount = amountFor('platform_fee', 'platform_charge', 'service_fee');
+  const gatewayAmount = amountFor('payment_gateway_charge', 'gateway_charge', 'payment_gateway_fee', 'gateway_fee');
+  const convenienceAmount = amountFor('convenience_fee', 'convenience_charge');
+  const insuranceAmount = amountFor('insurance_fee', 'insurance_charge');
   const explicitCleaningAmount = amountFor('cleaning_fee');
-  const extraGuestAmount = amountFor('extra_guest_fee');
+  const extraGuestAmount = amountFor('extra_guest_fee', 'host_extra_guest_fee', 'extra_person_fee', 'extra_person_charge');
   const knownWithoutCleaning = platformAmount + gatewayAmount + convenienceAmount + insuranceAmount + extraGuestAmount;
   const residualCleaningAmount = Math.max(0, Number(totalExtraCharges || 0) - knownWithoutCleaning);
   const cleaningAmount = explicitCleaningAmount > 0 ? explicitCleaningAmount : residualCleaningAmount;
@@ -217,7 +256,7 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   const amounts = getCustomerBookingAmounts(booking);
   const extraChargeEntries = options.showExtraChargeBreakdown ? getExtraChargeEntries(booking, amounts.extraCharges) : [];
   const bookingId = booking.booking_id || booking.id || 'NA';
-  const invoiceNo = booking.invoice_no || booking.booking_invoice_no || booking.transaction_id || (bookingId !== 'NA' ? `STRC/26-27/${String(bookingId).slice(-5)}` : 'NA');
+  const invoiceNo = customerBookingInvoiceNo(booking);
   const invoiceDate = formatDate(booking.created_at || new Date());
   const bookedOnDateTime = formatDateTime(booking.created_at || new Date());
 
@@ -306,6 +345,7 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
     .toolbar .print { background: #007a4d; color: #fff; border-color: #007a4d; }
     .invoice-page { width: 190mm; min-width: 190mm; margin: 0 auto 20px; background: #fff; }
     .invoice { border: 1px solid #000; background: #fff; color: #000; }
+    .invoice-title { text-align: center; font-size: 12px; font-weight: 900; text-transform: uppercase; padding: 5px 6px; border-bottom: 1px solid #000; letter-spacing: 0; }
     table { width: 100%; border-collapse: collapse; table-layout: fixed; border-spacing: 0; }
     td, th { border: 1px solid #000; padding: 4px 6px; vertical-align: top; overflow-wrap: anywhere; color: #000; }
     th { background: #fff; font-size: 9px; text-align: left; vertical-align: middle; font-weight: 800; }
@@ -363,6 +403,7 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   </div>`}
   <main class="invoice-page">
     <section class="invoice">
+      <div class="invoice-title">Tax Invoice</div>
       <table class="header-table">
         <tbody>
           <tr>
@@ -517,7 +558,7 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
 };
 
 export const downloadCustomerBookingInvoice = (booking = {}, property = {}, user = {}) => {
-  const invoiceNo = booking.invoice_no || booking.booking_invoice_no || booking.booking_id || 'booking-invoice';
+  const invoiceNo = customerBookingInvoiceNo(booking) || booking.booking_id || 'booking-invoice';
   const invoiceHtml = buildCustomerBookingInvoiceHtml(booking, property, user);
 
   const printWindow = window.open('', 'xspace-booking-invoice', 'width=1100,height=900');

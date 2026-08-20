@@ -34,6 +34,66 @@ const formatDateForInvoice = (value) => {
     .replace(/ /g, '-');
 };
 
+const usefulInvoiceText = (...values) => {
+  const value = values.find((item) => {
+    if (item === undefined || item === null) return false;
+    const text = String(item).trim();
+    return text && !['NA', 'N/A', '-'].includes(text.toUpperCase());
+  });
+  return value === undefined || value === null ? null : String(value).trim();
+};
+
+const invoiceFinancialYearLabel = (value) => {
+  const date = value ? new Date(value) : new Date();
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  const year = safeDate.getFullYear();
+  const startYear = safeDate.getMonth() + 1 >= 4 ? year : year - 1;
+  return `${String(startYear).slice(-2)}-${String(startYear + 1).slice(-2)}`;
+};
+
+const bookingInvoiceSuffix = (...values) => {
+  const value = usefulInvoiceText(...values);
+  if (!value) return null;
+  const compact = value.replace(/[^a-z0-9]/gi, '').toUpperCase();
+  return compact ? compact.slice(-5) : null;
+};
+
+const customerBookingInvoiceNo = (record = {}, booking = {}) => {
+  const explicit = usefulInvoiceText(
+    record.customer_invoice_no,
+    record.tax_invoice_no,
+    record.booking_invoice_no,
+    record.invoice_no,
+    record.invoice_number,
+    booking.customer_invoice_no,
+    booking.tax_invoice_no,
+    booking.booking_invoice_no,
+    booking.invoice_no,
+    booking.invoice_number,
+  );
+  if (explicit?.toUpperCase().startsWith('STRC/')) return explicit;
+  const suffix = bookingInvoiceSuffix(
+    record.booking_id,
+    record.bookingId,
+    booking.booking_id,
+    booking.id,
+    record.transaction_id,
+  );
+  if (suffix) {
+    const dateValue = usefulInvoiceText(record.invoice_date, booking.invoice_date, record.created_at, booking.created_at);
+    return `STRC/${invoiceFinancialYearLabel(dateValue)}/${suffix}`;
+  }
+  if (explicit?.toUpperCase().startsWith('STRB/')) return `STRC/${explicit.split('/').slice(1).join('/')}`;
+  return explicit || 'NA';
+};
+
+const displayInvoiceNoForTransaction = (transaction = {}) => {
+  if (['booking_payment', 'refund'].includes(transaction.type)) {
+    return customerBookingInvoiceNo(transaction, transaction.booking || {});
+  }
+  return usefulInvoiceText(transaction.invoice_no, transaction.invoice_number, transaction.transaction_id) || 'NA';
+};
+
 const numberToWordsInteger = (num) => {
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
   const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
@@ -1489,6 +1549,7 @@ export const PricingEngineTab = () => {
 const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
   const [items, setItems] = useState([]);
   const [total, setTotal] = useState(0);
+  const [paymentConfig, setPaymentConfig] = useState(null);
   const [filters, setFilters] = useState({
     q: '',
     customer_name: '',
@@ -1518,13 +1579,17 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
     setLoading(true);
     try {
       const params = Object.fromEntries(Object.entries(filters).filter(([, v]) => v));
-      const res = await accountAPI.listTransactions({
-        ...params,
-        limit: LIMIT,
-        skip: (page - 1) * LIMIT,
-      });
+      const [res, paymentConfigRes] = await Promise.all([
+        accountAPI.listTransactions({
+          ...params,
+          limit: LIMIT,
+          skip: (page - 1) * LIMIT,
+        }),
+        bookingAPI.getPaymentConfig().catch(() => null),
+      ]);
       setItems(res.data.transactions || []);
       setTotal(res.data.total || 0);
+      if (paymentConfigRes?.data) setPaymentConfig(paymentConfigRes.data);
     } finally {
       setLoading(false);
     }
@@ -1622,12 +1687,72 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
     if (!checkIn && !checkOut) return 'NA';
     return `${formatPlanDate(checkIn)} to ${formatPlanDate(checkOut)}`;
   };
+  const getStayUnits = (txn) => {
+    const explicitUnits = Number(
+      txn.booking_invoice_breakdown?.pricing_units ??
+      txn.invoice_breakdown?.pricing_units ??
+      txn.booking?.pricing_units ??
+      txn.booking?.nights ??
+      txn.booking?.num_nights ??
+      0
+    );
+    if (explicitUnits > 0) return explicitUnits;
+    const checkIn = txn.booking?.check_in_date;
+    const checkOut = txn.booking?.check_out_date;
+    const start = checkIn ? new Date(checkIn) : null;
+    const end = checkOut ? new Date(checkOut) : null;
+    if (start && end && !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime())) {
+      return Math.max(1, Math.round((end - start) / (1000 * 60 * 60 * 24)));
+    }
+    return 1;
+  };
+  const configuredChargeAmount = (chargeKey, baseAmount, units) => {
+    const chargeConfig = paymentConfig?.charges?.[chargeKey];
+    if (!chargeConfig || chargeConfig.enabled === false) return 0;
+    const value = Number(chargeConfig.value || 0);
+    if (!Number.isFinite(value) || value <= 0) return 0;
+    if (chargeConfig.charge_type === 'percentage') {
+      return Number(((Number(baseAmount || 0) / Math.max(1, units || 1)) * value / 100 * Math.max(1, units || 1)).toFixed(2));
+    }
+    return Number((value * Math.max(1, units || 1)).toFixed(2));
+  };
+  const firstPositive = (...values) => {
+    for (const value of values) {
+      const n = Number(value || 0);
+      if (Number.isFinite(n) && n > 0) return n;
+    }
+    return 0;
+  };
   const getBookingBreakdown = (txn) => {
     const breakdown = txn.booking_invoice_breakdown || txn.invoice_breakdown || {};
     const total = Number(breakdown.total_amount ?? ((txn.amount || 0) / 100));
-    const extraCharges = breakdown.extra_charges || {};
-    const extraTotal = Number(breakdown.extra_charges_total ?? Object.values(extraCharges).reduce((sum, value) => sum + Number(value || 0), 0));
-    const baseAmount = Number(breakdown.base_amount ?? breakdown.gross ?? 0);
+    const sourceCharges = {
+      ...(txn.booking?.extra_charges || {}),
+      ...(breakdown.extra_charges || {}),
+    };
+    const chargeAmount = (...keys) => keys.reduce((sum, key) => (
+      sum + Number(sourceCharges[key] ?? breakdown[key] ?? txn.booking?.[key] ?? 0)
+    ), 0);
+    const platformFee = chargeAmount('platform_fee', 'platform_charge', 'service_fee');
+    const gatewayFee = chargeAmount('payment_gateway_charge', 'gateway_charge', 'payment_gateway_fee', 'gateway_fee');
+    const convenienceFee = chargeAmount('convenience_fee', 'convenience_charge');
+    const insuranceFee = chargeAmount('insurance_fee', 'insurance_charge');
+    const explicitCleaningFee = chargeAmount('cleaning_fee');
+    const extraGuestFee = chargeAmount('extra_guest_fee', 'host_extra_guest_fee', 'extra_person_fee', 'extra_person_charge');
+    const rawExtraTotal = Number(breakdown.extra_charges_total ?? breakdown.total_extra_charges ?? txn.booking?.extra_charges_total ?? txn.booking?.total_extra_charges ?? 0);
+    const knownWithoutCleaning = platformFee + gatewayFee + convenienceFee + insuranceFee + extraGuestFee;
+    const cleaningFee = explicitCleaningFee > 0 ? explicitCleaningFee : Math.max(0, rawExtraTotal - knownWithoutCleaning);
+    const baseAmount = Number(breakdown.base_amount ?? breakdown.gross ?? txn.booking?.base_amount ?? txn.booking?.host_amount ?? 0);
+    const units = getStayUnits(txn);
+    const extraCharges = {
+      platform_fee: firstPositive(platformFee, configuredChargeAmount('platform_fee', baseAmount, units)),
+      payment_gateway_charge: firstPositive(gatewayFee, configuredChargeAmount('payment_gateway_charge', baseAmount, units)),
+      convenience_fee: firstPositive(convenienceFee, configuredChargeAmount('convenience_fee', baseAmount, units)),
+      insurance_fee: firstPositive(insuranceFee, configuredChargeAmount('insurance_fee', baseAmount, units)),
+      cleaning_fee: firstPositive(cleaningFee, configuredChargeAmount('cleaning_fee', baseAmount, units)),
+      extra_guest_fee: firstPositive(extraGuestFee, configuredChargeAmount('extra_guest_fee', baseAmount, units)),
+    };
+    const extraTotal = rawExtraTotal || Object.values(extraCharges).reduce((sum, value) => sum + Number(value || 0), 0);
     const gstAmount = Number(breakdown.gst_amount ?? (Number(breakdown.igst || 0) + Number(breakdown.cgst || 0) + Number(breakdown.sgst || 0)));
     return {
       baseAmount,
@@ -1641,10 +1766,7 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
       taxableAmount: Number(breakdown.taxable_amount ?? Math.max(0, total - gstAmount)),
     };
   };
-  const extraChargesTitle = (breakdown) => Object.entries(breakdown.extraCharges || {})
-    .filter(([, value]) => Number(value || 0) > 0)
-    .map(([key, value]) => `${key.replaceAll('_', ' ')}: ${formatMoney(value)}`)
-    .join('\n') || 'No extra charges';
+  const formatOptionalMoney = (value) => Number(value || 0) > 0 ? formatMoney(value) : 'NA';
   const getInvoiceBreakdown = (txn) => {
     if (txn.booking_invoice_breakdown) {
       const bookingBreakdown = getBookingBreakdown(txn);
@@ -1847,7 +1969,7 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
           <>
             <div className="overflow-x-auto">
               {filters.type === 'booking_payment' ? (
-              <table className="w-full min-w-[2200px] text-xs text-left border-collapse" data-testid="booking-transactions-table">
+              <table className="w-full min-w-[2800px] text-xs text-left border-collapse" data-testid="booking-transactions-table">
                 <thead>
                   <tr className="border-b border-gray-100 text-charcoal-muted uppercase text-xs font-bold tracking-wider bg-stone/50">
                     {[
@@ -1862,7 +1984,12 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                       'Broker/RM Name',
                       'Branch Manager',
                       'Base Amount',
-                      'Extra Charges',
+                      'Platform Fee',
+                      'Payment Gateway Charge',
+                      'Convenience Fee',
+                      'Insurance Fee',
+                      'Cleaning Fee',
+                      'Extra Guest Fee',
                       'IGST',
                       'CGST',
                       'SGST',
@@ -1888,7 +2015,7 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                     return (
                       <tr key={t.transaction_id} className="hover:bg-stone/40 transition text-charcoal" data-testid={`booking-txn-${t.transaction_id}`}>
                         <td className="py-4 px-4 whitespace-nowrap font-mono font-bold">{t.booking_id || t.booking?.booking_id || 'NA'}</td>
-                        <td className="py-4 px-4 whitespace-nowrap font-bold">{t.invoice_no || 'NA'}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-bold">{displayInvoiceNoForTransaction(t)}</td>
                         <td className="py-4 px-4 whitespace-nowrap">{formatInvoiceDate(t.booking?.created_at || t.created_at)}</td>
                         <td className="py-4 px-4 min-w-[160px]">
                           <div className="font-bold text-charcoal text-sm">{t.user?.full_name || 'NA'}</div>
@@ -1909,7 +2036,12 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                         </td>
                         <td className="py-4 px-4 min-w-[150px] font-bold">{t.branch_manager?.full_name || 'NA'}</td>
                         <td className="py-4 px-4 whitespace-nowrap font-mono">{formatMoney(breakdown.baseAmount)}</td>
-                        <td className="py-4 px-4 whitespace-nowrap font-mono" title={extraChargesTitle(breakdown)}>{formatMoney(breakdown.extraTotal)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatOptionalMoney(breakdown.extraCharges.platform_fee)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatOptionalMoney(breakdown.extraCharges.payment_gateway_charge)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatOptionalMoney(breakdown.extraCharges.convenience_fee)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatOptionalMoney(breakdown.extraCharges.insurance_fee)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatOptionalMoney(breakdown.extraCharges.cleaning_fee)}</td>
+                        <td className="py-4 px-4 whitespace-nowrap font-mono">{formatOptionalMoney(breakdown.extraCharges.extra_guest_fee)}</td>
                         <td className="py-4 px-4 whitespace-nowrap font-mono">{breakdown.igst ? formatMoney(breakdown.igst) : 'NA'}</td>
                         <td className="py-4 px-4 whitespace-nowrap font-mono">{formatMoney(breakdown.cgst)}</td>
                         <td className="py-4 px-4 whitespace-nowrap font-mono">{formatMoney(breakdown.sgst)}</td>
@@ -1981,7 +2113,7 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
                       data-testid={`txn-${t.transaction_id}`}
                     >
                       <td className="py-4 px-4 whitespace-nowrap text-xs">{formatInvoiceDate(t.created_at)}</td>
-                      <td className="py-4 px-4 whitespace-nowrap text-xs font-bold">{t.invoice_no || 'NA'}</td>
+                      <td className="py-4 px-4 whitespace-nowrap text-xs font-bold">{displayInvoiceNoForTransaction(t)}</td>
                       <td className="py-4 px-4 min-w-[150px]">
                         <div className="font-bold text-charcoal text-sm">{t.broker?.full_name || t.broker_name || 'NA'}</div>
                         <div className="text-xs text-charcoal-muted mt-0.5">LG Code: {t.broker?.lg_code || t.broker?.employee_code || t.broker?.uid || t.broker?.user_id || t.broker_lg_code || 'NA'}</div>
@@ -3701,13 +3833,16 @@ const InvoiceModal = ({ transaction, onClose }) => {
         : t.type === 'refund'
           ? `Accommodation Refund [booking_id: ${t.booking_id || 'NA'}]`
           : 'Platform Service Charges';
+  const invoiceNo = displayInvoiceNoForTransaction(t);
   const buildAdminBookingInvoiceHtml = () => {
     const booking = t.booking || {};
     const bookingInvoice = {
       ...booking,
       booking_id: t.booking_id || booking.booking_id,
-      invoice_no: t.invoice_no || t.transaction_id,
-      booking_invoice_no: t.invoice_no || t.transaction_id,
+      invoice_no: invoiceNo,
+      booking_invoice_no: invoiceNo,
+      customer_invoice_no: invoiceNo,
+      tax_invoice_no: invoiceNo,
       created_at: booking.created_at || t.created_at,
       total_amount: amountINR,
       paid_amount: amountINR,
@@ -3750,6 +3885,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
     }
 
     const invoiceHtml = `
+      <div class="tax-invoice-title">Tax Invoice</div>
       <table class="invoice-shell">
         <tbody>
           <tr>
@@ -3784,7 +3920,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
               <table>
                 <tbody>
                   <tr>
-                    <td><span>Invoice No.</span><strong>${escapeInvoiceHtml(t.invoice_no || t.transaction_id)}</strong></td>
+                    <td><span>Invoice No.</span><strong>${escapeInvoiceHtml(invoiceNo)}</strong></td>
                     <td><span>Dated</span><strong>${escapeInvoiceHtml(formatDateForInvoice(t.created_at))}</strong></td>
                   </tr>
                   <tr>
@@ -3982,7 +4118,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
         <head>
           <meta charset="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>${t.invoice_no || 'Tax Invoice'}</title>
+          <title>${invoiceNo || 'Tax Invoice'}</title>
           <style>
             @page {
               size: A4 portrait;
@@ -4091,6 +4227,16 @@ const InvoiceModal = ({ transaction, onClose }) => {
             }
 
             strong { font-weight: 700; }
+            .tax-invoice-title {
+              width: 100%;
+              padding: 6px 8px;
+              border-bottom: 1.5px solid #000 !important;
+              text-align: center;
+              font-size: 13px;
+              font-weight: 800;
+              letter-spacing: 0;
+              text-transform: uppercase;
+            }
             .invoice-shell { border-bottom: 0 !important; }
             .company-cell { width: 50%; padding: 0; }
             .details-cell { width: 50%; padding: 0; }
@@ -4210,6 +4356,16 @@ const InvoiceModal = ({ transaction, onClose }) => {
     const bookingTaxableAmount = Number(invoiceBreakdown.taxable_amount ?? Math.max(0, amountINR - Number(invoiceBreakdown.gst_amount || 0)));
     const derivedExtraTotal = Math.max(0, bookingTaxableAmount - bookingBaseAmount + discountAmount);
     const bookingExtraTotal = Math.max(Number(invoiceBreakdown.extra_charges_total || 0), derivedExtraTotal);
+    const bookingExtraCharges = {
+      ...(bookingObj.extra_charges || {}),
+      ...(invoiceBreakdown.extra_charges || {}),
+      platform_fee: invoiceBreakdown.platform_fee ?? bookingObj.platform_fee ?? bookingObj.extra_charges?.platform_fee,
+      payment_gateway_charge: invoiceBreakdown.payment_gateway_charge ?? invoiceBreakdown.gateway_charge ?? bookingObj.payment_gateway_charge ?? bookingObj.gateway_charge ?? bookingObj.extra_charges?.payment_gateway_charge ?? bookingObj.extra_charges?.gateway_charge,
+      convenience_fee: invoiceBreakdown.convenience_fee ?? bookingObj.convenience_fee ?? bookingObj.extra_charges?.convenience_fee,
+      insurance_fee: invoiceBreakdown.insurance_fee ?? bookingObj.insurance_fee ?? bookingObj.extra_charges?.insurance_fee,
+      cleaning_fee: invoiceBreakdown.cleaning_fee ?? bookingObj.cleaning_fee ?? bookingObj.extra_charges?.cleaning_fee,
+      extra_guest_fee: invoiceBreakdown.extra_guest_fee ?? invoiceBreakdown.host_extra_guest_fee ?? bookingObj.extra_guest_fee ?? bookingObj.host_extra_guest_fee ?? bookingObj.extra_charges?.extra_guest_fee,
+    };
     const effectiveProperty = {
       ...(bookingObj.property || {}),
       ...(property || {}),
@@ -4221,14 +4377,16 @@ const InvoiceModal = ({ transaction, onClose }) => {
     const invoiceHtml = buildCustomerBookingInvoiceHtml({
       ...bookingObj,
       booking_id: t.booking_id || bookingObj.booking_id,
-      invoice_no: t.invoice_no || t.transaction_id,
-      booking_invoice_no: t.invoice_no || t.transaction_id,
+      invoice_no: invoiceNo,
+      booking_invoice_no: invoiceNo,
+      customer_invoice_no: invoiceNo,
+      tax_invoice_no: invoiceNo,
       created_at: bookingObj.created_at || t.created_at,
       total_amount: amountINR,
       paid_amount: amountINR,
       total_extra_charges: bookingExtraTotal,
       extra_charges_total: bookingExtraTotal,
-      extra_charges: invoiceBreakdown.extra_charges || {},
+      extra_charges: bookingExtraCharges,
       discount_amount: discountAmount,
       gst_amount: invoiceBreakdown.gst_amount,
       cgst: invoiceBreakdown.cgst,
@@ -4264,7 +4422,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
           </div>
           <iframe
             ref={bookingInvoiceFrameRef}
-            title={t.invoice_no || 'Booking invoice'}
+            title={invoiceNo || 'Booking invoice'}
             srcDoc={invoiceHtml}
             className="w-full h-[78vh] rounded-lg border border-gray-200 bg-white"
           />
@@ -4322,6 +4480,18 @@ const InvoiceModal = ({ transaction, onClose }) => {
         <div className="overflow-x-auto">
           {/* Printable Invoice element */}
           <div id="printable-invoice" className="bg-white text-black font-sans border-2 border-black w-full min-w-[900px] mx-auto text-xs relative" style={{ boxSizing: 'border-box', padding: '2px' }}>
+            <div
+              style={{
+                padding: '6px 8px',
+                borderBottom: '2px solid black',
+                textAlign: 'center',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+              }}
+            >
+              Tax Invoice
+            </div>
             
             {/* Header: Company details and Invoice details */}
             <table className="w-full border-collapse border-b-2 border-black" style={{ borderCollapse: 'collapse', width: '100%' }}>
@@ -4354,7 +4524,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
                         <tr style={{ borderBottom: '1px solid black' }}>
                           <td className="w-1/2 p-2 border-r border-black" style={{ width: '50%', padding: '8px', borderRight: '1px solid black' }}>
                             <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Invoice No.</div>
-                            <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{t.invoice_no || t.transaction_id}</div>
+                            <div style={{ fontSize: '11px', fontWeight: 'bold' }}>{invoiceNo}</div>
                           </td>
                           <td className="w-1/2 p-2" style={{ width: '50%', padding: '8px' }}>
                             <div style={{ fontSize: '8px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase' }}>Dated</div>

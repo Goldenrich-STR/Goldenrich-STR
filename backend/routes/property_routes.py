@@ -10,6 +10,9 @@ from middleware.auth_middleware import get_current_user, require_role
 from services.notification_service import send_multi_channel_notification
 from services.booking_calculation_service import (
     BOOKING_CHARGE_KEYS,
+    PLATFORM_FEE_CONTEXT_BROKER,
+    PLATFORM_FEE_CONTEXT_DEFAULT,
+    PLATFORM_FEE_CONTEXT_RM,
     as_float,
     calculate_configured_charges_total,
     get_booking_payment_config,
@@ -168,19 +171,112 @@ def _property_host_nightly_price(prop: dict) -> float:
         return 0.0
 
 
+def _mapped_value(*values) -> bool:
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized and normalized not in {"na", "n/a", "none", "null", "-"}:
+                return True
+        elif value:
+            return True
+    return False
+
+
+def _is_rm_user(user: Optional[dict]) -> bool:
+    user = user or {}
+    role = str(user.get("role") or "").strip().lower()
+    role_key = str(user.get("admin_role_key") or user.get("designation") or "").strip().lower()
+    return role in {"rm", "relationship_manager"} or role_key in {"rm", "relationship_manager"} or "relationship manager" in role_key
+
+
+def _is_broker_user(user: Optional[dict]) -> bool:
+    user = user or {}
+    role = str(user.get("role") or "").strip().lower()
+    return role == "broker"
+
+
+async def _property_platform_fee_context(db: AsyncIOMotorDatabase, prop: dict, owner: Optional[dict] = None) -> str:
+    owner = owner or {}
+    first_verifier_id = (
+        prop.get("broker_id")
+        or prop.get("managed_by_broker_id")
+        or prop.get("created_by_user_id")
+    )
+    if _mapped_value(prop.get("broker_id")) and str(prop.get("broker_id")).strip() == str(prop.get("rm_id") or "").strip():
+        return PLATFORM_FEE_CONTEXT_RM
+    if (
+        _mapped_value(prop.get("broker_id"), prop.get("rm_id"), prop.get("branch_manager_id"))
+        and str(prop.get("rm_id")).strip() == str(prop.get("branch_manager_id")).strip()
+        and str(prop.get("broker_id")).strip() != str(prop.get("rm_id")).strip()
+    ):
+        return PLATFORM_FEE_CONTEXT_RM
+    if _mapped_value(prop.get("broker_id"), prop.get("branch_manager_id")) and not _mapped_value(prop.get("broker_lg_code"), prop.get("managed_by_broker_id")):
+        verifier = await db.users.find_one({"user_id": prop.get("broker_id")}, {"_id": 0, "role": 1, "admin_role_key": 1, "designation": 1})
+        if _is_rm_user(verifier):
+            return PLATFORM_FEE_CONTEXT_RM
+    if _mapped_value(first_verifier_id):
+        verifier = await db.users.find_one({"user_id": first_verifier_id}, {"_id": 0, "role": 1, "admin_role_key": 1, "designation": 1})
+        if _is_rm_user(verifier):
+            return PLATFORM_FEE_CONTEXT_RM
+        if _is_broker_user(verifier):
+            return PLATFORM_FEE_CONTEXT_BROKER
+
+    if _mapped_value(
+        prop.get("broker_id"),
+        prop.get("broker_lg_code"),
+        prop.get("broker_code"),
+        prop.get("assigned_broker_id"),
+        owner.get("broker_id"),
+        owner.get("broker_lg_code"),
+        owner.get("lg_code"),
+    ):
+        return PLATFORM_FEE_CONTEXT_BROKER
+    if _mapped_value(
+        prop.get("rm_id"),
+        prop.get("employee_id"),
+        prop.get("assigned_employee_id"),
+        prop.get("rm_code"),
+        prop.get("employee_code"),
+        owner.get("rm_id"),
+        owner.get("employee_id"),
+        owner.get("assigned_employee_id"),
+        owner.get("employee_code"),
+    ):
+        return PLATFORM_FEE_CONTEXT_RM
+    return PLATFORM_FEE_CONTEXT_DEFAULT
+
+
 async def _add_customer_display_price(db: AsyncIOMotorDatabase, prop: dict, config: Optional[dict] = None) -> dict:
     try:
         config = config or await get_booking_payment_config(db)
         host_price = money(_property_host_nightly_price(prop))
-        display_price = money(host_price + calculate_configured_charges_total(host_price, config))
+        owner = None
+        if prop.get("owner_id"):
+            owner = await db.users.find_one({"user_id": prop.get("owner_id")}, {"_id": 0})
+        platform_fee_context = await _property_platform_fee_context(db, prop, owner)
+        display_price = money(host_price + calculate_configured_charges_total(
+            host_price,
+            config,
+            platform_fee_context=platform_fee_context,
+        ))
         prop["host_price_per_night"] = as_float(host_price)
         prop["display_price_per_night"] = as_float(display_price)
         prop["customer_price_per_night"] = as_float(display_price)
+        prop["platform_fee_context"] = platform_fee_context
         prop["display_price_excludes_tax"] = True
         enabled_charges = [
             key
             for key in BOOKING_CHARGE_KEYS
-            if config.get("charges", {}).get(key, {}).get("enabled")
+            if (
+                config.get("charges", {}).get(key, {}).get("enabled")
+                or (
+                    key == "platform_fee"
+                    and platform_fee_context != PLATFORM_FEE_CONTEXT_DEFAULT
+                    and (config.get("platform_fee_overrides", {}).get(platform_fee_context) or {}).get("enabled")
+                )
+            )
         ]
         prop["display_price_includes"] = enabled_charges
     except Exception as exc:
@@ -240,7 +336,7 @@ async def create_property(
         ]
         location = ", ".join(part for part in location_parts if part) or "Location not specified"
 
-        asyncio.create_task(send_multi_channel_notification(
+        notification_result = await send_multi_channel_notification(
             db=db,
             user_id=current_user["user_id"],
             notification_type=NotificationType.PROPERTY_APPROVED,
@@ -260,7 +356,22 @@ async def create_property(
                 "location": location,
                 "status": property_obj.status.value if hasattr(property_obj.status, "value") else property_obj.status,
             },
-        ))
+        )
+        whatsapp_result = (notification_result.get("results") or {}).get("whatsapp", {})
+        if whatsapp_result.get("success"):
+            logger.info(
+                "Property listed WhatsApp queued/sent: property=%s user=%s provider=%s",
+                property_obj.property_id,
+                current_user["user_id"],
+                whatsapp_result.get("message_id"),
+            )
+        else:
+            logger.warning(
+                "Property listed WhatsApp failed: property=%s user=%s result=%s",
+                property_obj.property_id,
+                current_user["user_id"],
+                whatsapp_result,
+            )
         
         logger.info(f"Property created: {property_obj.property_id} by {current_user['user_id']} (broker assigned: {host_broker_id})")
         return property_obj
@@ -533,6 +644,17 @@ async def search_properties(
             "_id": 0,
             "property_id": 1,
             "owner_id": 1,
+            "broker_id": 1,
+            "broker_lg_code": 1,
+            "broker_code": 1,
+            "rm_id": 1,
+            "employee_id": 1,
+            "assigned_employee_id": 1,
+            "rm_code": 1,
+            "employee_code": 1,
+            "branch_manager_id": 1,
+            "managed_by_broker_id": 1,
+            "created_by_user_id": 1,
             "title": 1,
             "property_type": 1,
             "category": 1,

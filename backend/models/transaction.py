@@ -41,8 +41,10 @@ class PayoutStatus(str, Enum):
 
 class RefundStatus(str, Enum):
     PENDING = "pending"
+    APPROVED = "approved"
     PROCESSED = "processed"
     FAILED = "failed"
+    REJECTED = "rejected"
 
 
 class PayoutDestinationType(str, Enum):

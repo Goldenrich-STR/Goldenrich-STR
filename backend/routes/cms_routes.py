@@ -107,9 +107,62 @@ Users must ensure that submitted personal, property, tax, banking, and verificat
 
 REFUND_CANCELLATION_TEXT = """## CANCELLATION AND REFUND POLICY
 
-Bookings, cancellations, refunds, payout deductions, penalties, and rescheduling requests are handled according to the policy displayed during booking, the host's approved listing rules, payment gateway status, and Platform review. Refunds may be reduced by applicable platform fees, taxes, payment gateway charges, cancellation penalties, damage claims, service usage, or other lawful deductions.
+### 1. Purpose
+This Refund & Cancellation Policy establishes a transparent, fair, and customer-friendly process for cancellations and refunds made through the X-SPACE360 website and mobile application.
 
-The Platform may hold, adjust, or deny refunds where a user breaches booking rules, provides false information, fails verification, causes damage, misuses the property, cancels outside the permitted window, or raises a claim without sufficient evidence. Host payouts may be adjusted or withheld for verified guest issues, non-delivery of services, listing misrepresentation, cancellation by host, or policy violations."""
+### 2. General Refund Policy
+The cancellation policy applicable to each property is displayed before booking confirmation. Refunds are processed only through the original payment method used for the booking. Refund eligibility depends on the cancellation timeline and selected booking type. Platform Convenience Fees, Payment Gateway Charges, and other non-refundable charges are not refunded unless specifically approved by X-SPACE360.
+
+### 3. Guest Cancellation Policy
+- Within 24 hours of booking, when check-in is more than 7 days away: 100% refund.
+- 7 days or more before check-in: 100% refund.
+- 3 to 6 days before check-in: 50% refund.
+- Less than 72 hours before check-in: no refund.
+- On check-in day: no refund.
+- No show: no refund.
+- Non-refundable booking: no refund.
+
+### 4. Host Cancellation Policy
+If the host cancels a confirmed booking, the customer is entitled to either a 100% refund or alternative accommodation, subject to availability.
+
+### 5. Property Unavailability
+If the booked property becomes unavailable due to technical issues, double booking, property maintenance, or force majeure, X-SPACE360 will arrange similar accommodation subject to availability or provide a full refund.
+
+### 6. No Show Policy
+A booking is treated as a no show if the guest fails to arrive on the scheduled check-in date, does not inform the host, or remains unreachable. No refund is applicable and the booking amount may be forfeited.
+
+### 7. Same-Day Cancellation
+If cancellation is made after the property's standard check-in time on the scheduled check-in date, no refund is applicable.
+
+### 8. Early Check-Out
+If the guest voluntarily checks out before the confirmed departure date, no refund is provided for unused nights and no future booking adjustment is permitted. Partial refunds may be considered only if permitted under the host's cancellation policy.
+
+### 9. Non-Refundable Bookings
+Promotional, discounted, or specially marked non-refundable bookings cannot be cancelled or modified and are not eligible for refund under normal circumstances.
+
+### 10. Refund Processing Timeline
+After approval, refunds are verified within 24-48 working hours. Banks, cards, UPI, and payment gateways may take 8-10 business days to credit the refund.
+
+### 11. Force Majeure
+Refund requests arising due to natural disasters, government restrictions, pandemic-related restrictions, or civil emergencies may be considered case by case. Supporting documentation may be required.
+
+### 12. Refund Payment Method
+Refunds are credited only to the original payment source used during booking, such as credit card, debit card, UPI, or net banking. Cash refunds are not permitted.
+
+### 13. Non-Refundable Charges
+Platform Convenience Fee, Payment Gateway Charges, and government taxes where legally non-refundable normally remain non-refundable.
+
+### 14. Fraudulent Bookings
+No refund is issued if false identity is used, fake documents are submitted, fraudulent payment is detected, or the booking violates X-SPACE360 Terms & Conditions.
+
+### 15. Cancellation Process
+Customers may cancel bookings through My Bookings, the X-SPACE360 website, mobile application, or customer support. A cancellation is valid only after confirmation from X-SPACE360 within 24-48 hours.
+
+### 16. Dispute Resolution
+If a customer disagrees with the refund decision, a refund review request may be submitted within 7 days from the date of cancellation. X-SPACE360 will review the request and communicate its final decision.
+
+### 17. Policy Amendments
+X-SPACE360 reserves the right to modify, amend, or update this Refund & Cancellation Policy at any time without prior notice. The latest version published on the X-SPACE360 platform shall prevail."""
 
 async def get_db():
     from server import db_instance
@@ -528,6 +581,32 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     {"$set": {
                         "content_data.privacy_text": PRIVACY_POLICY_TEXT,
                         "content_data.privacy_label": "Privacy Policy",
+                        "updated_at": datetime.now(timezone.utc),
+                    }},
+                )
+            refund_text = ((legal_terms_doc.get("content_data") or {}).get("refund_text") or "")
+            required_refund_markers = [
+                "Within 24 hours of booking",
+                "3 to 6 days before check-in",
+                "Less than 72 hours before check-in",
+                "8-10 business days",
+                "Platform Convenience Fee",
+                "Payment Gateway Charges",
+            ]
+            old_refund_markers = [
+                "Flexible, Moderate, or Strict",
+                "Cancel 48 hours to 7 days",
+                "5-7 business days",
+            ]
+            if (
+                any(marker not in refund_text for marker in required_refund_markers)
+                or any(marker in refund_text for marker in old_refund_markers)
+            ):
+                await db.cms_content.update_one(
+                    {"page": "landing", "section": "legal_terms"},
+                    {"$set": {
+                        "content_data.refund_text": REFUND_CANCELLATION_TEXT,
+                        "content_data.refund_label": "Cancellation & Refund Policy",
                         "updated_at": datetime.now(timezone.utc),
                     }},
                 )

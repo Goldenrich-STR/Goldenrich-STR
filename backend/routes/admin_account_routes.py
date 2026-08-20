@@ -25,14 +25,22 @@ from models.transaction import (
 from models.user import UserRole
 from services.account_service import (
     process_auto_eligible_payouts,
-    initiate_refund,
+    ensure_refund_for_cancelled_paid_booking,
+    create_refund_request,
+    approve_refund_request,
+    reject_refund_request,
     process_payout,
     sweep_payout_eligibility,
 )
 from services.booking_calculation_service import extract_booking_pricing_snapshot
+from services.booking_calculation_service import calculate_host_payout_breakdown
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/account", tags=["Admin Account"])
+
+
+class RefundDecisionRequest(BaseModel):
+    reason: Optional[str] = None
 
 
 async def get_db():
@@ -745,24 +753,95 @@ async def _txn_query_async(
     return query
 
 
+def _coerce_datetime(value):
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, date):
+        return datetime(value.year, value.month, value.day, tzinfo=timezone.utc)
+    if isinstance(value, str):
+        raw = value.strip()
+        if raw:
+            try:
+                parsed = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+                return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+            except ValueError:
+                try:
+                    return datetime.strptime(raw.split("T", 1)[0], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                except ValueError:
+                    pass
+    return datetime.now(timezone.utc)
+
+
+def _financial_year_label(value=None) -> str:
+    ist_tz = timezone(timedelta(hours=5, minutes=30))
+    dt = _coerce_datetime(value).astimezone(ist_tz)
+    start_year = dt.year if dt.month >= 4 else dt.year - 1
+    return f"{str(start_year)[-2:]}-{str(start_year + 1)[-2:]}"
+
+
+def _useful_text(*values) -> Optional[str]:
+    for value in values:
+        if value in (None, ""):
+            continue
+        text = str(value).strip()
+        if text and text.upper() not in {"NA", "N/A", "-"}:
+            return text
+    return None
+
+
+def _booking_invoice_suffix(*values) -> Optional[str]:
+    value = _useful_text(*values)
+    if not value:
+        return None
+    compact = re.sub(r"[^A-Za-z0-9]", "", str(value)).upper()
+    return compact[-5:] if compact else None
+
+
+def _customer_booking_invoice_no(record: Optional[dict] = None, fallback_date=None) -> Optional[str]:
+    record = record or {}
+    explicit = _useful_text(
+        record.get("customer_invoice_no"),
+        record.get("tax_invoice_no"),
+        record.get("booking_invoice_no"),
+        record.get("invoice_no"),
+        record.get("invoice_number"),
+    )
+    if explicit and explicit.upper().startswith("STRC/"):
+        return explicit
+
+    suffix = _booking_invoice_suffix(
+        record.get("booking_id"),
+        record.get("bookingId"),
+        record.get("id"),
+        record.get("transaction_id"),
+    )
+    if suffix:
+        invoice_date = _useful_text(
+            record.get("invoice_date"),
+            record.get("created_at"),
+            record.get("booking_date"),
+            fallback_date,
+        )
+        return f"STRC/{_financial_year_label(invoice_date)}/{suffix}"
+
+    if explicit and explicit.upper().startswith("STRB/"):
+        return f"STRC/{explicit.split('/', 1)[1]}"
+    return explicit
+
+
 async def get_invoice_number(db: AsyncIOMotorDatabase, t: dict) -> str:
     t_type = t.get("type")
     if t_type in ("booking_payment", "refund"):
-        prefix = "STRB"
+        invoice_no = _customer_booking_invoice_no(t, t.get("created_at"))
+        if invoice_no:
+            return invoice_no
+        prefix = "STRC"
         types_list = ["booking_payment", "refund"]
     else:
         prefix = "STRS"
         types_list = ["subscription", "registration_fee"]
         
-    created_at = t.get("created_at")
-    if isinstance(created_at, str):
-        try:
-            created_at = datetime.fromisoformat(created_at)
-        except ValueError:
-            created_at = datetime.now(timezone.utc)
-            
-    if created_at.tzinfo is None:
-        created_at = created_at.replace(tzinfo=timezone.utc)
+    created_at = _coerce_datetime(t.get("created_at"))
     
     # IST is UTC + 5:30
     ist_tz = timezone(timedelta(hours=5, minutes=30))
@@ -1553,6 +1632,53 @@ async def _lookup_finance_user_ref(db: AsyncIOMotorDatabase, reference):
     return {"user_id": reference, "uid": reference, "full_name": str(reference)}
 
 
+def _finance_user_role(user: Optional[dict]) -> str:
+    if not user:
+        return ""
+    return str(user.get("role") or user.get("admin_role_key") or "").strip().lower()
+
+
+def _is_finance_broker_user(user: Optional[dict]) -> bool:
+    role = _finance_user_role(user)
+    return role == "broker" or "broker" in role
+
+
+def _is_finance_employee_user(user: Optional[dict]) -> bool:
+    if not user:
+        return False
+    role = _finance_user_role(user)
+    code = str(user.get("employee_code") or user.get("user_id") or user.get("uid") or "").strip().lower()
+    return (
+        role in {"employee", "rm", "relationship_manager", "relationship manager", "branch_manager", "branch manager"}
+        or "employee" in role
+        or "rm" == role
+        or "-emp" in code
+    )
+
+
+async def _lookup_finance_user_ref_for_role(db: AsyncIOMotorDatabase, reference, role_check):
+    reference = _first_present(reference)
+    if not reference:
+        return None
+    projection = {
+        "_id": 0,
+        "user_id": 1,
+        "uid": 1,
+        "full_name": 1,
+        "email": 1,
+        "phone": 1,
+        "role": 1,
+        "admin_role_key": 1,
+        "lg_code": 1,
+        "employee_code": 1,
+    }
+    for key in ("user_id", "uid", "lg_code", "employee_code", "email"):
+        user = await db.users.find_one({key: reference}, projection)
+        if user and role_check(user):
+            return user
+    return None
+
+
 @router.get("/payouts")
 async def list_payouts(
     status: Optional[str] = None,
@@ -1713,8 +1839,7 @@ async def list_payouts(
         existing_charge_breakdown = p.get("customer_charge_breakdown") or {}
         snapshot_charge_breakdown = {
             "platform_fee": _rupees_to_paise(extra_charges.get("platform_fee")),
-            "gateway_charge": _rupees_to_paise(extra_charges.get("gateway_charge")),
-            "company_charge": _rupees_to_paise(extra_charges.get("company_charge")),
+            "gateway_charge": _rupees_to_paise(extra_charges.get("payment_gateway_charge") or extra_charges.get("gateway_charge")),
             "convenience_fee": _rupees_to_paise(extra_charges.get("convenience_fee")),
             "insurance_fee": _rupees_to_paise(extra_charges.get("insurance_fee")),
             "cleaning_fee": _rupees_to_paise(extra_charges.get("cleaning_fee")),
@@ -1723,8 +1848,7 @@ async def list_payouts(
         }
         p["customer_charge_breakdown"] = {
             "platform_fee": _first_paise(snapshot_charge_breakdown.get("platform_fee"), existing_charge_breakdown.get("platform_fee"), p.get("platform_fee")),
-            "gateway_charge": _first_paise(snapshot_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("gateway_charge"), p.get("gateway_charge")),
-            "company_charge": _first_paise(snapshot_charge_breakdown.get("company_charge"), existing_charge_breakdown.get("company_charge"), p.get("company_charge")),
+            "gateway_charge": _first_paise(snapshot_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("payment_gateway_charge"), p.get("gateway_charge")),
             "convenience_fee": _first_paise(snapshot_charge_breakdown.get("convenience_fee"), existing_charge_breakdown.get("convenience_fee")),
             "insurance_fee": _first_paise(snapshot_charge_breakdown.get("insurance_fee"), existing_charge_breakdown.get("insurance_fee")),
             "cleaning_fee": _first_paise(snapshot_charge_breakdown.get("cleaning_fee"), existing_charge_breakdown.get("cleaning_fee")),
@@ -1744,7 +1868,6 @@ async def list_payouts(
             sum(p["customer_charge_breakdown"].get(k, 0) for k in (
                 "platform_fee",
                 "gateway_charge",
-                "company_charge",
                 "convenience_fee",
                 "insurance_fee",
                 "cleaning_fee",
@@ -1757,7 +1880,42 @@ async def list_payouts(
         )
         p["platform_fee"] = p["customer_charge_breakdown"].get("platform_fee") or p.get("platform_fee") or 0
         p["gateway_charge"] = p["customer_charge_breakdown"].get("gateway_charge") or p.get("gateway_charge") or 0
-        p["company_charge"] = p["customer_charge_breakdown"].get("company_charge") or p.get("company_charge") or 0
+        p.pop("company_charge", None)
+
+        if booking and p.get("status") not in {"paid", "processed", "completed"}:
+            try:
+                payout_breakdown = await calculate_host_payout_breakdown(db, booking=booking)
+                refreshed_tds = payout_breakdown.get("tds_breakdown") or {}
+                p["tds_amount"] = payout_breakdown.get("tds_amount", p.get("tds_amount", 0))
+                p["net_amount"] = payout_breakdown.get("net_amount", p.get("net_amount", 0))
+                p["deductions"] = payout_breakdown.get("deductions") or p.get("deductions") or []
+                p["tds_breakdown"] = refreshed_tds
+                p["tds_base_amount"] = _rupees_to_paise(refreshed_tds.get("tds_base_amount"))
+                p["tds_rate_percent"] = float(refreshed_tds.get("rate_percent") or 0)
+                p["tds_threshold_amount"] = _rupees_to_paise(refreshed_tds.get("threshold_amount"))
+                p["tds_fy_gross_before"] = _rupees_to_paise(refreshed_tds.get("prior_fy_gross"))
+                p["tds_fy_gross_after"] = _rupees_to_paise(refreshed_tds.get("projected_fy_gross"))
+                p["tds_threshold_crossed"] = bool(refreshed_tds.get("threshold_crossed"))
+                p["tds_financial_year"] = refreshed_tds.get("financial_year")
+                await db.payouts.update_one(
+                    {"payout_id": p.get("payout_id")},
+                    {"$set": {
+                        "tds_amount": p["tds_amount"],
+                        "net_amount": p["net_amount"],
+                        "deductions": p["deductions"],
+                        "tds_breakdown": p["tds_breakdown"],
+                        "tds_base_amount": p["tds_base_amount"],
+                        "tds_rate_percent": p["tds_rate_percent"],
+                        "tds_threshold_amount": p["tds_threshold_amount"],
+                        "tds_fy_gross_before": p["tds_fy_gross_before"],
+                        "tds_fy_gross_after": p["tds_fy_gross_after"],
+                        "tds_threshold_crossed": p["tds_threshold_crossed"],
+                        "tds_financial_year": p["tds_financial_year"],
+                        "updated_at": datetime.now(timezone.utc),
+                    }},
+                )
+            except Exception as exc:
+                logger.warning("Could not refresh payout TDS for %s: %s", p.get("payout_id"), exc)
 
         tds_breakdown = p.get("tds_breakdown") or {}
         if not tds_breakdown:
@@ -1891,6 +2049,242 @@ async def auto_payout_status(
 
 # --------------- Refunds ----------------
 
+async def _reconcile_missing_cancelled_refunds(db: AsyncIOMotorDatabase, limit: int = 100) -> None:
+    bookings = await (
+        db.bookings.find(
+            {
+                "booking_status": {"$in": ["cancelled", "canceled"]},
+            },
+            {"_id": 0},
+        )
+        .sort("cancelled_at", -1)
+        .limit(limit)
+        .to_list(length=limit)
+    )
+    for booking in bookings:
+        booking_id = booking.get("booking_id")
+        if not booking_id:
+            continue
+        if await db.refunds.find_one({"booking_id": booking_id}, {"_id": 1}):
+            continue
+        try:
+            await ensure_refund_for_cancelled_paid_booking(
+                db,
+                booking,
+                reason=booking.get("cancellation_reason") or "Guest cancellation",
+                initiated_by=booking.get("cancelled_by") or "system",
+                initiated_by_role=booking.get("cancelled_by_role") or "system",
+            )
+        except Exception as err:
+            logger.warning(f"Refund reconciliation failed for booking {booking_id}: {err}")
+
+
+async def _enrich_refund_for_credit_note(db: AsyncIOMotorDatabase, refund: dict) -> dict:
+    booking = await db.bookings.find_one({"booking_id": refund.get("booking_id")}, {"_id": 0}) or {}
+    property_doc = await db.properties.find_one({"property_id": booking.get("property_id") or refund.get("property_id")}, {"_id": 0}) or {}
+    guest = await db.users.find_one({"user_id": refund.get("guest_id") or booking.get("guest_id")}, {"_id": 0}) or {}
+    host = await db.users.find_one({"user_id": refund.get("host_id") or booking.get("host_id")}, {"_id": 0}) or {}
+    txns = await (
+        db.transactions.find(
+            {"booking_id": refund.get("booking_id"), "type": TransactionType.BOOKING_PAYMENT.value},
+            {"_id": 0},
+        )
+        .sort("created_at", -1)
+        .limit(1)
+        .to_list(length=1)
+    )
+    txn = txns[0] if txns else {}
+
+    broker_ref = _first_present(
+        refund.get("broker_id"),
+        refund.get("broker_code"),
+        refund.get("broker_lg_code"),
+        booking.get("broker_id"),
+        booking.get("assigned_broker_id"),
+        booking.get("broker_code"),
+        booking.get("broker_lg_code"),
+        property_doc.get("broker_id"),
+        property_doc.get("assigned_broker_id"),
+        property_doc.get("broker_code"),
+        property_doc.get("broker_lg_code"),
+        txn.get("broker_id"),
+        txn.get("broker_code"),
+        txn.get("broker_lg_code"),
+        host.get("broker_id"),
+        host.get("assigned_broker_id"),
+        host.get("broker_code"),
+    )
+    employee_ref = _first_present(
+        refund.get("rm_id"),
+        refund.get("employee_id"),
+        refund.get("rm_code"),
+        refund.get("employee_code"),
+        booking.get("rm_id"),
+        booking.get("employee_id"),
+        booking.get("assigned_employee_id"),
+        booking.get("rm_code"),
+        booking.get("employee_code"),
+        property_doc.get("rm_id"),
+        property_doc.get("employee_id"),
+        property_doc.get("assigned_employee_id"),
+        property_doc.get("rm_code"),
+        property_doc.get("employee_code"),
+        txn.get("rm_id"),
+        txn.get("employee_id"),
+        txn.get("rm_code"),
+        txn.get("employee_code"),
+        host.get("rm_id"),
+        host.get("employee_id"),
+        host.get("assigned_employee_id"),
+        host.get("employee_code"),
+    )
+    broker_info = await _lookup_finance_user_ref_for_role(db, broker_ref, _is_finance_broker_user)
+    employee_info = await _lookup_finance_user_ref_for_role(db, employee_ref, _is_finance_employee_user)
+
+    def first(*values):
+        for value in values:
+            if value not in (None, "") and str(value).strip().upper() not in {"NA", "N/A", "-"}:
+                return value
+        return None
+
+    def rupees_to_paise(value) -> int:
+        try:
+            return max(0, int(round(float(value or 0) * 100)))
+        except (TypeError, ValueError):
+            return 0
+
+    def amount_to_paise(value, gross_reference: int = 0) -> int:
+        try:
+            amount = float(value or 0)
+        except (TypeError, ValueError):
+            return 0
+        if amount <= 0:
+            return 0
+        gross_rupees = (gross_reference or 0) / 100
+        if gross_rupees and amount <= max(gross_rupees * 2, 10000):
+            return int(round(amount * 100))
+        return int(round(amount))
+
+    pricing = extract_booking_pricing_snapshot(booking) if booking else {}
+    extra_charges = pricing.get("extra_charges") or {}
+    host_actual_paise = rupees_to_paise(pricing.get("host_actual_value"))
+    host_extra_guest_paise = rupees_to_paise(first(
+        pricing.get("host_extra_guest_fee"),
+        extra_charges.get("host_extra_guest_fee"),
+        booking.get("host_extra_guest_fee"),
+        booking.get("host_extra_guest_charge"),
+        booking.get("extra_guest_host_amount"),
+        booking.get("extra_person_amount"),
+        booking.get("extra_person_total"),
+        booking.get("extra_guest_amount"),
+        booking.get("extra_guest_fee_host_amount"),
+    ))
+    gross_receipt = int(refund.get("gross_receipt_amount") or refund.get("original_amount") or (float(booking.get("total_amount") or 0) * 100) or 0)
+    stored_refundable_base = int(refund.get("refundable_base_amount") or refund.get("refund_base_amount") or 0)
+    computed_refundable_base = host_actual_paise + host_extra_guest_paise
+    refundable_base = max(stored_refundable_base, computed_refundable_base, host_actual_paise)
+    refund_total = int(refund.get("refund_amount") or 0)
+    cancellation = int(refund.get("cancellation_charges") or max(0, refundable_base - refund_total))
+    taxable = int(refund.get("net_taxable_value_credited") or refund_total)
+    gst_total = 0
+    cgst = 0
+    sgst = 0
+
+    raw_extra_guest_fee_paise = rupees_to_paise(extra_charges.get("extra_guest_fee"))
+    customer_charge_breakdown = {
+        "platform_fee": rupees_to_paise(extra_charges.get("platform_fee")),
+        "gateway_charge": rupees_to_paise(first(extra_charges.get("payment_gateway_charge"), extra_charges.get("gateway_charge"))),
+        "convenience_fee": rupees_to_paise(first(extra_charges.get("convenience_fee"), extra_charges.get("platform_convenience_fee"))),
+        "insurance_fee": rupees_to_paise(first(extra_charges.get("insurance_fee"), extra_charges.get("protection_fee"))),
+        "cleaning_fee": rupees_to_paise(extra_charges.get("cleaning_fee")),
+        "extra_guest_fee": max(0, raw_extra_guest_fee_paise - host_extra_guest_paise),
+        "customer_gst": rupees_to_paise(pricing.get("gst_amount")),
+    }
+    existing_breakdown = refund.get("customer_charge_breakdown") or {}
+    for key in list(customer_charge_breakdown):
+        if not customer_charge_breakdown[key]:
+            customer_charge_breakdown[key] = amount_to_paise(existing_breakdown.get(key), gross_receipt)
+    non_refundable_difference = max(0, gross_receipt - refundable_base)
+    original_invoice_date = first(
+        refund.get("original_invoice_date"),
+        booking.get("invoice_date"),
+        txn.get("invoice_date"),
+        booking.get("created_at"),
+        txn.get("created_at"),
+        refund.get("created_at"),
+    )
+    original_invoice_no = _customer_booking_invoice_no(
+        {
+            "customer_invoice_no": first(refund.get("original_invoice_no"), booking.get("customer_invoice_no")),
+            "tax_invoice_no": first(refund.get("tax_invoice_no"), booking.get("tax_invoice_no"), txn.get("tax_invoice_no")),
+            "booking_invoice_no": first(booking.get("booking_invoice_no"), refund.get("booking_invoice_no")),
+            "invoice_no": first(refund.get("invoice_no"), booking.get("invoice_no"), txn.get("invoice_no")),
+            "invoice_number": first(booking.get("invoice_number"), txn.get("invoice_number")),
+            "booking_id": first(refund.get("booking_id"), booking.get("booking_id"), txn.get("booking_id")),
+            "id": first(booking.get("id"), txn.get("booking_id")),
+            "created_at": original_invoice_date,
+            "invoice_date": original_invoice_date,
+        },
+        original_invoice_date,
+    )
+
+    enriched = {
+        **refund,
+        "booking": booking,
+        "property": property_doc,
+        "guest": {
+            "full_name": first(guest.get("full_name"), booking.get("guest_name"), booking.get("customer_name")),
+            "email": first(guest.get("email"), booking.get("guest_email"), booking.get("customer_email")),
+            "phone": first(guest.get("phone"), booking.get("guest_phone"), booking.get("customer_phone")),
+            "gstin": first(guest.get("gstin"), guest.get("gst_number"), booking.get("customer_gstin")),
+        },
+        "host": {"full_name": host.get("full_name"), "email": host.get("email"), "phone": host.get("phone")},
+        "transaction": txn,
+        "broker": broker_info,
+        "employee": employee_info,
+        "rm": employee_info,
+        "broker_name": first((broker_info or {}).get("full_name")),
+        "broker_code": first((broker_info or {}).get("lg_code"), (broker_info or {}).get("employee_code"), (broker_info or {}).get("user_id")),
+        "rm_name": first((employee_info or {}).get("full_name")),
+        "employee_name": first((employee_info or {}).get("full_name")),
+        "rm_code": first((employee_info or {}).get("employee_code"), (employee_info or {}).get("user_id")),
+        "employee_code": first((employee_info or {}).get("employee_code"), (employee_info or {}).get("user_id")),
+        "customer_name": first(refund.get("customer_name"), guest.get("full_name"), booking.get("guest_name"), booking.get("customer_name")),
+        "customer_email": first(refund.get("customer_email"), guest.get("email"), booking.get("guest_email"), booking.get("customer_email")),
+        "customer_phone": first(refund.get("customer_phone"), guest.get("phone"), booking.get("guest_phone"), booking.get("customer_phone")),
+        "customer_gstin": first(refund.get("customer_gstin"), booking.get("customer_gstin"), guest.get("gstin"), guest.get("gst_number")),
+        "property_name": first(refund.get("property_name"), booking.get("property_name"), property_doc.get("title"), property_doc.get("property_name"), property_doc.get("name")),
+        "property_type": first(refund.get("property_type"), property_doc.get("property_type"), property_doc.get("type")),
+        "room_type": first(refund.get("room_type"), booking.get("room_type"), property_doc.get("configuration"), property_doc.get("bhk")),
+        "property_address": first(refund.get("property_address"), property_doc.get("address"), property_doc.get("location"), booking.get("property_address")),
+        "property_owner_name": first(refund.get("property_owner_name"), host.get("full_name"), property_doc.get("owner_name")),
+        "property_owner_contact": first(refund.get("property_owner_contact"), host.get("phone"), property_doc.get("owner_contact")),
+        "original_invoice_no": original_invoice_no,
+        "original_invoice_date": original_invoice_date,
+        "payment_ref": first(refund.get("payment_ref"), refund.get("razorpay_payment_id"), booking.get("payment_id"), booking.get("razorpay_payment_id")),
+        "booking_date": first(refund.get("booking_date"), booking.get("created_at"), booking.get("booking_date")),
+        "check_in_date": first(refund.get("check_in_date"), booking.get("check_in_date")),
+        "check_out_date": first(refund.get("check_out_date"), booking.get("check_out_date")),
+        "stay_nights": first(refund.get("stay_nights"), booking.get("nights"), booking.get("stay_nights"), booking.get("number_of_nights")),
+        "guest_count": first(refund.get("guest_count"), booking.get("number_of_guests"), booking.get("guests"), booking.get("guest_count")),
+        "payment_mode": first(refund.get("payment_mode"), booking.get("payment_method"), "Online Payment"),
+        "payment_status": first(refund.get("payment_status"), booking.get("payment_status"), "Paid"),
+        "original_amount": gross_receipt,
+        "gross_receipt_amount": gross_receipt,
+        "gross_amount": int(refund.get("gross_amount") or refundable_base),
+        "refund_base_amount": refundable_base,
+        "refundable_base_amount": refundable_base,
+        "cancellation_charges": cancellation,
+        "net_taxable_value_credited": taxable,
+        "cgst_refund_amount": cgst,
+        "sgst_refund_amount": sgst,
+        "igst_refund_amount": 0,
+        "gst_refund_amount": gst_total,
+        "customer_charge_breakdown": customer_charge_breakdown,
+        "non_refundable_difference_amount": non_refundable_difference,
+    }
+    return enriched
+
 @router.get("/refunds")
 async def list_refunds(
     status: Optional[str] = None,
@@ -1899,6 +2293,7 @@ async def list_refunds(
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
+    await _reconcile_missing_cancelled_refunds(db)
     query: dict = {}
     if status:
         query["status"] = status
@@ -1909,11 +2304,7 @@ async def list_refunds(
         .limit(limit)
     )
     items = await cursor.to_list(length=limit)
-    for r in items:
-        guest = await db.users.find_one({"user_id": r["guest_id"]}, {"_id": 0, "full_name": 1, "email": 1})
-        host = await db.users.find_one({"user_id": r["host_id"]}, {"_id": 0, "full_name": 1, "email": 1})
-        r["guest"] = guest
-        r["host"] = host
+    items = [await _enrich_refund_for_credit_note(db, r) for r in items]
     total = await db.refunds.count_documents(query)
     return {"refunds": items, "total": total}
 
@@ -1928,15 +2319,15 @@ async def create_refund(
     booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not booking:
         raise HTTPException(404, detail="Booking not found")
-    # Strict idempotency: if any refund row exists with status in {pending,processed}, block.
+    # Strict idempotency: if any active refund row exists, block duplicate requests.
     dup = await db.refunds.find_one({
         "booking_id": booking_id,
-        "status": {"$in": [RefundStatus.PROCESSED.value, RefundStatus.PENDING.value]},
+        "status": {"$in": [RefundStatus.PROCESSED.value, RefundStatus.PENDING.value, "initiated", "processing"]},
     })
     if dup:
-        raise HTTPException(400, detail="Refund already processed for this booking")
+        raise HTTPException(400, detail="Refund request already exists for this booking")
 
-    rfd = await initiate_refund(
+    refund_doc = await create_refund_request(
         db,
         booking=booking,
         reason=payload.reason,
@@ -1946,9 +2337,50 @@ async def create_refund(
         override_percent=payload.override_percent,
     )
     return {
-        "message": f"Refund {rfd.status.value}",
-        "refund": _strip(rfd.model_dump()),
+        "message": "Refund request created for admin approval",
+        "refund": _strip(refund_doc),
     }
+
+
+@router.post("/refunds/{refund_id}/approve")
+async def approve_refund(
+    refund_id: str,
+    payload: RefundDecisionRequest,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    try:
+        refund_doc = await approve_refund_request(
+            db,
+            refund_id=refund_id,
+            approved_by=current_user["user_id"],
+            reason=payload.reason,
+        )
+    except ValueError as err:
+        raise HTTPException(400, detail=str(err))
+    return {"message": "Refund approved and processed", "refund": _strip(refund_doc or {})}
+
+
+@router.post("/refunds/{refund_id}/reject")
+async def reject_refund(
+    refund_id: str,
+    payload: RefundDecisionRequest,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    reason = (payload.reason or "").strip()
+    if not reason:
+        raise HTTPException(400, detail="Rejection reason is required")
+    try:
+        refund_doc = await reject_refund_request(
+            db,
+            refund_id=refund_id,
+            rejected_by=current_user["user_id"],
+            reason=reason,
+        )
+    except ValueError as err:
+        raise HTTPException(400, detail=str(err))
+    return {"message": "Refund request rejected", "refund": _strip(refund_doc or {})}
 
 
 # --------------- Refund policy preview ----------------

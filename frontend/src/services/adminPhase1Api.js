@@ -95,6 +95,8 @@ export const adminPhase1API = {
   runAutoFinancePayouts: () => apiClient.post('/admin/account/payouts/run-auto'),
   financeRefunds: (params = {}) => apiClient.get('/admin/account/refunds', { params }),
   initiateFinanceRefund: (bookingId, payload) => apiClient.post(`/admin/account/refunds/${bookingId}`, payload),
+  approveFinanceRefund: (refundId, payload = {}) => apiClient.post(`/admin/account/refunds/${refundId}/approve`, payload),
+  rejectFinanceRefund: (refundId, payload = {}) => apiClient.post(`/admin/account/refunds/${refundId}/reject`, payload),
   financeRefundPolicyPreview: (params = {}) => apiClient.get('/admin/account/refunds/policy-preview', { params }),
   financePayoutAutoStatus: () => apiClient.get('/admin/account/payouts/auto-status'),
   financeTaxCommission: () => apiClient.get('/admin/core/finance/tax-commission'),

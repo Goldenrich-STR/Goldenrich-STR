@@ -14,6 +14,9 @@ from services.audit_service import write_audit_log
 from services.booking_calculation_service import (
     BOOKING_PAYMENT_CONFIG_KEY,
     DEFAULT_BOOKING_GST_PERCENT,
+    PLATFORM_FEE_CONTEXT_BROKER,
+    PLATFORM_FEE_CONTEXT_DEFAULT,
+    PLATFORM_FEE_CONTEXT_RM,
     calculate_booking_breakdown,
     ensure_booking_tax_slabs_table,
     ensure_platform_settings_table,
@@ -191,10 +194,88 @@ async def _ensure_platform_settings_table(db: AsyncIOMotorDatabase) -> None:
 
 def _default_platform_fee_percent() -> float:
     try:
-        value = float(os.getenv("BOOKING_PLATFORM_FEE_PERCENT", "10"))
+        value = float(os.getenv("BOOKING_PLATFORM_FEE_PERCENT", "0"))
     except ValueError:
-        value = 10.0
+        value = 0.0
     return max(0.0, min(100.0, value))
+
+
+def _mapped_value(*values) -> bool:
+    for value in values:
+        if value is None:
+            continue
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized and normalized not in {"na", "n/a", "none", "null", "-"}:
+                return True
+        elif value:
+            return True
+    return False
+
+
+def _is_rm_user(user: Optional[dict]) -> bool:
+    user = user or {}
+    role = str(user.get("role") or "").strip().lower()
+    role_key = str(user.get("admin_role_key") or user.get("designation") or "").strip().lower()
+    return role in {"rm", "relationship_manager"} or role_key in {"rm", "relationship_manager"} or "relationship manager" in role_key
+
+
+def _is_broker_user(user: Optional[dict]) -> bool:
+    user = user or {}
+    role = str(user.get("role") or "").strip().lower()
+    return role == "broker"
+
+
+async def _resolve_platform_fee_context(db: AsyncIOMotorDatabase, property_dict: Optional[dict], owner: Optional[dict] = None) -> str:
+    property_dict = property_dict or {}
+    owner = owner or {}
+    first_verifier_id = (
+        property_dict.get("broker_id")
+        or property_dict.get("managed_by_broker_id")
+        or property_dict.get("created_by_user_id")
+    )
+    if _mapped_value(property_dict.get("broker_id")) and str(property_dict.get("broker_id")).strip() == str(property_dict.get("rm_id") or "").strip():
+        return PLATFORM_FEE_CONTEXT_RM
+    if (
+        _mapped_value(property_dict.get("broker_id"), property_dict.get("rm_id"), property_dict.get("branch_manager_id"))
+        and str(property_dict.get("rm_id")).strip() == str(property_dict.get("branch_manager_id")).strip()
+        and str(property_dict.get("broker_id")).strip() != str(property_dict.get("rm_id")).strip()
+    ):
+        return PLATFORM_FEE_CONTEXT_RM
+    if _mapped_value(property_dict.get("broker_id"), property_dict.get("branch_manager_id")) and not _mapped_value(property_dict.get("broker_lg_code"), property_dict.get("managed_by_broker_id")):
+        verifier = await db.users.find_one({"user_id": property_dict.get("broker_id")}, {"_id": 0, "role": 1, "admin_role_key": 1, "designation": 1})
+        if _is_rm_user(verifier):
+            return PLATFORM_FEE_CONTEXT_RM
+    if _mapped_value(first_verifier_id):
+        verifier = await db.users.find_one({"user_id": first_verifier_id}, {"_id": 0, "role": 1, "admin_role_key": 1, "designation": 1})
+        if _is_rm_user(verifier):
+            return PLATFORM_FEE_CONTEXT_RM
+        if _is_broker_user(verifier):
+            return PLATFORM_FEE_CONTEXT_BROKER
+
+    if _mapped_value(
+        property_dict.get("broker_id"),
+        property_dict.get("broker_lg_code"),
+        property_dict.get("broker_code"),
+        property_dict.get("assigned_broker_id"),
+        owner.get("broker_id"),
+        owner.get("broker_lg_code"),
+        owner.get("lg_code"),
+    ):
+        return PLATFORM_FEE_CONTEXT_BROKER
+    if _mapped_value(
+        property_dict.get("rm_id"),
+        property_dict.get("employee_id"),
+        property_dict.get("assigned_employee_id"),
+        property_dict.get("rm_code"),
+        property_dict.get("employee_code"),
+        owner.get("rm_id"),
+        owner.get("employee_id"),
+        owner.get("assigned_employee_id"),
+        owner.get("employee_code"),
+    ):
+        return PLATFORM_FEE_CONTEXT_RM
+    return PLATFORM_FEE_CONTEXT_DEFAULT
 
 async def _get_booking_payment_config(db: AsyncIOMotorDatabase) -> dict:
     return await get_booking_payment_config(db)
@@ -241,6 +322,7 @@ async def _calculate_booking_pricing(
     tax_slab_base_amount: Optional[float] = None,
     pricing_units: Optional[int] = 1,
     extra_guest_amount: float = 0,
+    platform_fee_context: Optional[str] = None,
 ) -> dict:
     """Calculate booking charges through the centralized pricing engine."""
     return await calculate_booking_breakdown(
@@ -252,6 +334,7 @@ async def _calculate_booking_pricing(
         tax_slab_base_amount=tax_slab_base_amount,
         pricing_units=pricing_units,
         extra_guest_amount=extra_guest_amount,
+        platform_fee_context=platform_fee_context,
     )
 
 async def _build_booking_quote(
@@ -570,6 +653,7 @@ async def create_booking(
         coupon_code = None
             
         advance_rate = _event_policy_percent(property_dict, "advance", 50.0)
+        platform_fee_context = await _resolve_platform_fee_context(db, property_dict, owner)
         pricing = await _calculate_booking_pricing(
             db,
             base_amount,
@@ -578,6 +662,7 @@ async def create_booking(
             tax_slab_base_amount=tax_slab_base_amount,
             pricing_units=num_nights,
             extra_guest_amount=extra_guest_amount,
+            platform_fee_context=platform_fee_context,
         )
         base_amount = pricing["base_amount"]
         service_fee = pricing["service_fee"]
@@ -646,6 +731,7 @@ async def create_booking(
         booking_dict["host_amount"] = pricing["host_amount"]
         booking_dict["taxable_amount"] = taxable_amount
         booking_dict["charges"] = pricing["charges"]
+        booking_dict["platform_fee_context"] = platform_fee_context
         booking_dict["pricing_breakdown"] = pricing
         booking_dict["payment_gateway_charge"] = pricing["payment_gateway_charge"]
         booking_dict["convenience_fee"] = pricing["convenience_fee"]
@@ -1500,7 +1586,15 @@ async def cancel_booking(
 
         current_status = booking_dict.get("booking_status")
         if current_status == BookingStatus.CANCELLED.value:
-            return {"message": "Booking already cancelled", "booking_id": booking_id}
+            from services.account_service import ensure_refund_for_cancelled_paid_booking
+            refund_info = await ensure_refund_for_cancelled_paid_booking(
+                db,
+                booking_dict,
+                reason="Guest cancellation",
+                initiated_by=current_user["user_id"],
+                initiated_by_role="guest",
+            )
+            return {"message": "Booking already cancelled", "booking_id": booking_id, "refund": refund_info}
         if current_status not in (BookingStatus.SOFT_LOCK.value, BookingStatus.CONFIRMED.value):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1535,34 +1629,26 @@ async def cancel_booking(
 
         # Phase 15 â€” auto-refund on cancel of a confirmed booking, per policy tier
         refund_info = None
-        auto_refund_enabled = os.getenv(
-            "AUTO_REFUND_ON_CANCELLATION", "false"
-        ).strip().lower() in {"1", "true", "yes", "on"}
-        if (
-            auto_refund_enabled
-            and current_status == BookingStatus.CONFIRMED.value
-            and booking_dict.get("payment_status") == "paid"
-        ):
+        if current_status == BookingStatus.CONFIRMED.value:
             try:
-                from services.account_service import initiate_refund
-                booking_dict["payment_id"] = booking_dict.get("razorpay_payment_id")
-                rfd = await initiate_refund(
+                from services.account_service import ensure_refund_for_cancelled_paid_booking
+                refund_doc = await ensure_refund_for_cancelled_paid_booking(
                     db,
-                    booking=booking_dict,
+                    {**booking_dict, "booking_status": BookingStatus.CANCELLED.value},
                     reason="Guest cancellation",
                     initiated_by=current_user["user_id"],
                     initiated_by_role="guest",
                 )
-                refund_info = {
-                    "refund_id": rfd.refund_id,
-                    "tier": rfd.policy_tier,
-                    "percent": rfd.refund_percent,
-                    "refund_paise": rfd.refund_amount,
-                    "status": rfd.status.value,
-                }
+                if refund_doc:
+                    refund_info = {
+                        "refund_id": refund_doc.get("refund_id"),
+                        "tier": refund_doc.get("policy_tier"),
+                        "percent": refund_doc.get("refund_percent"),
+                        "refund_paise": refund_doc.get("refund_amount"),
+                        "status": refund_doc.get("status"),
+                    }
             except Exception as rf_err:
-                logger.warning(f"Auto-refund on cancel failed: {rf_err}")
-
+                logger.warning(f"Refund creation on cancel failed: {rf_err}")
         try:
             from services.notification_service import send_multi_channel_notification
             from models.notification import NotificationChannel, NotificationType
@@ -1610,6 +1696,7 @@ class ApplyCouponRequest(BaseModel):
 
 class BookingPricingQuoteRequest(BaseModel):
     host_amount: float
+    property_id: Optional[str] = None
     tax_slab_base_amount: Optional[float] = None
     pricing_units: Optional[int] = 1
     extra_guest_amount: Optional[float] = 0
@@ -1623,6 +1710,14 @@ async def booking_pricing_quote(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Return the central booking pricing breakdown used by checkout and payment."""
+    platform_fee_context = PLATFORM_FEE_CONTEXT_DEFAULT
+    if payload.property_id:
+        property_dict = await db.properties.find_one({"property_id": payload.property_id}, {"_id": 0})
+        owner = None
+        owner_id = (property_dict or {}).get("owner_id")
+        if owner_id:
+            owner = await db.users.find_one({"user_id": owner_id}, {"_id": 0})
+        platform_fee_context = await _resolve_platform_fee_context(db, property_dict, owner)
     return await _calculate_booking_pricing(
         db,
         payload.host_amount,
@@ -1631,6 +1726,7 @@ async def booking_pricing_quote(
         extra_guest_amount=payload.extra_guest_amount or 0,
         coupon_discount=payload.coupon_discount or 0,
         coupon_code=payload.coupon_code,
+        platform_fee_context=platform_fee_context,
     )
 
 
@@ -1703,6 +1799,7 @@ async def apply_coupon(
             tax_slab_base_amount=booking_dict.get("tax_slab_base_amount"),
             pricing_units=booking_dict.get("pricing_units") or 1,
             extra_guest_amount=booking_dict.get("host_extra_guest_fee") or booking_dict.get("extra_guest_fee") or 0,
+            platform_fee_context=booking_dict.get("platform_fee_context"),
         )
         discount_base = float(preview.get("subtotal_before_discount") or original_taxable)
         discount = round(min(max(0.0, discount), discount_base), 2)
@@ -1715,6 +1812,7 @@ async def apply_coupon(
             tax_slab_base_amount=booking_dict.get("tax_slab_base_amount"),
             pricing_units=booking_dict.get("pricing_units") or 1,
             extra_guest_amount=booking_dict.get("host_extra_guest_fee") or booking_dict.get("extra_guest_fee") or 0,
+            platform_fee_context=booking_dict.get("platform_fee_context"),
         )
         new_total = pricing["total_amount"]
         
@@ -1833,9 +1931,11 @@ async def get_booking_tax_slab(
 class BookingPaymentConfigUpdate(BaseModel):
     platform_fee_percent: Optional[float] = None
     platform_fee_label: Optional[str] = None
+    platform_fee_overrides: Optional[dict] = None
     charges: Optional[dict] = None
     coupon_discount: Optional[dict] = None
     host_payout: Optional[dict] = None
+    commission_rules: Optional[dict] = None
 
 @router.put("/admin/payment/config")
 async def update_payment_config(

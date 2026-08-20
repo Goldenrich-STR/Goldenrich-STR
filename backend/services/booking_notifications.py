@@ -1,5 +1,6 @@
 """Booking-specific notification triggers and the soft-lock reminder scheduler."""
 import asyncio
+import html
 import logging
 import os
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,114 @@ from services.notification_service import send_multi_channel_notification
 from services.email_service import email_service
 
 logger = logging.getLogger(__name__)
+
+
+def _money_from_paise(value) -> str:
+    try:
+        return f"Rs. {float(value or 0) / 100:,.2f}"
+    except (TypeError, ValueError):
+        return "Rs. 0.00"
+
+
+def _safe(value, fallback: str = "NA") -> str:
+    if value is None or value == "":
+        value = fallback
+    return html.escape(str(value))
+
+
+def _date(value) -> str:
+    if not value:
+        return "NA"
+    if isinstance(value, datetime):
+        return value.strftime("%d-%m-%Y")
+    text = str(value)
+    try:
+        return datetime.fromisoformat(text.replace("Z", "+00:00")).strftime("%d-%m-%Y")
+    except ValueError:
+        return text[:10]
+
+
+def _credit_note_html(refund: dict) -> str:
+    company = """
+      <strong style="font-size:18px;">X-SPACE360</strong><br>
+      (Golden Rich Financial &amp; Real Estate Solutions Pvt. Ltd.)<br>
+      Office No-804, Royal Avaan Avenue, Opp. Bhosla School Gate,<br>
+      Jehan Circle, Gangapur Road Nashik-422013<br>
+      GSTIN/UIN: 27AAKCG1285C1ZP<br>
+      State Name : Maharashtra, Code : 27<br>
+      Contact : 9225586001<br>
+      Mail-finance.director@goldenrichproperties.com
+    """
+    stay = refund.get("stay_nights") or "1"
+    rows = [
+        ("Check-in", _safe(refund.get("check_in_date"))),
+        ("Check-out", _safe(refund.get("check_out_date"))),
+        ("Stay", f"{_safe(stay)} Night(s)"),
+        ("No of Guest", _safe(refund.get("guest_count"))),
+        ("Payment Mode / Status", f"{_safe(refund.get('payment_mode'), 'Online Payment')} / {_safe(refund.get('payment_status'), 'Paid')}"),
+    ]
+    price_rows = [
+        (f"Accommodation / Property Booking - {_safe(refund.get('property_name'))}<br>Stay: {_safe(stay)} Night | Room: {_safe(refund.get('room_type'))}", _money_from_paise(refund.get("gross_amount"))),
+        ("Cancellation Charges As per Refund Policy", _money_from_paise(refund.get("cancellation_charges"))),
+        ("Taxable Value", _money_from_paise(refund.get("net_taxable_value_credited"))),
+        ("CGST", _money_from_paise(refund.get("cgst_refund_amount"))),
+        ("SGST", _money_from_paise(refund.get("sgst_refund_amount"))),
+        ("Total Price", _money_from_paise(refund.get("refund_amount"))),
+    ]
+    body_rows = "".join(
+        f"<tr><td style='border:1px solid #111;padding:7px;font-weight:bold;'>{label}</td>"
+        f"<td style='border:1px solid #111;padding:7px;'>{value}</td></tr>"
+        for label, value in rows
+    )
+    price_body = "".join(
+        f"<tr><td style='border:1px solid #111;padding:7px;'>{label}</td>"
+        f"<td style='border:1px solid #111;padding:7px;'>{value}</td></tr>"
+        for label, value in price_rows
+    )
+    return f"""
+      <div style="margin-top:22px;font-family:Arial,sans-serif;color:#111;">
+        <h2 style="text-align:center;margin:0 0 14px;font-size:22px;">CREDIT NOTE</h2>
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+          <tr>
+            <td style="border:1px solid #111;padding:7px;vertical-align:top;width:50%;">
+              <strong>Guest Name:</strong><br>{_safe(refund.get('customer_name'))}<br>
+              Contact No. {_safe(refund.get('customer_phone'))}<br>
+              Email: {_safe(refund.get('customer_email'))}<br>
+              GSTIN: {_safe(refund.get('customer_gstin'), 'NA')} [Optional]<br>
+              Property / Hotel- {_safe(refund.get('property_name'))}<br>
+              Booking Status - Booking Confirmed<br>
+              Room Type - {_safe(refund.get('room_type'))}
+            </td>
+            <td style="border:1px solid #111;padding:7px;vertical-align:top;">
+              Credit Note No.: {_safe(refund.get('credit_note_no'))}<br>
+              Credit Note Date: {_date(refund.get('credit_note_date'))}<br><br>
+              Original Invoice No - {_safe(refund.get('original_invoice_no'))}<br>
+              Original Invoice Date- {_date(refund.get('original_invoice_date'))}<br><br>
+              <strong>Booking Refund</strong><br>
+              Booking ID: {_safe(refund.get('booking_id'))}<br>
+              Payment Ref.: {_safe(refund.get('payment_ref'))}<br>
+              Booked on - {_date(refund.get('booking_date'))}
+            </td>
+          </tr>
+          <tr><td colspan="2" style="border:1px solid #111;padding:9px;font-weight:bold;">DETAILS</td></tr>
+          <tr>
+            <td style="border:1px solid #111;padding:7px;vertical-align:top;">
+              <strong>Property Owner Details:</strong><br>
+              {_safe(refund.get('property_owner_name'))}<br>
+              Property: {_safe(refund.get('property_name'))}<br>
+              {_safe(refund.get('property_address'))}<br>
+              Contact No. {_safe(refund.get('property_owner_contact'))}
+            </td>
+            <td style="border:1px solid #111;padding:7px;vertical-align:top;">{company}</td>
+          </tr>
+          {body_rows}
+          <tr><td colspan="2" style="border:1px solid #111;padding:9px;font-weight:bold;">Price Summary</td></tr>
+          <tr><td style="border:1px solid #111;padding:7px;font-weight:bold;">Description</td><td style="border:1px solid #111;padding:7px;font-weight:bold;">Amount (Rs.)</td></tr>
+          {price_body}
+          <tr><td colspan="2" style="border:1px solid #111;padding:9px;"><strong>Amount Paid by Online Payment:</strong> {_money_from_paise(refund.get('refund_amount'))}</td></tr>
+        </table>
+      </div>
+    """
 
 
 # ----------------- Email templates -----------------
@@ -419,6 +528,11 @@ async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: d
                 "refund_date": refund_date_val,
                 "payment_method": payment_method,
                 "refund_reference_number": refund_ref,
+                "credit_note_no": refund_dict.get("credit_note_no"),
+                "credit_note_date": refund_dict.get("credit_note_date"),
+                "original_invoice_no": refund_dict.get("original_invoice_no"),
+                "original_invoice_date": refund_dict.get("original_invoice_date"),
+                "credit_note_html": _credit_note_html(refund_dict),
             },
         )
         logger.info(f"Refund notification triggered for booking {refund_dict['booking_id']}")

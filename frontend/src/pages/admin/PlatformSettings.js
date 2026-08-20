@@ -447,6 +447,12 @@ const hostPayoutDefinitions = [
   ['gateway_charge', 'Gateway Charges', 'Payment gateway deduction before payout.'],
 ];
 
+const commissionRuleDefinitions = [
+  ['broker', 'Broker Commission', 'Commission percentage for broker-first mapped bookings.'],
+  ['employee', 'RM / Employee Commission', 'Commission percentage for RM-first mapped bookings.'],
+  ['branch_manager', 'Branch Manager Commission', 'Commission percentage for branch manager oversight.'],
+];
+
 const chargeTypeOptions = [
   ['percentage', 'Percentage (%)'],
   ['fixed', 'Fixed Amount (Rs.)'],
@@ -455,8 +461,15 @@ const chargeTypeOptions = [
 const defaultCharge = (key, existing = {}) => ({
   enabled: key === 'platform_fee' ? existing.enabled !== false : Boolean(existing.enabled),
   charge_type: existing.charge_type || existing.type || (key === 'platform_fee' ? 'percentage' : 'fixed'),
-  value: existing.value ?? existing.percent ?? (key === 'platform_fee' ? 10 : 0),
+  value: existing.value ?? existing.percent ?? 0,
   label: existing.label || paymentChargeDefinitions.find(([chargeKey]) => chargeKey === key)?.[1] || key,
+});
+
+const defaultPlatformFeeOverride = (key, existing = {}, fallbackValue = 0) => ({
+  enabled: Boolean(existing.enabled),
+  charge_type: 'percentage',
+  value: existing.value ?? existing.percent ?? fallbackValue,
+  label: existing.label || (key === 'broker_mapped' ? 'Broker Mapped Platform Fee' : 'RM Mapped Platform Fee'),
 });
 
 const defaultPayoutCharge = (key, existing = {}) => ({
@@ -464,6 +477,13 @@ const defaultPayoutCharge = (key, existing = {}) => ({
   charge_type: existing.charge_type || existing.type || 'percentage',
   value: existing.value ?? 0,
   label: existing.label || hostPayoutDefinitions.find(([chargeKey]) => chargeKey === key)?.[1] || key,
+});
+
+const defaultCommissionRule = (key, existing = {}) => ({
+  enabled: Boolean(existing.enabled),
+  charge_type: 'percentage',
+  value: existing.value ?? existing.percent ?? 0,
+  label: existing.label || commissionRuleDefinitions.find(([ruleKey]) => ruleKey === key)?.[1] || key,
 });
 
 const currentFyStart = () => {
@@ -507,18 +527,29 @@ const buildPaymentDraft = (paymentConfig = {}) => {
   const rawPayout = paymentConfig.host_payout || {};
   const platformCharge = {
     ...rawCharges.platform_fee,
-    value: rawCharges.platform_fee?.value ?? paymentConfig.platform_fee_percent ?? 10,
+    enabled: false,
+    value: 0,
     label: rawCharges.platform_fee?.label || paymentConfig.platform_fee_label || 'Platform Fee',
   };
+  const rawOverrides = paymentConfig.platform_fee_overrides || {};
+  const platformValue = 0;
 
   return {
     charges: Object.fromEntries(paymentChargeDefinitions.map(([key]) => [
       key,
       defaultCharge(key, key === 'platform_fee' ? platformCharge : rawCharges[key]),
     ])),
+    platform_fee_overrides: {
+      broker_mapped: defaultPlatformFeeOverride('broker_mapped', rawOverrides.broker_mapped, platformValue),
+      rm_mapped: defaultPlatformFeeOverride('rm_mapped', rawOverrides.rm_mapped, platformValue),
+    },
     host_payout: Object.fromEntries(hostPayoutDefinitions.map(([key]) => [
       key,
       defaultPayoutCharge(key, rawPayout[key]),
+    ])),
+    commission_rules: Object.fromEntries(commissionRuleDefinitions.map(([key]) => [
+      key,
+      defaultCommissionRule(key, paymentConfig.commission_rules?.[key]),
     ])),
   };
 };
@@ -562,6 +593,44 @@ const ConfigChargeRow = ({ title, description, value, typeOptions = chargeTypeOp
   </div>
 );
 
+const PlatformFeeRuleInputs = ({ overrides, onChange }) => (
+  <div className="mt-4 grid gap-3 md:grid-cols-2">
+    {[
+      ['broker_mapped', 'Broker Mapped Property (%)', 'Applies this platform fee percentage to broker-mapped properties only.'],
+      ['rm_mapped', 'RM Mapped Property (%)', 'Applies this platform fee percentage to RM or employee-mapped properties only.'],
+    ].map(([key, title, help]) => {
+      const row = overrides[key] || {};
+      return (
+        <div key={key} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <label className="flex items-center justify-between gap-3 text-xs font-black uppercase tracking-wide text-slate-500">
+            <span>{title}</span>
+            <span className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={Boolean(row.enabled)}
+                onChange={(event) => onChange(key, { enabled: event.target.checked })}
+                className="h-4 w-4 accent-emerald-700"
+              />
+              {row.enabled ? 'Enabled' : 'Disabled'}
+            </span>
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value={row.value ?? 0}
+            onChange={(event) => onChange(key, { value: event.target.value })}
+            className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 font-bold outline-none focus:border-gold"
+            placeholder="Percentage"
+          />
+          <p className="mt-2 text-xs leading-5 text-slate-500">{help}</p>
+        </div>
+      );
+    })}
+  </div>
+);
+
 const PaymentTaxCommission = ({
   paymentConfig,
   taxCommission,
@@ -595,6 +664,20 @@ const PaymentTaxCommission = ({
     }));
   };
 
+  const updatePlatformFeeOverride = (key, patch) => {
+    setDraft((current) => ({
+      ...current,
+      platform_fee_overrides: {
+        ...current.platform_fee_overrides,
+        [key]: {
+          ...current.platform_fee_overrides[key],
+          ...patch,
+          charge_type: 'percentage',
+        },
+      },
+    }));
+  };
+
   const updatePayout = (key, patch) => {
     setDraft((current) => ({
       ...current,
@@ -605,10 +688,26 @@ const PaymentTaxCommission = ({
     }));
   };
 
+  const updateCommissionRule = (key, patch) => {
+    setDraft((current) => ({
+      ...current,
+      commission_rules: {
+        ...current.commission_rules,
+        [key]: {
+          ...current.commission_rules[key],
+          ...patch,
+          charge_type: 'percentage',
+        },
+      },
+    }));
+  };
+
   const validateConfig = () => {
     const rows = [
       ...Object.values(draft.charges),
+      ...Object.values(draft.platform_fee_overrides || {}),
       ...Object.values(draft.host_payout),
+      ...Object.values(draft.commission_rules || {}),
     ];
     for (const row of rows) {
       const value = Number(row.value ?? row.default_value ?? 0);
@@ -626,11 +725,29 @@ const PaymentTaxCommission = ({
       return;
     }
     const platformFee = draft.charges.platform_fee || {};
+    const normalizedCharges = {
+      ...draft.charges,
+      platform_fee: {
+        ...platformFee,
+        enabled: false,
+        charge_type: 'percentage',
+        value: 0,
+        label: platformFee.label || 'Platform Fee',
+      },
+    };
     onSave({
-      platform_fee_percent: platformFee.charge_type === 'percentage' ? Number(platformFee.value || 0) : 0,
+      platform_fee_percent: 0,
       platform_fee_label: platformFee.label || 'Platform Fee',
-      charges: draft.charges,
+      charges: normalizedCharges,
+      platform_fee_overrides: Object.fromEntries(Object.entries(draft.platform_fee_overrides || {}).map(([key, value]) => [
+        key,
+        { ...value, enabled: Boolean(value.enabled), charge_type: 'percentage' },
+      ])),
       host_payout: draft.host_payout,
+      commission_rules: Object.fromEntries(Object.entries(draft.commission_rules || {}).map(([key, value]) => [
+        key,
+        { ...value, enabled: Boolean(value.enabled), charge_type: 'percentage' },
+      ])),
     });
   };
 
@@ -643,9 +760,9 @@ const PaymentTaxCommission = ({
     <div className="space-y-5">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
         {[
-          ['Payment Configuration', `${draft.charges.platform_fee?.value ?? 0}% platform fee`],
+          ['Payment Configuration', 'Mapped platform fee'],
           ['Booking GST Slabs', `${bookingTaxSlabs.filter((slab) => slab.is_active !== false).length} active`],
-          ['Host Payout Configuration', `${draft.host_payout.platform_commission?.value ?? 0}% commission`],
+          ['Commission Configuration', `${Object.values(draft.commission_rules || {}).filter((row) => row.enabled).length} active`],
           ['TDS Configuration', `${tdsConfig?.configurations?.length || 1} role rule(s)`],
           ['Subscription Tax', `${plans.length} plans`],
         ].map(([label, value]) => <Panel key={label} className="p-4"><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-2 break-words text-xl font-black">{value}</p></Panel>)}
@@ -667,14 +784,32 @@ const PaymentTaxCommission = ({
         </div>
         <div className="mt-4 grid gap-4 xl:grid-cols-2">
           {paymentChargeDefinitions.map(([key, title, description]) => (
-            <ConfigChargeRow
-              key={key}
-              title={title}
-              description={description}
-              value={draft.charges[key]}
-              onChange={(patch) => updateCharge(key, patch)}
-              forceEnabled={key === 'platform_fee'}
-            />
+            <div key={key}>
+              {key === 'platform_fee' ? (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-black text-slate-900">{title}</p>
+                      <p className="mt-1 text-xs leading-5 text-slate-500">
+                        Configure separate platform fee percentages for broker-mapped and RM-mapped properties.
+                      </p>
+                    </div>
+                    <span className="text-xs font-black uppercase tracking-wide text-emerald-700">Mapped Rules</span>
+                  </div>
+                  <PlatformFeeRuleInputs
+                    overrides={draft.platform_fee_overrides || {}}
+                    onChange={updatePlatformFeeOverride}
+                  />
+                </div>
+              ) : (
+                <ConfigChargeRow
+                  title={title}
+                  description={description}
+                  value={draft.charges[key]}
+                  onChange={(patch) => updateCharge(key, patch)}
+                />
+              )}
+            </div>
           ))}
         </div>
       </Panel>
@@ -739,6 +874,37 @@ const PaymentTaxCommission = ({
           </div>
         </Panel>
       </div>
+
+      <Panel className="p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
+          <div>
+            <h2 className="font-black">Commission Configuration</h2>
+            <p className="mt-1 text-xs text-slate-500">Configure booking-wise commission percentages for broker, RM/employee and branch manager settlements.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-black uppercase tracking-wide text-emerald-700">Percentage Rules</span>
+            <button
+              disabled={saving}
+              onClick={saveConfig}
+              className="rounded-xl bg-charcoal px-5 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
+            >
+              {saving ? 'Saving...' : 'Save Commission'}
+            </button>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+          {commissionRuleDefinitions.map(([key, title, description]) => (
+            <ConfigChargeRow
+              key={key}
+              title={title}
+              description={description}
+              value={draft.commission_rules[key]}
+              typeOptions={[['percentage', 'Percentage (%)']]}
+              onChange={(patch) => updateCommissionRule(key, patch)}
+            />
+          ))}
+        </div>
+      </Panel>
 
       <TdsConfigurationPanel config={tdsConfig} saving={savingTds} onSave={onSaveTds} />
 
