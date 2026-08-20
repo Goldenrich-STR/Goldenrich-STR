@@ -439,8 +439,10 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                       onListNew: _handleListPropertyTrigger,
                     ),
                     const SizedBox(height: 28),
-                    _PortfolioHero(onListNew: _handleListPropertyTrigger),
-                    const SizedBox(height: 20),
+                    const _PortfolioHero(),
+                    const SizedBox(height: 12),
+                    const _DashboardHeroImage(),
+                    const SizedBox(height: 18),
                     _StatsGrid(
                       items: [
                         _DashboardStatData(
@@ -719,58 +721,77 @@ class _HostDashboardTopBar extends StatelessWidget {
 }
 
 class _PortfolioHero extends StatelessWidget {
-  final VoidCallback onListNew;
-
-  const _PortfolioHero({required this.onListNew});
+  const _PortfolioHero();
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 122,
-      child: Stack(
-        children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Your Portfolio',
-                  style: GoogleFonts.manrope(
-                    fontSize: 36,
-                    height: 1,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF07142F),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                Text(
-                  'Manage your properties and track performance',
-                  style: GoogleFonts.manrope(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.charcoalMuted,
-                  ),
-                ),
-              ],
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Your Portfolio',
+          style: GoogleFonts.manrope(
+            fontSize: 30,
+            height: 1.05,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF07142F),
           ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: IgnorePointer(
-              child: Opacity(
-                opacity: 0.92,
-                child: SizedBox(
-                  width: 176,
-                  height: 92,
-                  child: Image.asset('assets/images/hero_villa.jpg',
-                      fit: BoxFit.cover),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Manage your properties and track performance',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.manrope(
+            fontSize: 13,
+            height: 1.35,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.charcoalMuted,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _DashboardHeroImage extends StatelessWidget {
+  const _DashboardHeroImage();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        height: 92,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset('assets/images/hero_villa.jpg', fit: BoxFit.cover),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    Colors.black.withValues(alpha: 0.30),
+                    Colors.black.withValues(alpha: 0.02),
+                  ],
                 ),
               ),
             ),
-          ),
-        ],
+            Positioned(
+              left: 14,
+              bottom: 12,
+              child: Text(
+                'Grow your hosting business',
+                style: GoogleFonts.manrope(
+                  color: Colors.white,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1092,38 +1113,46 @@ class _FeatureCardsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: _FeatureCard(
-            icon: Icons.calendar_month_rounded,
-            title: 'Property\nCalendar',
-            subtitle: 'Manage availability\nand bookings',
-            tint: AppTheme.primary,
-            onTap: onCalendar,
+    return SizedBox(
+      height: 174,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        children: [
+          SizedBox(
+            width: 148,
+            child: _FeatureCard(
+              icon: Icons.calendar_month_rounded,
+              title: 'Property Calendar',
+              subtitle: 'Manage availability and bookings',
+              tint: AppTheme.primary,
+              onTap: onCalendar,
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _FeatureCard(
-            icon: Icons.account_balance_wallet_rounded,
-            title: 'Payouts\nManager',
-            subtitle: 'Track earnings and\npayment history',
-            tint: Colors.green.shade700,
-            onTap: onPayouts,
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 148,
+            child: _FeatureCard(
+              icon: Icons.account_balance_wallet_rounded,
+              title: 'Payouts Manager',
+              subtitle: 'Track earnings and payment history',
+              tint: Colors.green.shade700,
+              onTap: onPayouts,
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _FeatureCard(
-            icon: Icons.flag_rounded,
-            title: 'Booking\nManager',
-            subtitle: 'View and manage\nall bookings',
-            tint: Colors.blue.shade700,
-            onTap: onBookings,
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 148,
+            child: _FeatureCard(
+              icon: Icons.flag_rounded,
+              title: 'Booking Manager',
+              subtitle: 'View and manage all bookings',
+              tint: Colors.blue.shade700,
+              onTap: onBookings,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -1148,55 +1177,55 @@ class _FeatureCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(22),
-      child: SizedBox(
-        height: 184,
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: tint.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(22),
-            border: Border.all(color: tint.withValues(alpha: 0.24)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CircleAvatar(
-                radius: 22,
-                backgroundColor: tint.withValues(alpha: 0.12),
-                child: Icon(icon, color: tint),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: tint.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: tint.withValues(alpha: 0.24)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: tint.withValues(alpha: 0.12),
+              child: Icon(icon, color: tint, size: 20),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              title,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.manrope(
+                fontSize: 14,
+                height: 1.18,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF07142F),
               ),
-              const Spacer(),
-              Text(
-                title,
-                style: GoogleFonts.manrope(
-                  fontSize: 17,
-                  height: 1.25,
-                  fontWeight: FontWeight.w900,
-                  color: const Color(0xFF07142F),
-                ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              subtitle,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.manrope(
+                fontSize: 10,
+                height: 1.2,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.charcoal,
               ),
-              const SizedBox(height: 8),
-              Text(
-                subtitle,
-                style: GoogleFonts.manrope(
-                  fontSize: 12,
-                  height: 1.35,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.charcoal,
-                ),
+            ),
+            const Spacer(),
+            Align(
+              alignment: Alignment.centerRight,
+              child: CircleAvatar(
+                radius: 15,
+                backgroundColor: Colors.white,
+                child: Icon(Icons.arrow_forward_rounded, color: tint, size: 15),
               ),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerRight,
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: Colors.white,
-                  child:
-                      Icon(Icons.arrow_forward_rounded, color: tint, size: 20),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
@@ -1246,7 +1275,7 @@ class _HostPropertyCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Stack(
@@ -1254,8 +1283,8 @@ class _HostPropertyCard extends StatelessWidget {
               PropertyImage(
                 imageUrl:
                     property.images.isNotEmpty ? property.images.first : null,
-                width: 128,
-                height: 136,
+                width: double.infinity,
+                height: 164,
                 borderRadius: BorderRadius.circular(18),
               ),
               Positioned(
@@ -1280,113 +1309,113 @@ class _HostPropertyCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  property.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
-                    fontSize: 18,
-                    height: 1.15,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF07142F),
+          const SizedBox(height: 14),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                property.title,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.manrope(
+                  fontSize: 18,
+                  height: 1.15,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF07142F),
+                ),
+              ),
+              const SizedBox(height: 8),
+              _MetaLine(
+                icon: Icons.location_on_rounded,
+                text: '${property.city}, ${property.state}',
+              ),
+              const SizedBox(height: 6),
+              _MetaLine(
+                icon: Icons.schedule_rounded,
+                text:
+                    'Listed: ${property.createdAt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(property.createdAt!.toLocal()) : "N/A"}',
+              ),
+              const Divider(height: 22, color: AppTheme.border),
+              Row(
+                children: [
+                  Expanded(
+                    child: _PropertyMetric(
+                      label: 'Area',
+                      value: '${property.areaSqft.toStringAsFixed(0)} sqft',
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                _MetaLine(
-                  icon: Icons.location_on_rounded,
-                  text: '${property.city}, ${property.state}',
-                ),
-                const SizedBox(height: 6),
-                _MetaLine(
-                  icon: Icons.schedule_rounded,
-                  text:
-                      'Listed: ${property.createdAt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(property.createdAt!.toLocal()) : "N/A"}',
-                ),
-                const Divider(height: 22, color: AppTheme.border),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _PropertyMetric(
-                        label: 'Area',
-                        value: '${property.areaSqft.toStringAsFixed(0)} sqft',
+                  Container(width: 1, height: 36, color: AppTheme.border),
+                  Expanded(
+                    child: _PropertyMetric(
+                      label: 'Price',
+                      value:
+                          '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
+                      alignEnd: true,
+                      valueColor: AppTheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: isDraft
+                          ? onEdit
+                          : (isLive
+                              ? () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          const HostCalendarScreen(),
+                                    ),
+                                  );
+                                }
+                              : onCalendarBlocked),
+                      icon: Icon(
+                          isDraft
+                              ? Icons.edit_rounded
+                              : Icons.calendar_month_rounded,
+                          size: 16),
+                      label: Text(isDraft ? 'Edit Draft' : 'Calendar',
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF07142F),
+                        side: const BorderSide(color: AppTheme.border),
+                        minimumSize: const Size(double.infinity, 46),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        textStyle: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w900, fontSize: 12),
                       ),
                     ),
-                    Container(width: 1, height: 36, color: AppTheme.border),
-                    Expanded(
-                      child: _PropertyMetric(
-                        label: 'Price',
-                        value:
-                            '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
-                        alignEnd: true,
-                        valueColor: AppTheme.primary,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: isDraft ? onSubmit : onEdit,
+                      icon: Icon(
+                          isDraft ? Icons.send_rounded : Icons.edit_rounded,
+                          size: 16,
+                          color: Colors.white),
+                      label: Text(isDraft ? 'Submit' : 'Manage Property',
+                          maxLines: 1, overflow: TextOverflow.ellipsis),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF07142F),
+                        foregroundColor: Colors.white,
+                        minimumSize: const Size(double.infinity, 46),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14)),
+                        textStyle: GoogleFonts.manrope(
+                            fontWeight: FontWeight.w900, fontSize: 12),
                       ),
                     ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: isDraft
-                            ? onEdit
-                            : (isLive
-                                ? () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            const HostCalendarScreen(),
-                                      ),
-                                    );
-                                  }
-                                : onCalendarBlocked),
-                        icon: Icon(
-                            isDraft
-                                ? Icons.edit_rounded
-                                : Icons.calendar_month_rounded,
-                            size: 16),
-                        label: Text(isDraft ? 'Edit Draft' : 'Calendar'),
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFF07142F),
-                          side: const BorderSide(color: AppTheme.border),
-                          minimumSize: const Size(double.infinity, 46),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                          textStyle: GoogleFonts.manrope(
-                              fontWeight: FontWeight.w900, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: isDraft ? onSubmit : onEdit,
-                        icon: Icon(
-                            isDraft ? Icons.send_rounded : Icons.edit_rounded,
-                            size: 16,
-                            color: Colors.white),
-                        label: Text(isDraft ? 'Submit' : 'Manage Property'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF07142F),
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 46),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(14)),
-                          textStyle: GoogleFonts.manrope(
-                              fontWeight: FontWeight.w900, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ],
       ),
@@ -1477,35 +1506,42 @@ class _HostTrustStrip extends StatelessWidget {
       (Icons.workspace_premium_outlined, 'Secure\nPayments', 'Safe & Reliable'),
       (Icons.star_border_rounded, 'Grow Your\nBusiness', 'Maximize earnings'),
     ];
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: AppTheme.border),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
+    return SizedBox(
+      height: 74,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
         children: [
-          for (int i = 0; i < items.length; i++) ...[
-            Expanded(
+          for (final item in items) ...[
+            Container(
+              width: 150,
+              margin: const EdgeInsets.only(right: 10),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: AppTheme.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 14,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+              ),
               child: Row(
                 children: [
-                  Icon(items[i].$1, color: AppTheme.primary, size: 26),
+                  Icon(item.$1, color: AppTheme.primary, size: 24),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          items[i].$2,
+                          item.$2.replaceAll('\n', ' '),
                           maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.manrope(
                             fontSize: 11,
                             height: 1.1,
@@ -1515,7 +1551,7 @@ class _HostTrustStrip extends StatelessWidget {
                         ),
                         const SizedBox(height: 3),
                         Text(
-                          items[i].$3,
+                          item.$3,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.manrope(
@@ -1530,8 +1566,6 @@ class _HostTrustStrip extends StatelessWidget {
                 ],
               ),
             ),
-            if (i != items.length - 1)
-              Container(width: 1, height: 38, color: AppTheme.border),
           ],
         ],
       ),
