@@ -9,10 +9,11 @@ import '../../config.dart';
 import '../../services/api_service.dart';
 import '../../services/localization_service.dart';
 import '../../theme.dart';
+import '../../utils/currency_formatter.dart';
 import '../auth/login_screen.dart';
 import '../guest/guest_browse_screen.dart';
-import '../guest/guest_bookings_screen.dart';
 import '../guest/landing_screen.dart';
+import '../guest/guest_bookings_screen.dart';
 import '../guest/property_detail_screen.dart';
 import '../guest/ai_chat_screen.dart';
 import '../host/host_bookings_screen.dart';
@@ -22,6 +23,7 @@ import '../host/host_performance_screen.dart';
 import '../host/host_payouts_screen.dart';
 import 'app_logo.dart';
 import 'notifications_screen.dart';
+import 'property_image.dart';
 import 'public_info_screens.dart';
 import 'support_tickets_screen.dart';
 import '../broker/broker_dashboard_screen.dart';
@@ -111,13 +113,13 @@ class _AppShellState extends State<AppShell> {
         _ModernProfileTab(user: null, auth: auth),
       ];
       navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Homes'),
+        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+            icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
         BottomNavigationBarItem(
             icon: Icon(Icons.luggage_outlined), label: 'Trips'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+            icon: Icon(Icons.forum_outlined), label: 'Messages'),
         BottomNavigationBarItem(
             icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
       ];
@@ -133,15 +135,15 @@ class _AppShellState extends State<AppShell> {
         ];
         navItems = [
           const BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled), label: 'Homes'),
+              icon: Icon(Icons.home_filled), label: 'Home'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
           const BottomNavigationBarItem(
               icon: Icon(Icons.luggage_outlined), label: 'Trips'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
-          BottomNavigationBarItem(
-              icon: const Icon(Icons.person_outline_rounded), label: 'Profile'),
+              icon: Icon(Icons.forum_outlined), label: 'Messages'),
+          const BottomNavigationBarItem(
+              icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
         ];
       } else if (role == 'host') {
         screens = [
@@ -152,14 +154,13 @@ class _AppShellState extends State<AppShell> {
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled), label: 'Homes'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
           BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'Messages'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -172,37 +173,40 @@ class _AppShellState extends State<AppShell> {
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled), label: 'Homes'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
           BottomNavigationBarItem(
               icon: Icon(Icons.dashboard_outlined), label: 'Broker'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'Messages'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
       } else if (role == 'employee') {
         final String? adminRole = user.adminRoleKey;
-        final bool isRm = adminRole == 'rm' || adminRole == 'relationship_manager';
+        final bool isRm =
+            adminRole == 'rm' || adminRole == 'relationship_manager';
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
-          isRm ? const BrokerDashboardScreen() : const EmployeeDashboardScreen(),
+          isRm
+              ? const BrokerDashboardScreen()
+              : const EmployeeDashboardScreen(),
           const AIChatScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = [
           const BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled), label: 'Homes'),
+              icon: Icon(Icons.home_filled), label: 'Home'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
           BottomNavigationBarItem(
-              icon: Icon(isRm ? Icons.dashboard_outlined : Icons.rate_review_outlined),
+              icon: Icon(
+                  isRm ? Icons.dashboard_outlined : Icons.rate_review_outlined),
               label: isRm ? 'Broker' : 'Reviews'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'Messages'),
           const BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -215,14 +219,13 @@ class _AppShellState extends State<AppShell> {
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
+          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled), label: 'Homes'),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlists'),
+              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
           BottomNavigationBarItem(
               icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'AI Chat'),
+              icon: Icon(Icons.forum_outlined), label: 'Messages'),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline), label: 'Profile'),
         ];
@@ -246,7 +249,10 @@ class _AppShellState extends State<AppShell> {
     }
 
     final bool isHost = user?.role == 'host';
-    final bool isBroker = user?.role == 'broker' || (user?.role == 'employee' && (user?.adminRoleKey == 'rm' || user?.adminRoleKey == 'relationship_manager'));
+    final bool isBroker = user?.role == 'broker' ||
+        (user?.role == 'employee' &&
+            (user?.adminRoleKey == 'rm' ||
+                user?.adminRoleKey == 'relationship_manager'));
 
     return Scaffold(
       key: _scaffoldKey,
@@ -1222,226 +1228,505 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
   Widget build(BuildContext context) {
     final localeProvider = Provider.of<LocaleProvider>(context);
     final user = widget.user;
+    final media = MediaQuery.of(context);
+    final unreadCount = context.watch<NotificationProvider>().unreadCount;
+    final shortestSide = media.size.shortestSide;
+    final isCompact = media.size.height < 700 || shortestSide < 360;
+    final horizontalPadding = shortestSide < 360 ? 16.0 : 20.0;
+    final topPadding = isCompact ? 10.0 : 16.0;
+    final bottomPadding = media.padding.bottom + (isCompact ? 18.0 : 30.0);
 
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(
-        title: Text(
-          'Profile',
-          style: GoogleFonts.manrope(
-            fontSize: 24,
-            fontWeight: FontWeight.w800,
-            color: AppTheme.charcoal,
-          ),
-        ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(22, 8, 22, 30),
-        children: [
-          if (user == null) ...[
-            Text(
-              'Log in and start planning your next trip.',
-              style: GoogleFonts.manrope(
-                fontSize: 15,
-                color: AppTheme.charcoalMuted,
-                height: 1.5,
+      body: SafeArea(
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(
+                horizontalPadding,
+                topPadding,
+                horizontalPadding,
+                bottomPadding,
               ),
-            ),
-            const SizedBox(height: 22),
-            SizedBox(
-              height: 56,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const LoginScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.secondary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              children: [
+                _ProfileHeader(
+                  compact: isCompact,
+                  unreadCount: user == null ? 0 : unreadCount,
+                  onBack: () {
+                    if (Navigator.canPop(context)) {
+                      Navigator.pop(context);
+                    } else {
+                      final state =
+                          context.findAncestorStateOfType<_AppShellState>();
+                      state?._onItemTapped(0);
+                    }
+                  },
+                  onNotifications: () {
+                    if (user == null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                      return;
+                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen()),
+                    );
+                  },
                 ),
-                child: Text(
-                  'Log in or sign up',
-                  style: GoogleFonts.manrope(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+                SizedBox(height: isCompact ? 12 : 18),
+                if (user == null)
+                  _LoggedOutProfileCard(compact: isCompact)
+                else
+                  _ProfileHeroCard(user: user, compact: isCompact),
+                SizedBox(height: isCompact ? 16 : 22),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isCompact ? 10 : 14,
+                    vertical: isCompact ? 6 : 8,
+                  ),
+                  decoration: BoxDecoration(
                     color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      _ProfileOptionTile(
+                        icon: Icons.settings_outlined,
+                        label: 'Account Settings',
+                        subtitle: 'Manage your account preferences',
+                        iconBackground: const Color(0xFFF7EBD8),
+                        iconColor: AppTheme.primary,
+                        compact: isCompact,
+                        onTap: () {
+                          if (user == null) {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const LoginScreen()),
+                            );
+                            return;
+                          }
+                          _showAccountSettings(user, localeProvider);
+                        },
+                      ),
+                      _ProfileOptionTile(
+                        icon: Icons.help_outline_rounded,
+                        label: 'Get Help',
+                        subtitle: 'FAQs and customer support',
+                        iconBackground: const Color(0xFFF0ECFF),
+                        iconColor: const Color(0xFF11131A),
+                        compact: isCompact,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SupportCenterScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                      _ProfileOptionTile(
+                        icon: Icons.info_outline_rounded,
+                        label: 'About X-Space360',
+                        subtitle: 'Learn more about us',
+                        iconBackground: const Color(0xFFEFF5FF),
+                        iconColor: const Color(0xFF11131A),
+                        compact: isCompact,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => const AboutUsScreen()),
+                          );
+                        },
+                      ),
+                      _ProfileOptionTile(
+                        icon: Icons.policy_outlined,
+                        label: 'Legal',
+                        subtitle: 'Terms, conditions and policies',
+                        iconBackground: const Color(0xFFEAF8EA),
+                        iconColor: const Color(0xFF0F6A2D),
+                        compact: isCompact,
+                        showDivider: false,
+                        onTap: _showLegalSheet,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ),
-          ] else ...[
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: AppTheme.stone,
-                borderRadius: BorderRadius.circular(22),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 58,
-                    height: 58,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
+                if (user != null) ...[
+                  const SizedBox(height: 24),
+                  if (_canSelfDelete(user)) ...[
+                    SizedBox(
+                      height: 56,
+                      child: OutlinedButton.icon(
+                        onPressed:
+                            _isDeactivating ? null : _confirmDeleteAccount,
+                        icon: _isDeactivating
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.red.shade700,
+                                ),
+                              )
+                            : const Icon(Icons.delete_outline_rounded,
+                                size: 24),
+                        label: Text(
+                            _isDeactivating ? 'Deleting...' : 'Delete Account'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.red.shade700,
+                          side: BorderSide(
+                              color: Colors.red.shade200, width: 1.4),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          textStyle: GoogleFonts.manrope(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
                     ),
-                    child: const Icon(
-                      Icons.person_outline_rounded,
-                      color: AppTheme.primary,
-                      size: 28,
+                    const SizedBox(height: 12),
+                  ],
+                  SizedBox(
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await widget.auth.logout();
+                        if (!context.mounted) return;
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      },
+                      icon: const Icon(Icons.logout_rounded, size: 24),
+                      label: Text(localeProvider.translate('sign_out')),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF1F2026),
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                        textStyle: GoogleFonts.manrope(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.fullName,
-                          style: GoogleFonts.manrope(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.charcoal,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          user.email,
-                          style: GoogleFonts.manrope(
-                            fontSize: 13,
-                            color: AppTheme.charcoalMuted,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Role: ${user.role.toUpperCase()}',
-                          style: GoogleFonts.manrope(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.primary,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(height: 18),
+                  Center(
+                    child: Text(
+                      'Version 1.0.0',
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.charcoalMuted,
+                      ),
                     ),
                   ),
                 ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ProfileHeader extends StatelessWidget {
+  final VoidCallback onBack;
+  final VoidCallback onNotifications;
+  final int unreadCount;
+  final bool compact;
+
+  const _ProfileHeader({
+    required this.onBack,
+    required this.onNotifications,
+    required this.unreadCount,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onBack,
+          icon: const Icon(Icons.arrow_back_rounded),
+          color: const Color(0xFF11131A),
+          iconSize: compact ? 23 : 26,
+          visualDensity: VisualDensity.compact,
+          padding: EdgeInsets.zero,
+          constraints: BoxConstraints.tightFor(
+            width: compact ? 36 : 42,
+            height: compact ? 36 : 42,
+          ),
+        ),
+        SizedBox(width: compact ? 6 : 8),
+        Expanded(
+          child: Text(
+            'Profile',
+            style: GoogleFonts.manrope(
+              fontSize: compact ? 24 : 30,
+              height: 1,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF11131A),
+            ),
+          ),
+        ),
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            IconButton(
+              onPressed: onNotifications,
+              icon: const Icon(Icons.notifications_none_rounded),
+              color: const Color(0xFF11131A),
+              iconSize: compact ? 23 : 27,
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: BoxConstraints.tightFor(
+                width: compact ? 36 : 42,
+                height: compact ? 36 : 42,
               ),
             ),
+            if (unreadCount > 0)
+              Positioned(
+                top: 10,
+                right: 11,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                ),
+              ),
           ],
-          const SizedBox(height: 28),
-          _ProfileOptionTile(
-            icon: Icons.settings_outlined,
-            label: 'Account settings',
-            onTap: () {
-              if (user == null) {
+        ),
+      ],
+    );
+  }
+}
+
+class _LoggedOutProfileCard extends StatelessWidget {
+  final bool compact;
+
+  const _LoggedOutProfileCard({this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.all(compact ? 14 : 18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6EFE5),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Log in and start planning your next trip.',
+            style: GoogleFonts.manrope(
+              fontSize: compact ? 12 : 13,
+              color: AppTheme.charcoalMuted,
+              height: 1.5,
+            ),
+          ),
+          SizedBox(height: compact ? 10 : 14),
+          SizedBox(
+            height: compact ? 44 : 48,
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
-                return;
-              }
-              _showAccountSettings(user, localeProvider);
-            },
-          ),
-          _ProfileOptionTile(
-            icon: Icons.help_outline_rounded,
-            label: 'Get help',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const SupportCenterScreen(),
-                ),
-              );
-            },
-          ),
-          _ProfileOptionTile(
-            icon: Icons.info_outline_rounded,
-            label: 'About X-Space360',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const AboutUsScreen()),
-              );
-            },
-          ),
-          _ProfileOptionTile(
-            icon: Icons.article_outlined,
-            label: 'Legal',
-            onTap: _showLegalSheet,
-          ),
-          if (user != null) ...[
-            const SizedBox(height: 24),
-            if (_canSelfDelete(user)) ...[
-              SizedBox(
-                height: 54,
-                child: OutlinedButton.icon(
-                  onPressed: _isDeactivating ? null : _confirmDeleteAccount,
-                  icon: _isDeactivating
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.red.shade700,
-                          ),
-                        )
-                      : const Icon(Icons.person_off_outlined),
-                  label: Text(
-                    _isDeactivating ? 'Deleting...' : 'Delete Account',
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red.shade700,
-                    side: BorderSide(color: Colors.red.shade200),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    textStyle: GoogleFonts.manrope(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
                 ),
               ),
-              const SizedBox(height: 12),
-            ],
-            SizedBox(
-              height: 54,
-              child: ElevatedButton(
-                onPressed: () async {
-                  await widget.auth.logout();
-                  if (!context.mounted) return;
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const LoginScreen(),
-                    ),
-                    (route) => false,
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.secondary,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(18),
-                  ),
-                ),
-                child: Text(
-                  localeProvider.translate('sign_out'),
-                  style: GoogleFonts.manrope(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
+              child: Text(
+                'Log in or sign up',
+                style: GoogleFonts.manrope(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileHeroCard extends StatelessWidget {
+  final dynamic user;
+  final bool compact;
+
+  const _ProfileHeroCard({required this.user, this.compact = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: compact ? 112 : 124,
+      padding: EdgeInsets.symmetric(
+        horizontal: compact ? 14 : 18,
+        vertical: compact ? 14 : 18,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF6EFE5),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned(
+            right: -30,
+            top: -42,
+            child: Container(
+              width: 135,
+              height: 135,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: 0.16),
+              ),
+            ),
+          ),
+          Row(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Container(
+                    width: compact ? 68 : 78,
+                    height: compact ? 68 : 78,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 20,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Icon(
+                      Icons.person_outline_rounded,
+                      color: AppTheme.primary,
+                      size: compact ? 33 : 38,
+                    ),
+                  ),
+                  Positioned(
+                    right: -2,
+                    bottom: 2,
+                    child: Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.10),
+                            blurRadius: 12,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt_outlined,
+                        color: AppTheme.charcoal,
+                        size: 17,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(width: compact ? 14 : 18),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user.fullName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                        fontSize: compact ? 18 : 20,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF11131A),
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      user.email,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        color: AppTheme.charcoalMuted,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 14,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.58),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        'Role: ${user.role.toUpperCase()}',
+                        style: GoogleFonts.manrope(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -1465,14 +1750,22 @@ class _LegalPolicyItem {
 class _ProfileOptionTile extends StatelessWidget {
   final IconData icon;
   final String label;
+  final String? subtitle;
   final VoidCallback onTap;
   final bool compact;
+  final Color iconBackground;
+  final Color iconColor;
+  final bool showDivider;
 
   const _ProfileOptionTile({
     required this.icon,
     required this.label,
     required this.onTap,
+    this.subtitle,
     this.compact = false,
+    this.iconBackground = Colors.transparent,
+    this.iconColor = AppTheme.charcoal,
+    this.showDivider = true,
   });
 
   @override
@@ -1483,31 +1776,59 @@ class _ProfileOptionTile extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(
           horizontal: compact ? 0 : 2,
-          vertical: compact ? 8 : 15,
+          vertical: compact ? 7 : 12,
         ),
         decoration: BoxDecoration(
           border: Border(
-            bottom: BorderSide(color: Colors.grey.shade200),
+            bottom: BorderSide(
+              color: showDivider ? Colors.grey.shade200 : Colors.transparent,
+            ),
           ),
         ),
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.charcoal, size: 24),
-            const SizedBox(width: 18),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: iconBackground,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: iconColor, size: 23),
+            ),
+            const SizedBox(width: 14),
             Expanded(
-              child: Text(
-                label,
-                style: GoogleFonts.manrope(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.charcoal,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: GoogleFonts.manrope(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF11131A),
+                    ),
+                  ),
+                  if (subtitle != null) ...[
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.charcoalMuted,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
             const Icon(
               Icons.chevron_right_rounded,
               color: AppTheme.charcoalMuted,
-              size: 24,
+              size: 22,
             ),
           ],
         ),
@@ -1862,23 +2183,13 @@ class _WishlistsTab extends StatelessWidget {
                       children: [
                         Stack(
                           children: [
-                            ClipRRect(
+                            PropertyImage(
+                              imageUrl: prop.images.isNotEmpty
+                                  ? prop.images[0]
+                                  : null,
+                              height: 200,
+                              width: double.infinity,
                               borderRadius: BorderRadius.circular(16),
-                              child: Image.network(
-                                prop.images.isNotEmpty
-                                    ? prop.images[0]
-                                    : 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85',
-                                height: 200,
-                                width: double.infinity,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, _, __) => Container(
-                                  height: 200,
-                                  width: double.infinity,
-                                  color: AppTheme.stone,
-                                  child: const Icon(Icons.home,
-                                      size: 40, color: AppTheme.secondary),
-                                ),
-                              ),
                             ),
                             Positioned(
                               top: 12,
@@ -1947,7 +2258,7 @@ class _WishlistsTab extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '₹${prop.pricePerNight.toStringAsFixed(0)}${prop.pricingUnitSuffix}',
+                          '${CurrencyFormatter.format(prop.customerDisplayPrice)}${prop.pricingUnitSuffix}',
                           style: GoogleFonts.manrope(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,

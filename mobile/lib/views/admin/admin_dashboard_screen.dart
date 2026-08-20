@@ -636,8 +636,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                     'description':
                         'Book within 7 days and save up to \$100 on your next stay. Terms apply.',
                     'button_text': 'Log in to claim offer',
-                    'image_url':
-                        'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=600',
+                    'image_url': '',
                   };
                   try {
                     await ApiService().dio.post('/cms/admin/content', data: {
@@ -1433,8 +1432,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         'role': '',
                         'rating': 5,
                         'comment': '',
-                        'avatar_url':
-                            'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150',
+                        'avatar_url': '',
                       });
                     });
                   },
@@ -1620,8 +1618,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen>
                         'id': 'p${DateTime.now().millisecondsSinceEpoch}',
                         'title': '',
                         'excerpt': '',
-                        'image_url':
-                            'https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600',
+                        'image_url': '',
                         'author': 'STR Insights Desk',
                         'date': 'June 13, 2026',
                         'read_time': '5 min read',

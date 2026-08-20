@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../models/property_model.dart';
 import '../../providers/property_provider.dart';
 import '../../theme.dart';
+import '../shared/property_image.dart';
 import 'host_calendar_screen.dart';
 import 'host_list_property_screen.dart';
 
@@ -113,13 +114,10 @@ class _PropertyCard extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
-                child: property.images.isNotEmpty
-                    ? Image.network(
-                        property.images.first,
-                        fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) => const _ImageFallback(),
-                      )
-                    : const _ImageFallback(),
+                child: PropertyImage(
+                  imageUrl:
+                      property.images.isNotEmpty ? property.images.first : null,
+                ),
               ),
             ),
             const SizedBox(height: 12),
@@ -279,20 +277,6 @@ class _SubscriptionRow extends StatelessWidget {
                   color: AppTheme.charcoal)),
         ],
       ),
-    );
-  }
-}
-
-class _ImageFallback extends StatelessWidget {
-  const _ImageFallback();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppTheme.stone,
-      alignment: Alignment.center,
-      child: const Icon(Icons.home_work_outlined,
-          color: AppTheme.charcoalMuted, size: 42),
     );
   }
 }

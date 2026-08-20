@@ -1,97 +1,147 @@
 import 'package:flutter/foundation.dart';
-import 'dart:io' show Platform;
+
+enum AppEnvironment {
+  dev,
+  uat,
+  production;
+
+  static AppEnvironment fromValue(String value) {
+    switch (value.trim().toLowerCase()) {
+      case 'dev':
+      case 'development':
+        return AppEnvironment.dev;
+      case 'uat':
+        return AppEnvironment.uat;
+      case 'prod':
+      case 'production':
+        return AppEnvironment.production;
+      default:
+        throw StateError('Unknown APP_ENV value.');
+    }
+  }
+}
 
 class AppConfig {
   static const String websiteUrl = 'https://x-space360.in';
   static const String publicUrl = 'https://www.x-space360.in';
-  static const String prodBaseUrl = 'https://api.x-space360.in';
-  static const String uploadBaseUrl = '$prodBaseUrl/api/uploads/';
+  static const String productionApiBaseUrl = 'https://api.x-space360.in';
+  static const String currencyCode = 'INR';
+  static const String _definedAppEnv =
+      String.fromEnvironment('APP_ENV', defaultValue: 'production');
+  static const String _definedApiBaseUrl =
+      String.fromEnvironment('API_BASE_URL');
+  static const String _definedWebBaseUrl =
+      String.fromEnvironment('WEB_BASE_URL');
+  static const String _definedPaymentMode =
+      String.fromEnvironment('PAYMENT_MODE', defaultValue: 'live');
+  static const bool mockMode =
+      bool.fromEnvironment('MOCK_MODE', defaultValue: false);
+  static const bool demoMode =
+      bool.fromEnvironment('DEMO_MODE', defaultValue: false);
+  static const bool debugFeatures =
+      bool.fromEnvironment('DEBUG_FEATURES', defaultValue: false);
+  static const String mapTileUrl = String.fromEnvironment(
+    'MAP_TILE_URL',
+    defaultValue:
+        'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  );
+  static const String mapAttribution = String.fromEnvironment(
+    'MAP_ATTRIBUTION',
+    defaultValue: '© OpenStreetMap © CARTO',
+  );
+  static const String mapUserAgent = String.fromEnvironment(
+    'MAP_USER_AGENT',
+    defaultValue: 'X-Space360 Mobile',
+  );
+  static const int nearbyDefaultRadiusMeters = int.fromEnvironment(
+    'NEARBY_DEFAULT_RADIUS_METERS',
+    defaultValue: 5000,
+  );
 
-  static String get webBaseUrl {
-    if (kReleaseMode) {
-      return publicUrl;
+  static AppEnvironment get environment =>
+      AppEnvironment.fromValue(_definedAppEnv);
+
+  static bool get isProduction => environment == AppEnvironment.production;
+
+  static String get environmentLabel {
+    switch (environment) {
+      case AppEnvironment.dev:
+        return 'DEV';
+      case AppEnvironment.uat:
+        return 'UAT';
+      case AppEnvironment.production:
+        return 'PRODUCTION';
     }
-    if (kIsWeb) {
-      return 'http://localhost:3000';
-    }
-    try {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:3000';
-      }
-    } catch (_) {}
-    return 'http://localhost:3000';
   }
 
-  /// Base API URL.
-  /// Automatically resolved based on platform:
-  /// - 'http://10.0.2.2:8001' for Android Emulator.
-  /// - 'http://localhost:8001' for Windows, Web, and iOS.
-  static String get devBaseUrl {
-    if (kReleaseMode) {
-      return prodBaseUrl;
-    }
-    if (kIsWeb) {
-      return 'http://localhost:8001';
-    }
-    try {
-      if (Platform.isAndroid) {
-        return 'http://10.0.2.2:8001';
+  static String get webBaseUrl =>
+      _definedWebBaseUrl.isNotEmpty ? _definedWebBaseUrl : publicUrl;
+
+  static String get activeBaseUrl {
+    final url = _definedApiBaseUrl.trim().replaceAll(RegExp(r'/$'), '');
+    if (isProduction) {
+      if (url.isNotEmpty && url != productionApiBaseUrl) {
+        throw StateError('Production API must be $productionApiBaseUrl.');
       }
-    } catch (_) {}
-    return 'http://localhost:8001';
+      return productionApiBaseUrl;
+    }
+    if (url.isEmpty) {
+      throw StateError('API_BASE_URL is required for non-production builds.');
+    }
+    return url;
   }
 
-  /// Whether to use production backend configuration.
-  /// Production release builds must use https://api.x-space360.in only.
-  static const bool isProduction = true;
+  static String get uploadBaseUrl => '$activeBaseUrl/api/uploads/';
 
-  /// Default currency symbol for pricing views.
-  static const String currencySymbol = '₹';
+  static String get paymentMode => _definedPaymentMode;
 
-  /// Default support context email.
-  static const String supportEmail = 'support@goldenrichstr.com';
+  static void validateOrThrow() {
+    final uri = Uri.parse(activeBaseUrl);
+    if (!uri.hasScheme || uri.host.isEmpty) {
+      throw StateError('API_BASE_URL must be an absolute URL.');
+    }
+    if (isProduction) {
+      if (activeBaseUrl != productionApiBaseUrl) {
+        throw StateError('Unsafe production API configuration.');
+      }
+      if (uri.scheme != 'https' || uri.host != 'api.x-space360.in') {
+        throw StateError('Production API must use HTTPS api.x-space360.in.');
+      }
+      if (mockMode || demoMode || debugFeatures || paymentMode != 'live') {
+        throw StateError('Production build contains unsafe feature flags.');
+      }
+    }
+  }
 
-  /// Returns active base URL based on config state.
-  static String get activeBaseUrl => isProduction ? prodBaseUrl : devBaseUrl;
-
-  /// Resolves an image path/URL to an absolute URL suitable for the current platform.
   static String resolveImageUrl(String? path) {
     if (path == null || path.isEmpty) {
-      return 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?crop=entropy&cs=srgb&fm=jpg&ixlib=rb-4.1.0&q=85';
+      return '';
     }
 
     if (path.startsWith('http://') || path.startsWith('https://')) {
-      try {
-        final uri = Uri.parse(path);
-        if (uri.host == 'localhost' ||
-            uri.host == '127.0.0.1' ||
-            uri.host == '0.0.0.0') {
-          final activeUri = Uri.parse(activeBaseUrl);
-          final newUri = uri.replace(
-            host: activeUri.host,
-            port: activeUri.port == 80 || activeUri.port == 443
-                ? null
-                : activeUri.port,
-            scheme: activeUri.scheme,
-          );
-          return newUri.toString();
-        }
-      } catch (_) {}
       return path;
     }
 
-    final baseUrl = activeBaseUrl;
     var cleanPath = path;
     if (cleanPath.startsWith('/')) {
       cleanPath = cleanPath.substring(1);
     }
 
+    final baseUrl = activeBaseUrl;
     if (cleanPath.startsWith('api/')) {
       return '$baseUrl/$cleanPath';
-    } else if (cleanPath.startsWith('uploads/')) {
+    }
+    if (cleanPath.startsWith('uploads/')) {
       return '$baseUrl/api/$cleanPath';
     }
-
     return '$baseUrl/$cleanPath';
   }
+}
+
+@visibleForTesting
+String normalizeApiPathForTest(String path) {
+  if (path.startsWith('/') && !path.startsWith('/api/')) {
+    return '/api$path';
+  }
+  return path;
 }

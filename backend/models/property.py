@@ -35,6 +35,10 @@ class PropertyStatus(str, Enum):
     REJECTED = "rejected"
     BLOCKED = "blocked"
 
+class BookingMode(str, Enum):
+    INSTANT_BOOK = "INSTANT_BOOK"
+    HOST_APPROVAL = "HOST_APPROVAL"
+
 class BHKType(str, Enum):
     STUDIO = "studio"
     ONE_BHK = "1bhk"
@@ -117,7 +121,8 @@ class Property(BaseModel):
     house_rules: Optional[str] = None
     pet_friendly: bool = False
     smoking_allowed: bool = False
-    instant_booking: bool = False
+    instant_booking: bool = True
+    booking_mode: BookingMode = BookingMode.INSTANT_BOOK
     
     # Cook Option
     has_cook: bool = False
@@ -193,7 +198,8 @@ class PropertyCreate(BaseModel):
     house_rules: Optional[str] = None
     pet_friendly: bool = False
     smoking_allowed: bool = False
-    instant_booking: bool = False
+    instant_booking: bool = True
+    booking_mode: Optional[BookingMode] = None
     has_cook: bool = False
     cook_price: Optional[float] = None
     has_self_cook: bool = False
@@ -240,6 +246,7 @@ class PropertyUpdate(BaseModel):
     pet_friendly: Optional[bool] = None
     smoking_allowed: Optional[bool] = None
     instant_booking: Optional[bool] = None
+    booking_mode: Optional[BookingMode] = None
     has_cook: Optional[bool] = None
     cook_price: Optional[float] = None
     has_self_cook: Optional[bool] = None

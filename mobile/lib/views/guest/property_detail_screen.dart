@@ -1,22 +1,24 @@
+import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
-import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../config.dart';
 import '../../providers/property_provider.dart';
-import '../../providers/booking_provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../models/booking_model.dart';
 import '../../models/property_model.dart';
 import '../../theme.dart';
+import '../../utils/currency_formatter.dart';
+import '../../utils/wishlist_action.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../auth/login_screen.dart';
+import '../shared/property_image.dart';
+import 'booking_flow_screen.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final String propertyId;
@@ -37,10 +39,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   int _currentImageIndex = 0;
   bool _isDescriptionExpanded = false;
   final PageController _pageController = PageController();
-  late final Razorpay _razorpay;
-  BookingModel? _pendingPaymentBooking;
-  bool _isOpeningCheckout = false;
-
+  Timer? _imageAutoSlideTimer;
   // New State variables for availability calendar, reviews, and guest count
   int _guestCount = 1;
   DateTime _calendarMonth = DateTime.now();
@@ -72,11 +71,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   String _propertyShareText(PropertyModel prop) {
-    final price = NumberFormat.currency(
-      locale: 'en_IN',
-      symbol: 'Rs ',
-      decimalDigits: 0,
-    ).format(prop.pricePerNight);
+    final price = CurrencyFormatter.format(prop.customerDisplayPrice);
     return 'Check out ${prop.title} in ${prop.city} on X-Space360. Starting from $price/${prop.pricingUnitLabel}.\n${_propertyShareUrl(prop)}';
   }
 
@@ -189,10 +184,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final propertyProvider =
           Provider.of<PropertyProvider>(context, listen: false);
@@ -200,6 +191,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       final prop = propertyProvider.currentProperty;
       if (prop != null) {
         await _saveRecentlyVisitedProperty(prop);
+        _startImageAutoSlide(prop.images.length);
       }
       if (prop != null && prop.category.toLowerCase() == 'event_venue') {
         setState(() {
@@ -261,10 +253,36 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
 
   @override
   void dispose() {
-    _razorpay.clear();
+    _imageAutoSlideTimer?.cancel();
     _couponController.dispose();
     _pageController.dispose();
     super.dispose();
+  }
+
+  void _startImageAutoSlide(int imageCount) {
+    _imageAutoSlideTimer?.cancel();
+    if (imageCount <= 1) return;
+    _imageAutoSlideTimer = Timer.periodic(const Duration(seconds: 4), (_) {
+      if (!mounted || !_pageController.hasClients) return;
+      final nextIndex = (_currentImageIndex + 1) % imageCount;
+      _pageController.animateToPage(
+        nextIndex,
+        duration: const Duration(milliseconds: 450),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
+
+  void _goToImage(int index, int imageCount) {
+    if (imageCount <= 1 || !_pageController.hasClients) return;
+    final nextIndex = (index + imageCount) % imageCount;
+    _imageAutoSlideTimer?.cancel();
+    _pageController.animateToPage(
+      nextIndex,
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOut,
+    );
+    _startImageAutoSlide(imageCount);
   }
 
   Future<void> _selectCheckIn(BuildContext context) async {
@@ -337,7 +355,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     if (!auth.isAuthenticated) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please sign in to book this property.'),
+          content: Text('Please sign in to reserve this property.'),
           backgroundColor: AppTheme.primary,
         ),
       );
@@ -347,46 +365,33 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           builder: (context) => const LoginScreen(popOnSuccess: true),
         ),
       );
-      if (loggedIn == true && context.mounted) {
-        _handleBooking(context, pricePerNight);
-      }
-      return;
+      if (loggedIn != true || !context.mounted) return;
     }
 
-    final userRole = auth.currentUser?.role.toLowerCase().trim();
+    final latestAuth = Provider.of<AuthProvider>(context, listen: false);
+    final userRole = latestAuth.currentUser?.role.toLowerCase().trim();
     if (userRole != 'guest') {
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             'Guest Booking Only',
             style: GoogleFonts.manrope(
-              fontWeight: FontWeight.w800,
-              color: AppTheme.charcoal,
-            ),
+                fontWeight: FontWeight.w800, color: AppTheme.charcoal),
           ),
           content: Text(
-            'Property booking is available only for guest accounts. '
-            'Your current role is ${auth.currentUser?.role ?? 'user'}. '
-            'Please sign in with a guest account to continue booking.',
-            style: GoogleFonts.manrope(
-              color: AppTheme.charcoalMuted,
-              height: 1.5,
-            ),
+            'Property booking is available only for guest accounts. Please sign in with a guest account to continue booking.',
+            style:
+                GoogleFonts.manrope(color: AppTheme.charcoalMuted, height: 1.5),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: Text(
-                'OK',
-                style: GoogleFonts.manrope(
-                  color: AppTheme.primary,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              child: Text('OK',
+                  style: GoogleFonts.manrope(
+                      color: AppTheme.primary, fontWeight: FontWeight.w800)),
             ),
           ],
         ),
@@ -394,313 +399,13 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       return;
     }
 
-    final propertyProvider =
-        Provider.of<PropertyProvider>(context, listen: false);
-    final prop = propertyProvider.currentProperty;
-    final isEvent = prop?.category.toLowerCase() == 'event_venue';
-
-    if (_checkInDate == null || _checkOutDate == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(isEvent
-              ? 'Please select event date'
-              : 'Please select check-in and check-out dates'),
-          backgroundColor: AppTheme.primary,
-        ),
-      );
-      return;
-    }
-
-    final bookingProvider =
-        Provider.of<BookingProvider>(context, listen: false);
-    final dateFormat = DateFormat('yyyy-MM-dd');
-
-    final Map<String, dynamic> bookingData = {
-      'property_id': widget.propertyId,
-      'check_in_date': dateFormat.format(_checkInDate!),
-      'check_out_date': dateFormat.format(_checkOutDate!),
-      'number_of_guests': _guestCount,
-      'payment_type': isEvent ? _paymentType : 'full',
-    };
-
-    if (isEvent) {
-      bookingData['selected_slot'] = _selectedSlot;
-      bookingData['food_preference'] = _foodPreference;
-    }
-
-    final booking = await bookingProvider.createBooking(bookingData);
-
-    if (booking != null && context.mounted) {
-      final double displayPayable = (booking.paymentType == 'advance' &&
-              (booking.advanceAmount ?? 0.0) > 0.0)
-          ? booking.advanceAmount!
-          : booking.totalAmount;
-      _showPaymentSheet(context, booking, displayPayable);
-    } else if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to create booking. Property might be blocked.'),
-          backgroundColor: AppTheme.primary,
-        ),
-      );
-    }
-  }
-
-  void _showPaymentSheet(
-      BuildContext context, BookingModel booking, double totalAmount) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            bottom: MediaQuery.of(context).viewInsets.bottom,
-            top: 24,
-            left: 24,
-            right: 24,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.border,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Text(
-                'Confirm & Pay',
-                style: GoogleFonts.manrope(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.stone,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Total Amount Payable',
-                      style: GoogleFonts.manrope(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.charcoalLight,
-                      ),
-                    ),
-                    Text(
-                      '${AppConfig.currencySymbol}${NumberFormat('#,##,###').format(totalAmount)}',
-                      style: GoogleFonts.manrope(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.primary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _couponController,
-                      style: GoogleFonts.manrope(fontSize: 14),
-                      decoration: InputDecoration(
-                        hintText: 'Enter Coupon Code',
-                        hintStyle:
-                            GoogleFonts.manrope(color: AppTheme.charcoalMuted),
-                        filled: true,
-                        fillColor: AppTheme.stone,
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton(
-                    onPressed: () async {
-                      final bookingProvider =
-                          Provider.of<BookingProvider>(context, listen: false);
-                      final success = await bookingProvider.applyCoupon(
-                          booking.bookingId, _couponController.text.trim());
-                      if (success && context.mounted) {
-                        Navigator.pop(context);
-                        final updatedBooking = bookingProvider.currentBooking!;
-                        final updatedPayable =
-                            (updatedBooking.paymentType == 'advance' &&
-                                    (updatedBooking.advanceAmount ?? 0.0) > 0.0)
-                                ? updatedBooking.advanceAmount!
-                                : updatedBooking.totalAmount;
-                        _showPaymentSheet(context, updatedBooking, updatedPayable);
-                      }
-                    },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.secondary,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 20, vertical: 12),
-                    ),
-                    child: const Text('Apply'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () async {
-                  await _openRazorpayCheckout(context, booking, totalAmount);
-                },
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: AppTheme.primary,
-                ),
-                child: Text(
-                  _isOpeningCheckout ? 'Opening Razorpay...' : 'Pay with Razorpay',
-                  style: GoogleFonts.manrope(fontWeight: FontWeight.w700),
-                ),
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Future<void> _openRazorpayCheckout(
-      BuildContext context, BookingModel booking, double amount) async {
-    final orderId = booking.razorpayOrderId;
-    if (orderId == null || orderId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment order could not be created. Please try again.'),
-          backgroundColor: AppTheme.primary,
-        ),
-      );
-      return;
-    }
-
-    final auth = Provider.of<AuthProvider>(context, listen: false);
-    final keyId = booking.razorpayKeyId;
-    if (keyId == null || keyId.isEmpty || keyId.startsWith('rzp_test_mock')) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Live Razorpay key is not configured for this build.'),
-          backgroundColor: AppTheme.primary,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _pendingPaymentBooking = booking;
-      _isOpeningCheckout = true;
-    });
-
-    try {
-      _razorpay.open({
-        'key': keyId,
-        'amount': (amount * 100).round(),
-        'currency': booking.currency ?? 'INR',
-        'name': 'X-Space360',
-        'description': booking.propertyTitle ?? 'Booking ${booking.bookingId}',
-        'order_id': orderId,
-        'prefill': {
-          'name': auth.currentUser?.fullName ?? booking.guestName ?? '',
-          'email': auth.currentUser?.email ?? booking.guestEmail ?? '',
-          'contact': auth.currentUser?.phone ?? booking.guestPhone ?? '',
-        },
-        'theme': {'color': '#C05C4F'},
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _isOpeningCheckout = false;
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Unable to open Razorpay checkout. Please try again.'),
-          backgroundColor: AppTheme.primary,
-        ),
-      );
-    }
-  }
-
-  Future<void> _handlePaymentSuccess(PaymentSuccessResponse response) async {
-    final booking = _pendingPaymentBooking;
-    if (booking == null) return;
-
-    final bookingProvider = Provider.of<BookingProvider>(context, listen: false);
-    final success = await bookingProvider.confirmPayment({
-      'booking_id': booking.bookingId,
-      'razorpay_payment_id': response.paymentId,
-      'razorpay_order_id': response.orderId ?? booking.razorpayOrderId,
-      'razorpay_signature': response.signature,
-    });
-
-    if (!mounted) return;
-    setState(() {
-      _isOpeningCheckout = false;
-      _pendingPaymentBooking = null;
-    });
-
-    if (success) {
-      Navigator.pop(context);
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment successful. Booking confirmed.'),
-          backgroundColor: Colors.green,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Payment received, but verification failed. Please contact support.'),
-          backgroundColor: AppTheme.primary,
-        ),
-      );
-    }
-  }
-
-  void _handlePaymentError(PaymentFailureResponse response) {
-    if (!mounted) return;
-    setState(() {
-      _isOpeningCheckout = false;
-      _pendingPaymentBooking = null;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(response.message?.isNotEmpty == true
-            ? response.message!
-            : 'Payment failed or was cancelled.'),
-        backgroundColor: AppTheme.primary,
-      ),
-    );
-  }
-
-  void _handleExternalWallet(ExternalWalletResponse response) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('External wallet selected: ${response.walletName ?? 'wallet'}')),
+    final prop =
+        Provider.of<PropertyProvider>(context, listen: false).currentProperty;
+    if (prop == null) return;
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (context) => BookingFlowScreen(property: prop)),
     );
   }
 
@@ -815,7 +520,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         ),
                       ),
                       Text(
-                        '₹${(prop.vegPrice ?? 0).toStringAsFixed(0)} / Plate',
+                        '${CurrencyFormatter.format(prop.vegPrice ?? 0)} / Plate',
                         style: GoogleFonts.manrope(
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoal,
@@ -878,7 +583,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         ),
                       ),
                       Text(
-                        '₹${(prop.nonVegPrice ?? 0).toStringAsFixed(0)} / Plate',
+                        '${CurrencyFormatter.format(prop.nonVegPrice ?? 0)} / Plate',
                         style: GoogleFonts.manrope(
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoal,
@@ -1188,7 +893,6 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final propertyProvider = Provider.of<PropertyProvider>(context);
-    final auth = Provider.of<AuthProvider>(context);
     final prop = propertyProvider.currentProperty;
 
     if (propertyProvider.isLoading || prop == null) {
@@ -1204,11 +908,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     final isEvent = prop.category.toLowerCase() == 'event_venue';
     final showPerDay = isCommercial || isEvent;
 
-    final images = prop.images.isNotEmpty
-        ? prop.images
-        : [
-            'https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800',
-          ];
+    final images = prop.images;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -1233,33 +933,21 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             setState(() {
                               _currentImageIndex = index;
                             });
+                            _startImageAutoSlide(images.length);
                           },
-                          itemCount: images.length,
+                          itemCount: images.isEmpty ? 1 : images.length,
                           itemBuilder: (context, index) {
                             return GestureDetector(
-                              onTap: () => _openImageGallery(
-                                images,
-                                initialIndex: index,
-                              ),
-                              child: Image.network(
-                                images[index],
-                                fit: BoxFit.cover,
-                                loadingBuilder:
-                                    (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    color: AppTheme.stone,
-                                    alignment: Alignment.center,
-                                    child: const CircularProgressIndicator(
-                                      color: AppTheme.primary,
-                                    ),
-                                  );
-                                },
-                                errorBuilder: (context, _, __) => Container(
-                                  color: AppTheme.stone,
-                                  child: const Icon(Icons.image_not_supported,
-                                      size: 60, color: AppTheme.charcoalMuted),
-                                ),
+                              onTap: images.isEmpty
+                                  ? null
+                                  : () => _openImageGallery(
+                                        images,
+                                        initialIndex: index,
+                                      ),
+                              child: PropertyImage(
+                                imageUrl: images.isEmpty ? null : images[index],
+                                width: double.infinity,
+                                height: 320,
                               ),
                             );
                           },
@@ -1283,6 +971,43 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         ),
                       ),
                       // Slide Index indicator badge
+                      if (images.length > 1) ...[
+                        Positioned(
+                          left: 14,
+                          top: 136,
+                          child: _ImageSliderArrow(
+                            icon: Icons.chevron_left_rounded,
+                            onTap: () => _goToImage(
+                              _currentImageIndex - 1,
+                              images.length,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          right: 14,
+                          top: 136,
+                          child: _ImageSliderArrow(
+                            icon: Icons.chevron_right_rounded,
+                            onTap: () => _goToImage(
+                              _currentImageIndex + 1,
+                              images.length,
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 0,
+                          right: 0,
+                          bottom: 38,
+                          child: Center(
+                            child: _ImageSliderDots(
+                              count: images.length,
+                              activeIndex: _currentImageIndex,
+                              onTap: (index) =>
+                                  _goToImage(index, images.length),
+                            ),
+                          ),
+                        ),
+                      ],
                       Positioned(
                         right: 16,
                         bottom: 36, // leave room for card overlap
@@ -1294,7 +1019,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
-                            '${_currentImageIndex + 1}/${images.length}',
+                            '${images.isEmpty ? 0 : _currentImageIndex + 1}/${images.isEmpty ? 0 : images.length}',
                             style: GoogleFonts.manrope(
                               color: Colors.white,
                               fontSize: 12,
@@ -1710,7 +1435,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       ),
                                     ),
                                     Text(
-                                      '₹${(prop.cookPrice ?? 0.0).toStringAsFixed(0)}/day',
+                                      '${CurrencyFormatter.format(prop.cookPrice ?? 0.0)}/day',
                                       style: GoogleFonts.manrope(
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.primary,
@@ -2004,80 +1729,81 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
 
                           // Location block
                           Text(
-                            'Location & neighbourhood',
+                            "Where you'll be",
                             style: GoogleFonts.manrope(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 28,
+                              fontWeight: FontWeight.w900,
                               color: AppTheme.charcoal,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 12),
                           Text(
                             '${prop.address}, ${prop.city}, ${prop.state}, India',
                             style: GoogleFonts.manrope(
-                              fontSize: 14,
+                              fontSize: 17,
                               color: AppTheme.charcoalLight,
-                              fontWeight: FontWeight.w500,
+                              fontWeight: FontWeight.w600,
                             ),
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 22),
                           Container(
-                            height: 200,
+                            height: 360,
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
-                              image: const DecorationImage(
-                                image: NetworkImage(
-                                    'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80'),
-                                fit: BoxFit.cover,
-                              ),
+                              borderRadius: BorderRadius.circular(28),
+                              color: const Color(0xFFF2F0EA),
                             ),
                             child: Stack(
                               children: [
                                 Positioned.fill(
-                                  child: Container(
-                                    decoration: BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [
-                                          Colors.black.withValues(alpha: 0.12),
-                                          Colors.black.withValues(alpha: 0.28),
-                                        ],
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(28),
+                                    child: CustomPaint(
+                                      painter: _SoftMapPainter(),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: const Color(0xFFF2F0EA)
+                                              .withValues(alpha: 0.78),
+                                        ),
                                       ),
-                                      borderRadius: BorderRadius.circular(16),
                                     ),
                                   ),
                                 ),
                                 Positioned(
-                                  left: 16,
-                                  top: 16,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 12, vertical: 8),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.92),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.satellite_alt_rounded,
-                                          size: 16,
+                                  right: 18,
+                                  top: 18,
+                                  child: Material(
+                                    color: Colors.transparent,
+                                    child: InkWell(
+                                      onTap: () => _openPropertyMap(prop),
+                                      customBorder: const CircleBorder(),
+                                      child: Container(
+                                        width: 64,
+                                        height: 64,
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black
+                                                  .withValues(alpha: 0.10),
+                                              blurRadius: 16,
+                                              offset: const Offset(0, 8),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.open_in_full_rounded,
                                           color: AppTheme.charcoal,
+                                          size: 28,
                                         ),
-                                        const SizedBox(width: 6),
-                                        Text(
-                                          'Satellite view',
-                                          style: GoogleFonts.manrope(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppTheme.charcoal,
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
+                                  ),
+                                ),
+                                Center(
+                                  child: Transform.translate(
+                                    offset: const Offset(0, -18),
+                                    child: const _MapHomeMarker(),
                                   ),
                                 ),
                                 Positioned(
@@ -2085,17 +1811,25 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   right: 16,
                                   bottom: 16,
                                   child: Container(
-                                    padding: const EdgeInsets.all(14),
+                                    padding: const EdgeInsets.all(12),
                                     decoration: BoxDecoration(
                                       color:
-                                          Colors.white.withValues(alpha: 0.92),
-                                      borderRadius: BorderRadius.circular(16),
+                                          Colors.white.withValues(alpha: 0.96),
+                                      borderRadius: BorderRadius.circular(18),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black
+                                              .withValues(alpha: 0.08),
+                                          blurRadius: 16,
+                                          offset: const Offset(0, 8),
+                                        ),
+                                      ],
                                     ),
                                     child: Row(
                                       children: [
                                         Container(
-                                          width: 44,
-                                          height: 44,
+                                          width: 48,
+                                          height: 48,
                                           decoration: const BoxDecoration(
                                             color: AppTheme.primary,
                                             shape: BoxShape.circle,
@@ -2116,7 +1850,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                 prop.city,
                                                 style: GoogleFonts.manrope(
                                                   fontSize: 14,
-                                                  fontWeight: FontWeight.w800,
+                                                  fontWeight: FontWeight.w900,
                                                   color: AppTheme.charcoal,
                                                 ),
                                               ),
@@ -2139,7 +1873,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                             side: const BorderSide(
                                                 color: AppTheme.charcoal),
                                             padding: const EdgeInsets.symmetric(
-                                                horizontal: 14, vertical: 10),
+                                                horizontal: 12, vertical: 10),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:
                                                   BorderRadius.circular(12),
@@ -2203,7 +1937,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
 
                           // Stay Dates Selection Card
                           Text(
-                            isEvent ? 'Select event date' : 'Select stay dates',
+                            prop.bookingDateTitle,
                             style: GoogleFonts.manrope(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
@@ -2384,9 +2118,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                     CrossAxisAlignment.start,
                                                 children: [
                                                   Text(
-                                                    isCommercial
-                                                        ? 'TOTAL STAFF'
-                                                        : 'TOTAL GUESTS',
+                                                    'TOTAL ${prop.participantLabelUpper}',
                                                     style: GoogleFonts.manrope(
                                                       fontSize: 10,
                                                       fontWeight:
@@ -2523,9 +2255,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       ),
                                       if (!isEvent)
                                         Text(
-                                          isCommercial
-                                              ? 'MAX ${prop.maxGuests} STAFF'
-                                              : 'MAX ${prop.maxGuests}',
+                                          'MAX ${prop.maxGuests} ${prop.participantLabelUpper}',
                                           style: GoogleFonts.manrope(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w800,
@@ -2613,7 +2343,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     const SizedBox(width: 12),
                     GestureDetector(
                       onTap: () {
-                        propertyProvider.toggleWishlist(prop.propertyId);
+                        handleWishlistTap(context, prop.propertyId);
                       },
                       child: Container(
                         padding: const EdgeInsets.all(10),
@@ -2677,7 +2407,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           textBaseline: TextBaseline.alphabetic,
                           children: [
                             Text(
-                              '₹${NumberFormat('#,##,###').format(prop.pricePerNight * (auth.isPromoClaimed ? 0.9 : 1.0))}',
+                              CurrencyFormatter.format(
+                                  prop.customerDisplayPrice),
                               style: GoogleFonts.manrope(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
@@ -2692,18 +2423,36 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            if (auth.isPromoClaimed) ...[
-                              const SizedBox(width: 6),
-                              Text(
-                                '${AppConfig.currencySymbol}${NumberFormat('#,##,###').format(prop.pricePerNight)}',
+                          ],
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              prop.isInstantBook
+                                  ? Icons.flash_on_rounded
+                                  : Icons.assignment_turned_in_outlined,
+                              size: 13,
+                              color: prop.isInstantBook
+                                  ? AppTheme.primary
+                                  : AppTheme.charcoalMuted,
+                            ),
+                            const SizedBox(width: 4),
+                            Flexible(
+                              child: Text(
+                                prop.bookingModeLabel,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.manrope(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                  color: AppTheme.charcoalMuted,
-                                  decoration: TextDecoration.lineThrough,
+                                  fontSize: 11,
+                                  color: prop.isInstantBook
+                                      ? AppTheme.primary
+                                      : AppTheme.charcoalMuted,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
-                            ],
+                            ),
                           ],
                         ),
                         const SizedBox(height: 2),
@@ -2738,7 +2487,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       elevation: 0,
                     ),
                     child: Text(
-                      isEvent ? 'Book Venue' : 'Book Now',
+                      isEvent && prop.isInstantBook
+                          ? 'Reserve Venue'
+                          : prop.bookingCtaLabel,
                       style: GoogleFonts.manrope(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
@@ -3379,7 +3130,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             Expanded(
               child: _buildFactTile(
                 'Type',
-                '${prop.category[0].toUpperCase()}${prop.category.substring(1)}',
+                prop.displayCategoryLabel,
                 Icons.home_work_outlined,
               ),
             ),
@@ -3407,7 +3158,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             Expanded(
               child: _buildFactTile(
                 'Starting price',
-                'Rs ${NumberFormat('#,##,###').format(prop.pricePerNight)}/${prop.pricingUnitLabel}',
+                '${CurrencyFormatter.format(prop.customerDisplayPrice)}/${prop.pricingUnitLabel}',
                 Icons.local_offer_outlined,
               ),
             ),
@@ -3419,7 +3170,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             Expanded(
               child: _buildFactTile(
                 'Guest capacity',
-                '${prop.maxGuests} Guests',
+                '${prop.maxGuests} ${prop.participantLabelUpper}',
                 Icons.groups_2_outlined,
               ),
             ),
@@ -3433,6 +3184,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        _buildBookingInfoPanel(prop),
         const SizedBox(height: 16),
         OutlinedButton.icon(
           onPressed: () => _openPropertyMap(prop),
@@ -3454,6 +3207,58 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildBookingInfoPanel(PropertyModel prop) {
+    final instant = prop.isInstantBook;
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color:
+            instant ? AppTheme.primary.withValues(alpha: 0.08) : AppTheme.stone,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: instant
+              ? AppTheme.primary.withValues(alpha: 0.22)
+              : AppTheme.border,
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            instant
+                ? Icons.flash_on_rounded
+                : Icons.assignment_turned_in_outlined,
+            color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  prop.bookingModeLabel,
+                  style: GoogleFonts.manrope(
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  prop.bookingModeDescription,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    color: AppTheme.charcoalMuted,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3587,9 +3392,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       children: [
                         CircleAvatar(
                           radius: 44,
-                          backgroundImage: const NetworkImage(
-                              'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150'),
                           backgroundColor: Colors.grey.shade100,
+                          child: const Icon(Icons.person,
+                              color: AppTheme.charcoalMuted, size: 36),
                         ),
                         Positioned(
                           bottom: 0,
@@ -3796,8 +3601,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           children: [
             const CircleAvatar(
               radius: 18,
-              backgroundImage: NetworkImage(
-                  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150'),
+              backgroundColor: AppTheme.stone,
+              child:
+                  Icon(Icons.person, color: AppTheme.charcoalMuted, size: 18),
             ),
             const SizedBox(width: 12),
             Text(
@@ -4140,24 +3946,10 @@ class _PropertyImageGalleryDialogState
                     minScale: 1,
                     maxScale: 4,
                     child: Center(
-                      child: Image.network(
-                        widget.images[index],
+                      child: PropertyImage(
+                        imageUrl: widget.images[index],
                         fit: BoxFit.contain,
-                        loadingBuilder: (context, child, progress) {
-                          if (progress == null) return child;
-                          return const Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.white,
-                            ),
-                          );
-                        },
-                        errorBuilder: (context, _, __) => const Center(
-                          child: Icon(
-                            Icons.broken_image_outlined,
-                            color: Colors.white70,
-                            size: 64,
-                          ),
-                        ),
+                        semanticLabel: 'Property gallery image',
                       ),
                     ),
                   );
@@ -4195,16 +3987,10 @@ class _PropertyImageGalleryDialogState
                           ),
                         ),
                         clipBehavior: Clip.antiAlias,
-                        child: Image.network(
-                          widget.images[index],
+                        child: PropertyImage(
+                          imageUrl: widget.images[index],
                           fit: BoxFit.cover,
-                          errorBuilder: (context, _, __) => Container(
-                            color: Colors.white10,
-                            child: const Icon(
-                              Icons.image_not_supported_outlined,
-                              color: Colors.white54,
-                            ),
-                          ),
+                          semanticLabel: 'Property gallery thumbnail',
                         ),
                       ),
                     );
@@ -4216,4 +4002,251 @@ class _PropertyImageGalleryDialogState
       ),
     );
   }
+}
+
+class _MapHomeMarker extends StatelessWidget {
+  const _MapHomeMarker();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Transform.translate(
+          offset: const Offset(0, 34),
+          child: Container(
+            width: 18,
+            height: 18,
+            decoration: const BoxDecoration(
+              color: Color(0xFF202020),
+              shape: BoxShape.circle,
+            ),
+          ),
+        ),
+        Container(
+          width: 74,
+          height: 74,
+          decoration: BoxDecoration(
+            color: const Color(0xFF202020),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.22),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.home_rounded,
+            color: Colors.white,
+            size: 36,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ImageSliderArrow extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _ImageSliderArrow({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const CircleBorder(),
+        child: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.92),
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.16),
+                blurRadius: 12,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Icon(icon, color: AppTheme.charcoal, size: 26),
+        ),
+      ),
+    );
+  }
+}
+
+class _ImageSliderDots extends StatelessWidget {
+  final int count;
+  final int activeIndex;
+  final ValueChanged<int> onTap;
+
+  const _ImageSliderDots({
+    required this.count,
+    required this.activeIndex,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final visibleCount = count > 8 ? 8 : count;
+    final start = count <= 8
+        ? 0
+        : (activeIndex - 3).clamp(0, count - visibleCount).toInt();
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.black.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List.generate(visibleCount, (offset) {
+          final index = start + offset;
+          final isActive = index == activeIndex;
+          return GestureDetector(
+            onTap: () => onTap(index),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 220),
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: isActive ? 18 : 7,
+              height: 7,
+              decoration: BoxDecoration(
+                color: isActive
+                    ? AppTheme.primary
+                    : Colors.white.withValues(alpha: 0.82),
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+}
+
+class _SoftMapPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final land = Paint()..color = const Color(0xFFF2EFE8);
+    canvas.drawRect(Offset.zero & size, land);
+
+    final blockPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.30)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    for (double x = -40; x < size.width + 60; x += 42) {
+      final path = Path()
+        ..moveTo(x, 0)
+        ..cubicTo(x + 12, size.height * 0.25, x - 18, size.height * 0.55,
+            x + 16, size.height);
+      canvas.drawPath(path, blockPaint);
+    }
+
+    for (double y = 18; y < size.height; y += 38) {
+      final path = Path()
+        ..moveTo(0, y)
+        ..cubicTo(size.width * 0.25, y - 16, size.width * 0.6, y + 18,
+            size.width, y - 8);
+      canvas.drawPath(path, blockPaint);
+    }
+
+    final mainRoad = Paint()
+      ..color = const Color(0xFFE1C987).withValues(alpha: 0.45)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 8
+      ..strokeCap = StrokeCap.round;
+    final roadPath = Path()
+      ..moveTo(-20, size.height * 0.66)
+      ..cubicTo(size.width * 0.28, size.height * 0.54, size.width * 0.55,
+          size.height * 0.73, size.width + 20, size.height * 0.58);
+    canvas.drawPath(roadPath, mainRoad);
+
+    final minorRoad = Paint()
+      ..color = Colors.white.withValues(alpha: 0.62)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3
+      ..strokeCap = StrokeCap.round;
+    for (final offset in [0.22, 0.42, 0.82]) {
+      final path = Path()
+        ..moveTo(size.width * offset, -10)
+        ..quadraticBezierTo(size.width * (offset + 0.08), size.height * 0.45,
+            size.width * (offset - 0.02), size.height + 10);
+      canvas.drawPath(path, minorRoad);
+    }
+
+    final labelStyle = TextStyle(
+      color: const Color(0xFFAAA49B).withValues(alpha: 0.65),
+      fontSize: 18,
+      fontWeight: FontWeight.w700,
+    );
+    _drawRotatedText(
+        canvas, 'Main Road', Offset(size.width * 0.34, 76), -1.22, labelStyle);
+    _drawRotatedText(canvas, 'University Road',
+        Offset(size.width * 0.58, size.height * 0.36), 0.72, labelStyle);
+
+    final placePaint = Paint()..color = const Color(0xFFF5C04A);
+    canvas.drawCircle(
+        Offset(size.width * 0.32, size.height * 0.72), 13, placePaint);
+    final iconPainter = TextPainter(
+      text: TextSpan(
+        text: 'R',
+        style: TextStyle(
+          color: Colors.white.withValues(alpha: 0.95),
+          fontSize: 13,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    iconPainter.paint(
+      canvas,
+      Offset(size.width * 0.32 - iconPainter.width / 2,
+          size.height * 0.72 - iconPainter.height / 2),
+    );
+
+    final attribution = TextPainter(
+      text: TextSpan(
+        text: 'Map',
+        style: TextStyle(
+          color: const Color(0xFF5E5A52).withValues(alpha: 0.42),
+          fontSize: 26,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    attribution.paint(canvas, Offset(18, size.height - 42));
+  }
+
+  void _drawRotatedText(
+    Canvas canvas,
+    String text,
+    Offset offset,
+    double angle,
+    TextStyle style,
+  ) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: ui.TextDirection.ltr,
+    )..layout();
+    canvas.save();
+    canvas.translate(offset.dx, offset.dy);
+    canvas.rotate(angle);
+    painter.paint(canvas, Offset.zero);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

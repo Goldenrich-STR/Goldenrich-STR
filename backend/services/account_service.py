@@ -73,12 +73,27 @@ async def record_transaction(
         if existing:
             existing.pop("_id", None)
             return Transaction(**existing)
-    if type == TransactionType.SUBSCRIPTION and subscription_id and upi_transaction_id:
+    if type == TransactionType.SUBSCRIPTION and subscription_id and (upi_transaction_id or razorpay_payment_id):
         existing = await db.transactions.find_one(
             {
                 "type": type.value,
                 "subscription_id": subscription_id,
-                "upi_transaction_id": upi_transaction_id,
+                **(
+                    {"upi_transaction_id": upi_transaction_id}
+                    if upi_transaction_id
+                    else {"razorpay_payment_id": razorpay_payment_id}
+                ),
+            }
+        )
+        if existing:
+            existing.pop("_id", None)
+            return Transaction(**existing)
+    if type == TransactionType.REGISTRATION_FEE and user_id and razorpay_payment_id:
+        existing = await db.transactions.find_one(
+            {
+                "type": type.value,
+                "user_id": user_id,
+                "razorpay_payment_id": razorpay_payment_id,
             }
         )
         if existing:
@@ -364,8 +379,7 @@ async def _payout_due_for_booking(
 ) -> tuple[PayoutStatus, datetime]:
     host = await db.users.find_one({"user_id": booking.get("host_id")})
     pref = (host or {}).get("payout_preference") or {}
-    payout_cycle = pref.get("payout_cycle") or "daily"
-    delay_days = 7 if payout_cycle == "weekly" else 30 if payout_cycle == "monthly" else 1
+    delay_days = 7
 
     checkout_date = _parse_booking_date(
         booking.get("check_out_date") or booking.get("checkout_date") or booking.get("end_date")

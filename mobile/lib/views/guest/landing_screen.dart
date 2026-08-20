@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -10,13 +11,19 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../models/property_model.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/property_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
+import '../../utils/currency_formatter.dart';
+import '../../utils/wishlist_action.dart';
 import '../auth/login_screen.dart';
 import '../shared/app_logo.dart';
 import '../shared/app_shell.dart';
+import '../shared/notifications_screen.dart';
+import '../shared/property_image.dart';
 import '../shared/support_tickets_screen.dart';
+import 'explore_map_screen.dart';
 import 'guest_browse_screen.dart';
 import 'property_detail_screen.dart';
 
@@ -30,6 +37,7 @@ class LandingScreen extends StatefulWidget {
 class _LandingScreenState extends State<LandingScreen> {
   static const String _recentlyVisitedKey = 'recently_visited_properties';
   String _selectedCity = 'Anywhere';
+  String _searchQuery = '';
   String _selectedCategory = 'All Types';
   DateTimeRange? _selectedRange;
   int _guestCount = 2;
@@ -37,7 +45,7 @@ class _LandingScreenState extends State<LandingScreen> {
   Timer? _heroTimer;
   int _activeHeroIndex = 0;
   List<PropertyModel> _recentlyVisitedProperties = [];
-  List<_BlogData> _blogCards = _defaultBlogCards;
+  List<_BlogData> _blogCards = [];
   String _activeHolidayGetawayCity = 'All';
 
   static const List<_HeroSlide> _heroSlides = [
@@ -52,8 +60,7 @@ class _LandingScreenState extends State<LandingScreen> {
       category: 'residential',
     ),
     _HeroSlide(
-      image:
-          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80',
+      image: 'assets/images/destinations/alibaug.png',
       tag: 'RESIDENTIAL STAYS',
       titlePrefix: 'Comfortable Premium ',
       titleHighlight: 'Stays',
@@ -73,8 +80,7 @@ class _LandingScreenState extends State<LandingScreen> {
       category: 'commercial',
     ),
     _HeroSlide(
-      image:
-          'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?auto=format&fit=crop&w=1400&q=80',
+      image: 'assets/images/destinations/sula-vineyards.png',
       tag: 'EVENT DESTINATIONS',
       titlePrefix: 'Celebrate Special ',
       titleHighlight: 'Events',
@@ -88,9 +94,11 @@ class _LandingScreenState extends State<LandingScreen> {
   static const List<_DestinationData> _destinations = [
     _DestinationData('Nashik', 'nashik'),
     _DestinationData('Trimbakeshwar', 'trimbak'),
+    _DestinationData('Mumbai', 'mumbai'),
+    _DestinationData('Goa', 'goa'),
     _DestinationData('Gangapur Dam', 'gangapur_dam'),
-    _DestinationData('Igatpuri', 'igatpuri'),
     _DestinationData('Sula Vineyards', 'sula'),
+    _DestinationData('Igatpuri', 'igatpuri'),
     _DestinationData('Anjaneri', 'anjaneri'),
     _DestinationData('Harihar Fort', 'harihar_fort'),
     _DestinationData('Bhandardara', 'bhandardara'),
@@ -134,40 +142,6 @@ class _LandingScreenState extends State<LandingScreen> {
     ),
   ];
 
-  static const List<_BlogData> _defaultBlogCards = [
-    _BlogData(
-      imageUrl:
-          'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1400&q=80',
-      category: 'X-Space360 Guide',
-      title: 'How to choose the right stay on X-Space360',
-      excerpt:
-          'Compare location, space type, amenities, and host quality before locking your next booking.',
-      content:
-          'Compare location, property type, host credibility, amenities, and booking flexibility before confirming your next stay on X-Space360. Focus on the purpose of your trip first, then shortlist spaces that match your guest count, budget, and experience expectations.',
-    ),
-    _BlogData(
-      imageUrl:
-          'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&w=1400&q=80',
-      category: 'Host Success',
-      title:
-          'How better presentation helps Goldenrich host partners win more bookings',
-      excerpt:
-          'Cleaner listing photos, better pricing clarity, and stronger trust signals improve conversions faster.',
-      content:
-          'Cleaner visuals, sharper pricing presentation, and stronger trust signals help host partners convert more visitors into bookings. Well-structured listing descriptions and polished imagery can directly improve guest confidence and booking intent.',
-    ),
-    _BlogData(
-      imageUrl:
-          'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=1400&q=80',
-      category: 'Local Picks',
-      title: 'Top Nashik stays for weekends, events, and work trips',
-      excerpt:
-          'Explore curated homes, venues, and commercial spaces across Nashik and nearby destinations.',
-      content:
-          'Explore curated homes, event venues, villas, and work-friendly spaces across Nashik and nearby destinations. Whether you are planning a weekend break, a celebration, or a professional visit, the right space can shape the whole experience.',
-    ),
-  ];
-
   static const List<_CollectionCardData> _collectionCards = [
     _CollectionCardData(
       id: 'luxury-villas',
@@ -175,8 +149,7 @@ class _LandingScreenState extends State<LandingScreen> {
       detail:
           'From Alibaug to Coorg, our hand-picked villas offer privacy, caretakers, BBQ setups, and breathtaking views for family vacations and weekend escapes.',
       tag: 'Most Booked',
-      image:
-          'https://images.unsplash.com/photo-1744448365250-9b6aa1a7e4a3?auto=format&fit=crop&q=80&w=900',
+      image: '',
       category: 'residential',
       propertyType: 'villa',
     ),
@@ -186,8 +159,7 @@ class _LandingScreenState extends State<LandingScreen> {
       detail:
           'A curated portfolio of exclusive private estates featuring elevated luxury, premium hospitality, and unforgettable destination-led stays.',
       tag: 'Signature Series',
-      image:
-          'https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&q=80&w=900',
+      image: '',
       category: 'residential',
       propertyType: 'resort',
     ),
@@ -197,8 +169,7 @@ class _LandingScreenState extends State<LandingScreen> {
       detail:
           'Curated celebration venues with floral courtyards, rooftop terraces, and in-house hospitality for memorable gatherings.',
       tag: 'Trending',
-      image:
-          'https://images.pexels.com/photos/12153938/pexels-photo-12153938.jpeg?auto=compress&cs=tinysrgb&w=900',
+      image: '',
       category: 'event_venue',
       propertyType: 'banquet_hall',
     ),
@@ -208,8 +179,7 @@ class _LandingScreenState extends State<LandingScreen> {
       detail:
           'Fully serviced urban homes with hotel-grade amenities, ideal for business travelers, relocating professionals, and long stays.',
       tag: 'New Launches',
-      image:
-          'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&q=80&w=900',
+      image: '',
       category: 'residential',
       propertyType: 'apartment',
     ),
@@ -219,8 +189,7 @@ class _LandingScreenState extends State<LandingScreen> {
       detail:
           'Short-term and long-term rentals for startups, corporate offsites, and growing teams with boardrooms and plug-and-play work setups.',
       tag: 'Corporate Picks',
-      image:
-          'https://images.unsplash.com/photo-1497366412874-3415097a27e7?auto=format&fit=crop&q=80&w=900',
+      image: '',
       category: 'commercial',
     ),
     _CollectionCardData(
@@ -229,7 +198,7 @@ class _LandingScreenState extends State<LandingScreen> {
       detail:
           'Scenic villas, pool stays, and weekend resorts with lawns, caretakers, and premium leisure amenities across top getaway destinations.',
       tag: 'Resort Picks',
-      image: 'assets/images/hero_villa.jpg',
+      image: '',
       category: 'residential',
       propertyType: 'villa',
     ),
@@ -269,6 +238,9 @@ class _LandingScreenState extends State<LandingScreen> {
     _heroTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!_heroPageController.hasClients || _heroSlides.length <= 1) return;
       final nextIndex = (_activeHeroIndex + 1) % _heroSlides.length;
+      if (mounted) {
+        setState(() => _activeHeroIndex = nextIndex);
+      }
       _heroPageController.animateToPage(
         nextIndex,
         duration: const Duration(milliseconds: 450),
@@ -276,9 +248,9 @@ class _LandingScreenState extends State<LandingScreen> {
       );
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PropertyProvider>().searchProperties({});
-      _loadRecentlyVisitedProperties();
-      _loadCmsBlogs();
+      _loadInitialLandingData();
+      Provider.of<NotificationProvider>(context, listen: false)
+          .loadUnreadCount();
     });
   }
 
@@ -308,6 +280,38 @@ class _LandingScreenState extends State<LandingScreen> {
     }
   }
 
+  Future<void> _loadInitialLandingData() async {
+    final propertyProvider = context.read<PropertyProvider>();
+    await Future.wait([
+      propertyProvider.loadLandingSections(),
+      _loadRecentlyVisitedProperties(),
+      _loadCmsBlogs(),
+    ]);
+    if (!mounted) return;
+    _precacheLandingImages(propertyProvider);
+  }
+
+  void _precacheLandingImages(PropertyProvider propertyProvider) {
+    final visibleProperties = <PropertyModel>[
+      ..._recentlyVisitedProperties.take(2),
+      ...propertyProvider.landingResidential.take(4),
+      ...propertyProvider.landingCommercial.take(4),
+      ...propertyProvider.landingEvents.take(4),
+    ];
+    final urls = <String>{
+      for (final property in visibleProperties)
+        if (property.images.isNotEmpty)
+          ...property.images
+              .take(2)
+              .map(PropertyImage.validPropertyImageUrl)
+              .whereType<String>(),
+    };
+
+    for (final url in urls.take(18)) {
+      precacheImage(CachedNetworkImageProvider(url), context);
+    }
+  }
+
   Future<void> _loadCmsBlogs() async {
     try {
       final response = await ApiService().dio.get('/cms/landing-page');
@@ -324,7 +328,7 @@ class _LandingScreenState extends State<LandingScreen> {
                   ? item['image_url'].toString()
                   : item['img']?.toString().isNotEmpty == true
                       ? item['img'].toString()
-                      : _defaultBlogCards.first.imageUrl,
+                      : '',
               category: (item['category']?.toString().trim().isNotEmpty == true)
                   ? item['category'].toString()
                   : 'X-Space360 Journal',
@@ -355,107 +359,334 @@ class _LandingScreenState extends State<LandingScreen> {
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
     final propertyProvider = context.watch<PropertyProvider>();
-    final properties = propertyProvider.properties;
-    final residential = _filterByCategory(properties, 'residential');
-    final commercial = _filterByCategory(properties, 'commercial');
-    final event = _filterEvent(properties);
-    final villas = _filterByPropertyType(properties, const ['villa', 'resort']);
-    final featured = properties.take(6).toList();
+    final residential = propertyProvider.landingResidential;
+    final commercial = propertyProvider.landingCommercial;
+    final event = propertyProvider.landingEvents;
+    final properties = [
+      ...residential,
+      ...commercial,
+      ...event,
+    ];
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: CustomScrollView(
-        physics: const BouncingScrollPhysics(),
-        slivers: [
-          SliverToBoxAdapter(child: _buildHero(auth)),
-          SliverToBoxAdapter(
-            child: _buildDestinationStrip(),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: RefreshIndicator(
+          color: AppTheme.primary,
+          onRefresh: () async {
+            final propertyProvider = context.read<PropertyProvider>();
+            await propertyProvider.loadLandingSections();
+            await _loadRecentlyVisitedProperties();
+            if (mounted) {
+              _precacheLandingImages(propertyProvider);
+            }
+          },
+          child: ListView(
+            physics: const BouncingScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+            children: [
+              _buildCommercialTopBar(auth),
+              const SizedBox(height: 18),
+              _buildCommercialHero(),
+              const SizedBox(height: 16),
+              _buildCommercialSearch(),
+              const SizedBox(height: 26),
+              _buildPopularLocationsCompact(properties),
+              const SizedBox(height: 26),
+              _buildBecomeHostBanner(auth),
+              const SizedBox(height: 26),
+              _buildRecentlyViewedCompact(),
+              const SizedBox(height: 26),
+              _buildFeaturedSpacesCompact(
+                title: 'Residential Stays',
+                category: 'residential',
+                properties: residential,
+              ),
+              const SizedBox(height: 26),
+              _buildFeaturedSpacesCompact(
+                title: 'Commercial Spaces',
+                category: 'commercial',
+                properties: commercial,
+              ),
+              const SizedBox(height: 26),
+              _buildFeaturedSpacesCompact(
+                title: 'Event Venues',
+                category: 'event_venue',
+                properties: event,
+              ),
+              const SizedBox(height: 22),
+              _buildOfferBanner(),
+            ],
           ),
-          SliverToBoxAdapter(
-            child: _buildRecentlyVisitedSection(),
-          ),
-          SliverToBoxAdapter(
-            child: _buildDiscoverCollectionsSection(),
-          ),
-          SliverToBoxAdapter(
-            child: _buildHolidayGetawaySection(properties),
-          ),
-          SliverToBoxAdapter(
-            child: _buildCollections(
-              title: 'Villas & Resorts',
-              subtitle:
-                  'Private pool villas, vineyard escapes, and destination-led premium stays.',
-              properties: villas.isNotEmpty ? villas : residential,
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: _buildCollections(
-              title: 'Residential Collection',
-              subtitle:
-                  'Managed homes, elegant apartments, and private family stays.',
-              properties: residential.isNotEmpty ? residential : featured,
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: _buildCollections(
-              title: 'Commercial Spaces',
-              subtitle: 'Premium offices, co-working spaces, and retail.',
-              properties: commercial.isNotEmpty ? commercial : featured,
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: _buildCollections(
-              title: 'Wedding Venues',
-              subtitle: 'Celebration-ready venues with polished hospitality.',
-              properties: event.isNotEmpty ? event : featured,
-            ),
-          ),
-          SliverToBoxAdapter(child: _buildHostBanner(auth)),
-          SliverToBoxAdapter(child: _buildTestimonialSection()),
-          SliverToBoxAdapter(child: _buildBlogSection()),
-        ],
+        ),
       ),
-      floatingActionButton: GestureDetector(
-        onTap: () {
-          Navigator.pushReplacement(
+    );
+  }
+
+  void _openHostSignup(AuthProvider auth) {
+    final userRole = auth.currentUser?.role.toLowerCase();
+    if (userRole == 'host') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const AppShell(initialIndex: 2)),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(
+          initialSignUpMode: true,
+          initialRole: 'host',
+        ),
+      ),
+    );
+  }
+
+  void _openBrowse({
+    String? category,
+    String? city,
+    String? propertyType,
+    int? guests,
+    String? searchQuery,
+  }) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => GuestBrowseScreen(
+          initialCity: city,
+          initialSearchQuery: searchQuery,
+          initialCategory: category,
+          initialPropertyType: propertyType,
+          initialGuests: guests,
+        ),
+      ),
+    );
+  }
+
+  void _openCommercialBrowse({
+    String? city,
+    String? propertyType,
+    int? guests,
+    String? searchQuery,
+  }) {
+    _openBrowse(
+      category: 'commercial',
+      city: city,
+      propertyType: propertyType,
+      guests: guests,
+      searchQuery: searchQuery,
+    );
+  }
+
+  Widget _buildCommercialTopBar(AuthProvider auth) {
+    final user = auth.currentUser;
+    final unreadCount = context.watch<NotificationProvider>().unreadCount;
+    return Row(
+      children: [
+        GestureDetector(
+          onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const AppShell(initialIndex: 3),
+            MaterialPageRoute(builder: (_) => const ExploreMapScreen()),
+          ),
+          child: Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              border: Border.all(color: AppTheme.border),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
             ),
-          );
-        },
+            child: const Icon(Icons.location_on, color: AppTheme.primary),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text('X-SPACE360',
+                      style: GoogleFonts.manrope(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF07142F))),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.keyboard_arrow_down,
+                      color: Color(0xFF07142F)),
+                ],
+              ),
+              Text('Find Your Perfect Space',
+                  style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.charcoalLight)),
+            ],
+          ),
+        ),
+        _HeaderNotificationButton(
+          unreadCount: user == null ? 0 : unreadCount,
+          onTap: () {
+            if (user == null) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const LoginScreen(initialRole: 'guest')),
+              );
+              return;
+            }
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            );
+          },
+        ),
+        const SizedBox(width: 4),
+        GestureDetector(
+          onTap: () {
+            if (user == null) {
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const LoginScreen(initialRole: 'guest')));
+            } else {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const AppShell(initialIndex: 4)),
+              );
+            }
+          },
+          child: CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color(0xFF07142F),
+            child: Icon(user == null ? Icons.person : Icons.person,
+                color: Colors.white),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCommercialHero() {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(22),
+      child: SizedBox(
+        height: 235,
         child: Stack(
-          clipBehavior: Clip.none,
+          fit: StackFit.expand,
           children: [
-            Container(
-              padding: const EdgeInsets.all(16),
+            PageView.builder(
+              controller: _heroPageController,
+              itemCount: _heroSlides.length,
+              onPageChanged: (index) =>
+                  setState(() => _activeHeroIndex = index),
+              itemBuilder: (context, index) {
+                final slide = _heroSlides[index];
+                return Image.asset(
+                  slide.image,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    color: AppTheme.stone,
+                    alignment: Alignment.center,
+                    child: const AppLogo(height: 44),
+                  ),
+                );
+              },
+            ),
+            DecoratedBox(
               decoration: BoxDecoration(
-                color: AppTheme.primary,
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.18),
-                    blurRadius: 20,
-                    offset: const Offset(0, 10),
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.72),
+                    Colors.black.withValues(alpha: 0.22),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                          color: Colors.white.withValues(alpha: 0.24)),
+                    ),
+                    child: Text(_heroSlides[_activeHeroIndex].tag,
+                        style: GoogleFonts.manrope(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900)),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                      '${_heroSlides[_activeHeroIndex].titlePrefix}\n${_heroSlides[_activeHeroIndex].titleHighlight}',
+                      style: GoogleFonts.manrope(
+                          color: Colors.white,
+                          fontSize: 25,
+                          height: 1.05,
+                          fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 8),
+                  Text(_heroSlides[_activeHeroIndex].badge,
+                      style: GoogleFonts.manrope(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                  const Spacer(),
+                  ElevatedButton.icon(
+                    onPressed: () => _openBrowse(
+                        category: _heroSlides[_activeHeroIndex].category),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF07142F),
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 9),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    iconAlignment: IconAlignment.end,
+                    icon: const Icon(Icons.arrow_forward, size: 18),
+                    label: Text('Explore Now',
+                        style: GoogleFonts.manrope(
+                            fontSize: 13, fontWeight: FontWeight.w900)),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.chat_bubble_outline_rounded,
-                color: Colors.white,
-                size: 24,
-              ),
             ),
             Positioned(
-              right: 1,
-              top: 1,
-              child: Container(
-                width: 11,
-                height: 11,
-                decoration: BoxDecoration(
-                  color: const Color(0xFF2ED08C),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
+              bottom: 20,
+              right: 24,
+              child: Row(
+                children: List.generate(
+                  4,
+                  (i) => Container(
+                    width: i == _activeHeroIndex ? 10 : 9,
+                    height: i == _activeHeroIndex ? 10 : 9,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(
+                          alpha: i == _activeHeroIndex ? 0.95 : 0.38),
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -465,7 +696,506 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildHero(AuthProvider auth) {
+  Widget _buildCommercialSearch() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 24,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color(0xFF07142F),
+            child: const Icon(Icons.manage_search, color: Colors.white),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 2,
+            child: GestureDetector(
+              onTap: () => _openSearchSheet(),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Where to?',
+                      style: GoogleFonts.manrope(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF07142F))),
+                  const SizedBox(height: 2),
+                  Text(
+                      _selectedCity != 'Anywhere'
+                          ? _selectedCity
+                          : (_searchQuery.isNotEmpty
+                              ? _searchQuery
+                              : 'Search city, area\nor property'),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.manrope(
+                          fontSize: 10, color: AppTheme.charcoalLight)),
+                ],
+              ),
+            ),
+          ),
+          _searchMeta(
+            Icons.calendar_month,
+            'Check In',
+            _selectedRange == null
+                ? 'Add date'
+                : DateFormat('dd MMM').format(_selectedRange!.start),
+          ),
+          _searchMeta(
+            Icons.calendar_month,
+            'Check Out',
+            _selectedRange == null
+                ? 'Add date'
+                : DateFormat('dd MMM').format(_selectedRange!.end),
+          ),
+          _searchMeta(Icons.person_outline, 'Guests', '$_guestCount guest'),
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: const Color(0xFF07142F),
+            child: IconButton(
+              onPressed: () => _openCommercialBrowse(
+                city: _selectedCity == 'Anywhere' ? null : _selectedCity,
+                guests: _guestCount,
+                searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
+              ),
+              icon: const Icon(Icons.search, color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _searchMeta(IconData icon, String title, String sub) {
+    return Expanded(
+      child: InkWell(
+        onTap: () => _openSearchSheet(),
+        child: Column(
+          children: [
+            Icon(icon, color: const Color(0xFF07142F), size: 18),
+            const SizedBox(height: 5),
+            Text(title,
+                maxLines: 1,
+                style: GoogleFonts.manrope(
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF07142F))),
+            Text(sub,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.manrope(
+                    fontSize: 8, color: AppTheme.charcoalLight)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegacyCommercialCategoryStrip() {
+    final items = [
+      (Icons.apartment, 'Office Spaces', 'private_office', Colors.indigo),
+      (Icons.groups_2, 'Coworking', 'co_working', Colors.teal),
+      (Icons.people_alt, 'Meeting Rooms', 'meeting_room', Colors.orange),
+      (Icons.storefront, 'Showrooms', 'shop', Colors.pink),
+      (Icons.warehouse, 'Warehouses', 'warehouse', Colors.blue),
+    ];
+    return Row(
+      children: items.map((item) {
+        return Expanded(
+          child: GestureDetector(
+            onTap: () => _openCommercialBrowse(propertyType: item.$3),
+            child: Column(
+              children: [
+                Container(
+                  width: 58,
+                  height: 58,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: item.$4.withValues(alpha: 0.12),
+                  ),
+                  child: Icon(item.$1, color: item.$4, size: 26),
+                ),
+                const SizedBox(height: 8),
+                Text(item.$2,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                        fontSize: 10,
+                        height: 1.1,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF07142F))),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildBecomeHostBanner(AuthProvider auth) {
+    const benefits = [
+      _HostBenefit(
+        icon: Icons.verified_user_outlined,
+        title: 'Trusted',
+        subtitle: 'Platform',
+      ),
+      _HostBenefit(
+        icon: Icons.trending_up_rounded,
+        title: 'Maximize',
+        subtitle: 'Income',
+      ),
+      _HostBenefit(
+        icon: Icons.support_agent_rounded,
+        title: '24/7',
+        subtitle: 'Support',
+      ),
+    ];
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(15),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFFFFFBF1),
+            Color(0xFFFFF4D9),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFF3DCA9)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 22,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _HostEarnPill(),
+          const SizedBox(height: 9),
+          _HostTitle(fontSize: 24),
+          const SizedBox(height: 7),
+          RichText(
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            text: TextSpan(
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                height: 1.35,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3F4652),
+              ),
+              children: const [
+                TextSpan(text: 'List your space and start earning with '),
+                TextSpan(
+                  text: 'X-SPACE360.',
+                  style: TextStyle(
+                    color: Color(0xFF07142F),
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 14),
+          const _HostMobileVisual(),
+          const SizedBox(height: 12),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 11),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.82),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: Colors.white),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(child: benefits[0]),
+                const SizedBox(width: 6),
+                Expanded(child: benefits[1]),
+                const SizedBox(width: 6),
+                Expanded(child: benefits[2]),
+              ],
+            ),
+          ),
+          const SizedBox(height: 13),
+          _HostListButton(
+            fullWidth: true,
+            onPressed: () => _openHostSignup(auth),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPopularLocationsCompact(List<PropertyModel> properties) {
+    final locations = _destinations.take(4).toList();
+    return Column(
+      children: [
+        _sectionHeader('Popular Locations', () => _openCommercialBrowse()),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 170,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: locations.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (_, index) {
+              final d = locations[index];
+              final count = properties
+                  .where((p) =>
+                      p.city.toLowerCase().contains(d.city.toLowerCase()))
+                  .length;
+              return GestureDetector(
+                onTap: () => _openCommercialBrowse(city: d.city),
+                child: Container(
+                  width: 160,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Image.asset(
+                        _destinationIconAssets[d.type] ??
+                            'assets/images/destinations/nashik.png',
+                        height: 92,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(d.city,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.manrope(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                    color: const Color(0xFF07142F))),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                const Icon(Icons.location_on_outlined,
+                                    size: 15, color: Color(0xFF07142F)),
+                                const SizedBox(width: 4),
+                                Text('${count > 0 ? count * 20 : 60}+ Spaces',
+                                    style: GoogleFonts.manrope(
+                                        fontSize: 12,
+                                        color: AppTheme.charcoalLight)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRecentlyViewedCompact() {
+    return Column(
+      children: [
+        _sectionHeader('Recently Viewed', () => _openCommercialBrowse()),
+        const SizedBox(height: 12),
+        if (_recentlyVisitedProperties.isEmpty)
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F3F1),
+              borderRadius: BorderRadius.circular(18),
+            ),
+            child: Row(
+              children: [
+                CircleAvatar(
+                  radius: 28,
+                  backgroundColor: const Color(0xFFF0E3D7),
+                  child: const Icon(Icons.schedule, color: Color(0xFF07142F)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("You haven’t viewed any spaces yet",
+                          style: GoogleFonts.manrope(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w900,
+                              color: const Color(0xFF07142F))),
+                      const SizedBox(height: 4),
+                      Text('Explore and save your favourite spaces.',
+                          style: GoogleFonts.manrope(
+                              fontSize: 13, color: AppTheme.charcoalLight)),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: Color(0xFF07142F)),
+              ],
+            ),
+          )
+        else
+          SizedBox(
+            height: 210,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _recentlyVisitedProperties.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (_, index) => SizedBox(
+                width: 210,
+                child: _CommercialFeaturedCard(
+                  property: _recentlyVisitedProperties[index],
+                  tag: 'Recent',
+                  onViewed: _loadRecentlyVisitedProperties,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildFeaturedSpacesCompact({
+    required String title,
+    required String category,
+    required List<PropertyModel> properties,
+  }) {
+    final cards = properties.take(6).toList();
+    return Column(
+      children: [
+        _sectionHeader(title, () => _openBrowse(category: category)),
+        const SizedBox(height: 12),
+        if (cards.isEmpty)
+          _CommercialEmptyCard(
+            message: _emptySectionMessage(title),
+          )
+        else
+          SizedBox(
+            height: 240,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: cards.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (_, index) => SizedBox(
+                width: 240,
+                child: _CommercialFeaturedCard(
+                  property: cards[index],
+                  tag: index == 0 ? 'Most Booked' : 'Top Rated',
+                  onViewed: _loadRecentlyVisitedProperties,
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  String _emptySectionMessage(String title) {
+    return '$title will appear here once live properties are available.';
+  }
+
+  Widget _buildOfferBanner() {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF5EEFF),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: const Color(0xFFE8DFFF),
+            child: const Icon(Icons.percent, color: Color(0xFF5B4BE7)),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Special Offers for You!',
+                    style: GoogleFonts.manrope(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF07142F))),
+                const SizedBox(height: 4),
+                Text('Book now and get up to 20% OFF on selected spaces.',
+                    style: GoogleFonts.manrope(
+                        fontSize: 13, color: AppTheme.charcoalLight)),
+              ],
+            ),
+          ),
+          OutlinedButton(
+            onPressed: () => _openCommercialBrowse(),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: const Color(0xFF5B4BE7),
+              side: const BorderSide(color: Color(0xFF5B4BE7)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12)),
+            ),
+            child: const Text('View Offers'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _sectionHeader(String title, VoidCallback onViewAll) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(title,
+              style: GoogleFonts.manrope(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF07142F))),
+        ),
+        TextButton.icon(
+          onPressed: onViewAll,
+          iconAlignment: IconAlignment.end,
+          icon: const Icon(Icons.arrow_forward, size: 18),
+          label: const Text('View all'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLegacyHero(AuthProvider auth) {
     final topPadding = MediaQuery.of(context).padding.top;
     return SizedBox(
       height: 420 + topPadding,
@@ -938,7 +1668,8 @@ class _LandingScreenState extends State<LandingScreen> {
     final dateText = _selectedRange == null
         ? 'Any week'
         : '${DateFormat('dd MMM').format(_selectedRange!.start)} - ${DateFormat('dd MMM').format(_selectedRange!.end)}';
-    return '$_selectedCity · $_selectedCategory · $dateText · $_guestCount guests';
+    final placeText = _searchQuery.isNotEmpty ? _searchQuery : _selectedCity;
+    return '$placeText · $_selectedCategory · $dateText · $_guestCount guests';
   }
 
   Widget _buildHeroIndicators() {
@@ -962,7 +1693,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildCollections({
+  Widget _buildLegacyCollections({
     required String title,
     required String subtitle,
     required List<PropertyModel> properties,
@@ -1012,18 +1743,29 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildHolidayGetawaySection(List<PropertyModel> allProperties) {
+  Widget _buildLegacyHolidayGetawaySection(List<PropertyModel> allProperties) {
     if (allProperties.isEmpty) return const SizedBox.shrink();
 
-    final preferredCities = ['Nashik', 'Trimbakeshwar', 'Igatpuri', 'Bhandardara'];
-    final presentCities = preferredCities.where((city) =>
-      allProperties.any((p) => p.city.trim().toLowerCase() == city.toLowerCase())
-    ).toList();
+    final preferredCities = [
+      'Nashik',
+      'Trimbakeshwar',
+      'Igatpuri',
+      'Bhandardara'
+    ];
+    final presentCities = preferredCities
+        .where((city) => allProperties
+            .any((p) => p.city.trim().toLowerCase() == city.toLowerCase()))
+        .toList();
     final tabs = ['All', ...presentCities];
 
     final filtered = _activeHolidayGetawayCity == 'All'
         ? allProperties.take(8).toList()
-        : allProperties.where((p) => p.city.trim().toLowerCase() == _activeHolidayGetawayCity.toLowerCase()).take(8).toList();
+        : allProperties
+            .where((p) =>
+                p.city.trim().toLowerCase() ==
+                _activeHolidayGetawayCity.toLowerCase())
+            .take(8)
+            .toList();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 6),
@@ -1054,7 +1796,8 @@ class _LandingScreenState extends State<LandingScreen> {
                   },
                   child: Container(
                     margin: const EdgeInsets.only(right: 12),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                     decoration: BoxDecoration(
                       color: isActive ? AppTheme.primary : Colors.white,
                       borderRadius: BorderRadius.circular(20),
@@ -1067,7 +1810,8 @@ class _LandingScreenState extends State<LandingScreen> {
                       tab,
                       style: GoogleFonts.manrope(
                         fontSize: 13,
-                        fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                        fontWeight:
+                            isActive ? FontWeight.w800 : FontWeight.w600,
                         color: isActive ? Colors.white : AppTheme.charcoalMuted,
                       ),
                     ),
@@ -1107,7 +1851,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildPromoSection() {
+  Widget _buildLegacyPromoSection() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
       child: Column(
@@ -1206,7 +1950,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildDestinationStrip() {
+  Widget _buildLegacyDestinationStrip() {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 26, 20, 28),
@@ -1305,7 +2049,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildHostBanner(AuthProvider auth) {
+  Widget _buildLegacyHostBanner(AuthProvider auth) {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 28, 20, 0),
       padding: const EdgeInsets.all(24),
@@ -1364,7 +2108,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildTestimonialSection() {
+  Widget _buildLegacyTestimonialSection() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
       child: Column(
@@ -1459,7 +2203,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildBlogSection() {
+  Widget _buildLegacyBlogSection() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 30, 20, 0),
       child: Column(
@@ -1599,7 +2343,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildChatbotSection() {
+  Widget _buildLegacyChatbotSection() {
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 30, 20, 0),
       padding: const EdgeInsets.all(22),
@@ -1664,7 +2408,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildFooter() {
+  Widget _buildLegacyFooter() {
     return Container(
       width: double.infinity,
       margin: const EdgeInsets.only(top: 28),
@@ -1754,6 +2498,7 @@ class _LandingScreenState extends State<LandingScreen> {
     if (result == null || !mounted) return;
     setState(() {
       _selectedCity = result.city.isEmpty ? 'Anywhere' : result.city;
+      _searchQuery = result.searchQuery;
       _selectedCategory = result.category;
       _selectedRange = result.range;
       _guestCount = result.guests;
@@ -1767,6 +2512,7 @@ class _LandingScreenState extends State<LandingScreen> {
       MaterialPageRoute(
         builder: (_) => GuestBrowseScreen(
           initialCity: _selectedCity == 'Anywhere' ? null : _selectedCity,
+          initialSearchQuery: _searchQuery.isEmpty ? null : _searchQuery,
           initialGuests: _guestCount,
           initialCategory: _mapCategoryToBrowseValue(_selectedCategory),
         ),
@@ -1805,7 +2551,7 @@ class _LandingScreenState extends State<LandingScreen> {
     }).toList();
   }
 
-  Widget _buildRecentlyVisitedSection() {
+  Widget _buildLegacyRecentlyVisitedSection() {
     return Container(
       color: Colors.white,
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
@@ -1885,7 +2631,7 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildDiscoverCollectionsSection() {
+  Widget _buildLegacyDiscoverCollectionsSection() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 8),
       child: Column(
@@ -1929,6 +2675,218 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 }
 
+class _CommercialFeaturedCard extends StatelessWidget {
+  final PropertyModel property;
+  final String tag;
+  final Future<void> Function() onViewed;
+
+  const _CommercialFeaturedCard({
+    required this.property,
+    required this.tag,
+    required this.onViewed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<PropertyProvider>();
+    final wishlisted = provider.isWishlisted(property.propertyId);
+    final rating = property.rating ?? 4.8;
+    return InkWell(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+              builder: (_) =>
+                  PropertyDetailScreen(propertyId: property.propertyId)),
+        );
+        await onViewed();
+      },
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.12),
+              blurRadius: 16,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Column(
+                children: [
+                  Expanded(
+                    child: PropertyImage(
+                      imageUrl: property.images.isNotEmpty
+                          ? property.images.first
+                          : null,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  const SizedBox(height: 74),
+                ],
+              ),
+            ),
+            Positioned(
+              top: 12,
+              left: 12,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: tag == 'Most Booked'
+                      ? const Color(0xFF36A853)
+                      : const Color(0xFF4E6DF5),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+                child: Text(tag,
+                    style: GoogleFonts.manrope(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900)),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: GestureDetector(
+                onTap: () => handleWishlistTap(context, property.propertyId),
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.white,
+                  child: Icon(
+                    wishlisted ? Icons.favorite : Icons.favorite_border,
+                    color:
+                        wishlisted ? AppTheme.primary : const Color(0xFF07142F),
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              right: 12,
+              bottom: 12,
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(property.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.manrope(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF07142F))),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        const Icon(Icons.location_on_outlined,
+                            size: 14, color: Color(0xFF07142F)),
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: Text('${property.city}, ${property.state}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: GoogleFonts.manrope(
+                                  fontSize: 11, color: AppTheme.charcoalLight)),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        const Icon(Icons.star,
+                            color: Color(0xFFFFB000), size: 16),
+                        const SizedBox(width: 4),
+                        Text(rating.toStringAsFixed(1),
+                            style: GoogleFonts.manrope(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                color: const Color(0xFF07142F))),
+                        const Spacer(),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              '${CurrencyFormatter.format(property.customerDisplayPrice)} / ${property.pricingUnitLabel}',
+                              style: GoogleFonts.manrope(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF07142F)),
+                            ),
+                            Text('Starts from',
+                                style: GoogleFonts.manrope(
+                                    fontSize: 10,
+                                    color: AppTheme.charcoalMuted)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CommercialEmptyCard extends StatelessWidget {
+  final String message;
+
+  const _CommercialEmptyCard({
+    this.message =
+        'Spaces will appear here once live properties are available.',
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Row(
+        children: [
+          const CircleAvatar(
+            backgroundColor: AppTheme.stone,
+            child: Icon(Icons.business_outlined, color: AppTheme.primary),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: GoogleFonts.manrope(
+                  fontWeight: FontWeight.w700, color: AppTheme.charcoalLight),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _PropertyCard extends StatelessWidget {
   final PropertyModel property;
   final Future<void> Function() onViewed;
@@ -1968,31 +2926,11 @@ class _PropertyCard extends StatelessWidget {
             Expanded(
               child: Stack(
                 children: [
-                  ClipRRect(
+                  PropertyImage(
+                    imageUrl: image,
+                    width: double.infinity,
+                    height: double.infinity,
                     borderRadius: BorderRadius.circular(26),
-                    child: image != null
-                        ? Image.network(
-                            image,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: AppTheme.stone,
-                                child: const Center(
-                                  child: Icon(Icons.home_work_outlined,
-                                      color: AppTheme.charcoalMuted, size: 34),
-                                ),
-                              );
-                            },
-                          )
-                        : Container(
-                            color: AppTheme.stone,
-                            child: const Center(
-                              child: Icon(Icons.home_work_outlined,
-                                  color: AppTheme.charcoalMuted, size: 34),
-                            ),
-                          ),
                   ),
                   Positioned(
                     top: 12,
@@ -2059,7 +2997,8 @@ class _PropertyCard extends StatelessWidget {
                     child: GestureDetector(
                       behavior: HitTestBehavior.opaque,
                       onTap: () async {
-                        final String shareText = 'Check out ${property.title} in ${property.city} on X-Space360. Starting from Rs ${NumberFormat.currency(locale: 'en_IN', symbol: '', decimalDigits: 0).format(property.pricePerNight).trim()}/${property.pricingUnitLabel}.\nhttps://x-space360.in/property/${Uri.encodeComponent(property.propertyId)}';
+                        final String shareText =
+                            'Check out ${property.title} in ${property.city} on X-Space360. Starting from ${CurrencyFormatter.format(property.customerDisplayPrice)}/${property.pricingUnitLabel}.\nhttps://x-space360.in/property/${Uri.encodeComponent(property.propertyId)}';
                         await Share.share(shareText, subject: property.title);
                       },
                       child: Container(
@@ -2086,20 +3025,8 @@ class _PropertyCard extends StatelessWidget {
                             propertyProvider.isWishlisted(property.propertyId);
                         return GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            propertyProvider
-                                .toggleWishlist(property.propertyId);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isWishlisted
-                                      ? 'Removed from wishlist.'
-                                      : 'Added to wishlist.',
-                                ),
-                                duration: const Duration(seconds: 1),
-                              ),
-                            );
-                          },
+                          onTap: () =>
+                              handleWishlistTap(context, property.propertyId),
                           child: Container(
                             width: 36,
                             height: 36,
@@ -2167,8 +3094,10 @@ class _PropertyCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
+            _BookingModeChip(property: property),
+            const SizedBox(height: 6),
             Text(
-              '${NumberFormat.currency(locale: 'en_IN', symbol: '₹', decimalDigits: 0).format(property.pricePerNight)}${property.pricingUnitSuffix}',
+              '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
               style: GoogleFonts.manrope(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
@@ -2177,6 +3106,51 @@ class _PropertyCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _BookingModeChip extends StatelessWidget {
+  final PropertyModel property;
+
+  const _BookingModeChip({required this.property});
+
+  @override
+  Widget build(BuildContext context) {
+    final instant = property.isInstantBook;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color:
+            instant ? AppTheme.primary.withValues(alpha: 0.10) : AppTheme.stone,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: instant
+              ? AppTheme.primary.withValues(alpha: 0.24)
+              : AppTheme.border,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            instant
+                ? Icons.flash_on_rounded
+                : Icons.assignment_turned_in_outlined,
+            size: 12,
+            color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            instant ? 'Instant Book' : 'Host Approval Required',
+            style: GoogleFonts.manrope(
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2383,34 +3357,12 @@ class _RecentlyVisitedCard extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              ClipRRect(
+              PropertyImage(
+                imageUrl: image,
+                height: 152,
+                width: double.infinity,
                 borderRadius: const BorderRadius.vertical(
                   top: Radius.circular(22),
-                ),
-                child: SizedBox(
-                  height: 152,
-                  width: double.infinity,
-                  child: image != null
-                      ? Image.network(
-                          image,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            color: AppTheme.stone,
-                            child: const Icon(
-                              Icons.home_work_outlined,
-                              color: AppTheme.charcoalMuted,
-                              size: 32,
-                            ),
-                          ),
-                        )
-                      : Container(
-                          color: AppTheme.stone,
-                          child: const Icon(
-                            Icons.home_work_outlined,
-                            color: AppTheme.charcoalMuted,
-                            size: 32,
-                          ),
-                        ),
                 ),
               ),
               Padding(
@@ -2520,9 +3472,13 @@ class _SearchBottomSheet extends StatefulWidget {
 
 class _SearchBottomSheetState extends State<_SearchBottomSheet> {
   final TextEditingController _cityController = TextEditingController();
+  Timer? _suggestionDebounce;
   DateTimeRange? _range;
   int _guests = 2;
   String _category = 'All Types';
+  bool _pickedCityFromChip = false;
+  bool _loadingSuggestions = false;
+  List<_PropertySuggestion> _suggestions = [];
 
   static const List<String> _popularCities = [
     'Goa',
@@ -2543,6 +3499,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
   void initState() {
     super.initState();
     _cityController.text = widget.initialCity;
+    _pickedCityFromChip = widget.initialCity.isNotEmpty;
     _range = widget.initialRange;
     _guests = widget.initialGuests;
     _category = widget.initialCategory;
@@ -2550,211 +3507,580 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
 
   @override
   void dispose() {
+    _suggestionDebounce?.cancel();
     _cityController.dispose();
     super.dispose();
   }
 
+  void _onSearchTextChanged(String value) {
+    setState(() => _pickedCityFromChip = false);
+    _suggestionDebounce?.cancel();
+    final query = value.trim();
+    if (query.length < 2) {
+      setState(() {
+        _suggestions = [];
+        _loadingSuggestions = false;
+      });
+      return;
+    }
+    _suggestionDebounce = Timer(const Duration(milliseconds: 280), () {
+      _loadSuggestions(query);
+    });
+  }
+
+  Future<void> _loadSuggestions(String query) async {
+    if (!mounted) return;
+    setState(() => _loadingSuggestions = true);
+    try {
+      final response = await ApiService().dio.get(
+        '/properties/search',
+        queryParameters: {
+          'search': query,
+          'limit': 8,
+          if (_category != 'All Types') 'category': _categoryValue(_category),
+        },
+      );
+      final rows = response.data?['properties'];
+      final suggestions = rows is List
+          ? rows
+              .whereType<Map>()
+              .map((row) => _PropertySuggestion.fromJson(
+                    Map<String, dynamic>.from(row),
+                  ))
+              .where((item) => item.title.isNotEmpty)
+              .toList()
+          : <_PropertySuggestion>[];
+      if (!mounted || _cityController.text.trim() != query) return;
+      setState(() {
+        _suggestions = suggestions;
+        _loadingSuggestions = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _suggestions = [];
+        _loadingSuggestions = false;
+      });
+    }
+  }
+
+  String _categoryValue(String label) {
+    switch (label) {
+      case 'Residential':
+        return 'residential';
+      case 'Commercial':
+        return 'commercial';
+      case 'Event Venue':
+        return 'event_venue';
+      default:
+        return '';
+    }
+  }
+
+  void _selectSuggestion(_PropertySuggestion suggestion) {
+    setState(() {
+      _cityController.text = suggestion.title;
+      _pickedCityFromChip = false;
+      _suggestions = [];
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(
-            22,
-            14,
-            22,
-            MediaQuery.of(context).viewInsets.bottom + 22,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 42,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppTheme.border,
-                    borderRadius: BorderRadius.circular(99),
+    final media = MediaQuery.of(context);
+    final maxHeight = media.size.height * 0.94;
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              24,
+              12,
+              24,
+              media.viewInsets.bottom + 26,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 42,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppTheme.border,
+                      borderRadius: BorderRadius.circular(99),
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Search stays',
-                style: GoogleFonts.manrope(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: AppTheme.charcoal,
-                ),
-              ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: _cityController,
-                decoration: const InputDecoration(
-                  hintText: 'Search destinations',
-                  prefixIcon: Icon(Icons.location_on_outlined),
-                ),
-              ),
-              const SizedBox(height: 14),
-              SizedBox(
-                height: 38,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _popularCities.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final city = _popularCities[index];
-                    return ChoiceChip(
-                      label: Text(city),
-                      selected: _cityController.text == city,
-                      onSelected: (_) {
-                        setState(() => _cityController.text = city);
-                      },
-                      selectedColor: AppTheme.secondary,
-                      labelStyle: GoogleFonts.manrope(
-                        color: _cityController.text == city
-                            ? Colors.white
-                            : AppTheme.charcoal,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      backgroundColor: AppTheme.stone,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                        side: BorderSide.none,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              SizedBox(
-                height: 40,
-                child: ListView.separated(
-                  scrollDirection: Axis.horizontal,
-                  itemCount: _categories.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 8),
-                  itemBuilder: (context, index) {
-                    final category = _categories[index];
-                    final selected = _category == category;
-                    return ChoiceChip(
-                      label: Text(category),
-                      selected: selected,
-                      onSelected: (_) {
-                        setState(() => _category = category);
-                      },
-                      selectedColor: AppTheme.primary,
-                      backgroundColor: AppTheme.stone,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                        side: BorderSide.none,
-                      ),
-                      labelStyle: GoogleFonts.manrope(
-                        color:
-                            selected ? AppTheme.secondary : AppTheme.charcoal,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 12,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              const SizedBox(height: 16),
-              InkWell(
-                onTap: _pickDates,
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                const SizedBox(height: 24),
+                _buildSearchSheetHeader(),
+                const SizedBox(height: 26),
+                Container(
                   decoration: BoxDecoration(
-                    color: AppTheme.sand,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: AppTheme.border),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.calendar_month_outlined,
-                          color: AppTheme.terracotta),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _range == null
-                              ? 'Select dates'
-                              : '${DateFormat('dd MMM').format(_range!.start)} - ${DateFormat('dd MMM').format(_range!.end)}',
+                  child: TextField(
+                    controller: _cityController,
+                    onChanged: _onSearchTextChanged,
+                    textInputAction: TextInputAction.search,
+                    decoration: InputDecoration(
+                      hintText: 'Search property name or destination',
+                      prefixIcon: const Icon(Icons.search_rounded, size: 30),
+                      suffixIcon: _loadingSuggestions
+                          ? const Padding(
+                              padding: EdgeInsets.all(14),
+                              child: SizedBox(
+                                width: 16,
+                                height: 16,
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2),
+                              ),
+                            )
+                          : _cityController.text.isNotEmpty
+                              ? IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _cityController.clear();
+                                      _suggestions = [];
+                                      _pickedCityFromChip = false;
+                                    });
+                                  },
+                                  icon: const Icon(Icons.close_rounded),
+                                )
+                              : null,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(20),
+                        borderSide: BorderSide.none,
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
+                    ),
+                  ),
+                ),
+                if (_suggestions.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  _SuggestionDropdown(
+                    suggestions: _suggestions,
+                    onSelected: _selectSuggestion,
+                  ),
+                ],
+                const SizedBox(height: 28),
+                _sectionTitle('Popular Destinations', action: 'View all'),
+                const SizedBox(height: 14),
+                _buildDestinationCards(),
+                const SizedBox(height: 28),
+                _sectionTitle('Property Type'),
+                const SizedBox(height: 14),
+                _buildPropertyTypeButtons(),
+                const SizedBox(height: 24),
+                _buildDateRow(),
+                const SizedBox(height: 14),
+                _buildGuestRow(),
+                const SizedBox(height: 24),
+                _buildTrustStrip(),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.pop(
+                        context,
+                        _SearchSelection(
+                          city: _pickedCityFromChip
+                              ? _cityController.text.trim()
+                              : '',
+                          searchQuery: _pickedCityFromChip
+                              ? ''
+                              : _cityController.text.trim(),
+                          category: _category,
+                          range: _range,
+                          guests: _guests,
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.search_rounded, size: 28),
+                        const SizedBox(width: 14),
+                        Text(
+                          'Search Stays',
                           style: GoogleFonts.manrope(
-                            color: AppTheme.charcoal,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 19,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: AppTheme.sand,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.people_outline, color: AppTheme.sage),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Guests',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.charcoal,
-                      ),
-                    ),
-                    const Spacer(),
-                    IconButton(
-                      onPressed:
-                          _guests > 1 ? () => setState(() => _guests--) : null,
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    Text(
-                      '$_guests',
-                      style: GoogleFonts.manrope(
-                        fontWeight: FontWeight.w800,
-                        color: AppTheme.charcoal,
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => setState(() => _guests++),
-                      icon: const Icon(Icons.add_circle_outline),
-                    ),
-                  ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSearchSheetHeader() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Find Your Perfect Stay',
+                style: GoogleFonts.manrope(
+                  fontSize: 28,
+                  height: 1.05,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF07142F),
                 ),
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(
-                      context,
-                      _SearchSelection(
-                        city: _cityController.text.trim(),
-                        category: _category,
-                        range: _range,
-                        guests: _guests,
-                      ),
-                    );
-                  },
-                  child: const Text('Apply & Search'),
+              const SizedBox(height: 8),
+              Text(
+                'Search top properties in your favorite destinations',
+                style: GoogleFonts.manrope(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.charcoalMuted,
                 ),
               ),
             ],
           ),
         ),
+        const SizedBox(width: 18),
+        Container(
+          width: 68,
+          height: 68,
+          decoration: BoxDecoration(
+            color: const Color(0xFF07142F),
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF07142F).withValues(alpha: 0.20),
+                blurRadius: 18,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.location_on_outlined,
+            color: AppTheme.primary,
+            size: 38,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sectionTitle(String title, {String? action}) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: GoogleFonts.manrope(
+              fontSize: 19,
+              fontWeight: FontWeight.w900,
+              color: const Color(0xFF07142F),
+            ),
+          ),
+        ),
+        if (action != null)
+          Text(
+            '$action  >',
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              fontWeight: FontWeight.w800,
+              color: AppTheme.primary,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildDestinationCards() {
+    final destinations = _popularCities.take(5).toList();
+    return SizedBox(
+      height: 162,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: destinations.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 14),
+        itemBuilder: (context, index) {
+          final city = destinations[index];
+          final selected = _cityController.text.trim() == city;
+          final assetKey = city.toLowerCase() == 'bangalore'
+              ? 'bengaluru'
+              : city.toLowerCase();
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _cityController.text = city;
+                _pickedCityFromChip = true;
+                _suggestions = [];
+              });
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              width: 138,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: selected ? AppTheme.primary : AppTheme.border,
+                  width: selected ? 1.6 : 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.07),
+                    blurRadius: 14,
+                    offset: const Offset(0, 7),
+                  ),
+                ],
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Image.asset(
+                      _destinationAssetFor(assetKey),
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: AppTheme.stone,
+                        alignment: Alignment.center,
+                        child: const Icon(Icons.location_city_outlined),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined,
+                                size: 17, color: Color(0xFF07142F)),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                city,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.manrope(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w900,
+                                  color: const Color(0xFF07142F),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          'Explore stays',
+                          style: GoogleFonts.manrope(
+                            fontSize: 12,
+                            color: AppTheme.charcoalMuted,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildPropertyTypeButtons() {
+    final items = [
+      ('All Types', Icons.check_circle_outline),
+      ('Residential', Icons.home_outlined),
+      ('Commercial', Icons.apartment_outlined),
+      ('Event Venue', Icons.celebration_outlined),
+    ];
+    return SizedBox(
+      height: 56,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          final selected = _category == item.$1;
+          return InkWell(
+            onTap: () {
+              setState(() => _category = item.$1);
+              final query = _cityController.text.trim();
+              if (query.length >= 2) {
+                _loadSuggestions(query);
+              }
+            },
+            borderRadius: BorderRadius.circular(16),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.symmetric(horizontal: 18),
+              decoration: BoxDecoration(
+                color: selected ? const Color(0xFF07142F) : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: selected ? const Color(0xFF07142F) : AppTheme.border,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    item.$2,
+                    color: selected ? Colors.white : AppTheme.charcoalMuted,
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    item.$1,
+                    style: GoogleFonts.manrope(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: selected ? Colors.white : AppTheme.charcoal,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildDateRow() {
+    final label = _range == null
+        ? 'Check-in  -  Check-out'
+        : '${DateFormat('dd MMM').format(_range!.start)}  -  ${DateFormat('dd MMM').format(_range!.end)}';
+    return _SearchOptionRow(
+      icon: Icons.calendar_month_outlined,
+      title: 'Select Dates',
+      subtitle: label,
+      trailing: const Icon(Icons.chevron_right_rounded, size: 30),
+      onTap: _pickDates,
+    );
+  }
+
+  Widget _buildGuestRow() {
+    return _SearchOptionRow(
+      icon: Icons.people_outline,
+      title: 'Guests',
+      subtitle: 'Select number of guests',
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _StepperButton(
+            icon: Icons.remove,
+            onTap: _guests > 1 ? () => setState(() => _guests--) : null,
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: Text(
+              '$_guests',
+              style: GoogleFonts.manrope(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF07142F),
+              ),
+            ),
+          ),
+          _StepperButton(
+            icon: Icons.add,
+            onTap: () => setState(() => _guests++),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTrustStrip() {
+    final items = [
+      (Icons.verified_user_outlined, 'Verified Properties', 'Quality checked'),
+      (Icons.support_agent_outlined, '24/7 Support', 'We are here'),
+      (Icons.currency_rupee, 'Best Price', 'Great deals'),
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFF8EA),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Row(
+        children: [
+          for (int i = 0; i < items.length; i++) ...[
+            Expanded(
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 18,
+                    backgroundColor: Colors.white,
+                    child: Icon(items[i].$1, size: 18, color: AppTheme.primary),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          items[i].$2,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF07142F),
+                          ),
+                        ),
+                        Text(
+                          items[i].$3,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 10,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (i != items.length - 1)
+              Container(width: 1, height: 34, color: AppTheme.border),
+          ],
+        ],
       ),
     );
   }
@@ -2812,14 +4138,256 @@ class _SearchIconButton extends StatelessWidget {
   }
 }
 
+class _SuggestionDropdown extends StatelessWidget {
+  final List<_PropertySuggestion> suggestions;
+  final ValueChanged<_PropertySuggestion> onSelected;
+
+  const _SuggestionDropdown({
+    required this.suggestions,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 250),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ListView.separated(
+        shrinkWrap: true,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        itemCount: suggestions.length,
+        separatorBuilder: (_, __) => Divider(
+          height: 1,
+          indent: 58,
+          color: Colors.grey.shade100,
+        ),
+        itemBuilder: (context, index) {
+          final suggestion = suggestions[index];
+          return InkWell(
+            onTap: () => onSelected(suggestion),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              child: Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.home_work_outlined,
+                      color: AppTheme.primary,
+                      size: 19,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          suggestion.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w900,
+                            color: AppTheme.charcoal,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          [
+                            suggestion.city,
+                            suggestion.categoryLabel,
+                          ].where((part) => part.trim().isNotEmpty).join(' - '),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(
+                    Icons.north_west_rounded,
+                    color: AppTheme.charcoalMuted,
+                    size: 16,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SearchOptionRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Widget trailing;
+  final VoidCallback? onTap;
+
+  const _SearchOptionRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.trailing,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(18),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: AppTheme.border),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundColor: const Color(0xFF07142F),
+              child: Icon(icon, color: Colors.white, size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.manrope(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF07142F),
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.charcoalMuted,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            trailing,
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StepperButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onTap;
+
+  const _StepperButton({
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(999),
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: AppTheme.border),
+          color: onTap == null ? AppTheme.stone : Colors.white,
+        ),
+        child: Icon(
+          icon,
+          color:
+              onTap == null ? AppTheme.charcoalMuted : const Color(0xFF07142F),
+        ),
+      ),
+    );
+  }
+}
+
+String _destinationAssetFor(String key) {
+  return _destinationIconAssets[key] ??
+      _destinationIconAssets['nashik'] ??
+      'assets/images/destinations/nashik.png';
+}
+
+class _PropertySuggestion {
+  final String title;
+  final String city;
+  final String category;
+
+  const _PropertySuggestion({
+    required this.title,
+    required this.city,
+    required this.category,
+  });
+
+  factory _PropertySuggestion.fromJson(Map<String, dynamic> json) {
+    return _PropertySuggestion(
+      title: json['title']?.toString().trim() ?? '',
+      city: json['city']?.toString().trim() ?? '',
+      category: json['category']?.toString().trim() ?? '',
+    );
+  }
+
+  String get categoryLabel {
+    if (category == 'event_venue') return 'Event Venue';
+    if (category.isEmpty) return '';
+    return category
+        .replaceAll('_', ' ')
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
+  }
+}
+
 class _SearchSelection {
   final String city;
+  final String searchQuery;
   final String category;
   final DateTimeRange? range;
   final int guests;
 
   const _SearchSelection({
     required this.city,
+    required this.searchQuery,
     required this.category,
     required this.range,
     required this.guests,
@@ -3428,6 +4996,304 @@ class _BlogDetailScreen extends StatelessWidget {
   }
 }
 
+class _HostEarnPill extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(8, 5, 12, 5),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFFE2A90D), Color(0xFFF4C333)],
+        ),
+        borderRadius: BorderRadius.circular(999),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.primary.withValues(alpha: 0.20),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 18,
+            height: 18,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 1.4),
+            ),
+            child:
+                const Icon(Icons.star_rounded, size: 12, color: Colors.white),
+          ),
+          const SizedBox(width: 6),
+          Text(
+            'EARN MORE',
+            style: GoogleFonts.manrope(
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              color: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HostTitle extends StatelessWidget {
+  final double fontSize;
+
+  const _HostTitle({required this.fontSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return RichText(
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(
+        style: GoogleFonts.manrope(
+          fontSize: fontSize,
+          height: 1.05,
+          fontWeight: FontWeight.w900,
+          color: const Color(0xFF07142F),
+        ),
+        children: const [
+          TextSpan(text: 'Become a '),
+          TextSpan(
+            text: 'Host',
+            style: TextStyle(color: AppTheme.primary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HostMobileVisual extends StatelessWidget {
+  const _HostMobileVisual();
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(18),
+      child: SizedBox(
+        height: 104,
+        width: double.infinity,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Image.asset(
+              'assets/images/hero_villa.jpg',
+              fit: BoxFit.cover,
+            ),
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    const Color(0xFF07142F).withValues(alpha: 0.78),
+                    const Color(0xFF07142F).withValues(alpha: 0.20),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 12,
+              top: 12,
+              child: Container(
+                width: 58,
+                height: 58,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFE2A90D), Color(0xFFF3BE20)],
+                  ),
+                  borderRadius: BorderRadius.circular(19),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.18),
+                      blurRadius: 14,
+                      offset: const Offset(0, 7),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.home_work_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              bottom: 12,
+              child: Text(
+                'Verified spaces earn better',
+                style: GoogleFonts.manrope(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Positioned(
+              right: 12,
+              bottom: 10,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.92),
+                  borderRadius: BorderRadius.circular(999),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.10),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  'Join 1000+ hosts',
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF07142F),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HostListButton extends StatelessWidget {
+  final bool fullWidth;
+  final VoidCallback onPressed;
+
+  const _HostListButton({
+    this.fullWidth = false,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: fullWidth ? double.infinity : 168,
+      height: fullWidth ? 48 : 44,
+      child: ElevatedButton(
+        onPressed: onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor:
+              fullWidth ? const Color(0xFFE6A90D) : const Color(0xFF07142F),
+          foregroundColor: Colors.white,
+          elevation: fullWidth ? 3 : 0,
+          shadowColor: AppTheme.primary.withValues(alpha: 0.35),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (fullWidth) ...[
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.home_rounded,
+                  color: Color(0xFFE6A90D),
+                  size: 17,
+                ),
+              ),
+              const SizedBox(width: 12),
+            ],
+            Text(
+              'List Your Space',
+              style: GoogleFonts.manrope(
+                fontSize: fullWidth ? 15 : 13,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Icon(Icons.arrow_forward_rounded, size: fullWidth ? 21 : 19),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _HostBenefit extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _HostBenefit({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            color: const Color(0xFFFFF8EA),
+            shape: BoxShape.circle,
+            border: Border.all(color: const Color(0xFFF0DFC5)),
+          ),
+          child: Icon(icon, size: 18, color: const Color(0xFF07142F)),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          title,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(
+            fontSize: 10,
+            height: 1,
+            fontWeight: FontWeight.w900,
+            color: const Color(0xFF07142F),
+          ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          subtitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          textAlign: TextAlign.center,
+          style: GoogleFonts.manrope(
+            fontSize: 9,
+            height: 1,
+            fontWeight: FontWeight.w700,
+            color: const Color(0xFF3F4652),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _FooterSectionData {
   final String title;
   final List<String> links;
@@ -3557,6 +5423,47 @@ class _AccountActionTile extends StatelessWidget {
         ),
         onTap: onTap,
       ),
+    );
+  }
+}
+
+class _HeaderNotificationButton extends StatelessWidget {
+  final int unreadCount;
+  final VoidCallback onTap;
+
+  const _HeaderNotificationButton({
+    required this.unreadCount,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        IconButton(
+          onPressed: onTap,
+          icon: const Icon(
+            Icons.notifications_none_rounded,
+            color: Color(0xFF07142F),
+            size: 28,
+          ),
+        ),
+        if (unreadCount > 0)
+          Positioned(
+            top: 10,
+            right: 10,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE53935),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white, width: 1.5),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }

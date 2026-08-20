@@ -116,11 +116,11 @@ def _goldenrich_redirect_uri() -> str:
     configured = _env("GOLDENRICH_OAUTH_REDIRECT_URI")
     if configured:
         return configured
-    backend_url = _env("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
+    backend_url = _env("PUBLIC_BACKEND_URL", "https://api.x-space360.in").rstrip("/")
     return f"{backend_url}/api/auth/sso/goldenrich/callback"
 
 def _is_self_referencing_authorize_url(authorize_url: str) -> bool:
-    backend_url = _env("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
+    backend_url = _env("PUBLIC_BACKEND_URL", "https://api.x-space360.in").rstrip("/")
     authorize_parts = urlparse(authorize_url)
     backend_parts = urlparse(backend_url)
     if not authorize_parts.netloc or not backend_parts.netloc:
@@ -131,7 +131,7 @@ def _sso_cookie_secure() -> bool:
     configured = _env("SSO_COOKIE_SECURE")
     if configured:
         return configured.lower() == "true"
-    return _env("PUBLIC_BACKEND_URL", "http://localhost:8001").startswith("https://")
+    return _env("PUBLIC_BACKEND_URL", "https://api.x-space360.in").startswith("https://")
 
 def _remember_sso_state(state: str) -> None:
     now = time.time()
@@ -987,7 +987,7 @@ async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_d
         if not user_dict:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
+                detail="No account found with this email address"
             )
 
         if user_dict.get("role") == UserRole.ADMIN.value:
@@ -1000,7 +1000,7 @@ async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_d
         if not verify_password(credentials.password, user_dict["password_hash"]):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid email or password"
+                detail="Password is incorrect"
             )
         
         # Check if user is active

@@ -186,7 +186,7 @@ flutter pub get
 Write-Host "Launching Flutter App on emulator/device..." -ForegroundColor Green
 if ($deviceId) {
     Write-Host "Targeting emulator: $deviceId" -ForegroundColor Green
-    flutter run -d $deviceId --device-timeout 90
+    flutter run -d $deviceId --flavor dev --device-timeout 90
 } else {
-    flutter run
+    flutter run --flavor dev
 }

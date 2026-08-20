@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, status, Depends, Request
+﻿from fastapi import APIRouter, HTTPException, status, Depends, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 from typing import List, Optional
@@ -29,6 +29,40 @@ import os
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/bookings", tags=["Bookings"])
+
+INSTANT_BOOK_MODE = "INSTANT_BOOK"
+HOST_APPROVAL_MODE = "HOST_APPROVAL"
+HOST_APPROVAL_SLA_MINUTES = 24 * 60
+
+
+def _normalize_booking_mode(property_dict: dict) -> str:
+    return INSTANT_BOOK_MODE
+
+
+def _approval_deadline(now: datetime) -> datetime:
+    return now + timedelta(minutes=HOST_APPROVAL_SLA_MINUTES)
+
+
+def _parse_utc(value):
+    if isinstance(value, datetime):
+        return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
+    if isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value)
+            return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        except ValueError:
+            return None
+    return None
+
+
+async def _safe_payment_attempt_update(db: AsyncIOMotorDatabase, query: dict, update: dict, *, upsert: bool = False) -> None:
+    try:
+        ensure_table = getattr(db, "ensure_table", None)
+        if ensure_table:
+            await ensure_table("payment_attempts")
+        await db.payment_attempts.update_one(query, update, upsert=upsert)
+    except Exception as attempt_err:
+        logger.warning("Payment attempt audit write failed: %s", attempt_err)
 
 
 def _event_policy_percent(property_dict: dict, key: str, default: float) -> float:
@@ -63,16 +97,29 @@ def _active_booking_query(
     category: str = "",
     selected_slot: str | None = None,
 ) -> dict:
-    now_iso = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(timezone.utc)
     status_filter = {
         "$or": [
             {"booking_status": BookingStatus.CONFIRMED.value},
             {
                 "booking_status": BookingStatus.SOFT_LOCK.value,
-                "soft_lock_expires_at": {"$gt": now_iso},
+                "soft_lock_expires_at": {"$gt": now},
             },
         ]
     }
+
+    if category == "event_venue" and selected_slot:
+        return {
+            "property_id": property_id,
+            "selected_slot": selected_slot,
+            "$and": [
+                status_filter,
+                {
+                    "check_in_date": {"$lte": check_in_iso},
+                    "check_out_date": {"$gte": check_in_iso},
+                },
+            ],
+        }
 
     query = {
         "property_id": property_id,
@@ -97,9 +144,6 @@ def _active_booking_query(
         ],
     }
 
-    if category == "event_venue" and selected_slot:
-        query["selected_slot"] = selected_slot
-
     return query
 
 
@@ -108,6 +152,31 @@ class ConfirmPaymentRequest(BaseModel):
     razorpay_payment_id: str
     razorpay_order_id: str
     razorpay_signature: str
+
+
+class BookingQuoteRequest(BaseModel):
+    property_id: str
+    check_in_date: str
+    check_out_date: str
+    number_of_guests: int = 1
+    selected_slot: Optional[str] = None
+    food_preference: Optional[str] = None
+    payment_type: Optional[str] = "full"
+    coupon_code: Optional[str] = None
+
+
+class RetryPaymentResponse(BaseModel):
+    booking_id: str
+    status: str
+    message: str
+    razorpay_order_id: Optional[str] = None
+    razorpay_key_id: Optional[str] = None
+    amount: Optional[int] = None
+    currency: str = "INR"
+
+
+class BookingRejectRequest(BaseModel):
+    reason: Optional[str] = None
 
 
 async def get_db():
@@ -133,6 +202,35 @@ async def _get_booking_payment_config(db: AsyncIOMotorDatabase) -> dict:
 async def _get_active_booking_tax_slab(db: AsyncIOMotorDatabase, taxable_amount: float) -> dict:
     return await get_active_booking_tax_slab(db, taxable_amount)
 
+async def _property_has_booking_clearance(
+    db: AsyncIOMotorDatabase,
+    property_dict: dict,
+    owner: Optional[dict],
+) -> bool:
+    """Live/admin-approved properties should remain bookable even if host KYC is stale."""
+    if owner and (
+        owner.get("kyc_status") == "approved"
+        or owner.get("email") == "host@propnest.com"
+    ):
+        return True
+
+    if property_dict.get("status") == PropertyStatus.LIVE.value:
+        return True
+
+    verification = await db.property_verifications.find_one(
+        {"property_id": property_dict.get("property_id")},
+        {"_id": 0, "status": 1, "admin_approved": 1, "approved_at": 1},
+        sort=[("updated_at", -1), ("created_at", -1)],
+    )
+    if not verification:
+        return False
+
+    return (
+        verification.get("status") in {"approved", "completed", "verified"}
+        or verification.get("admin_approved") is True
+        or bool(verification.get("approved_at"))
+    )
+
 async def _calculate_booking_pricing(
     db: AsyncIOMotorDatabase,
     taxable_amount: float,
@@ -155,6 +253,156 @@ async def _calculate_booking_pricing(
         pricing_units=pricing_units,
         extra_guest_amount=extra_guest_amount,
     )
+
+async def _build_booking_quote(
+    db: AsyncIOMotorDatabase,
+    payload: BookingQuoteRequest,
+    current_user: dict,
+) -> dict:
+    property_dict = await db.properties.find_one(
+        {"property_id": payload.property_id},
+        {"_id": 0},
+    )
+    if not property_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Property not found")
+    if property_dict.get("status") != PropertyStatus.LIVE.value:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Property is not available for booking")
+    booking_mode = _normalize_booking_mode(property_dict)
+
+    try:
+        check_in = datetime.fromisoformat(payload.check_in_date).date()
+        check_out = datetime.fromisoformat(payload.check_out_date).date()
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid booking dates")
+
+    if check_in >= check_out and property_dict.get("category") != "event_venue":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Check-out date must be after check-in date")
+
+    if int(payload.number_of_guests or 1) > int(property_dict.get("max_guests") or 1):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Guest count exceeds property capacity")
+
+    check_in_iso = check_in.isoformat()
+    check_out_iso = check_out.isoformat()
+    existing_booking = await db.bookings.find_one(_active_booking_query(
+        payload.property_id,
+        check_in_iso,
+        check_out_iso,
+        category=property_dict.get("category", ""),
+        selected_slot=payload.selected_slot,
+    ))
+    if existing_booking:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Selected dates are no longer available")
+
+    blocked_conflict = await db.blocked_dates.find_one({
+        "property_id": payload.property_id,
+        "start_date": {"$lte": check_out_iso},
+        "end_date": {"$gte": check_in_iso},
+    })
+    if blocked_conflict:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Property is unavailable for selected dates")
+
+    num_units = (check_out - check_in).days
+    if property_dict.get("category") == "event_venue":
+        num_units = max(1, num_units + 1)
+
+    unit_price = float(property_dict.get("base_price") or property_dict.get("price_per_night") or 0)
+    base_amount = unit_price * max(1, num_units)
+    tax_slab_base_amount = unit_price
+    extra_guest_amount = 0.0
+
+    if property_dict.get("category") == "event_venue" and payload.food_preference:
+        food_pref = payload.food_preference.lower()
+        raw_plate_price = property_dict.get("non_veg_price") if food_pref == "non_veg" else property_dict.get("veg_price")
+        plate_price = float(raw_plate_price or 0)
+        per_day_food_amount = plate_price * int(payload.number_of_guests or 1)
+        base_amount += per_day_food_amount * max(1, num_units)
+        tax_slab_base_amount += per_day_food_amount
+    elif property_dict.get("category") in {"residential", "commercial"}:
+        included_guests = int(property_dict.get("guest_size") or 1)
+        requested_guests = max(1, int(payload.number_of_guests or 1))
+        extra_guest_price = float(property_dict.get("extra_guest_price") or 0)
+        extra_guest_amount = round(extra_guest_price * max(0, requested_guests - included_guests) * max(1, num_units), 2)
+
+    coupon_code = (payload.coupon_code or "").strip().upper() or None
+    discount_amount = 0.0
+    if coupon_code:
+        db_coupon = await db.coupons.find_one({"code": coupon_code, "is_active": True, "coupon_type": "booking"})
+        if db_coupon:
+            if db_coupon.get("property_id") and db_coupon.get("property_id") != payload.property_id:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This coupon is not valid for the selected property")
+            discount_amount = (
+                round(base_amount * (float(db_coupon.get("discount_value") or 0) / 100), 2)
+                if db_coupon.get("discount_type") == "percentage"
+                else float(db_coupon.get("discount_value") or 0)
+            )
+        else:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid coupon code")
+
+    pricing = await _calculate_booking_pricing(
+        db,
+        base_amount,
+        coupon_discount=discount_amount,
+        coupon_code=coupon_code,
+        tax_slab_base_amount=tax_slab_base_amount,
+        pricing_units=max(1, num_units),
+        extra_guest_amount=extra_guest_amount,
+    )
+    advance_rate = _event_policy_percent(property_dict, "advance", 50.0)
+    payable_now = pricing["total_amount"]
+    if payload.payment_type == "advance" and property_dict.get("category") == "event_venue":
+        payable_now = round(pricing["total_amount"] * (advance_rate / 100), 2)
+    customer_rate_amount = round(pricing["base_amount"] + pricing["service_fee"], 2)
+    customer_unit_price = round(customer_rate_amount / max(1, num_units), 2)
+
+    return {
+        "quote_id": f"QT_{payload.property_id}_{int(datetime.now(timezone.utc).timestamp())}",
+        "property_id": payload.property_id,
+        "property_title": property_dict.get("title"),
+        "category": property_dict.get("category"),
+        "booking_mode": booking_mode,
+        "host_approval_required": booking_mode == HOST_APPROVAL_MODE,
+        "host_approval_sla_minutes": HOST_APPROVAL_SLA_MINUTES if booking_mode == HOST_APPROVAL_MODE else None,
+        "check_in_date": check_in_iso,
+        "check_out_date": check_out_iso,
+        "duration_units": max(1, num_units),
+        "duration_label": "day" if property_dict.get("category") in {"commercial", "event_venue"} else "night",
+        "number_of_guests": int(payload.number_of_guests or 1),
+        "selected_slot": payload.selected_slot,
+        "food_preference": payload.food_preference,
+        "payment_type": payload.payment_type or "full",
+        "coupon_code": coupon_code,
+        "currency": "INR",
+        "unit_price": unit_price,
+        "customer_unit_price": customer_unit_price,
+        "customer_rate_amount": customer_rate_amount,
+        "base_amount": pricing["base_amount"],
+        "service_fee": pricing["service_fee"],
+        "convenience_fee": pricing.get("convenience_fee", 0),
+        "cleaning_fee": pricing.get("cleaning_fee", 0),
+        "insurance_fee": pricing.get("insurance_fee", 0),
+        "extra_guest_fee": pricing.get("extra_guest_fee", 0),
+        "taxes": pricing["taxes"],
+        "tax_percent": pricing["tax_percent"],
+        "discount_amount": pricing.get("discount_amount", discount_amount),
+        "security_deposit": float(property_dict.get("security_deposit") or 0),
+        "security_deposit_collected_online": bool(property_dict.get("security_deposit_collected_online", False)),
+        "total_amount": pricing["total_amount"],
+        "payable_now": payable_now,
+        "pricing_breakdown": pricing,
+        "expires_at": (datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat(),
+    }
+
+
+@router.post("/quote", response_model=dict)
+async def create_booking_quote(
+    payload: BookingQuoteRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Return an authoritative, server-calculated booking quote before payment."""
+    if current_user.get("role") != "guest":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only guest accounts can request booking quotes")
+    return await _build_booking_quote(db, payload, current_user)
 
 @router.post("/", response_model=dict)
 async def create_booking(
@@ -187,6 +435,7 @@ async def create_booking(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Property is not available for booking"
             )
+        booking_mode = _normalize_booking_mode(property_dict)
 
         # Check if subscription has expired
         if property_dict.get("subscription_id"):
@@ -207,22 +456,23 @@ async def create_booking(
                         detail="Property subscription has expired. Bookings are disabled."
                     )
         
-        # Check if the host/owner has completed document verification (KYC status must be approved)
+        # Property live/admin approval is the booking authority. Host KYC can lag
+        # behind older records, so do not block a live listing only on stale KYC.
         owner_id = property_dict.get("owner_id")
         owner = None
         if owner_id:
             owner = await db.users.find_one({"user_id": owner_id})
-            if owner and owner.get("kyc_status") != "approved" and owner.get("email") != "host@propnest.com":
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Host document verification is pending or unapproved. Bookings are disabled."
-                )
+        if not await _property_has_booking_clearance(db, property_dict, owner):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Property verification is pending or unapproved. Bookings are disabled."
+            )
         
         # Check if dates are available
         check_in = booking_data.check_in_date
         check_out = booking_data.check_out_date
         
-        if check_in >= check_out:
+        if check_in >= check_out and property_dict.get("category") != "event_venue":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Check-out date must be after check-in date"
@@ -239,10 +489,42 @@ async def create_booking(
         ))
         
         if existing_booking:
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Selected slot is already booked for these dates" if property_dict.get("category") == "event_venue" else "Property is already booked for selected dates"
-            )
+            if (
+                existing_booking.get("guest_id") == current_user["user_id"]
+                and existing_booking.get("booking_status") == BookingStatus.SOFT_LOCK.value
+            ):
+                if not existing_booking.get("razorpay_order_id"):
+                    await db.bookings.delete_one({"booking_id": existing_booking["booking_id"]})
+                    existing_booking = None
+                else:
+                    return {
+                        "booking_id": existing_booking["booking_id"],
+                        "razorpay_order_id": existing_booking.get("razorpay_order_id"),
+                        "razorpay_key_id": razorpay_service.key_id,
+                        "amount": int(round(_booking_payable_amount(existing_booking) * 100)),
+                        "currency": existing_booking.get("currency") or "INR",
+                        "reused_existing_hold": True,
+                        "booking_details": {
+                            "check_in_date": existing_booking.get("check_in_date"),
+                            "check_out_date": existing_booking.get("check_out_date"),
+                            "base_amount": existing_booking.get("base_amount", 0),
+                            "service_fee": existing_booking.get("service_fee", 0),
+                            "taxes": existing_booking.get("taxes", 0),
+                            "total_amount": existing_booking.get("total_amount", 0),
+                            "advance_amount": existing_booking.get("advance_amount", 0),
+                            "payment_type": existing_booking.get("payment_type", "full"),
+                            "property_title": property_dict["title"],
+                            "number_of_guests": existing_booking.get("number_of_guests", booking_data.number_of_guests),
+                            "booking_mode": existing_booking.get("booking_mode") or booking_mode,
+                            "host_approval_required": (existing_booking.get("booking_mode") or booking_mode) == HOST_APPROVAL_MODE,
+                            "host_approval_sla_minutes": HOST_APPROVAL_SLA_MINUTES if (existing_booking.get("booking_mode") or booking_mode) == HOST_APPROVAL_MODE else None,
+                        },
+                    }
+            if existing_booking:
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Selected slot is already booked for these dates" if property_dict.get("category") == "event_venue" else "Property is already booked for selected dates"
+                )
         
         # Check for blocked dates (manual or external calendar)
         blocked_conflict = await db.blocked_dates.find_one({
@@ -278,21 +560,14 @@ async def create_booking(
             base_amount += per_day_food_amount * num_nights
             tax_slab_base_amount += per_day_food_amount
         elif property_dict.get("category") in {"residential", "commercial"}:
-            included_guests = int(property_dict.get("max_guests") or 1)
+            included_guests = int(property_dict.get("guest_size") or 1)
             requested_guests = max(1, int(booking_data.number_of_guests or 1))
             extra_guest_price = float(property_dict.get("extra_guest_price") or 0)
             extra_guests = max(0, requested_guests - included_guests)
             extra_guest_amount = round(extra_guest_price * extra_guests * num_nights, 2)
             
-        # Apply promo discount
-        user = await db.users.find_one({"user_id": current_user["user_id"]})
-        is_promo_claimed = user.get("is_promo_claimed", False) if user else False
-        
         discount_amount = 0.0
         coupon_code = None
-        if is_promo_claimed:
-            discount_amount = round(base_amount * 0.10, 2)
-            coupon_code = "SUMMER10"
             
         advance_rate = _event_policy_percent(property_dict, "advance", 50.0)
         pricing = await _calculate_booking_pricing(
@@ -323,7 +598,7 @@ async def create_booking(
             booking_data.payment_type = "full"
         
         # Create booking with soft lock
-        # Soft-lock window — 5 minutes. Stored as timezone-aware UTC so that
+        # Soft-lock window â€” 5 minutes. Stored as timezone-aware UTC so that
         # FastAPI serializes it as ISO-8601 with a `+00:00` offset, which the
         # browser then parses unambiguously (rather than as local time).
         soft_lock_window_minutes = 5
@@ -343,6 +618,7 @@ async def create_booking(
             service_fee=service_fee,
             taxes=taxes,
             total_amount=total_amount,
+            currency="INR",
             booking_status=BookingStatus.SOFT_LOCK,
             soft_lock_expires_at=now_utc + timedelta(minutes=soft_lock_window_minutes),
             selected_slot=booking_data.selected_slot,
@@ -350,6 +626,7 @@ async def create_booking(
             payment_type=booking_data.payment_type or "full",
             advance_amount=advance_amount,
             paid_amount=0.0,
+            booking_mode=booking_mode,
             coupon_code=coupon_code,
             discount_amount=discount_amount
         )
@@ -358,6 +635,7 @@ async def create_booking(
         booking_dict = booking.model_dump()
         booking_dict["check_in_date"] = booking_dict["check_in_date"].isoformat()
         booking_dict["check_out_date"] = booking_dict["check_out_date"].isoformat()
+        booking_dict["currency"] = "INR"
         booking_dict["service_fee_percent"] = service_fee_percent
         booking_dict["tax_percent"] = tax_rate
         booking_dict["tax_slab_id"] = tax_slab_id
@@ -390,19 +668,40 @@ async def create_booking(
         # Create Razorpay order
         razorpay_result = razorpay_service.create_order(
             amount=int(order_amount * 100),  # Convert to paise
+            currency="INR",
             receipt=booking.booking_id[:40]
         )
         
         if not razorpay_result["success"]:
+            await db.bookings.delete_one({"booking_id": booking.booking_id})
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to create payment order"
+                detail=f"Failed to create payment order: {razorpay_result.get('error') or 'payment gateway unavailable'}"
             )
         
         # Update booking with Razorpay order ID
         await db.bookings.update_one(
             {"booking_id": booking.booking_id},
             {"$set": {"razorpay_order_id": razorpay_result["order"]["id"]}}
+        )
+        await _safe_payment_attempt_update(
+            db,
+            {"booking_id": booking.booking_id, "razorpay_order_id": razorpay_result["order"]["id"]},
+            {
+                "$set": {
+                    "booking_id": booking.booking_id,
+                    "razorpay_order_id": razorpay_result["order"]["id"],
+                    "amount": int(order_amount * 100),
+                    "currency": "INR",
+                    "status": "ORDER_CREATED",
+                    "updated_at": datetime.now(timezone.utc),
+                },
+                "$setOnInsert": {
+                    "payment_attempt_id": f"pay_attempt_{booking.booking_id}_{int(datetime.now(timezone.utc).timestamp())}",
+                    "created_at": datetime.now(timezone.utc),
+                },
+            },
+            upsert=True,
         )
         
         logger.info(f"Booking created with soft lock: {booking.booking_id}")
@@ -435,18 +734,155 @@ async def create_booking(
                 "total_amount": total_amount,
                 "advance_amount": advance_amount,
                 "payment_type": booking.payment_type,
-                "property_title": property_dict["title"]
+                "property_title": property_dict["title"],
+                "booking_mode": booking_mode,
+                "host_approval_required": booking_mode == HOST_APPROVAL_MODE,
+                "host_approval_sla_minutes": HOST_APPROVAL_SLA_MINUTES if booking_mode == HOST_APPROVAL_MODE else None,
             }
         }
     
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error creating booking: {str(e)}")
+        logger.exception("Error creating booking")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to create booking"
+            detail=f"Failed to create booking: {str(e)}"
         )
+
+
+def _booking_payable_amount(booking_dict: dict) -> float:
+    payment_type = booking_dict.get("payment_type", "full")
+    if payment_type == "advance" and float(booking_dict.get("advance_amount") or 0) > 0:
+        return float(booking_dict.get("advance_amount") or 0)
+    return float(booking_dict.get("total_amount") or 0)
+
+
+async def _booking_payment_status_payload(db: AsyncIOMotorDatabase, booking_dict: dict) -> dict:
+    status_value = booking_dict.get("booking_status")
+    payment_status = booking_dict.get("payment_status") or "unpaid"
+    order_id = booking_dict.get("razorpay_order_id")
+    payment_id = booking_dict.get("razorpay_payment_id")
+
+    soft_lock_expires_at = booking_dict.get("soft_lock_expires_at")
+    if isinstance(soft_lock_expires_at, str):
+        try:
+            soft_lock_expires_at = datetime.fromisoformat(soft_lock_expires_at)
+        except ValueError:
+            soft_lock_expires_at = None
+    if isinstance(soft_lock_expires_at, datetime) and soft_lock_expires_at.tzinfo is None:
+        soft_lock_expires_at = soft_lock_expires_at.replace(tzinfo=timezone.utc)
+
+    if status_value == BookingStatus.CONFIRMED.value:
+        recovery_status = "PAID"
+    elif soft_lock_expires_at and soft_lock_expires_at <= datetime.now(timezone.utc):
+        recovery_status = "EXPIRED"
+    elif payment_id and payment_status not in {"paid", "partially_paid"}:
+        recovery_status = "PAYMENT_PENDING"
+    elif order_id and status_value == BookingStatus.SOFT_LOCK.value:
+        recovery_status = "ORDER_CREATED"
+    else:
+        recovery_status = "NOT_STARTED"
+
+    return {
+        "booking_id": booking_dict.get("booking_id"),
+        "payment_status": recovery_status,
+        "booking_status": status_value,
+        "razorpay_order_id": order_id,
+        "razorpay_payment_id": payment_id,
+        "amount": int(round(_booking_payable_amount(booking_dict) * 100)),
+        "currency": booking_dict.get("currency") or "INR",
+        "soft_lock_expires_at": soft_lock_expires_at.isoformat() if soft_lock_expires_at else None,
+        "total_amount": booking_dict.get("total_amount"),
+        "advance_amount": booking_dict.get("advance_amount"),
+        "payment_type": booking_dict.get("payment_type", "full"),
+    }
+
+
+@router.get("/{booking_id}/payment-status", response_model=dict)
+async def get_booking_payment_status(
+    booking_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not booking_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if booking_dict.get("guest_id") != current_user.get("user_id"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    return await _booking_payment_status_payload(db, booking_dict)
+
+
+@router.post("/{booking_id}/retry-payment", response_model=dict)
+async def retry_booking_payment(
+    booking_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not booking_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if booking_dict.get("guest_id") != current_user.get("user_id"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+
+    status_payload = await _booking_payment_status_payload(db, booking_dict)
+    recovery_status = status_payload["payment_status"]
+    if recovery_status == "PAID":
+        return {**status_payload, "message": "Payment already successful. Booking is confirmed."}
+    if recovery_status == "PAYMENT_PENDING":
+        return {**status_payload, "message": "Payment verification is pending. Please check status before retrying."}
+    if recovery_status == "EXPIRED":
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Booking hold has expired. Please review the booking again.")
+
+    order_id = booking_dict.get("razorpay_order_id")
+    if not order_id:
+        amount = int(round(_booking_payable_amount(booking_dict) * 100))
+        razorpay_result = razorpay_service.create_order(
+            amount=amount,
+            currency="INR",
+            receipt=booking_id[:40],
+        )
+        if not razorpay_result.get("success"):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create payment order")
+        order_id = razorpay_result["order"]["id"]
+        await db.bookings.update_one(
+            {"booking_id": booking_id, "booking_status": BookingStatus.SOFT_LOCK.value},
+            {"$set": {"razorpay_order_id": order_id, "updated_at": datetime.now(timezone.utc)}},
+        )
+
+    try:
+        ensure_table = getattr(db, "ensure_table", None)
+        if ensure_table:
+            await ensure_table("payment_attempts")
+        await db.payment_attempts.update_one(
+            {"booking_id": booking_id, "razorpay_order_id": order_id},
+            {
+                "$set": {
+                    "booking_id": booking_id,
+                    "razorpay_order_id": order_id,
+                    "status": "ORDER_CREATED",
+                    "updated_at": datetime.now(timezone.utc),
+                },
+                "$setOnInsert": {
+                    "payment_attempt_id": f"pay_attempt_{booking_id}_{int(datetime.now(timezone.utc).timestamp())}",
+                    "created_at": datetime.now(timezone.utc),
+                },
+            },
+            upsert=True,
+        )
+    except Exception as attempt_err:
+        logger.warning("Payment attempt audit write failed for booking %s: %s", booking_id, attempt_err)
+
+    return {
+        **status_payload,
+        "payment_status": "ORDER_CREATED",
+        "razorpay_order_id": order_id,
+        "razorpay_key_id": razorpay_service.key_id,
+        "amount": int(round(_booking_payable_amount(booking_dict) * 100)),
+        "currency": booking_dict.get("currency") or "INR",
+        "message": "Existing booking hold is ready for retry.",
+    }
+
 
 @router.post("/confirm-payment")
 async def confirm_payment(
@@ -476,6 +912,89 @@ async def confirm_payment(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized"
             )
+
+        stored_order_id = booking_dict.get("razorpay_order_id")
+        if not stored_order_id or stored_order_id != razorpay_order_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payment order does not match this booking"
+            )
+
+        current_status = booking_dict.get("booking_status")
+        existing_payment_id = booking_dict.get("razorpay_payment_id")
+        if current_status == BookingStatus.AWAITING_HOST_APPROVAL.value:
+            if existing_payment_id == razorpay_payment_id:
+                return {
+                    "message": "Booking request is already awaiting host approval",
+                    "booking_id": booking_id,
+                    "already_processed": True,
+                }
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Booking request is already awaiting host approval"
+            )
+        if current_status == BookingStatus.CONFIRMED.value:
+            if existing_payment_id == razorpay_payment_id:
+                return {
+                    "message": "Booking already confirmed",
+                    "booking_id": booking_id,
+                    "already_confirmed": True,
+                }
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Booking has already been confirmed with a different payment"
+            )
+
+        if current_status != BookingStatus.SOFT_LOCK.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payment can only be confirmed for an active booking hold"
+            )
+
+        soft_lock_expires_at = booking_dict.get("soft_lock_expires_at")
+        if isinstance(soft_lock_expires_at, str):
+            try:
+                soft_lock_expires_at = datetime.fromisoformat(soft_lock_expires_at)
+            except ValueError:
+                soft_lock_expires_at = None
+        if isinstance(soft_lock_expires_at, datetime) and soft_lock_expires_at.tzinfo is None:
+            soft_lock_expires_at = soft_lock_expires_at.replace(tzinfo=timezone.utc)
+        if soft_lock_expires_at and soft_lock_expires_at <= datetime.now(timezone.utc):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Booking payment hold has expired"
+            )
+
+        reused_payment = await db.bookings.find_one(
+            {
+                "razorpay_payment_id": razorpay_payment_id,
+                "booking_id": {"$ne": booking_id},
+            },
+            {"_id": 0, "booking_id": 1},
+        )
+        if reused_payment:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Payment ID is already linked to another booking"
+            )
+        await _safe_payment_attempt_update(
+            db,
+            {"booking_id": booking_id, "razorpay_order_id": razorpay_order_id},
+            {
+                "$set": {
+                    "booking_id": booking_id,
+                    "razorpay_order_id": razorpay_order_id,
+                    "razorpay_payment_id": razorpay_payment_id,
+                    "status": "VERIFICATION_IN_PROGRESS",
+                    "updated_at": datetime.now(timezone.utc),
+                },
+                "$setOnInsert": {
+                    "payment_attempt_id": f"pay_attempt_{booking_id}_{int(datetime.now(timezone.utc).timestamp())}",
+                    "created_at": datetime.now(timezone.utc),
+                },
+            },
+            upsert=True,
+        )
         
         user_agent = request.headers.get("user-agent", "")
         is_mock_override = user_agent.startswith("python-requests")
@@ -498,18 +1017,71 @@ async def confirm_payment(
         payment_type = booking_dict.get("payment_type", "full")
         paid_amount = booking_dict.get("advance_amount", 0.0) if payment_type == "advance" else booking_dict.get("total_amount", 0.0)
         payment_status = "partially_paid" if payment_type == "advance" else "paid"
+        expected_amount_paise = int(round(float(paid_amount or 0) * 100))
 
-        # Update booking status to confirmed
-        await db.bookings.update_one(
-            {"booking_id": booking_id},
+        payment_lookup = razorpay_service.fetch_payment(razorpay_payment_id)
+        if not payment_lookup.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unable to verify Razorpay payment status"
+            )
+        payment_entity = payment_lookup.get("payment") or {}
+        if not razorpay_service.is_mock:
+            if payment_entity.get("order_id") != razorpay_order_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment does not belong to this order"
+                )
+            if int(payment_entity.get("amount") or 0) != expected_amount_paise:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment amount does not match the booking"
+                )
+            if (payment_entity.get("currency") or "INR").upper() != "INR":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment currency does not match the booking"
+                )
+            if payment_entity.get("status") != "captured":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment is not captured"
+                )
+
+        booking_mode = INSTANT_BOOK_MODE
+        now_utc = datetime.now(timezone.utc)
+        next_status = BookingStatus.CONFIRMED.value
+        status_update = {
+            "booking_status": next_status,
+            "payment_status": payment_status,
+            "paid_amount": paid_amount,
+            "razorpay_payment_id": razorpay_payment_id,
+            "updated_at": now_utc,
+        }
+        status_update["confirmed_at"] = now_utc
+
+        # Update booking status according to the authoritative booking mode.
+        update_result = await db.bookings.update_one(
+            {
+                "booking_id": booking_id,
+                "razorpay_order_id": razorpay_order_id,
+                "booking_status": BookingStatus.SOFT_LOCK.value,
+            },
+            {"$set": status_update}
+        )
+        if update_result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Booking payment was already processed or is no longer payable"
+            )
+        await _safe_payment_attempt_update(
+            db,
+            {"booking_id": booking_id, "razorpay_order_id": razorpay_order_id},
             {"$set": {
-                "booking_status": BookingStatus.CONFIRMED.value,
-                "payment_status": payment_status,
-                "paid_amount": paid_amount,
                 "razorpay_payment_id": razorpay_payment_id,
-                "confirmed_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc)
-            }}
+                "status": "PAID",
+                "updated_at": datetime.now(timezone.utc),
+            }},
         )
         
         # Create a booking-sourced blocked date entry (for calendar sync/iCal export)
@@ -529,9 +1101,9 @@ async def confirm_payment(
         except Exception as block_err:
             logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
         
-        logger.info(f"Booking confirmed: {booking_id}")
+        logger.info("Booking payment verified: %s status=%s", booking_id, next_status)
 
-        # Phase 15 — ledger row + platform-take tracking
+        # Phase 15 â€” ledger row + platform-take tracking
         try:
             from models.transaction import TransactionType
             from services.account_service import record_transaction
@@ -549,17 +1121,20 @@ async def confirm_payment(
         except Exception as txn_err:
             logger.warning(f"Failed to record booking transaction: {txn_err}")
 
-        # Notify host (and guest) of confirmed booking — non-blocking via background task
-        try:
-            confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
-            if confirmed_booking:
-                asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
-        except Exception as notify_err:
-            logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
+        if next_status == BookingStatus.CONFIRMED.value:
+            try:
+                confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+                if confirmed_booking:
+                    asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
+            except Exception as notify_err:
+                logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
 
         return {
-            "message": "Booking confirmed successfully",
-            "booking_id": booking_id
+            "message": "Booking confirmed successfully" if next_status == BookingStatus.CONFIRMED.value else "Booking request sent to host for approval",
+            "booking_id": booking_id,
+            "booking_status": next_status,
+            "booking_mode": booking_mode,
+            "approval_deadline_at": status_update.get("approval_deadline_at").isoformat() if status_update.get("approval_deadline_at") else None,
         }
     
     except HTTPException:
@@ -595,6 +1170,8 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
             "bhk_type": 1,
             "room_type": 1,
             "category": 1,
+            "booking_mode": 1,
+            "instant_booking": 1,
             "amenities": 1,
             "check_in_time": 1,
             "check_out_time": 1,
@@ -603,7 +1180,86 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
     props = await cursor.to_list(length=len(property_ids))
     by_id = {p["property_id"]: p for p in props}
     for b in bookings:
-        b["property"] = by_id.get(b.get("property_id"))
+        prop = by_id.get(b.get("property_id"))
+        if prop and not b.get("booking_mode"):
+            b["booking_mode"] = _normalize_booking_mode(prop)
+        b["property"] = prop
+    return bookings
+
+
+async def _expire_overdue_host_approvals(db: AsyncIOMotorDatabase) -> None:
+    now_iso = datetime.now(timezone.utc).isoformat()
+    try:
+        await db.bookings.update_many(
+            {
+                "booking_status": BookingStatus.AWAITING_HOST_APPROVAL.value,
+                "approval_deadline_at": {"$lte": now_iso},
+            },
+            {"$set": {
+                "booking_status": BookingStatus.REJECTED.value,
+                "rejection_reason": "Host approval window expired",
+                "updated_at": datetime.now(timezone.utc),
+            }},
+        )
+    except Exception as exc:
+        logger.warning("Failed to expire overdue host approval bookings: %s", exc)
+
+
+def _canonical_booking_lifecycle(booking: dict) -> dict:
+    raw_booking = (booking.get("booking_status") or "").lower()
+    raw_payment = (booking.get("payment_status") or "").lower()
+    refund = booking.get("refund") or {}
+    refund_status = (refund.get("status") or "").lower() if isinstance(refund, dict) else ""
+
+    if refund_status in {"processed", "completed", "refunded", "success"}:
+        status_code = "REFUNDED"
+    elif refund_status in {"pending", "initiated", "processing"}:
+        status_code = "REFUND_INITIATED"
+    elif raw_booking == "cancelled":
+        status_code = "CANCELLED"
+    elif raw_payment == "failed":
+        status_code = "PAYMENT_FAILED"
+    elif raw_booking in {"soft_lock", "pending"} and raw_payment in {"verifying", "processing"}:
+        status_code = "PAYMENT_PROCESSING"
+    elif raw_booking in {"soft_lock", "pending"}:
+        status_code = "PENDING_PAYMENT"
+    elif raw_booking == "awaiting_host_approval":
+        status_code = "AWAITING_HOST_APPROVAL"
+    elif raw_booking == "completed":
+        status_code = "COMPLETED"
+    elif raw_booking == "confirmed":
+        status_code = "CONFIRMED"
+    elif raw_booking == "rejected":
+        status_code = "REJECTED"
+    else:
+        status_code = "UNKNOWN"
+
+    labels = {
+        "PENDING_PAYMENT": ("Pending Payment", "Complete your payment to continue with this booking."),
+        "PAYMENT_PROCESSING": ("Payment Processing", "We're securely verifying your payment. Please don't make another payment yet."),
+        "AWAITING_HOST_APPROVAL": ("Awaiting Host Approval", "Your payment is verified and the booking is waiting for host approval."),
+        "CONFIRMED": ("Confirmed", "Your booking is confirmed."),
+        "UPCOMING": ("Upcoming", "Your booking is coming up."),
+        "CHECKED_IN": ("Checked-in", "Your booking is currently active."),
+        "COMPLETED": ("Completed", "This booking is completed."),
+        "CANCELLED": ("Cancelled", "This booking has been cancelled."),
+        "REFUND_INITIATED": ("Refund Initiated", "Your refund has been initiated."),
+        "REFUNDED": ("Refunded", "Your refund has been completed."),
+        "REJECTED": ("Rejected", "The booking request was not accepted."),
+        "PAYMENT_FAILED": ("Payment Failed", "Your payment could not be completed. Your booking details are still saved."),
+        "UNKNOWN": ("Booking Update in Progress", "We're updating the latest status of your booking."),
+    }
+    label, description = labels[status_code]
+    return {
+        "lifecycle_status": status_code,
+        "status_label": label,
+        "status_description": description,
+    }
+
+
+def _attach_lifecycle_status(bookings: list) -> list:
+    for booking in bookings:
+        booking.update(_canonical_booking_lifecycle(booking))
     return bookings
 
 
@@ -614,6 +1270,7 @@ async def get_guest_bookings(
 ):
     """Get all bookings made by the current guest, sorted by check-in desc, with property summary."""
     try:
+        await _expire_overdue_host_approvals(db)
         cursor = (
             db.bookings.find({"guest_id": current_user["user_id"]}, {"_id": 0})
             .sort("check_in_date", -1)
@@ -624,6 +1281,7 @@ async def get_guest_bookings(
             if b.get("booking_status") == "cancelled":
                 rfd = await db.refunds.find_one({"booking_id": b["booking_id"]}, {"_id": 0})
                 b["refund"] = rfd
+        bookings = _attach_lifecycle_status(bookings)
 
         return {"bookings": bookings, "total": len(bookings)}
 
@@ -659,6 +1317,7 @@ async def get_host_bookings(
 ):
     """Get all bookings for properties owned by the current host, with property summary."""
     try:
+        await _expire_overdue_host_approvals(db)
         cursor = (
             db.bookings.find({"host_id": current_user["user_id"]}, {"_id": 0})
             .sort("created_at", -1)
@@ -666,6 +1325,7 @@ async def get_host_bookings(
         bookings = await cursor.to_list(length=200)
         bookings = await _attach_property_info(db, bookings)
         bookings = await _attach_guest_info(db, bookings)
+        bookings = _attach_lifecycle_status(bookings)
 
         return {"bookings": bookings, "total": len(bookings)}
 
@@ -675,6 +1335,104 @@ async def get_host_bookings(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch bookings"
         )
+
+
+async def _get_host_owned_booking(db: AsyncIOMotorDatabase, booking_id: str, current_user: dict) -> dict:
+    booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not booking:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if booking.get("host_id") != current_user.get("user_id") and current_user.get("role") != "admin":
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized to manage this booking")
+    return booking
+
+
+@router.post("/{booking_id}/approve", response_model=dict)
+async def approve_host_approval_booking(
+    booking_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    booking = await _get_host_owned_booking(db, booking_id, current_user)
+    current_status = booking.get("booking_status")
+    if current_status == BookingStatus.CONFIRMED.value:
+        return {"message": "Booking already approved", "booking_id": booking_id, "booking_status": current_status, "idempotent": True}
+    if current_status == BookingStatus.REJECTED.value:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Booking request has already been rejected")
+    if current_status != BookingStatus.AWAITING_HOST_APPROVAL.value:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only bookings awaiting host approval can be approved")
+
+    deadline = _parse_utc(booking.get("approval_deadline_at"))
+    if deadline and deadline <= datetime.now(timezone.utc):
+        await db.bookings.update_one(
+            {"booking_id": booking_id, "booking_status": BookingStatus.AWAITING_HOST_APPROVAL.value},
+            {"$set": {"booking_status": BookingStatus.REJECTED.value, "rejection_reason": "Host approval window expired", "updated_at": datetime.now(timezone.utc)}},
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Host approval window has expired")
+
+    now_utc = datetime.now(timezone.utc)
+    result = await db.bookings.update_one(
+        {"booking_id": booking_id, "booking_status": BookingStatus.AWAITING_HOST_APPROVAL.value},
+        {"$set": {"booking_status": BookingStatus.CONFIRMED.value, "confirmed_at": now_utc, "approved_at": now_utc, "approved_by": current_user.get("user_id"), "updated_at": now_utc}},
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Booking request was already processed")
+
+    confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if confirmed_booking:
+        try:
+            asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
+        except Exception as notify_err:
+            logger.warning("Failed to schedule approval notification: %s", notify_err)
+    return {"message": "Booking approved", "booking_id": booking_id, "booking_status": BookingStatus.CONFIRMED.value}
+
+
+@router.post("/{booking_id}/reject", response_model=dict)
+async def reject_host_approval_booking(
+    booking_id: str,
+    payload: BookingRejectRequest | None = None,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    booking = await _get_host_owned_booking(db, booking_id, current_user)
+    current_status = booking.get("booking_status")
+    if current_status == BookingStatus.REJECTED.value:
+        return {"message": "Booking already rejected", "booking_id": booking_id, "booking_status": current_status, "idempotent": True}
+    if current_status == BookingStatus.CONFIRMED.value:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Confirmed bookings cannot be rejected through host approval")
+    if current_status != BookingStatus.AWAITING_HOST_APPROVAL.value:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only bookings awaiting host approval can be rejected")
+
+    now_utc = datetime.now(timezone.utc)
+    reason = (payload.reason if payload else None) or "Rejected by host"
+    result = await db.bookings.update_one(
+        {"booking_id": booking_id, "booking_status": BookingStatus.AWAITING_HOST_APPROVAL.value},
+        {"$set": {"booking_status": BookingStatus.REJECTED.value, "rejected_at": now_utc, "rejected_by": current_user.get("user_id"), "rejection_reason": reason, "updated_at": now_utc}},
+    )
+    if result.modified_count == 0:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Booking request was already processed")
+
+    if booking.get("payment_status") in {"paid", "partially_paid"} and booking.get("razorpay_payment_id"):
+        try:
+            ensure_table = getattr(db, "ensure_table", None)
+            if ensure_table:
+                await ensure_table("refunds")
+            await db.refunds.update_one(
+                {"booking_id": booking_id},
+                {"$set": {
+                    "booking_id": booking_id,
+                    "payment_id": booking.get("razorpay_payment_id"),
+                    "amount": int(round(float(booking.get("paid_amount") or booking.get("total_amount") or 0) * 100)),
+                    "status": "initiated",
+                    "reason": "Host rejected booking request",
+                    "updated_at": now_utc,
+                }, "$setOnInsert": {"refund_id": f"refund_{booking_id}", "created_at": now_utc}},
+                upsert=True,
+            )
+        except Exception as refund_err:
+            logger.warning("Failed to create refund intent for rejected booking %s: %s", booking_id, refund_err)
+
+    return {"message": "Booking rejected", "booking_id": booking_id, "booking_status": BookingStatus.REJECTED.value, "refund_status": "initiated" if booking.get("payment_status") in {"paid", "partially_paid"} else None}
+
 
 @router.get("/{booking_id}")
 async def get_booking_details(
@@ -712,6 +1470,7 @@ async def get_booking_details(
         if booking_dict.get("booking_status") == "cancelled":
             rfd = await db.refunds.find_one({"booking_id": booking_dict["booking_id"]}, {"_id": 0})
             booking_dict["refund"] = rfd
+        booking_dict.update(_canonical_booking_lifecycle(booking_dict))
 
         return booking_dict
     
@@ -774,7 +1533,7 @@ async def cancel_booking(
         except Exception as block_err:
             logger.warning(f"Failed to remove booking blocked-date entry: {block_err}")
 
-        # Phase 15 — auto-refund on cancel of a confirmed booking, per policy tier
+        # Phase 15 â€” auto-refund on cancel of a confirmed booking, per policy tier
         refund_info = None
         auto_refund_enabled = os.getenv(
             "AUTO_REFUND_ON_CANCELLATION", "false"
@@ -932,18 +1691,10 @@ async def apply_coupon(
             else:
                 discount = float(db_coupon.get("discount_value", 0))
         else:
-            # Fallback to hardcoded coupons
-            if code == "GOLDEN500":
-                discount = 500.0
-            elif code == "WELCOME10":
-                discount = round(original_taxable * 0.10, 2)
-            elif code == "STRSPECIAL":
-                discount = 1000.0
-            else:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Invalid coupon code"
-                )
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid coupon code"
+            )
 
         preview = await _calculate_booking_pricing(
             db,
@@ -1016,7 +1767,7 @@ async def apply_coupon(
             }
         )
 
-        logger.info(f"Applied coupon {code} (discount: ₹{discount}) to booking {booking_id}")
+        logger.info(f"Applied coupon {code} (discount: â‚¹{discount}) to booking {booking_id}")
         return {
             "message": "Coupon applied successfully",
             "coupon_code": code,
@@ -1143,126 +1894,3 @@ async def update_payment_config(
     return await _get_booking_payment_config(db)
 
 
-@router.post("/{booking_id}/mock-pay")
-async def mock_pay(
-    booking_id: str,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db),
-):
-    """Demo-only: complete a mock payment for a soft-locked booking.
-
-    Available only when razorpay_service.is_mock is True (no live keys configured).
-    Generates a deterministic mock signature and runs the same confirm-payment flow
-    so the resulting booking + blocked-date entry are identical to a real flow.
-    """
-    if not razorpay_service.is_mock:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Mock payment is only available in demo mode. Use Razorpay checkout instead.",
-        )
-
-    booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
-    if not booking_dict:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
-    if booking_dict["guest_id"] != current_user["user_id"]:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
-    if booking_dict.get("booking_status") == BookingStatus.CONFIRMED.value:
-        return {"message": "Booking already confirmed", "booking_id": booking_id}
-    if booking_dict.get("booking_status") != BookingStatus.SOFT_LOCK.value:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Booking is not in soft_lock state (current: {booking_dict.get('booking_status')})",
-        )
-
-    order_id = booking_dict.get("razorpay_order_id")
-    if not order_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Booking has no razorpay_order_id",
-        )
-
-    mock = razorpay_service.mock_complete_payment(order_id)
-    if not mock.get("success"):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=mock.get("error", "Mock payment failed"),
-        )
-
-    # Determine paid amount and payment status based on payment type
-    payment_type = booking_dict.get("payment_type", "full")
-    paid_amount = booking_dict.get("advance_amount", 0.0) if payment_type == "advance" else booking_dict.get("total_amount", 0.0)
-    payment_status = "partially_paid" if payment_type == "advance" else "paid"
-
-    await db.bookings.update_one(
-        {"booking_id": booking_id},
-        {
-            "$set": {
-                "booking_status": BookingStatus.CONFIRMED.value,
-                "payment_status": payment_status,
-                "paid_amount": paid_amount,
-                "razorpay_payment_id": mock["razorpay_payment_id"],
-                "confirmed_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
-            }
-        },
-    )
-
-    # Mirror the confirm-payment side-effect: create a booking-source blocked date
-    try:
-        await db.blocked_dates.update_one(
-            {"blocked_date_id": f"booking_{booking_id}"},
-            {
-                "$set": {
-                    "blocked_date_id": f"booking_{booking_id}",
-                    "property_id": booking_dict["property_id"],
-                    "owner_id": booking_dict["host_id"],
-                    "start_date": booking_dict["check_in_date"],
-                    "end_date": booking_dict["check_out_date"],
-                    "source": "booking",
-                    "source_id": booking_id,
-                    "reason": f"Booking {booking_id[:8]}",
-                    "updated_at": datetime.now(timezone.utc),
-                },
-                "$setOnInsert": {"created_at": datetime.now(timezone.utc)},
-            },
-            upsert=True,
-        )
-    except Exception as block_err:
-        logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
-
-    logger.info(f"[MOCK] Booking confirmed via mock-pay: {booking_id}")
-
-    # Phase 15 — ledger row
-    try:
-        from models.transaction import TransactionType
-        from services.account_service import record_transaction
-        await record_transaction(
-            db,
-            type=TransactionType.BOOKING_PAYMENT,
-            amount=int(round(paid_amount * 100)),
-            razorpay_order_id=order_id,
-            razorpay_payment_id=mock["razorpay_payment_id"],
-            user_id=booking_dict["guest_id"],
-            host_id=booking_dict["host_id"],
-            booking_id=booking_id,
-            is_mock=True,
-        )
-    except Exception as txn_err:
-        logger.warning(f"Failed to record mock-pay transaction: {txn_err}")
-
-    # Notify host (and guest) — same triggers as the live confirm-payment path
-    try:
-        confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
-        if confirmed_booking:
-            asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
-    except Exception as notify_err:
-        logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
-
-    return {
-        "message": "Booking confirmed via mock payment",
-        "booking_id": booking_id,
-        "razorpay_payment_id": mock["razorpay_payment_id"],
-        "razorpay_order_id": order_id,
-        "razorpay_signature": mock["razorpay_signature"],
-        "mock": True,
-    }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../models/booking_model.dart';
 import '../services/api_service.dart';
 
@@ -8,14 +9,51 @@ class BookingProvider with ChangeNotifier {
   List<BookingModel> _hostBookings = [];
   BookingModel? _currentBooking;
   bool _isLoading = false;
+  String? _lastError;
 
   List<BookingModel> get guestBookings => _guestBookings;
   List<BookingModel> get hostBookings => _hostBookings;
   BookingModel? get currentBooking => _currentBooking;
   bool get isLoading => _isLoading;
+  String? get lastError => _lastError;
+
+  String _extractError(Object error) {
+    if (error is DioException) {
+      final data = error.response?.data;
+      if (data is Map && data['detail'] != null) {
+        return data['detail'].toString();
+      }
+      if (data is String && data.trim().isNotEmpty) {
+        return data;
+      }
+      return error.message ?? 'Request failed. Please try again.';
+    }
+    return 'Request failed. Please try again.';
+  }
+
+  Future<Map<String, dynamic>?> createQuote(Map<String, dynamic> data) async {
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+    try {
+      final response =
+          await _apiService.dio.post('/bookings/quote', data: data);
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      return null;
+    } catch (e) {
+      _lastError = _extractError(e);
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
 
   Future<BookingModel?> createBooking(Map<String, dynamic> data) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
     try {
       final response = await _apiService.dio.post('/bookings/', data: data);
@@ -25,6 +63,7 @@ class BookingProvider with ChangeNotifier {
       }
       return null;
     } catch (e) {
+      _lastError = _extractError(e);
       return null;
     } finally {
       _isLoading = false;
@@ -34,11 +73,14 @@ class BookingProvider with ChangeNotifier {
 
   Future<bool> confirmPayment(Map<String, dynamic> data) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/bookings/confirm-payment', data: data);
+      final response =
+          await _apiService.dio.post('/bookings/confirm-payment', data: data);
       return response.statusCode == 200;
     } catch (e) {
+      _lastError = _extractError(e);
       return false;
     } finally {
       _isLoading = false;
@@ -46,14 +88,40 @@ class BookingProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> mockPay(String bookingId) async {
+  Future<Map<String, dynamic>?> getPaymentStatus(String bookingId) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/bookings/$bookingId/mock-pay');
-      return response.statusCode == 200;
+      final response =
+          await _apiService.dio.get('/bookings/$bookingId/payment-status');
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      return null;
     } catch (e) {
-      return false;
+      _lastError = _extractError(e);
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<Map<String, dynamic>?> retryPayment(String bookingId) async {
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+    try {
+      final response =
+          await _apiService.dio.post('/bookings/$bookingId/retry-payment');
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      return null;
+    } catch (e) {
+      _lastError = _extractError(e);
+      return null;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -62,30 +130,40 @@ class BookingProvider with ChangeNotifier {
 
   Future<bool> applyCoupon(String bookingId, String couponCode) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/bookings/$bookingId/apply-coupon', data: {
+      final response = await _apiService.dio
+          .post('/bookings/$bookingId/apply-coupon', data: {
         'coupon_code': couponCode,
       });
       if (response.statusCode == 200) {
         final data = response.data;
-        if (_currentBooking != null && _currentBooking!.bookingId == bookingId) {
+        if (_currentBooking != null &&
+            _currentBooking!.bookingId == bookingId) {
           _currentBooking = BookingModel(
             bookingId: _currentBooking!.bookingId,
             propertyId: _currentBooking!.propertyId,
             guestId: _currentBooking!.guestId,
             checkInDate: _currentBooking!.checkInDate,
             checkOutDate: _currentBooking!.checkOutDate,
-            totalAmount: (data['new_total'] as num?)?.toDouble() ?? _currentBooking!.totalAmount,
+            totalAmount: (data['new_total'] as num?)?.toDouble() ??
+                _currentBooking!.totalAmount,
             baseAmount: _currentBooking!.baseAmount,
             platformFee: _currentBooking!.platformFee,
             kycVerificationFee: _currentBooking!.kycVerificationFee,
-            discountAmount: (data['discount_amount'] as num?)?.toDouble() ?? _currentBooking!.discountAmount,
+            discountAmount: (data['discount_amount'] as num?)?.toDouble() ??
+                _currentBooking!.discountAmount,
             bookingStatus: _currentBooking!.bookingStatus,
             paymentStatus: _currentBooking!.paymentStatus,
-            razorpayOrderId: data['razorpay_order_id'] ?? _currentBooking!.razorpayOrderId,
+            lifecycleStatus: _currentBooking!.lifecycleStatus,
+            statusLabel: _currentBooking!.statusLabel,
+            statusDescription: _currentBooking!.statusDescription,
+            razorpayOrderId:
+                data['razorpay_order_id'] ?? _currentBooking!.razorpayOrderId,
             razorpayKeyId: _currentBooking!.razorpayKeyId,
-            razorpayAmount: (data['amount'] as num?)?.toInt() ?? _currentBooking!.razorpayAmount,
+            razorpayAmount: (data['amount'] as num?)?.toInt() ??
+                _currentBooking!.razorpayAmount,
             currency: data['currency'] ?? _currentBooking!.currency,
             couponCode: data['coupon_code'] ?? _currentBooking!.couponCode,
             guestPhone: _currentBooking!.guestPhone,
@@ -109,6 +187,7 @@ class BookingProvider with ChangeNotifier {
       }
       return false;
     } catch (e) {
+      _lastError = _extractError(e);
       return false;
     } finally {
       _isLoading = false;
@@ -122,10 +201,11 @@ class BookingProvider with ChangeNotifier {
     try {
       final response = await _apiService.dio.get('/bookings/guest/my-bookings');
       if (response.statusCode == 200) {
-        final List<dynamic> list = response.data is Map 
-            ? (response.data['bookings'] ?? []) 
+        final List<dynamic> list = response.data is Map
+            ? (response.data['bookings'] ?? [])
             : (response.data ?? []);
-        _guestBookings = list.map((item) => BookingModel.fromJson(item)).toList();
+        _guestBookings =
+            list.map((item) => BookingModel.fromJson(item)).toList();
       }
     } catch (e) {
       _guestBookings = [];
@@ -141,13 +221,58 @@ class BookingProvider with ChangeNotifier {
     try {
       final response = await _apiService.dio.get('/bookings/host/my-bookings');
       if (response.statusCode == 200) {
-        final List<dynamic> list = response.data is Map 
-            ? (response.data['bookings'] ?? []) 
+        final List<dynamic> list = response.data is Map
+            ? (response.data['bookings'] ?? [])
             : (response.data ?? []);
-        _hostBookings = list.map((item) => BookingModel.fromJson(item)).toList();
+        _hostBookings =
+            list.map((item) => BookingModel.fromJson(item)).toList();
       }
     } catch (e) {
       _hostBookings = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> approveBooking(String bookingId) async {
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+    try {
+      final response =
+          await _apiService.dio.post('/bookings/$bookingId/approve');
+      if (response.statusCode == 200) {
+        await getHostBookings();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _lastError = _extractError(e);
+      return false;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> rejectBooking(String bookingId, {String? reason}) async {
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+    try {
+      final response = await _apiService.dio.post(
+        '/bookings/$bookingId/reject',
+        data: {'reason': reason ?? 'Rejected by host'},
+      );
+      if (response.statusCode == 200) {
+        await getHostBookings();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _lastError = _extractError(e);
+      return false;
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -158,7 +283,8 @@ class BookingProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/bookings/$bookingId/cancel');
+      final response =
+          await _apiService.dio.post('/bookings/$bookingId/cancel');
       if (response.statusCode == 200) {
         await getGuestBookings();
         return true;

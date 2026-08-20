@@ -1,4 +1,3 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
@@ -6,13 +5,14 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart' show FormData, MultipartFile;
 import '../../models/property_model.dart';
+import '../../providers/booking_provider.dart';
 import '../../providers/property_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
-import '../guest/landing_screen.dart';
-import '../shared/app_logo.dart';
+import '../../utils/currency_formatter.dart';
 import '../shared/app_shell.dart';
+import '../shared/property_image.dart';
 import 'host_list_property_screen.dart';
 import 'host_calendar_screen.dart';
 import 'host_payouts_screen.dart';
@@ -46,6 +46,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<PropertyProvider>(context, listen: false).getHostProperties();
+      Provider.of<BookingProvider>(context, listen: false).getHostBookings();
       Provider.of<AuthProvider>(context, listen: false).refreshProfile();
     });
   }
@@ -73,44 +74,13 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
         context,
         MaterialPageRoute(builder: (context) => const HostListPropertyScreen()),
       ).then((_) {
+        if (!mounted) return;
         Provider.of<PropertyProvider>(context, listen: false)
             .getHostProperties();
       });
     } else {
       _showDocumentVerificationDialog();
     }
-  }
-
-  void _showVerificationPendingDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          children: [
-            const Icon(Icons.hourglass_empty, color: Colors.orange, size: 28),
-            const SizedBox(width: 10),
-            Text('Verification Pending',
-                style: Theme.of(context)
-                    .textTheme
-                    .displayMedium
-                    ?.copyWith(fontSize: 20)),
-          ],
-        ),
-        content: const Text(
-          'Your host verification request has been submitted and is currently undergoing admin review. You will be able to list new properties once approved.',
-          style: TextStyle(fontSize: 15, height: 1.4),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK',
-                style: TextStyle(
-                    color: AppTheme.primary, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
   }
 
   void _showDocumentVerificationDialog() {
@@ -189,7 +159,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                               controller: _priceController,
                               keyboardType: TextInputType.number,
                               decoration: const InputDecoration(
-                                  labelText: 'Price per night',
+                                  labelText: 'Base price',
                                   border: OutlineInputBorder()),
                               validator: (v) => v == null || v.isEmpty
                                   ? 'Price required'
@@ -401,9 +371,8 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final propertyProvider = Provider.of<PropertyProvider>(context);
+    final bookingProvider = Provider.of<BookingProvider>(context);
     final authProvider = Provider.of<AuthProvider>(context);
-    final textTheme = Theme.of(context).textTheme;
-
     final properties = propertyProvider.hostProperties;
     final sortedProperties = List<PropertyModel>.from(properties);
     sortedProperties.sort((a, b) {
@@ -417,657 +386,198 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
     final pendingProperties = sortedProperties.where(_isPending).toList();
     final rejectedProperties = sortedProperties.where(_isRejected).toList();
     final filteredProperties = _filterProperties(sortedProperties);
+    final totalEarnings = bookingProvider.hostBookings.where((booking) {
+      final bookingStatus = booking.bookingStatus.toLowerCase();
+      final paymentStatus = (booking.paymentStatus ?? '').toLowerCase();
+      final isPaid = paymentStatus == 'paid' || paymentStatus == 'captured';
+      final isEarned = bookingStatus == 'confirmed' ||
+          bookingStatus == 'completed' ||
+          booking.lifecycleStatus == 'completed';
+      return isPaid && isEarned;
+    }).fold<double>(
+      0,
+      (sum, booking) =>
+          sum +
+          (booking.baseAmount > 0 ? booking.baseAmount : booking.totalAmount),
+    );
+    final totalEarningsLabel = CurrencyFormatter.format(totalEarnings);
 
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      appBar: AppBar(
-        leading: IconButton(
-          onPressed: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const AppShell(initialIndex: 0),
-              ),
-            );
-          },
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: AppTheme.charcoal,
-          ),
-        ),
-        title: InkWell(
-          onTap: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => const AppShell(initialIndex: 0),
-              ),
-            );
-          },
-          borderRadius: BorderRadius.circular(12),
-          child: const AppLogo(
-            height: 24,
-            tintColor: Colors.black,
-            framed: false,
-          ),
-        ),
-        centerTitle: false,
-        backgroundColor: AppTheme.white,
-        elevation: 0.5,
-        actions: [
-          TextButton.icon(
-            onPressed: _handleListPropertyTrigger,
-            icon: const Icon(Icons.add, color: AppTheme.primary),
-            label: const Text('LIST NEW',
-                style: TextStyle(
-                    color: AppTheme.primary, fontWeight: FontWeight.bold)),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      backgroundColor: Colors.white,
       body: RefreshIndicator(
         onRefresh: () async {
-          await propertyProvider.getHostProperties();
-          await authProvider.refreshProfile();
+          await Future.wait([
+            propertyProvider.getHostProperties(),
+            bookingProvider.getHostBookings(),
+            authProvider.refreshProfile(),
+          ]);
         },
         color: AppTheme.primary,
-        child: SingleChildScrollView(
+        child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(
-                    left: 20.0, right: 20.0, top: 24.0, bottom: 8.0),
+          slivers: [
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  MediaQuery.of(context).padding.top + 18,
+                  20,
+                  24,
+                ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
-                      'Your Portfolio',
-                      style: textTheme.displayMedium
-                          ?.copyWith(fontSize: 24, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Manage your properties and track performance',
-                      style: textTheme.bodyMedium
-                          ?.copyWith(color: AppTheme.charcoalLight),
-                    ),
-                  ],
-                ),
-              ),
-
-              if (authProvider.currentUser?.kycStatus.toLowerCase() !=
-                  'approved')
-                Container(
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 20.0, vertical: 12.0),
-                  padding: const EdgeInsets.all(16.0),
-                  decoration: BoxDecoration(
-                    color: authProvider.currentUser?.kycStatus.toLowerCase() ==
-                            'pending'
-                        ? Colors.orange.withOpacity(0.12)
-                        : AppTheme.primary.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(16.0),
-                    border: Border.all(
-                      color:
-                          authProvider.currentUser?.kycStatus.toLowerCase() ==
-                                  'pending'
-                              ? Colors.orange.withOpacity(0.3)
-                              : AppTheme.primary.withOpacity(0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        authProvider.currentUser?.kycStatus.toLowerCase() ==
-                                'pending'
-                            ? Icons.hourglass_top_rounded
-                            : Icons.gpp_maybe_rounded,
-                        color:
-                            authProvider.currentUser?.kycStatus.toLowerCase() ==
-                                    'pending'
-                                ? Colors.orange
-                                : AppTheme.primary,
-                        size: 28,
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              authProvider.currentUser?.kycStatus
-                                          .toLowerCase() ==
-                                      'pending'
-                                  ? 'Host Verification Pending Review'
-                                  : authProvider.currentUser?.kycStatus
-                                              .toLowerCase() ==
-                                          'rejected'
-                                      ? 'Host Verification Rejected'
-                                      : 'Document Verification Required',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                                color: authProvider.currentUser?.kycStatus
-                                            .toLowerCase() ==
-                                        'pending'
-                                    ? Colors.orange.shade900
-                                    : AppTheme.primary,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              authProvider.currentUser?.kycStatus
-                                          .toLowerCase() ==
-                                      'pending'
-                                  ? 'Your documents are under review. You can list properties, but bookings remain disabled until approval.'
-                                  : authProvider.currentUser?.kycStatus
-                                              .toLowerCase() ==
-                                          'rejected'
-                                      ? 'Please update and re-submit your verification documents.'
-                                      : 'Please submit your documents to activate listing features.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: authProvider.currentUser?.kycStatus
-                                            .toLowerCase() ==
-                                        'pending'
-                                    ? Colors.orange.shade900.withOpacity(0.8)
-                                    : AppTheme.charcoal,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (authProvider.currentUser?.kycStatus.toLowerCase() !=
-                          'pending')
-                        IconButton(
-                          icon: const Icon(Icons.arrow_forward_ios,
-                              size: 16, color: AppTheme.primary),
-                          onPressed: _handleListPropertyTrigger,
-                        ),
-                    ],
-                  ),
-                ),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0, vertical: 12.0),
-                child: GridView.count(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 14,
-                  mainAxisSpacing: 14,
-                  childAspectRatio: 1.55,
-                  children: [
-                    _buildStatCard(
-                      icon: Icons.business,
-                      title: 'Total Properties',
-                      value: '${properties.length}',
-                      filterValue: 'all',
-                    ),
-                    _buildStatCard(
-                      icon: Icons.visibility,
-                      title: 'Active Listings',
-                      value: '${liveProperties.length}',
-                      filterValue: 'live',
-                    ),
-                    _buildStatCard(
-                      icon: Icons.pending_actions,
-                      title: 'Pending Review',
-                      value: '${pendingProperties.length}',
-                      filterValue: 'pending_verification',
-                    ),
-                    _buildStatCard(
-                      icon: Icons.report_problem_outlined,
-                      title: 'Rejected',
-                      value: '${rejectedProperties.length}',
-                      iconColor: Colors.red.shade600,
-                      filterValue: 'rejected',
-                    ),
-                    _buildStatCard(
-                      icon: Icons.account_balance_wallet,
-                      title: 'Total Earnings',
-                      value: '₹0',
-                      iconColor: Colors.green,
-                    ),
-                  ],
-                ),
-              ),
-
-              // Quick Actions Section
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0, vertical: 16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Host Dashboard Features',
-                      style: textTheme.displayMedium
-                          ?.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildActionCard(
-                            context: context,
-                            icon: Icons.calendar_month,
-                            title: 'Property\nCalendar',
-                            color: AppTheme.primary,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const HostCalendarScreen()),
-                              );
-                            },
+                    _HostDashboardTopBar(
+                      onBack: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const AppShell(initialIndex: 0),
                           ),
+                        );
+                      },
+                      onListNew: _handleListPropertyTrigger,
+                    ),
+                    const SizedBox(height: 28),
+                    _PortfolioHero(onListNew: _handleListPropertyTrigger),
+                    const SizedBox(height: 20),
+                    _StatsGrid(
+                      items: [
+                        _DashboardStatData(
+                          icon: Icons.business_rounded,
+                          title: 'Total Properties',
+                          value: '${properties.length}',
+                          tint: AppTheme.primary,
+                          filterValue: 'all',
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildActionCard(
-                            context: context,
-                            icon: Icons.payments,
-                            title: 'Payouts\nManager',
-                            color: Colors.green.shade700,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const HostPayoutsScreen()),
-                              );
-                            },
-                          ),
+                        _DashboardStatData(
+                          icon: Icons.visibility_rounded,
+                          title: 'Active Listings',
+                          value: '${liveProperties.length}',
+                          tint: Colors.blue.shade700,
+                          filterValue: 'live',
                         ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: _buildActionCard(
-                            context: context,
-                            icon: Icons.bookmark_added,
-                            title: 'Booking\nManager',
-                            color: Colors.blue.shade700,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                    builder: (context) =>
-                                        const HostBookingsScreen()),
-                              );
-                            },
-                          ),
+                        _DashboardStatData(
+                          icon: Icons.calendar_month_rounded,
+                          title: 'Pending Review',
+                          value: '${pendingProperties.length}',
+                          tint: Colors.green.shade700,
+                          filterValue: 'pending_verification',
+                        ),
+                        _DashboardStatData(
+                          icon: Icons.warning_rounded,
+                          title: 'Rejected',
+                          value: '${rejectedProperties.length}',
+                          tint: Colors.red.shade600,
+                          filterValue: 'rejected',
                         ),
                       ],
+                      activeFilter: _filterStatus,
+                      onFilter: (value) =>
+                          setState(() => _filterStatus = value),
                     ),
-                  ],
-                ),
-              ),
-
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 20.0, vertical: 16.0),
-                child: Text(
-                  _propertyListTitle(),
-                  style: textTheme.displayMedium
-                      ?.copyWith(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-              ),
-
-              propertyProvider.isLoading
-                  ? const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 40.0),
-                      child: Center(
+                    const SizedBox(height: 14),
+                    _EarningsBanner(totalEarningsLabel: totalEarningsLabel),
+                    const SizedBox(height: 28),
+                    _HostVerificationBanner(
+                      authProvider: authProvider,
+                      onAction: _handleListPropertyTrigger,
+                    ),
+                    const SizedBox(height: 24),
+                    const _SectionHeader(
+                      title: 'Host Dashboard Features',
+                      subtitle:
+                          'Tools to help you manage your properties easily',
+                    ),
+                    const SizedBox(height: 14),
+                    _FeatureCardsRow(
+                      onCalendar: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HostCalendarScreen()),
+                      ),
+                      onPayouts: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HostPayoutsScreen()),
+                      ),
+                      onBookings: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HostBookingsScreen()),
+                      ),
+                    ),
+                    const SizedBox(height: 28),
+                    _SectionHeader(
+                      title: _propertyListTitle(),
+                      actionLabel: 'View all properties',
+                      onAction: () => setState(() => _filterStatus = 'all'),
+                    ),
+                    const SizedBox(height: 14),
+                    if (propertyProvider.isLoading)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Center(
                           child: CircularProgressIndicator(
-                              color: AppTheme.primary)),
-                    )
-                  : filteredProperties.isEmpty
-                      ? _buildEmptyState(
-                          hasAnyProperties: properties.isNotEmpty)
-                      : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: filteredProperties.length,
-                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                          itemBuilder: (context, index) {
-                            final prop = filteredProperties[index];
-                            final isLive = _isLive(prop);
-                            final isDraft =
-                                prop.status.toLowerCase() == 'draft';
-                            final isRejected = _isRejected(prop);
-
-                            return Card(
-                              elevation: 0,
-                              margin: const EdgeInsets.only(bottom: 16.0),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16.0),
-                                side: const BorderSide(color: AppTheme.stone),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            prop.title,
-                                            style: textTheme.bodyLarge
-                                                ?.copyWith(
-                                                    fontWeight:
-                                                        FontWeight.bold),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: isLive
-                                                ? Colors.green.withOpacity(0.1)
-                                                : isRejected
-                                                    ? Colors.red
-                                                        .withOpacity(0.1)
-                                                    : Colors.orange
-                                                        .withOpacity(0.1),
-                                            borderRadius:
-                                                BorderRadius.circular(12),
-                                          ),
-                                          child: Text(
-                                            prop.status.toUpperCase(),
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: isLive
-                                                  ? Colors.green
-                                                  : isRejected
-                                                      ? Colors.red
-                                                      : Colors.orange,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.location_on,
-                                            size: 14,
-                                            color: AppTheme.charcoalLight),
-                                        const SizedBox(width: 4),
-                                        Text('${prop.city}, ${prop.state}',
-                                            style: textTheme.bodyMedium
-                                                ?.copyWith(
-                                                    color: AppTheme
-                                                        .charcoalLight)),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        const Icon(Icons.access_time,
-                                            size: 14,
-                                            color: AppTheme.charcoalLight),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          'Listed: ${prop.createdAt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(prop.createdAt!.toLocal()) : "N/A"}',
-                                          style: textTheme.bodyMedium?.copyWith(
-                                              color: AppTheme.charcoalLight,
-                                              fontSize: 12),
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(
-                                        height: 24, color: AppTheme.stone),
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          'Area: ${prop.areaSqft.toStringAsFixed(0)} sqft',
-                                          style: textTheme.bodyMedium?.copyWith(
-                                              color: AppTheme.charcoalLight),
-                                        ),
-                                        Text(
-                                          '₹${prop.pricePerNight.toStringAsFixed(0)} / night',
-                                          style: textTheme.bodyLarge?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.primary),
-                                        ),
-                                      ],
-                                    ),
-                                    if (isDraft) ...[
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: OutlinedButton.icon(
-                                              icon: const Icon(Icons.edit,
-                                                  size: 14),
-                                              label: const Text('Edit Draft'),
-                                              onPressed: () async {
-                                                final updated =
-                                                    await Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        HostListPropertyScreen(
-                                                            property: prop),
-                                                  ),
-                                                );
-                                                if (updated == true) {
-                                                  propertyProvider
-                                                      .getHostProperties();
-                                                }
-                                              },
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor:
-                                                    AppTheme.primary,
-                                                side: const BorderSide(
-                                                    color: AppTheme.primary),
-                                                minimumSize: const Size(
-                                                    double.infinity, 40),
-                                                shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8)),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              icon: const Icon(Icons.send,
-                                                  size: 14,
-                                                  color: Colors.white),
-                                              label: const Text('Submit'),
-                                              onPressed: () async {
-                                                final success = await Provider
-                                                        .of<PropertyProvider>(
-                                                            context,
-                                                            listen: false)
-                                                    .submitForVerification(
-                                                        prop.propertyId);
-                                                if (success &&
-                                                    context.mounted) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(
-                                                    const SnackBar(
-                                                        content: Text(
-                                                            'Submitted for Verification!')),
-                                                  );
-                                                  propertyProvider
-                                                      .getHostProperties();
-                                                }
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    AppTheme.primary,
-                                                foregroundColor: Colors.white,
-                                                minimumSize: const Size(
-                                                    double.infinity, 40),
-                                                shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8)),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ] else ...[
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: OutlinedButton.icon(
-                                              icon: const Icon(
-                                                  Icons.calendar_month,
-                                                  size: 14),
-                                              label: const Text('Calendar'),
-                                              onPressed: isLive
-                                                  ? () {
-                                                      Navigator.push(
-                                                        context,
-                                                        MaterialPageRoute(
-                                                            builder: (context) =>
-                                                                const HostCalendarScreen()),
-                                                      );
-                                                    }
-                                                  : () {
-                                                      ScaffoldMessenger.of(
-                                                              context)
-                                                          .showSnackBar(
-                                                        const SnackBar(
-                                                            content: Text(
-                                                                'Calendar opens after this property is live.')),
-                                                      );
-                                                    },
-                                              style: OutlinedButton.styleFrom(
-                                                foregroundColor: isLive
-                                                    ? AppTheme.charcoal
-                                                    : AppTheme.charcoalMuted,
-                                                side: const BorderSide(
-                                                    color: AppTheme.border),
-                                                minimumSize: const Size(
-                                                    double.infinity, 40),
-                                                shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8)),
-                                              ),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              icon: const Icon(Icons.edit,
-                                                  size: 14,
-                                                  color: Colors.white),
-                                              label: const Text('Manage'),
-                                              onPressed: () async {
-                                                final updated =
-                                                    await Navigator.push(
-                                                  context,
-                                                  MaterialPageRoute(
-                                                    builder: (context) =>
-                                                        HostListPropertyScreen(
-                                                            property: prop),
-                                                  ),
-                                                );
-                                                if (updated == true) {
-                                                  propertyProvider
-                                                      .getHostProperties();
-                                                }
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor:
-                                                    AppTheme.charcoal,
-                                                foregroundColor: Colors.white,
-                                                minimumSize: const Size(
-                                                    double.infinity, 40),
-                                                shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                            8)),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ],
-                                ),
+                              color: AppTheme.primary),
+                        ),
+                      )
+                    else if (filteredProperties.isEmpty)
+                      _buildEmptyState(hasAnyProperties: properties.isNotEmpty)
+                    else
+                      ...filteredProperties.map(
+                        (prop) => _HostPropertyCard(
+                          property: prop,
+                          isLive: _isLive(prop),
+                          isDraft: prop.status.toLowerCase() == 'draft',
+                          isRejected: _isRejected(prop),
+                          onEdit: () => _openPropertyEditor(prop),
+                          onSubmit: () => _submitDraft(prop),
+                          onRefresh: () => propertyProvider.getHostProperties(),
+                          onCalendarBlocked: () {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                    'Calendar opens after this property is live.'),
                               ),
                             );
                           },
                         ),
-            ],
-          ),
+                      ),
+                    const SizedBox(height: 18),
+                    const _HostTrustStrip(),
+                    const SizedBox(height: 90),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildStatCard({
-    required IconData icon,
-    required String title,
-    required String value,
-    Color iconColor = AppTheme.primary,
-    String? filterValue,
-  }) {
-    final isActive = filterValue != null && _filterStatus == filterValue;
-    final card = Container(
-      padding: const EdgeInsets.all(16.0),
-      decoration: BoxDecoration(
-        color: isActive ? AppTheme.primary.withOpacity(0.08) : AppTheme.white,
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(
-            color: isActive ? AppTheme.primary : AppTheme.stone,
-            width: isActive ? 1.5 : 1),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: isActive ? AppTheme.primary : iconColor, size: 24),
-          const Spacer(),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.charcoal,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppTheme.charcoalLight,
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ],
+  Future<void> _openPropertyEditor(PropertyModel property) async {
+    final updated = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => HostListPropertyScreen(property: property),
       ),
     );
+    if (updated == true && mounted) {
+      Provider.of<PropertyProvider>(context, listen: false).getHostProperties();
+    }
+  }
 
-    if (filterValue == null) return card;
-
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: () => setState(() => _filterStatus = filterValue),
-      child: card,
-    );
+  Future<void> _submitDraft(PropertyModel property) async {
+    final success = await Provider.of<PropertyProvider>(context, listen: false)
+        .submitForVerification(property.propertyId);
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Submitted for Verification!')),
+      );
+      Provider.of<PropertyProvider>(context, listen: false).getHostProperties();
+    }
   }
 
   Widget _buildEmptyState({bool hasAnyProperties = false}) {
@@ -1082,7 +592,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
       child: Column(
         children: [
           CircleAvatar(
-            backgroundColor: AppTheme.stone.withOpacity(0.4),
+            backgroundColor: AppTheme.stone.withValues(alpha: 0.4),
             radius: 36,
             child: const Icon(Icons.business,
                 size: 36, color: AppTheme.charcoalLight),
@@ -1131,42 +641,922 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
       ),
     );
   }
+}
 
-  Widget _buildActionCard({
-    required BuildContext context,
-    required IconData icon,
-    required String title,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(16.0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 12.0),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(16.0),
-          border: Border.all(color: color.withOpacity(0.2), width: 1.5),
-        ),
-        child: Column(
+class _HostDashboardTopBar extends StatelessWidget {
+  final VoidCallback onBack;
+  final VoidCallback onListNew;
+
+  const _HostDashboardTopBar({
+    required this.onBack,
+    required this.onListNew,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return Row(
           children: [
-            CircleAvatar(
-              backgroundColor: color.withOpacity(0.15),
-              radius: 20,
-              child: Icon(icon, color: color, size: 20),
+            _SoftIconButton(icon: Icons.arrow_back_rounded, onTap: onBack),
+            SizedBox(width: compact ? 8 : 14),
+            Icon(Icons.location_on_rounded,
+                color: AppTheme.secondary, size: compact ? 34 : 42),
+            SizedBox(width: compact ? 4 : 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'X-SPACE360',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                      fontSize: compact ? 17 : 22,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                      color: const Color(0xFF07142F),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Host Dashboard',
+                    style: GoogleFonts.manrope(
+                      fontSize: compact ? 11 : 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.charcoalMuted,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 10),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.charcoal,
+            ElevatedButton.icon(
+              onPressed: onListNew,
+              icon: const Icon(Icons.add_rounded, color: Colors.white),
+              label: Text(compact ? 'List New' : 'List New Property'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primary,
+                foregroundColor: Colors.white,
+                elevation: 8,
+                shadowColor: AppTheme.primary.withValues(alpha: 0.25),
+                padding: EdgeInsets.symmetric(
+                    horizontal: compact ? 12 : 16, vertical: compact ? 12 : 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                textStyle: GoogleFonts.manrope(
+                  fontSize: compact ? 12 : 14,
+                  fontWeight: FontWeight.w900,
+                ),
               ),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+class _PortfolioHero extends StatelessWidget {
+  final VoidCallback onListNew;
+
+  const _PortfolioHero({required this.onListNew});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 122,
+      child: Stack(
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Portfolio',
+                  style: GoogleFonts.manrope(
+                    fontSize: 36,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF07142F),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                Text(
+                  'Manage your properties and track performance',
+                  style: GoogleFonts.manrope(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.charcoalMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: IgnorePointer(
+              child: Opacity(
+                opacity: 0.92,
+                child: SizedBox(
+                  width: 176,
+                  height: 92,
+                  child: Image.asset('assets/images/hero_villa.jpg',
+                      fit: BoxFit.cover),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DashboardStatData {
+  final IconData icon;
+  final String title;
+  final String value;
+  final Color tint;
+  final String filterValue;
+
+  const _DashboardStatData({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.tint,
+    required this.filterValue,
+  });
+}
+
+class _StatsGrid extends StatelessWidget {
+  final List<_DashboardStatData> items;
+  final String activeFilter;
+  final ValueChanged<String> onFilter;
+
+  const _StatsGrid({
+    required this.items,
+    required this.activeFilter,
+    required this.onFilter,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      itemCount: items.length,
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+        childAspectRatio: 1.02,
+      ),
+      itemBuilder: (context, index) {
+        final item = items[index];
+        final active = item.filterValue == activeFilter;
+        return InkWell(
+          onTap: () => onFilter(item.filterValue),
+          borderRadius: BorderRadius.circular(22),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 180),
+            padding: const EdgeInsets.all(18),
+            decoration: BoxDecoration(
+              color: item.tint.withValues(alpha: active ? 0.10 : 0.045),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(
+                color: item.tint.withValues(alpha: active ? 0.45 : 0.16),
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                CircleAvatar(
+                  radius: 24,
+                  backgroundColor: item.tint.withValues(alpha: 0.12),
+                  child: Icon(item.icon, color: item.tint, size: 24),
+                ),
+                const Spacer(),
+                Text(
+                  item.value,
+                  style: GoogleFonts.manrope(
+                    fontSize: 30,
+                    height: 1,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF07142F),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  item.title,
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Text(
+                      'View all',
+                      style: GoogleFonts.manrope(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: item.tint,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.arrow_forward_rounded,
+                        size: 17, color: item.tint),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _EarningsBanner extends StatelessWidget {
+  final String totalEarningsLabel;
+
+  const _EarningsBanner({required this.totalEarningsLabel});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF4FBF6),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.green.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: Colors.green.withValues(alpha: 0.12),
+            child: const Icon(Icons.account_balance_wallet_rounded,
+                color: Colors.green, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      totalEarningsLabel,
+                      style: GoogleFonts.manrope(
+                        fontSize: 26,
+                        height: 1,
+                        fontWeight: FontWeight.w900,
+                        color: const Color(0xFF07142F),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      'Total Earnings',
+                      style: GoogleFonts.manrope(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.charcoalMuted,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Lifetime earnings from all bookings',
+                  style: GoogleFonts.manrope(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.charcoalMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const CircleAvatar(
+            radius: 24,
+            backgroundColor: Colors.white,
+            child: Icon(Icons.arrow_forward_rounded, color: Color(0xFF07142F)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HostVerificationBanner extends StatelessWidget {
+  final AuthProvider authProvider;
+  final VoidCallback onAction;
+
+  const _HostVerificationBanner({
+    required this.authProvider,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final kycStatus =
+        authProvider.currentUser?.kycStatus.toLowerCase() ?? 'not_submitted';
+    if (kycStatus == 'approved') return const SizedBox.shrink();
+    final pending = kycStatus == 'pending';
+    final rejected = kycStatus == 'rejected';
+    final tint = pending
+        ? Colors.orange
+        : rejected
+            ? Colors.red
+            : AppTheme.primary;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: tint.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        children: [
+          Icon(pending ? Icons.hourglass_top_rounded : Icons.gpp_maybe_rounded,
+              color: tint, size: 24),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              pending
+                  ? 'Host verification is pending review. Listings can be managed, but bookings remain disabled until approval.'
+                  : rejected
+                      ? 'Host verification was rejected. Update and re-submit your documents.'
+                      : 'Submit host verification documents to activate listing features.',
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.charcoal,
+              ),
+            ),
+          ),
+          if (!pending)
+            IconButton(
+              onPressed: onAction,
+              icon:
+                  Icon(Icons.arrow_forward_ios_rounded, size: 16, color: tint),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionHeader extends StatelessWidget {
+  final String title;
+  final String? subtitle;
+  final String? actionLabel;
+  final VoidCallback? onAction;
+
+  const _SectionHeader({
+    required this.title,
+    this.subtitle,
+    this.actionLabel,
+    this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: GoogleFonts.manrope(
+                  fontSize: 23,
+                  height: 1.1,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF07142F),
+                ),
+              ),
+              if (subtitle != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  subtitle!,
+                  style: GoogleFonts.manrope(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.charcoalMuted,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        if (actionLabel != null)
+          TextButton.icon(
+            onPressed: onAction,
+            label: Text(actionLabel!),
+            iconAlignment: IconAlignment.end,
+            icon: const Icon(Icons.arrow_forward_rounded),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.primary,
+              textStyle: GoogleFonts.manrope(
+                fontSize: 14,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _FeatureCardsRow extends StatelessWidget {
+  final VoidCallback onCalendar;
+  final VoidCallback onPayouts;
+  final VoidCallback onBookings;
+
+  const _FeatureCardsRow({
+    required this.onCalendar,
+    required this.onPayouts,
+    required this.onBookings,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _FeatureCard(
+            icon: Icons.calendar_month_rounded,
+            title: 'Property\nCalendar',
+            subtitle: 'Manage availability\nand bookings',
+            tint: AppTheme.primary,
+            onTap: onCalendar,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _FeatureCard(
+            icon: Icons.account_balance_wallet_rounded,
+            title: 'Payouts\nManager',
+            subtitle: 'Track earnings and\npayment history',
+            tint: Colors.green.shade700,
+            onTap: onPayouts,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _FeatureCard(
+            icon: Icons.flag_rounded,
+            title: 'Booking\nManager',
+            subtitle: 'View and manage\nall bookings',
+            tint: Colors.blue.shade700,
+            onTap: onBookings,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _FeatureCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final Color tint;
+  final VoidCallback onTap;
+
+  const _FeatureCard({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.tint,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(22),
+      child: SizedBox(
+        height: 184,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: tint.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: tint.withValues(alpha: 0.24)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 22,
+                backgroundColor: tint.withValues(alpha: 0.12),
+                child: Icon(icon, color: tint),
+              ),
+              const Spacer(),
+              Text(
+                title,
+                style: GoogleFonts.manrope(
+                  fontSize: 17,
+                  height: 1.25,
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFF07142F),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                subtitle,
+                style: GoogleFonts.manrope(
+                  fontSize: 12,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.charcoal,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: Colors.white,
+                  child:
+                      Icon(Icons.arrow_forward_rounded, color: tint, size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HostPropertyCard extends StatelessWidget {
+  final PropertyModel property;
+  final bool isLive;
+  final bool isDraft;
+  final bool isRejected;
+  final VoidCallback onEdit;
+  final VoidCallback onSubmit;
+  final VoidCallback onRefresh;
+  final VoidCallback onCalendarBlocked;
+
+  const _HostPropertyCard({
+    required this.property,
+    required this.isLive,
+    required this.isDraft,
+    required this.isRejected,
+    required this.onEdit,
+    required this.onSubmit,
+    required this.onRefresh,
+    required this.onCalendarBlocked,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = isLive
+        ? Colors.green
+        : isRejected
+            ? Colors.red
+            : Colors.orange;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Stack(
+            children: [
+              PropertyImage(
+                imageUrl:
+                    property.images.isNotEmpty ? property.images.first : null,
+                width: 128,
+                height: 136,
+                borderRadius: BorderRadius.circular(18),
+              ),
+              Positioned(
+                left: 10,
+                bottom: 10,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    property.status.replaceAll('_', ' ').toUpperCase(),
+                    style: GoogleFonts.manrope(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      color: statusColor,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  property.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.manrope(
+                    fontSize: 18,
+                    height: 1.15,
+                    fontWeight: FontWeight.w900,
+                    color: const Color(0xFF07142F),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _MetaLine(
+                  icon: Icons.location_on_rounded,
+                  text: '${property.city}, ${property.state}',
+                ),
+                const SizedBox(height: 6),
+                _MetaLine(
+                  icon: Icons.schedule_rounded,
+                  text:
+                      'Listed: ${property.createdAt != null ? DateFormat('dd MMM yyyy, hh:mm a').format(property.createdAt!.toLocal()) : "N/A"}',
+                ),
+                const Divider(height: 22, color: AppTheme.border),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _PropertyMetric(
+                        label: 'Area',
+                        value: '${property.areaSqft.toStringAsFixed(0)} sqft',
+                      ),
+                    ),
+                    Container(width: 1, height: 36, color: AppTheme.border),
+                    Expanded(
+                      child: _PropertyMetric(
+                        label: 'Price',
+                        value:
+                            '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
+                        alignEnd: true,
+                        valueColor: AppTheme.primary,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isDraft
+                            ? onEdit
+                            : (isLive
+                                ? () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            const HostCalendarScreen(),
+                                      ),
+                                    );
+                                  }
+                                : onCalendarBlocked),
+                        icon: Icon(
+                            isDraft
+                                ? Icons.edit_rounded
+                                : Icons.calendar_month_rounded,
+                            size: 16),
+                        label: Text(isDraft ? 'Edit Draft' : 'Calendar'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF07142F),
+                          side: const BorderSide(color: AppTheme.border),
+                          minimumSize: const Size(double.infinity, 46),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          textStyle: GoogleFonts.manrope(
+                              fontWeight: FontWeight.w900, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: isDraft ? onSubmit : onEdit,
+                        icon: Icon(
+                            isDraft ? Icons.send_rounded : Icons.edit_rounded,
+                            size: 16,
+                            color: Colors.white),
+                        label: Text(isDraft ? 'Submit' : 'Manage Property'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF07142F),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 46),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14)),
+                          textStyle: GoogleFonts.manrope(
+                              fontWeight: FontWeight.w900, fontSize: 13),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MetaLine extends StatelessWidget {
+  final IconData icon;
+  final String text;
+
+  const _MetaLine({required this.icon, required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 15, color: AppTheme.charcoalMuted),
+        const SizedBox(width: 5),
+        Expanded(
+          child: Text(
+            text,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.manrope(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.charcoalMuted,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PropertyMetric extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool alignEnd;
+  final Color? valueColor;
+
+  const _PropertyMetric({
+    required this.label,
+    required this.value,
+    this.alignEnd = false,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment:
+          alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.manrope(
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.charcoalMuted,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.manrope(
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            color: valueColor ?? const Color(0xFF07142F),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HostTrustStrip extends StatelessWidget {
+  const _HostTrustStrip();
+
+  @override
+  Widget build(BuildContext context) {
+    const items = [
+      (Icons.verified_user_outlined, 'Verified\nProperties', '100% Trusted'),
+      (Icons.support_agent_rounded, '24/7\nSupport', "We're here to help"),
+      (Icons.workspace_premium_outlined, 'Secure\nPayments', 'Safe & Reliable'),
+      (Icons.star_border_rounded, 'Grow Your\nBusiness', 'Maximize earnings'),
+    ];
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          for (int i = 0; i < items.length; i++) ...[
+            Expanded(
+              child: Row(
+                children: [
+                  Icon(items[i].$1, color: AppTheme.primary, size: 26),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          items[i].$2,
+                          maxLines: 2,
+                          style: GoogleFonts.manrope(
+                            fontSize: 11,
+                            height: 1.1,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF07142F),
+                          ),
+                        ),
+                        const SizedBox(height: 3),
+                        Text(
+                          items[i].$3,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.manrope(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (i != items.length - 1)
+              Container(width: 1, height: 38, color: AppTheme.border),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _SoftIconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _SoftIconButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: const Color(0xFFF9F4EC),
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: SizedBox(
+          width: 52,
+          height: 52,
+          child: Icon(icon, color: const Color(0xFF07142F), size: 28),
         ),
       ),
     );
@@ -1261,16 +1651,6 @@ class _DocumentVerificationSheetState
                 }
               },
             ),
-            ListTile(
-              leading:
-                  const Icon(Icons.developer_mode, color: AppTheme.primary),
-              title: const Text('Simulate Document (For Fast Testing)'),
-              onTap: () {
-                Navigator.pop(context);
-                _setDocumentPath(type, '${type}_document.jpg',
-                    'uploads/mock_${type}_document.jpg');
-              },
-            ),
           ],
         ),
       ),
@@ -1297,8 +1677,6 @@ class _DocumentVerificationSheetState
         final response =
             await ApiService().dio.post('/upload/document', data: formData);
         uploadedPath = response.data['url']?.toString() ?? path;
-      } else {
-        await Future.delayed(const Duration(milliseconds: 500));
       }
     } catch (e) {
       if (!mounted) return;
@@ -1799,7 +2177,8 @@ class _DocumentVerificationSheetState
     final RegExp panRegex = RegExp(r'[A-Z]{5}[0-9]{4}[A-Z]');
     if (!panRegex.hasMatch(pan)) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invalid PAN card number format (e.g. ABCDE1234F).')),
+        const SnackBar(
+            content: Text('Invalid PAN card number format (e.g. ABCDE1234F).')),
       );
       return;
     }

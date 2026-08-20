@@ -5,28 +5,112 @@ import '../services/api_service.dart';
 class PropertyProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   List<PropertyModel> _properties = [];
+  List<PropertyModel> _landingResidential = [];
+  List<PropertyModel> _landingCommercial = [];
+  List<PropertyModel> _landingEvents = [];
   List<PropertyModel> _hostProperties = [];
   PropertyModel? _currentProperty;
   bool _isLoading = false;
 
   List<PropertyModel> get properties => _properties;
+  List<PropertyModel> get landingResidential => _landingResidential;
+  List<PropertyModel> get landingCommercial => _landingCommercial;
+  List<PropertyModel> get landingEvents => _landingEvents;
   List<PropertyModel> get hostProperties => _hostProperties;
   PropertyModel? get currentProperty => _currentProperty;
   bool get isLoading => _isLoading;
+
+  Future<List<PropertyModel>> _fetchSearchList(
+    Map<String, dynamic> params,
+  ) async {
+    final response = await _apiService.dio.get(
+      '/properties/search',
+      queryParameters: params,
+    );
+    if (response.statusCode == 200) {
+      final List<dynamic> list = response.data['properties'] ??
+          response.data['results'] ??
+          (response.data is List ? response.data : []);
+      final properties = <PropertyModel>[];
+      for (final item in list) {
+        try {
+          if (item is Map) {
+            properties.add(
+              PropertyModel.fromJson(Map<String, dynamic>.from(item)),
+            );
+          }
+        } catch (_) {
+          continue;
+        }
+      }
+      return properties;
+    }
+    return [];
+  }
+
+  Future<List<PropertyModel>> _fetchLandingCategory(String category) async {
+    try {
+      return await _fetchSearchList({
+        'category': category,
+        'limit': 12,
+        'sort': 'rating_desc',
+      });
+    } catch (_) {
+      return [];
+    }
+  }
+
+  List<PropertyModel> _filterCategory(
+    List<PropertyModel> properties,
+    String category,
+  ) {
+    return properties
+        .where((property) => property.category.toLowerCase().trim() == category)
+        .toList();
+  }
 
   Future<void> searchProperties(Map<String, dynamic> params) async {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio
-          .get('/properties/search', queryParameters: params);
-      if (response.statusCode == 200) {
-        final List<dynamic> list = response.data['properties'] ??
-            response.data['results'] ??
-            (response.data is List ? response.data : []);
-        _properties = list.map((item) => PropertyModel.fromJson(item)).toList();
-      }
+      _properties = await _fetchSearchList(params);
     } catch (e) {
+      _properties = [];
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> loadLandingSections() async {
+    _isLoading = true;
+    notifyListeners();
+    try {
+      final results = await Future.wait<List<PropertyModel>>([
+        _fetchLandingCategory('residential'),
+        _fetchLandingCategory('commercial'),
+        _fetchLandingCategory('event_venue'),
+        _fetchSearchList({'limit': 60}),
+      ]);
+      final fallback = results[3];
+      _landingResidential = results[0].isNotEmpty
+          ? results[0]
+          : _filterCategory(fallback, 'residential').take(12).toList();
+      _landingCommercial = results[1].isNotEmpty
+          ? results[1]
+          : _filterCategory(fallback, 'commercial').take(12).toList();
+      _landingEvents = results[2].isNotEmpty
+          ? results[2]
+          : _filterCategory(fallback, 'event_venue').take(12).toList();
+      _properties = [
+        ..._landingResidential,
+        ..._landingCommercial,
+        ..._landingEvents,
+      ];
+    } catch (e) {
+      _landingResidential = [];
+      _landingCommercial = [];
+      _landingEvents = [];
       _properties = [];
     } finally {
       _isLoading = false;
@@ -302,20 +386,6 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> mockPaySubscription(
-      String subscriptionId, String razorpayOrderId) async {
-    try {
-      final response = await _apiService.dio
-          .post('/subscriptions/subscribe/mock-pay', queryParameters: {
-        'subscription_id': subscriptionId,
-        'razorpay_order_id': razorpayOrderId,
-      });
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
-  }
-
   Future<bool> confirmSubscriptionPayment({
     required String subscriptionId,
     required String razorpayPaymentId,
@@ -486,6 +556,12 @@ class PropertyProvider with ChangeNotifier {
 
   bool isWishlisted(String propertyId) {
     return _wishlistIds.contains(propertyId);
+  }
+
+  void addWishlist(String propertyId) {
+    if (propertyId.isEmpty || _wishlistIds.contains(propertyId)) return;
+    _wishlistIds.add(propertyId);
+    notifyListeners();
   }
 
   void toggleWishlist(String propertyId) {

@@ -10,6 +10,8 @@ class BookingStatus(str, Enum):
     CANCELLED = "cancelled"
     COMPLETED = "completed"
     SOFT_LOCK = "soft_lock"
+    AWAITING_HOST_APPROVAL = "awaiting_host_approval"
+    REJECTED = "rejected"
 
 class CancellationPolicy(str, Enum):
     FLEXIBLE = "flexible"
@@ -37,9 +39,11 @@ class Booking(BaseModel):
     service_fee: float
     taxes: float
     total_amount: float
+    currency: str = "INR"
     
     # Payment
     payment_status: str = "pending"  # pending, paid, failed, refunded
+    booking_mode: str = "INSTANT_BOOK"
     razorpay_order_id: Optional[str] = None
     razorpay_payment_id: Optional[str] = None
     coupon_code: Optional[str] = None
@@ -68,6 +72,13 @@ class Booking(BaseModel):
     confirmed_at: Optional[datetime] = None
     cancelled_at: Optional[datetime] = None
     soft_lock_expires_at: Optional[datetime] = None
+    approval_requested_at: Optional[datetime] = None
+    approval_deadline_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None
+    rejected_at: Optional[datetime] = None
+    rejected_by: Optional[str] = None
+    rejection_reason: Optional[str] = None
 
 class BookingCreate(BaseModel):
     property_id: str

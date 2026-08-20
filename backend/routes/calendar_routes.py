@@ -32,7 +32,7 @@ class ExternalCalendarRequest(BaseModel):
 
 
 def _public_backend_url() -> str:
-    return os.environ.get("PUBLIC_BACKEND_URL", "http://localhost:8001").rstrip("/")
+    return os.environ.get("PUBLIC_BACKEND_URL", "https://api.x-space360.in").rstrip("/")
 
 
 async def _build_property_ical(property_id: str, property_data: dict, db: AsyncIOMotorDatabase) -> bytes:

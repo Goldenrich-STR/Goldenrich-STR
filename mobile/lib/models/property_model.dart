@@ -17,6 +17,8 @@ class PropertyModel {
   final double longitude;
   final double areaSqft;
   final double pricePerNight;
+  final double? customerPricePerNight;
+  final double? extraGuestPrice;
   final int maxGuests;
   final List<String> amenities;
   final List<String> images;
@@ -25,6 +27,9 @@ class PropertyModel {
   final String? youtubeLongUrl;
   final bool petFriendly;
   final bool instantBooking;
+  final String bookingMode;
+  final bool hostApprovalRequired;
+  final int? hostApprovalSlaMinutes;
   final String status;
   final double? vegPrice;
   final double? nonVegPrice;
@@ -60,6 +65,8 @@ class PropertyModel {
     required this.longitude,
     required this.areaSqft,
     required this.pricePerNight,
+    this.customerPricePerNight,
+    this.extraGuestPrice,
     required this.maxGuests,
     required this.amenities,
     required this.images,
@@ -68,6 +75,9 @@ class PropertyModel {
     this.youtubeLongUrl,
     required this.petFriendly,
     required this.instantBooking,
+    required this.bookingMode,
+    required this.hostApprovalRequired,
+    this.hostApprovalSlaMinutes,
     required this.status,
     this.vegPrice,
     this.nonVegPrice,
@@ -99,13 +109,50 @@ class PropertyModel {
 
   String get pricingUnitLabel {
     if (isEventVenue) return 'day';
-    if (isCommercial) return 'month';
+    if (isCommercial) return 'day';
     return 'night';
   }
 
   String get pricingUnitSuffix => ' / $pricingUnitLabel';
 
+  double get customerDisplayPrice => customerPricePerNight ?? pricePerNight;
+
+  bool get isInstantBook => bookingMode.toUpperCase() == 'INSTANT_BOOK';
+
+  String get bookingModeLabel =>
+      isInstantBook ? 'Instant Book' : 'Host Approval Required';
+
+  String get bookingModeDescription => isInstantBook
+      ? 'Book instantly without waiting for host approval.'
+      : 'The host reviews every booking request. Expected response: within 24 hours.';
+
+  String get bookingCtaLabel => isInstantBook ? 'Reserve' : 'Request to Book';
+
+  String get bookingDateTitle {
+    if (isEventVenue) return 'Select event date';
+    if (isCommercial) return 'Select booking dates';
+    return 'Select stay dates';
+  }
+
+  String get participantLabel => isCommercial ? 'staff' : 'guests';
+
+  String get participantLabelUpper => participantLabel.toUpperCase();
+
+  String get displayCategoryLabel {
+    final normalized = category.trim().replaceAll('_', ' ');
+    if (normalized.isEmpty) return 'Property';
+    return normalized
+        .split(' ')
+        .where((part) => part.isNotEmpty)
+        .map((part) => '${part[0].toUpperCase()}${part.substring(1)}')
+        .join(' ');
+  }
+
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
+    final images = (json['images'] as List? ?? [])
+        .where((img) => _isProductionPropertyImageUrl(img.toString()))
+        .map<String>((img) => AppConfig.resolveImageUrl(img.toString()))
+        .toList();
     return PropertyModel(
       propertyId: json['property_id'] ?? '',
       ownerId: json['owner_id'] ?? '',
@@ -123,16 +170,21 @@ class PropertyModel {
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
       areaSqft: (json['area_sqft'] as num?)?.toDouble() ?? 0.0,
       pricePerNight: (json['price_per_night'] as num?)?.toDouble() ?? 0.0,
+      customerPricePerNight:
+          (json['customer_price_per_night'] as num?)?.toDouble() ??
+              (json['display_price_per_night'] as num?)?.toDouble(),
+      extraGuestPrice: (json['extra_guest_price'] as num?)?.toDouble(),
       maxGuests: json['max_guests'] ?? 6,
       amenities: List<String>.from(json['amenities'] ?? []),
-      images: (json['images'] as List? ?? [])
-          .map<String>((img) => AppConfig.resolveImageUrl(img.toString()))
-          .toList(),
+      images: images,
       videoUrl: json['video_url'],
       youtubeShortUrl: json['youtube_short_url'],
       youtubeLongUrl: json['youtube_long_url'],
       petFriendly: json['pet_friendly'] ?? false,
-      instantBooking: json['instant_booking'] ?? false,
+      instantBooking: true,
+      bookingMode: 'INSTANT_BOOK',
+      hostApprovalRequired: false,
+      hostApprovalSlaMinutes: null,
       status: json['status'] ?? 'draft',
       vegPrice: (json['veg_price'] as num?)?.toDouble(),
       nonVegPrice: (json['non_veg_price'] as num?)?.toDouble(),
@@ -150,9 +202,35 @@ class PropertyModel {
       cookPrice: (json['cook_price'] as num?)?.toDouble(),
       hasSelfCook: json['has_self_cook'] ?? false,
       hasTaxi: json['has_taxi'] ?? false,
-      rating: (json['rating'] as num?)?.toDouble() ?? (json['rating_avg'] as num?)?.toDouble(),
-      reviewCount: (json['review_count'] as num?)?.toInt() ?? (json['rating_count'] as num?)?.toInt(),
+      rating: (json['rating'] as num?)?.toDouble() ??
+          (json['rating_avg'] as num?)?.toDouble(),
+      reviewCount: (json['review_count'] as num?)?.toInt() ??
+          (json['rating_count'] as num?)?.toInt(),
     );
+  }
+
+  static bool _isProductionPropertyImageUrl(String value) {
+    final raw = value.trim();
+    if (raw.isEmpty) return false;
+    final lower = raw.toLowerCase();
+    return !lower.contains('example.com') &&
+        !lower.contains('images.unsplash.com') &&
+        !lower.contains('source.unsplash.com') &&
+        !lower.contains('images.pexels.com') &&
+        !lower.contains('picsum.photos') &&
+        !lower.contains('placeholder.com') &&
+        !lower.contains('placehold.co') &&
+        !lower.contains('dummyimage') &&
+        !_isLocalAbsoluteUrl(raw);
+  }
+
+  static bool _isLocalAbsoluteUrl(String value) {
+    final uri = Uri.tryParse(value);
+    if (uri == null || !uri.hasScheme) return false;
+    return uri.host == 'localhost' ||
+        uri.host == '127.0.0.1' ||
+        uri.host == '10.0.2.2' ||
+        uri.host == '0.0.0.0';
   }
 
   Map<String, dynamic> toJson() {
@@ -173,6 +251,8 @@ class PropertyModel {
       'longitude': longitude,
       'area_sqft': areaSqft,
       'price_per_night': pricePerNight,
+      'customer_price_per_night': customerPricePerNight,
+      'extra_guest_price': extraGuestPrice,
       'max_guests': maxGuests,
       'amenities': amenities,
       'images': images,
@@ -180,7 +260,10 @@ class PropertyModel {
       'youtube_short_url': youtubeShortUrl,
       'youtube_long_url': youtubeLongUrl,
       'pet_friendly': petFriendly,
-      'instant_booking': instantBooking,
+      'instant_booking': true,
+      'booking_mode': 'INSTANT_BOOK',
+      'host_approval_required': false,
+      'host_approval_sla_minutes': null,
       'status': status,
       'veg_price': vegPrice,
       'non_veg_price': nonVegPrice,

@@ -32,7 +32,7 @@ async def razorpay_webhook(
 
     webhook_secret = os.getenv("RAZORPAY_WEBHOOK_SECRET")
 
-    # In demo/development without webhook secret configured, we can skip signature check to ease testing
+    # In non-production without webhook secret configured, signature checks may be skipped for local testing only.
     if webhook_secret and signature:
         expected = hmac.new(
             webhook_secret.encode("utf-8"),
@@ -47,7 +47,13 @@ async def razorpay_webhook(
                 detail="Invalid signature"
             )
     else:
-        logger.info("Razorpay webhook signature verification skipped (RAZORPAY_WEBHOOK_SECRET not set in env).")
+        if razorpay_service.environment_is_production:
+            logger.warning("Razorpay webhook rejected because signature verification is not configured.")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Webhook signature verification is required",
+            )
+        logger.info("Razorpay webhook signature verification skipped outside production.")
 
     # 2. Parse payload
     try:
@@ -100,6 +106,21 @@ async def razorpay_webhook(
     if booking:
         booking_id = booking["booking_id"]
         logger.info(f"Resolved payment to Booking ID: {booking_id}")
+
+        expected_amount = (
+            booking.get("advance_amount", 0)
+            if booking.get("payment_type") == "advance"
+            else booking.get("total_amount", 0)
+        )
+        expected_amount_paise = int(round(float(expected_amount or 0) * 100))
+        if amount_paise is not None and int(amount_paise) != expected_amount_paise:
+            logger.warning(
+                "Webhook booking amount mismatch for %s: expected=%s actual=%s",
+                booking_id,
+                expected_amount_paise,
+                amount_paise,
+            )
+            return {"status": "rejected", "error": "amount_mismatch", "resolved_entity": "booking", "id": booking_id}
         
         if booking.get("booking_status") != BookingStatus.CONFIRMED.value:
             # Update booking status to confirmed
@@ -181,6 +202,16 @@ async def razorpay_webhook(
         subscription_id = subscription["subscription_id"]
         logger.info(f"Resolved payment to Subscription ID: {subscription_id}")
 
+        expected_amount_paise = int(round(float(subscription.get("amount") or 0) * 100))
+        if amount_paise is not None and int(amount_paise) != expected_amount_paise:
+            logger.warning(
+                "Webhook subscription amount mismatch for %s: expected=%s actual=%s",
+                subscription_id,
+                expected_amount_paise,
+                amount_paise,
+            )
+            return {"status": "rejected", "error": "amount_mismatch", "resolved_entity": "subscription", "id": subscription_id}
+        
         if subscription.get("status") != SubscriptionStatus.ACTIVE.value:
             # Update status to active
             await db.subscriptions.update_one(
@@ -234,6 +265,16 @@ async def razorpay_webhook(
         user = await db.users.find_one({"user_id": user_id})
         if user:
             if not user.get("registration_fee_paid", False):
+                from routes.subscription_routes import REGISTRATION_FEE_AMOUNT
+                if amount_paise is not None and int(amount_paise) != REGISTRATION_FEE_AMOUNT:
+                    logger.warning(
+                        "Webhook registration amount mismatch for %s: expected=%s actual=%s",
+                        user_id,
+                        REGISTRATION_FEE_AMOUNT,
+                        amount_paise,
+                    )
+                    return {"status": "rejected", "error": "amount_mismatch", "resolved_entity": "registration_fee", "id": user_id}
+
                 # Update user
                 await db.users.update_one(
                     {"user_id": user_id},
@@ -248,7 +289,6 @@ async def razorpay_webhook(
                 try:
                     from models.transaction import TransactionType
                     from services.account_service import record_transaction
-                    from routes.subscription_routes import REGISTRATION_FEE_AMOUNT
                     await record_transaction(
                         db,
                         type=TransactionType.REGISTRATION_FEE,

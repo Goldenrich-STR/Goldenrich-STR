@@ -1,4 +1,5 @@
 import '../config.dart';
+import 'booking_status_ui.dart';
 
 class BookingModel {
   final String bookingId;
@@ -13,6 +14,9 @@ class BookingModel {
   final double discountAmount;
   final String bookingStatus;
   final String? paymentStatus;
+  final String? lifecycleStatus;
+  final String? statusLabel;
+  final String? statusDescription;
   final String? razorpayOrderId;
   final String? razorpayKeyId;
   final int? razorpayAmount;
@@ -30,6 +34,8 @@ class BookingModel {
   final String? propertyState;
   final List<String>? propertyImages;
   final String? propertyCategory;
+  final String? bookingMode;
+  final String? approvalDeadlineAt;
 
   BookingModel({
     required this.bookingId,
@@ -44,6 +50,9 @@ class BookingModel {
     required this.discountAmount,
     required this.bookingStatus,
     this.paymentStatus,
+    this.lifecycleStatus,
+    this.statusLabel,
+    this.statusDescription,
     this.razorpayOrderId,
     this.razorpayKeyId,
     this.razorpayAmount,
@@ -61,7 +70,17 @@ class BookingModel {
     this.propertyState,
     this.propertyImages,
     this.propertyCategory,
+    this.bookingMode,
+    this.approvalDeadlineAt,
   });
+
+  BookingStatusUi get statusUi => BookingStatusMapper.fromRaw(
+        bookingStatus: bookingStatus,
+        paymentStatus: paymentStatus,
+        lifecycleStatus: lifecycleStatus,
+        checkInDate: checkInDate,
+        checkOutDate: checkOutDate,
+      );
 
   factory BookingModel.fromJson(Map<String, dynamic> json) {
     final details = json['booking_details'] as Map<String, dynamic>?;
@@ -70,43 +89,69 @@ class BookingModel {
 
     return BookingModel(
       bookingId: json['booking_id'] ?? '',
-      propertyId: json['property_id'] ?? (details != null ? details['property_id'] ?? '' : ''),
+      propertyId: json['property_id'] ??
+          (details != null ? details['property_id'] ?? '' : ''),
       guestId: json['guest_id'] ?? '',
-      checkInDate: json['check_in_date'] ?? (details != null ? details['check_in_date'] ?? '' : ''),
-      checkOutDate: json['check_out_date'] ?? (details != null ? details['check_out_date'] ?? '' : ''),
-      totalAmount: (json['total_amount'] as num?)?.toDouble() ?? 
-                   (details != null ? (details['total_amount'] as num?)?.toDouble() ?? 0.0 : 0.0),
-      baseAmount: (json['base_amount'] as num?)?.toDouble() ?? 
-                  (details != null ? (details['base_amount'] as num?)?.toDouble() ?? 0.0 : 0.0),
+      checkInDate: json['check_in_date'] ??
+          (details != null ? details['check_in_date'] ?? '' : ''),
+      checkOutDate: json['check_out_date'] ??
+          (details != null ? details['check_out_date'] ?? '' : ''),
+      totalAmount: (json['total_amount'] as num?)?.toDouble() ??
+          (details != null
+              ? (details['total_amount'] as num?)?.toDouble() ?? 0.0
+              : 0.0),
+      baseAmount: (json['base_amount'] as num?)?.toDouble() ??
+          (details != null
+              ? (details['base_amount'] as num?)?.toDouble() ?? 0.0
+              : 0.0),
       platformFee: (json['platform_fee'] as num?)?.toDouble() ??
           (json['service_fee'] as num?)?.toDouble() ??
-          (details != null ? (details['service_fee'] as num?)?.toDouble() ?? 0.0 : 0.0),
-      kycVerificationFee: (json['kyc_verification_fee'] as num?)?.toDouble() ?? 0.0,
+          (details != null
+              ? (details['service_fee'] as num?)?.toDouble() ?? 0.0
+              : 0.0),
+      kycVerificationFee:
+          (json['kyc_verification_fee'] as num?)?.toDouble() ?? 0.0,
       discountAmount: (json['discount_amount'] as num?)?.toDouble() ?? 0.0,
       bookingStatus: json['booking_status'] ?? '',
       paymentStatus: json['payment_status'],
+      lifecycleStatus: json['lifecycle_status'],
+      statusLabel: json['status_label'],
+      statusDescription: json['status_description'],
       razorpayOrderId: json['razorpay_order_id'],
       razorpayKeyId: json['razorpay_key_id'],
       razorpayAmount: (json['amount'] as num?)?.toInt(),
       currency: json['currency'],
       couponCode: json['coupon_code'],
-      guestPhone: json['guest_phone'] ?? (guestJson != null ? guestJson['phone'] : null),
-      guestEmail: json['guest_email'] ?? (guestJson != null ? guestJson['email'] : null),
-      guestName: json['guest_name'] ?? (guestJson != null ? guestJson['full_name'] : null),
-      propertyTitle: json['property_title'] ?? 
-                     (details != null ? details['property_title'] : null) ?? 
-                     (propJson != null ? propJson['title'] : null),
-      paymentType: json['payment_type'] ?? (details != null ? details['payment_type'] : null),
-      advanceAmount: (json['advance_amount'] as num?)?.toDouble() ?? 
-                     (details != null ? (details['advance_amount'] as num?)?.toDouble() : null),
-      numberOfGuests: json['number_of_guests'] ?? (details != null ? details['number_of_guests'] ?? 1 : 1),
+      guestPhone: json['guest_phone'] ??
+          (guestJson != null ? guestJson['phone'] : null),
+      guestEmail: json['guest_email'] ??
+          (guestJson != null ? guestJson['email'] : null),
+      guestName: json['guest_name'] ??
+          (guestJson != null ? guestJson['full_name'] : null),
+      propertyTitle: json['property_title'] ??
+          (details != null ? details['property_title'] : null) ??
+          (propJson != null ? propJson['title'] : null),
+      paymentType: json['payment_type'] ??
+          (details != null ? details['payment_type'] : null),
+      advanceAmount: (json['advance_amount'] as num?)?.toDouble() ??
+          (details != null
+              ? (details['advance_amount'] as num?)?.toDouble()
+              : null),
+      numberOfGuests: json['number_of_guests'] ??
+          (details != null ? details['number_of_guests'] ?? 1 : 1),
       createdAt: json['created_at'] ?? '',
       propertyCity: propJson != null ? propJson['city'] : null,
       propertyState: propJson != null ? propJson['state'] : null,
       propertyImages: propJson != null && propJson['images'] != null
-          ? (propJson['images'] as List).map<String>((img) => AppConfig.resolveImageUrl(img.toString())).toList()
+          ? (propJson['images'] as List)
+              .map<String>((img) => AppConfig.resolveImageUrl(img.toString()))
+              .toList()
           : null,
       propertyCategory: propJson != null ? propJson['category'] : null,
+      bookingMode: json['booking_mode'] ??
+          (details != null ? details['booking_mode'] : null) ??
+          (propJson != null ? propJson['booking_mode'] : null),
+      approvalDeadlineAt: json['approval_deadline_at'],
     );
   }
 
@@ -124,6 +169,9 @@ class BookingModel {
       'discount_amount': discountAmount,
       'booking_status': bookingStatus,
       'payment_status': paymentStatus,
+      'lifecycle_status': lifecycleStatus,
+      'status_label': statusLabel,
+      'status_description': statusDescription,
       'razorpay_order_id': razorpayOrderId,
       'razorpay_key_id': razorpayKeyId,
       'amount': razorpayAmount,
@@ -136,6 +184,8 @@ class BookingModel {
       'advance_amount': advanceAmount,
       'number_of_guests': numberOfGuests,
       'created_at': createdAt,
+      'booking_mode': bookingMode,
+      'approval_deadline_at': approvalDeadlineAt,
     };
   }
 }

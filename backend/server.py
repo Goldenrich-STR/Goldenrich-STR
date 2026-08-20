@@ -357,6 +357,7 @@ async def startup_sequence():
         # 2. Create indexes (Mocked for PG, real for Mongo)
         await db_instance.bookings.create_index("booking_id", unique=True)
         await db_instance.properties.create_index("property_id", unique=True)
+        await db_instance.properties.create_index([("status", 1), ("latitude", 1), ("longitude", 1)])
         await db_instance.users.create_index("user_id", unique=True)
         await db_instance.users.create_index("email", unique=True)
         await db_instance.blocked_dates.create_index("blocked_date_id", unique=True)

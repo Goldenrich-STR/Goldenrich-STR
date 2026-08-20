@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
@@ -47,6 +48,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
 
   // Step 3: Pricing & Rules
   final _priceController = TextEditingController();
+  final _extraGuestPriceController = TextEditingController();
+  final _maxExtraGuestsController = TextEditingController();
   final _vegPriceController = TextEditingController();
   final _nonVegPriceController = TextEditingController();
 
@@ -86,7 +89,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   final _rulesController = TextEditingController();
   bool _petFriendly = false;
   bool _smokingAllowed = false;
-  bool _instantBooking = false;
   bool _hasCook = false;
   final _cookPriceController = TextEditingController();
   bool _hasSelfCook = false;
@@ -153,6 +155,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   String _subscriptionCouponError = '';
   final _subscriptionCouponController = TextEditingController();
   static const double _subscriptionCouponMinTaxableAmount = 10.0;
+  final Set<String> _expandedSubscriptionDescriptions = {};
   String? _pendingPaymentPropertyId;
   String? _pendingPaymentSubscriptionId;
   String? _pendingPaymentOrderId;
@@ -403,6 +406,13 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       _latitude = p.latitude;
       _longitude = p.longitude;
       _priceController.text = p.pricePerNight.toString();
+      if (p.extraGuestPrice != null) {
+        _extraGuestPriceController.text = p.extraGuestPrice.toString();
+      }
+      final includedGuests = p.guestSize ?? 1;
+      final extraCapacity = p.maxGuests - includedGuests;
+      _maxExtraGuestsController.text =
+          extraCapacity > 0 ? extraCapacity.toString() : '';
       _videoUrl = p.videoUrl;
       _youtubeShortController.text = p.youtubeShortUrl ?? '';
       _youtubeLongController.text = p.youtubeLongUrl ?? '';
@@ -410,7 +420,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       _selectedAmenities.addAll(p.amenities);
       _uploadedImages.addAll(p.images);
       _petFriendly = p.petFriendly;
-      _instantBooking = p.instantBooking;
       _hasCook = p.hasCook;
       if (p.cookPrice != null)
         _cookPriceController.text = p.cookPrice.toString();
@@ -504,6 +513,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     _youtubeShortController.dispose();
     _youtubeLongController.dispose();
     _cookPriceController.dispose();
+    _extraGuestPriceController.dispose();
+    _maxExtraGuestsController.dispose();
     _subscriptionCouponController.dispose();
     for (final controller in _rulesControllers) {
       controller.dispose();
@@ -524,6 +535,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       _pincodeController,
       _mapsUrlController,
       _priceController,
+      _extraGuestPriceController,
+      _maxExtraGuestsController,
       _vegPriceController,
       _nonVegPriceController,
       _minStayController,
@@ -562,13 +575,15 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       'latitude': _latitude,
       'longitude': _longitude,
       'price': _priceController.text,
+      'extraGuestPrice': _extraGuestPriceController.text,
+      'maxExtraGuests': _maxExtraGuestsController.text,
       'vegPrice': _vegPriceController.text,
       'nonVegPrice': _nonVegPriceController.text,
       'minStay': _minStayController.text,
       'pricingCycle': _pricingCycle,
       'petFriendly': _petFriendly,
       'smokingAllowed': _smokingAllowed,
-      'instantBooking': _instantBooking,
+      'instantBooking': true,
       'hasCook': _hasCook,
       'cookPrice': _cookPriceController.text,
       'hasSelfCook': _hasSelfCook,
@@ -623,6 +638,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         _latitude = (draft['latitude'] as num?)?.toDouble() ?? _latitude;
         _longitude = (draft['longitude'] as num?)?.toDouble() ?? _longitude;
         _priceController.text = draft['price'] ?? _priceController.text;
+        _extraGuestPriceController.text =
+            draft['extraGuestPrice'] ?? _extraGuestPriceController.text;
+        _maxExtraGuestsController.text =
+            draft['maxExtraGuests'] ?? _maxExtraGuestsController.text;
         _vegPriceController.text =
             draft['vegPrice'] ?? _vegPriceController.text;
         _nonVegPriceController.text =
@@ -631,7 +650,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         _pricingCycle = draft['pricingCycle'] ?? _pricingCycle;
         _petFriendly = draft['petFriendly'] ?? _petFriendly;
         _smokingAllowed = draft['smokingAllowed'] ?? _smokingAllowed;
-        _instantBooking = draft['instantBooking'] ?? _instantBooking;
         _hasCook = draft['hasCook'] ?? _hasCook;
         _cookPriceController.text =
             draft['cookPrice'] ?? _cookPriceController.text;
@@ -777,57 +795,102 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     }
   }
 
-  void _autofillLocationMock() {
+  Future<void> _reverseFillAddressFromCoordinates() async {
+    final response = await Dio().get(
+      'https://nominatim.openstreetmap.org/reverse',
+      queryParameters: {
+        'format': 'jsonv2',
+        'lat': _latitude,
+        'lon': _longitude,
+      },
+      options: Options(
+        headers: {'User-Agent': 'X-Space360-Mobile/1.0'},
+        receiveTimeout: const Duration(seconds: 5),
+        sendTimeout: const Duration(seconds: 5),
+      ),
+    );
+    if (response.statusCode != 200 || response.data == null) return;
+    final data = response.data as Map<String, dynamic>;
+    final address = data['address'] as Map<String, dynamic>? ?? {};
     setState(() {
-      _addressController.text = 'Flat 402, Golden Crest Apartments, Sector 15';
-      _cityController.text = 'Pune';
-      _stateController.text = 'Maharashtra';
-      _pincodeController.text = '411001';
-      _latitude = 18.5204;
-      _longitude = 73.8567;
-      _mapsUrlController.text =
-          'https://www.google.com/maps/place/18.5204,73.8567';
+      final displayAddress = (data['display_name']?.toString() ?? '')
+          .split(',')
+          .take(3)
+          .join(',')
+          .trim();
+      if (displayAddress.isNotEmpty) {
+        _addressController.text = displayAddress;
+      }
+      _cityController.text = (address['city'] ??
+              address['town'] ??
+              address['village'] ??
+              address['suburb'] ??
+              _cityController.text)
+          .toString();
+      _stateController.text =
+          (address['state'] ?? _stateController.text).toString();
+      _pincodeController.text =
+          (address['postcode'] ?? _pincodeController.text).toString();
     });
   }
 
   void _detectCurrentLocation() async {
     setState(() => _isDetectingLocation = true);
     try {
-      final response = await Dio().get('https://ipapi.co/json/',
-          options: Options(
-              receiveTimeout: const Duration(seconds: 4),
-              sendTimeout: const Duration(seconds: 4)));
-      if (response.statusCode == 200 && response.data != null) {
-        final data = response.data;
-        setState(() {
-          _cityController.text = data['city'] ?? 'Pune';
-          _stateController.text = data['region'] ?? 'Maharashtra';
-          _pincodeController.text = data['postal'] ?? '411001';
-          _latitude =
-              double.tryParse(data['latitude']?.toString() ?? '') ?? 18.5204;
-          _longitude =
-              double.tryParse(data['longitude']?.toString() ?? '') ?? 73.8567;
-          _addressController.text =
-              'My Location Near ${data['org'] ?? 'Network Area'}';
-          _mapsUrlController.text =
-              'https://www.google.com/maps/place/$_latitude,$_longitude';
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Detected location: ${_cityController.text}, ${_stateController.text}')),
-        );
-      } else {
-        throw Exception('Location API error');
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        await Geolocator.openLocationSettings();
+        throw Exception('Location service is turned off');
       }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        throw Exception('Location permission denied');
+      }
+
+      Position? position;
+      try {
+        position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.bestForNavigation,
+            distanceFilter: 0,
+            timeLimit: Duration(seconds: 20),
+          ),
+        );
+      } catch (_) {
+        position = await Geolocator.getLastKnownPosition(
+          forceAndroidLocationManager: true,
+        );
+      }
+      if (position == null) {
+        throw Exception('Unable to read device location');
+      }
+      setState(() {
+        _latitude = position!.latitude;
+        _longitude = position.longitude;
+        _mapsUrlController.text =
+            'https://www.google.com/maps/search/?api=1&query=$_latitude,$_longitude';
+      });
+      await _reverseFillAddressFromCoordinates();
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(
+                'Detected location: ${_cityController.text}, ${_stateController.text}')),
+      );
     } catch (e) {
-      _autofillLocationMock();
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('GPS unavailable. Pune coordinates applied.')),
+            content: Text(
+                'Current location unavailable. Enable GPS/location permission and try again.')),
       );
     } finally {
-      setState(() => _isDetectingLocation = false);
+      if (mounted) setState(() => _isDetectingLocation = false);
     }
   }
 
@@ -1086,16 +1149,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                 if (picked != null) {
                   _addImagePath(picked.path);
                 }
-              },
-            ),
-            ListTile(
-              leading:
-                  const Icon(Icons.developer_mode, color: AppTheme.primary),
-              title: const Text('Add Demo / Mock Property Photo'),
-              onTap: () {
-                Navigator.pop(context);
-                _addImagePath(
-                    'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&w=600&q=80');
               },
             ),
           ],
@@ -1410,6 +1463,16 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     });
   }
 
+  int _includedGuestCount() => int.tryParse(_minGuestsController.text) ?? 1;
+
+  int _totalGuestCapacity() {
+    final maxExtra = int.tryParse(_maxExtraGuestsController.text);
+    if (maxExtra != null) {
+      return _includedGuestCount() + maxExtra;
+    }
+    return int.tryParse(_maxGuestsController.text) ?? 6;
+  }
+
   bool _validateCurrentStep() {
     if (_currentStep == 0) {
       if (_titleController.text.trim().length < 5) {
@@ -1449,6 +1512,21 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           double.tryParse(_priceController.text) == null) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please enter a valid price.')));
+        return false;
+      }
+      final maxExtraText = _maxExtraGuestsController.text.trim();
+      if (maxExtraText.isNotEmpty &&
+          (int.tryParse(maxExtraText) == null || int.parse(maxExtraText) < 0)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Please enter valid max extra guests.')));
+        return false;
+      }
+      final extraFeeText = _extraGuestPriceController.text.trim();
+      if (extraFeeText.isNotEmpty &&
+          (double.tryParse(extraFeeText) == null ||
+              double.parse(extraFeeText) < 0)) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('Please enter a valid extra guest fee.')));
         return false;
       }
       if (_hasCook &&
@@ -1537,9 +1615,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           ? _mapsUrlController.text.trim()
           : null,
       'area_sqft': double.tryParse(_areaController.text) ?? 0.0,
-      'guest_size': int.tryParse(_minGuestsController.text) ?? 1,
-      'max_guests': int.tryParse(_maxGuestsController.text) ?? 6,
+      'guest_size': _includedGuestCount(),
+      'max_guests': _totalGuestCapacity(),
       'price_per_night': double.tryParse(_priceController.text) ?? 0.0,
+      'extra_guest_price': double.tryParse(_extraGuestPriceController.text),
       'pricing_cycle': _pricingCycle,
       'minimum_stay_days': int.tryParse(_minStayController.text) ?? 1,
       'amenities': _selectedAmenities,
@@ -1567,7 +1646,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                   : 'Please keep the space clean.')),
       'pet_friendly': _petFriendly,
       'smoking_allowed': _smokingAllowed,
-      'instant_booking': _instantBooking,
+      'instant_booking': true,
+      'booking_mode': 'INSTANT_BOOK',
       'has_cook': _hasCook,
       'cook_price': _hasCook && _cookPriceController.text.isNotEmpty
           ? double.tryParse(_cookPriceController.text)
@@ -1658,9 +1738,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           ? _mapsUrlController.text.trim()
           : null,
       'area_sqft': double.parse(_areaController.text),
-      'guest_size': int.tryParse(_minGuestsController.text) ?? 1,
-      'max_guests': int.parse(_maxGuestsController.text),
+      'guest_size': _includedGuestCount(),
+      'max_guests': _totalGuestCapacity(),
       'price_per_night': double.parse(_priceController.text),
+      'extra_guest_price': double.tryParse(_extraGuestPriceController.text),
       'pricing_cycle': _pricingCycle,
       'minimum_stay_days': int.tryParse(_minStayController.text) ?? 1,
       'amenities': _selectedAmenities,
@@ -1688,7 +1769,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                   : 'Please keep the space clean.')),
       'pet_friendly': _petFriendly,
       'smoking_allowed': _smokingAllowed,
-      'instant_booking': _instantBooking,
+      'instant_booking': true,
+      'booking_mode': 'INSTANT_BOOK',
       'has_cook': _hasCook,
       'cook_price': _hasCook && _cookPriceController.text.isNotEmpty
           ? double.tryParse(_cookPriceController.text)
@@ -1778,7 +1860,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           return;
         }
 
-        _processSubscriptionAndMockPay(
+        _processSubscriptionPayment(
           createdPropertyId,
           _selectedSubscriptionPlanId!,
           (selectedPlan['plan_name'] ?? 'STR Plan').toString(),
@@ -2369,7 +2451,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                                   ),
                                   onPressed: () {
                                     Navigator.pop(context);
-                                    _processSubscriptionAndMockPay(
+                                    _processSubscriptionPayment(
                                       propertyId,
                                       planId,
                                       name,
@@ -2415,7 +2497,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     );
   }
 
-  void _processSubscriptionAndMockPay(
+  void _processSubscriptionPayment(
       String propertyId, String planId, String planName, double amount,
       {String? couponCode}) async {
     showDialog(
@@ -2454,7 +2536,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
               ? ((subResult['payable_amount'] as num).toDouble() * 100).round()
               : (amount * 100).round());
       final isMock = subResult['is_mock'] == true;
-      final finalAmount = amountPaise / 100.0;
 
       if (mounted) {
         if (!isMock && keyId.isNotEmpty && razorpayOrderId.isNotEmpty) {
@@ -2470,12 +2551,11 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           return;
         }
 
-        _showMockPaymentGateway(
-          propertyId: propertyId,
-          subscriptionId: subscriptionId,
-          razorpayOrderId: razorpayOrderId,
-          planName: planName,
-          amount: finalAmount,
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Payment is unavailable. Please try again after payment setup is complete.'),
+          ),
         );
       }
     } catch (e) {
@@ -2579,215 +2659,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             'External wallet selected: ${response.walletName ?? 'wallet'}'),
       ),
     );
-  }
-
-  void _showMockPaymentGateway({
-    required String propertyId,
-    required String subscriptionId,
-    required String razorpayOrderId,
-    required String planName,
-    required double amount,
-  }) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary.withOpacity(0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.account_balance_wallet_outlined,
-                        color: AppTheme.primary,
-                        size: 24,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    const Text(
-                      'STR Secure Pay',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                        color: AppTheme.charcoal,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                const Divider(height: 1),
-                const SizedBox(height: 16),
-                const Text(
-                  'MOCK PAYMENT GATEWAY',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                    color: Colors.red,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Subscription: $planName',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: AppTheme.charcoal,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Amount: ₹$amount',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 22,
-                    color: AppTheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[100],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Order ID: $razorpayOrderId',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                            fontFamily: 'monospace'),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Sub ID: $subscriptionId',
-                        style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.grey[600],
-                            fontFamily: 'monospace'),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    _confirmSubscriptionPayment(
-                      propertyId: propertyId,
-                      subscriptionId: subscriptionId,
-                      razorpayOrderId: razorpayOrderId,
-                    );
-                  },
-                  child: const Text(
-                    'PAY SUCCESSFUL',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Payment cancelled by user.')),
-                    );
-                  },
-                  child: const Text(
-                    'Cancel Payment',
-                    style: TextStyle(
-                        color: AppTheme.charcoalLight,
-                        fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  void _confirmSubscriptionPayment({
-    required String propertyId,
-    required String subscriptionId,
-    required String razorpayOrderId,
-  }) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const Center(
-        child: CircularProgressIndicator(color: AppTheme.primary),
-      ),
-    );
-
-    try {
-      final propProvider =
-          Provider.of<PropertyProvider>(context, listen: false);
-      final paymentSuccess = await propProvider.mockPaySubscription(
-          subscriptionId, razorpayOrderId);
-
-      if (!paymentSuccess) {
-        if (mounted) Navigator.pop(context); // Close loader
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text('Payment verification failed on server.')),
-          );
-        }
-        return;
-      }
-
-      final verificationSuccess =
-          await propProvider.submitForVerification(propertyId);
-
-      if (mounted) Navigator.pop(context); // Close loader
-
-      if (verificationSuccess) {
-        await _clearDraft();
-        if (mounted) {
-          _showFinalSuccessDialog();
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-                content: Text(
-                    'Property payment verified, but verification submission failed.')),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) Navigator.pop(context);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error completing subscription: $e')),
-        );
-      }
-    }
   }
 
   void _confirmLiveSubscriptionPayment({
@@ -3207,40 +3078,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           ),
         ),
         const SizedBox(height: 8),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildFieldLabel('Description'),
-            _isGeneratingAI
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.primary))
-                : TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppTheme.primary,
-                      padding: EdgeInsets.zero,
-                      minimumSize: const Size(50, 30),
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    ),
-                    icon: const Icon(Icons.auto_awesome, size: 12),
-                    label: const Text('GENERATE WITH AI',
-                        style: TextStyle(
-                            fontSize: 10, fontWeight: FontWeight.w800)),
-                    onPressed: _generateAIDescription,
-                  ),
-          ],
-        ),
-        TextFormField(
-          controller: _descController,
-          maxLines: 4,
-          decoration: const InputDecoration(
-            hintText:
-                'Describe your space, neighbourhood, and what makes it special...',
-          ),
-        ),
-        const SizedBox(height: 8),
         _buildFieldLabel('Category'),
         _buildBasicSelector(
           value: _category,
@@ -3349,6 +3186,40 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             ),
           ],
         ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildFieldLabel('Description'),
+            _isGeneratingAI
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: AppTheme.primary))
+                : TextButton.icon(
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primary,
+                      padding: EdgeInsets.zero,
+                      minimumSize: const Size(50, 30),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    icon: const Icon(Icons.auto_awesome, size: 12),
+                    label: const Text('GENERATE WITH AI',
+                        style: TextStyle(
+                            fontSize: 10, fontWeight: FontWeight.w800)),
+                    onPressed: _generateAIDescription,
+                  ),
+          ],
+        ),
+        TextFormField(
+          controller: _descController,
+          maxLines: 4,
+          decoration: const InputDecoration(
+            hintText:
+                'Describe your space, neighbourhood, and what makes it special...',
+          ),
+        ),
       ],
     );
   }
@@ -3357,24 +3228,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Where is your place?',
-                style: textTheme.displayMedium?.copyWith(fontSize: 20)),
-            TextButton.icon(
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.primary,
-                padding: EdgeInsets.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              ),
-              icon: const Icon(Icons.location_searching, size: 12),
-              label: const Text('AUTOFILL DEMO',
-                  style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
-              onPressed: _autofillLocationMock,
-            ),
-          ],
-        ),
+        Text('Where is your place?',
+            style: textTheme.displayMedium?.copyWith(fontSize: 20)),
         const SizedBox(height: 4),
         const Text(
             'Enter location coordinates or address info to assist guests.',
@@ -3722,6 +3577,43 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         ],
         if (!isEventVenue) ...[
           const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildFieldLabel('Max Extra Guests'),
+                    TextFormField(
+                      controller: _maxExtraGuestsController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        hintText: 'e.g., 2',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildFieldLabel('Extra Guest Fee'),
+                    TextFormField(
+                      controller: _extraGuestPriceController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        prefixText: '₹ ',
+                        hintText: 'e.g., 500',
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           _buildFieldLabel('Minimum Stay (Duration)'),
           TextFormField(
             controller: _minStayController,
@@ -3818,11 +3710,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             'Smoking Allowed',
             _smokingAllowed,
             (val) => setState(() => _smokingAllowed = val),
-          ),
-          _buildCustomSwitchRow(
-            'Instant Booking (Guests book immediately)',
-            _instantBooking,
-            (val) => setState(() => _instantBooking = val),
           ),
           const SizedBox(height: 16),
           const Divider(),
@@ -4523,7 +4410,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           content: TextField(
             controller: controller,
             decoration: InputDecoration(
-              hintText: 'https://example.com/image.jpg',
+              hintText: 'https://api.x-space360.in/api/uploads/property-image.jpg',
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -4569,7 +4456,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           content: TextField(
             controller: controller,
             decoration: InputDecoration(
-              hintText: 'https://example.com/video.mp4',
+              hintText: 'https://api.x-space360.in/api/uploads/property-video.mp4',
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -4645,18 +4532,6 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                 if (picked != null) {
                   _addVideoPath(picked.path);
                 }
-              },
-            ),
-            ListTile(
-              leading:
-                  const Icon(Icons.developer_mode, color: AppTheme.primary),
-              title: const Text('Add Demo / Mock Property Video'),
-              onTap: () {
-                Navigator.pop(context);
-                setState(() {
-                  _videoUrl =
-                      'https://assets.mixkit.co/videos/preview/mixkit-luxury-resort-with-swimming-pool-41662-large.mp4';
-                });
               },
             ),
           ],
@@ -5227,12 +5102,11 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                                 .toString()
                                 .isNotEmpty) ...[
                               const SizedBox(height: 4),
-                              Text(
-                                plan['description'].toString(),
-                                style: const TextStyle(
-                                  color: AppTheme.charcoalLight,
-                                  fontSize: 12,
-                                ),
+                              _buildSubscriptionDescription(
+                                planId: planId,
+                                description: plan['description'].toString(),
+                                fontSize: 12,
+                                collapsedLines: 2,
                               ),
                             ],
                           ],
@@ -5289,73 +5163,76 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(Icons.radio_button_checked, color: gold, size: 26),
-                  const SizedBox(width: 14),
+                  const Icon(Icons.radio_button_checked, color: gold, size: 24),
+                  const SizedBox(width: 10),
                   Container(
-                    width: 58,
-                    height: 58,
+                    width: 52,
+                    height: 52,
                     decoration: BoxDecoration(
                       color: gold.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(14),
                       border: Border.all(color: gold.withValues(alpha: 0.35)),
                     ),
                     child: const Icon(Icons.workspace_premium_rounded,
-                        color: gold, size: 30),
+                        color: gold, size: 28),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 12),
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          planName,
-                          style: const TextStyle(
-                            color: AppTheme.charcoal,
-                            fontSize: 20,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                        if (description.isNotEmpty) ...[
-                          const SizedBox(height: 5),
-                          Text(
-                            description,
-                            style: const TextStyle(
-                              color: AppTheme.charcoalLight,
-                              fontSize: 13,
-                              height: 1.35,
-                            ),
-                          ),
-                        ],
-                      ],
+                    child: Text(
+                      planName,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppTheme.charcoal,
+                        fontSize: 18,
+                        height: 1.15,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
-                  RichText(
-                    textAlign: TextAlign.right,
-                    text: TextSpan(
-                      children: [
-                        TextSpan(
-                          text:
-                              '\u20B9${_formatSubscriptionAmount(monthlyPrice)}',
-                          style: const TextStyle(
-                            color: gold,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerRight,
+                    child: RichText(
+                      textAlign: TextAlign.right,
+                      text: TextSpan(
+                        children: [
+                          TextSpan(
+                            text:
+                                '\u20B9${_formatSubscriptionAmount(monthlyPrice)}',
+                            style: const TextStyle(
+                              color: gold,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w900,
+                            ),
                           ),
-                        ),
-                        const TextSpan(
-                          text: ' /mo',
-                          style: TextStyle(
-                            color: AppTheme.charcoal,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
+                          const TextSpan(
+                            text: ' /mo',
+                            style: TextStyle(
+                              color: AppTheme.charcoal,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
+              if (description.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Padding(
+                  padding: const EdgeInsets.only(left: 86),
+                  child: _buildSubscriptionDescription(
+                    planId: (plan['plan_id'] ?? planName).toString(),
+                    description: description,
+                    fontSize: 13,
+                    collapsedLines: 3,
+                  ),
+                ),
+              ],
               const SizedBox(height: 18),
               Container(
                 decoration: BoxDecoration(
@@ -5531,7 +5408,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.confirmation_number_rounded,
+                            const Icon(Icons.confirmation_number_rounded,
                                 color: gold, size: 18),
                             const SizedBox(width: 8),
                             Text(
@@ -5678,6 +5555,62 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     );
   }
 
+  Widget _buildSubscriptionDescription({
+    required String planId,
+    required String description,
+    required double fontSize,
+    required int collapsedLines,
+  }) {
+    final text = description.trim();
+    if (text.isEmpty) return const SizedBox.shrink();
+    final isExpanded = _expandedSubscriptionDescriptions.contains(planId);
+    final shouldOfferToggle = text.length > 110 || text.split('\n').length > 2;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          text,
+          maxLines: isExpanded ? null : collapsedLines,
+          overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+          softWrap: true,
+          style: TextStyle(
+            color: AppTheme.charcoalLight,
+            fontSize: fontSize,
+            height: 1.35,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        if (shouldOfferToggle) ...[
+          const SizedBox(height: 4),
+          InkWell(
+            onTap: () {
+              setState(() {
+                if (isExpanded) {
+                  _expandedSubscriptionDescriptions.remove(planId);
+                } else {
+                  _expandedSubscriptionDescriptions.add(planId);
+                }
+              });
+            },
+            borderRadius: BorderRadius.circular(6),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: Text(
+                isExpanded ? 'Read less' : 'Read more',
+                style: const TextStyle(
+                  color: AppTheme.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
   Widget _buildStepReview(TextTheme textTheme) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -5703,7 +5636,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                 _buildReviewRow('Type', '$_bhkType $_propertyType'),
                 _buildReviewRow('Area size', '${_areaController.text} sqft'),
                 _buildReviewRow('Guests',
-                    '${_minGuestsController.text} Min / ${_maxGuestsController.text} Max'),
+                    '${_includedGuestCount()} included / ${_totalGuestCapacity()} max'),
                 _buildReviewRow('City / Location',
                     '${_cityController.text}, ${_stateController.text}'),
                 if (_category == 'event_venue') ...[
@@ -5716,6 +5649,16 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                 ] else ...[
                   _buildReviewRow(
                       'Price', '₹${_priceController.text} / $_pricingCycle'),
+                  _buildReviewRow(
+                      'Max Extra Guests',
+                      _maxExtraGuestsController.text.trim().isEmpty
+                          ? '0'
+                          : _maxExtraGuestsController.text.trim()),
+                  _buildReviewRow(
+                      'Extra Guest Fee',
+                      _extraGuestPriceController.text.trim().isEmpty
+                          ? 'Not set'
+                          : '₹${_extraGuestPriceController.text.trim()} / guest'),
                 ],
                 _buildReviewRow(
                     'Cook Available',

@@ -22,17 +22,6 @@ class RazorpayService {
     return null;
   }
 
-  /// Helper to mock checkout flow for UAT/development.
-  /// Reuses `/bookings/{booking_id}/mock-pay` endpoint.
-  Future<bool> executeMockPayment(String bookingId) async {
-    try {
-      final response = await _apiService.dio.post('/bookings/$bookingId/mock-pay');
-      return response.statusCode == 200;
-    } catch (e) {
-      return false;
-    }
-  }
-
   /// Setup options mapping for razorpay_flutter plugin.
   /// Pass these values directly to Razorpay's .open() method.
   Map<String, dynamic> buildCheckoutOptions({

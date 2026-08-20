@@ -3,6 +3,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 from typing import List, Optional
 from models.subscription import SubscriptionPlan, Subscription, SubscriptionCreate, SubscriptionPlanType, SubscriptionStatus
+from models.property import PropertyStatus
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user
 from services.razorpay_service import razorpay_service
@@ -58,6 +59,53 @@ async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, templ
         )
     except Exception as email_err:
         logger.warning("Subscription email failed: %s", email_err)
+
+
+async def _activate_property_after_subscription_payment(
+    db: AsyncIOMotorDatabase,
+    subscription: dict,
+    subscription_id: str,
+) -> Optional[str]:
+    """Mark the paid property's subscription active and submit draft listings for verification.
+
+    This runs inside payment confirmation so a browser back/refresh after successful
+    payment cannot leave the property stuck as draft.
+    """
+    property_id = subscription.get("property_id")
+    if not property_id:
+        return None
+
+    now = datetime.now(timezone.utc)
+    property_doc = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+    if not property_doc:
+        logger.warning("Subscription %s paid for missing property %s", subscription_id, property_id)
+        return None
+
+    set_fields = {
+        "subscription_id": subscription_id,
+        "subscription_status": SubscriptionStatus.ACTIVE.value,
+        "updated_at": now,
+    }
+    if property_doc.get("status") == PropertyStatus.DRAFT.value:
+        set_fields.update({
+            "status": PropertyStatus.PENDING_VERIFICATION.value,
+            "submitted_at": property_doc.get("submitted_at") or now,
+        })
+
+    await db.properties.update_one(
+        {"property_id": property_id},
+        {"$set": set_fields},
+    )
+
+    if set_fields.get("status") == PropertyStatus.PENDING_VERIFICATION.value:
+        try:
+            from services.verification_workflow import on_host_submit
+            updated_property = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+            await on_host_submit(db, updated_property)
+        except Exception as wf_err:
+            logger.warning("Verification workflow after subscription payment failed for %s: %s", property_id, wf_err)
+
+    return property_id
 
 REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # ₹500 in paise
 
@@ -425,6 +473,8 @@ async def create_subscription(
         subscription_dict["end_date"] = subscription_dict["end_date"].isoformat()
         if subscription_dict["trial_end_date"]:
             subscription_dict["trial_end_date"] = subscription_dict["trial_end_date"].isoformat()
+        subscription_dict["razorpay_order_id"] = razorpay_result["order"]["id"]
+        subscription_dict["payment_status"] = "order_created"
         
         await db.subscriptions.insert_one(subscription_dict)
         
@@ -482,6 +532,40 @@ async def confirm_subscription_payment(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Not authorized"
             )
+
+        stored_order_id = subscription.get("razorpay_order_id")
+        if not stored_order_id or stored_order_id != razorpay_order_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payment order does not match this subscription"
+            )
+
+        existing_payment_id = subscription.get("razorpay_subscription_id")
+        if subscription.get("status") == SubscriptionStatus.ACTIVE.value:
+            if existing_payment_id == razorpay_payment_id:
+                await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+                return {
+                    "message": "Subscription already activated",
+                    "subscription_id": subscription_id,
+                    "already_active": True,
+                }
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Subscription has already been activated with a different payment"
+            )
+
+        reused_payment = await db.subscriptions.find_one(
+            {
+                "razorpay_subscription_id": razorpay_payment_id,
+                "subscription_id": {"$ne": subscription_id},
+            },
+            {"_id": 0, "subscription_id": 1},
+        )
+        if reused_payment:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Payment ID is already linked to another subscription"
+            )
         
         # Verify payment signature
         is_valid = razorpay_service.verify_payment_signature(
@@ -495,26 +579,57 @@ async def confirm_subscription_payment(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid payment signature"
             )
+
+        payment_lookup = razorpay_service.fetch_payment(razorpay_payment_id)
+        if not payment_lookup.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unable to verify Razorpay payment status"
+            )
+        payment_entity = payment_lookup.get("payment") or {}
+        if not razorpay_service.is_mock:
+            if payment_entity.get("order_id") != razorpay_order_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment does not belong to this order"
+                )
+            if int(payment_entity.get("amount") or 0) != int(round(float(subscription.get("amount") or 0) * 100)):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment amount does not match the subscription"
+                )
+            if (payment_entity.get("currency") or "INR").upper() != "INR":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment currency does not match the subscription"
+                )
+            if payment_entity.get("status") != "captured":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment is not captured"
+                )
         
         # Update subscription status to active
-        await db.subscriptions.update_one(
-            {"subscription_id": subscription_id},
+        update_result = await db.subscriptions.update_one(
+            {
+                "subscription_id": subscription_id,
+                "razorpay_order_id": razorpay_order_id,
+                "status": {"$ne": SubscriptionStatus.ACTIVE.value},
+            },
             {"$set": {
                 "status": SubscriptionStatus.ACTIVE.value,
+                "payment_status": "paid",
                 "razorpay_subscription_id": razorpay_payment_id,
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
-        
-        # Update property subscription status if property_id exists
-        if subscription.get("property_id"):
-            await db.properties.update_one(
-                {"property_id": subscription["property_id"]},
-                {"$set": {
-                    "subscription_id": subscription_id,
-                    "subscription_status": "active"
-                }}
+        if update_result.modified_count == 0:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Subscription payment was already processed"
             )
+        
+        await _activate_property_after_subscription_payment(db, subscription, subscription_id)
         
         logger.info(f"Subscription confirmed: {subscription_id}")
 
@@ -561,6 +676,88 @@ async def confirm_subscription_payment(
             detail="Failed to confirm subscription"
         )
 
+
+@router.post("/subscribe/mock-pay")
+async def mock_pay_subscription(
+    subscription_id: str,
+    razorpay_order_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Complete a subscription payment in local/demo Razorpay mode."""
+    if not razorpay_service.is_mock:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mock subscription payment is only available in demo mode",
+        )
+
+    subscription = await db.subscriptions.find_one({"subscription_id": subscription_id}, {"_id": 0})
+    if not subscription:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Subscription not found")
+    if subscription.get("user_id") != current_user["user_id"]:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+    if subscription.get("razorpay_order_id") != razorpay_order_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment order does not match this subscription")
+
+    if subscription.get("status") == SubscriptionStatus.ACTIVE.value:
+        await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+        return {
+            "message": "Subscription already activated",
+            "subscription_id": subscription_id,
+            "already_active": True,
+            "property_id": subscription.get("property_id"),
+        }
+
+    mock_payment = razorpay_service.mock_complete_payment(razorpay_order_id)
+    if not mock_payment.get("success"):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to complete mock payment")
+
+    await db.subscriptions.update_one(
+        {
+            "subscription_id": subscription_id,
+            "razorpay_order_id": razorpay_order_id,
+            "status": {"$ne": SubscriptionStatus.ACTIVE.value},
+        },
+        {"$set": {
+            "status": SubscriptionStatus.ACTIVE.value,
+            "payment_status": "paid",
+            "razorpay_subscription_id": mock_payment["razorpay_payment_id"],
+            "updated_at": datetime.now(timezone.utc),
+        }},
+    )
+    await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+
+    try:
+        from models.transaction import TransactionType
+        from services.account_service import record_transaction
+        await record_transaction(
+            db,
+            type=TransactionType.SUBSCRIPTION,
+            amount=int(round(float(subscription.get("amount") or 0) * 100)),
+            razorpay_order_id=razorpay_order_id,
+            razorpay_payment_id=mock_payment["razorpay_payment_id"],
+            user_id=subscription["user_id"],
+            subscription_id=subscription_id,
+            is_mock=True,
+        )
+    except Exception as txn_err:
+        logger.warning("Failed to record mock subscription transaction: %s", txn_err)
+
+    await _send_subscription_email(
+        db,
+        subscription["user_id"],
+        "subscription_activated",
+        {**subscription, "razorpay_subscription_id": mock_payment["razorpay_payment_id"]},
+    )
+
+    return {
+        "message": "Subscription activated successfully",
+        "subscription_id": subscription_id,
+        "property_id": subscription.get("property_id"),
+        "razorpay_payment_id": mock_payment["razorpay_payment_id"],
+        "mock": True,
+    }
+
 @router.post("/confirm-subscription-upi")
 async def confirm_subscription_upi_payment(
     payload: ConfirmSubscriptionUpiRequest,
@@ -601,14 +798,7 @@ async def confirm_subscription_upi_payment(
         }}
     )
 
-    if subscription.get("property_id"):
-        await db.properties.update_one(
-            {"property_id": subscription["property_id"]},
-            {"$set": {
-                "subscription_id": payload.subscription_id,
-                "subscription_status": "active"
-            }}
-        )
+    await _activate_property_after_subscription_payment(db, subscription, payload.subscription_id)
 
     try:
         from models.transaction import TransactionType
@@ -641,83 +831,6 @@ async def confirm_subscription_upi_payment(
         "message": "Subscription activated successfully",
         "subscription_id": payload.subscription_id,
         "upi_transaction_id": upi_transaction_id
-    }
-
-@router.post("/subscribe/mock-pay")
-async def mock_pay_subscription(
-    subscription_id: str,
-    razorpay_order_id: str,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db)
-):
-    """Demo-only: simulate subscription payment in mock mode."""
-    if not razorpay_service.is_mock:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Mock payment is only available in demo mode.",
-        )
-    
-    subscription = await db.subscriptions.find_one({"subscription_id": subscription_id})
-    if not subscription:
-        raise HTTPException(status_code=404, detail="Subscription not found")
-        
-    if subscription["user_id"] != current_user["user_id"]:
-        raise HTTPException(status_code=403, detail="Unauthorized")
-
-    mock = razorpay_service.mock_complete_payment(razorpay_order_id)
-    if not mock.get("success"):
-        raise HTTPException(status_code=500, detail="Mock payment failed")
-
-    # Reuse confirmation logic via manual update (DRY)
-    await db.subscriptions.update_one(
-        {"subscription_id": subscription_id},
-        {"$set": {
-            "status": SubscriptionStatus.ACTIVE.value,
-            "razorpay_subscription_id": mock["razorpay_payment_id"],
-            "updated_at": datetime.now(timezone.utc)
-        }}
-    )
-
-    if subscription.get("property_id"):
-        await db.properties.update_one(
-            {"property_id": subscription["property_id"]},
-            {"$set": {
-                "subscription_id": subscription_id,
-                "subscription_status": "active"
-            }}
-        )
-
-    # Ledger
-    try:
-        from models.transaction import TransactionType
-        from services.account_service import record_transaction
-        sub_amount = int(round(subscription.get("amount", 0) * 100))
-        await record_transaction(
-            db,
-            type=TransactionType.SUBSCRIPTION,
-            amount=sub_amount,
-            razorpay_order_id=razorpay_order_id,
-            razorpay_payment_id=mock["razorpay_payment_id"],
-            user_id=subscription["user_id"],
-            subscription_id=subscription_id,
-            is_mock=True,
-        )
-    except Exception as txn_err:
-        logger.warning(f"Failed to record mock subscription transaction: {txn_err}")
-
-    await _send_subscription_email(
-        db,
-        subscription["user_id"],
-        "subscription_activated",
-        {**subscription, "razorpay_subscription_id": mock["razorpay_payment_id"]},
-    )
-
-    return {
-        "message": "Subscription activated (mock)",
-        "subscription_id": subscription_id,
-        "razorpay_payment_id": mock["razorpay_payment_id"],
-        "razorpay_order_id": razorpay_order_id,
-        "razorpay_signature": mock["razorpay_signature"],
     }
 
 @router.get("/my-subscriptions")
@@ -776,6 +889,14 @@ async def create_registration_fee_order(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to create payment order"
             )
+
+        await db.users.update_one(
+            {"user_id": current_user["user_id"]},
+            {"$set": {
+                "pending_registration_fee_order_id": razorpay_result["order"]["id"],
+                "updated_at": datetime.now(timezone.utc),
+            }}
+        )
         
         return {
             "razorpay_order_id": razorpay_result["order"]["id"],
@@ -821,6 +942,25 @@ async def confirm_registration_fee_payment(
                 "registration_fee_payment_id": user.get("registration_fee_payment_id"),
             }
 
+        if not user or user.get("pending_registration_fee_order_id") != payload.razorpay_order_id:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Payment order does not match this registration fee"
+            )
+
+        reused_payment = await db.users.find_one(
+            {
+                "registration_fee_payment_id": payload.razorpay_payment_id,
+                "user_id": {"$ne": current_user["user_id"]},
+            },
+            {"_id": 0, "user_id": 1},
+        )
+        if reused_payment:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Payment ID is already linked to another account"
+            )
+
         # Verify payment signature
         is_valid = razorpay_service.verify_payment_signature(
             payload.razorpay_order_id,
@@ -833,6 +973,35 @@ async def confirm_registration_fee_payment(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid payment signature"
             )
+
+        payment_lookup = razorpay_service.fetch_payment(payload.razorpay_payment_id)
+        if not payment_lookup.get("success"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Unable to verify Razorpay payment status"
+            )
+        payment_entity = payment_lookup.get("payment") or {}
+        if not razorpay_service.is_mock:
+            if payment_entity.get("order_id") != payload.razorpay_order_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment does not belong to this order"
+                )
+            if int(payment_entity.get("amount") or 0) != REGISTRATION_FEE_AMOUNT:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment amount does not match the registration fee"
+                )
+            if (payment_entity.get("currency") or "INR").upper() != "INR":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment currency does not match the registration fee"
+                )
+            if payment_entity.get("status") != "captured":
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Payment is not captured"
+                )
         
         # Update user registration fee status
         await db.users.update_one(
@@ -840,6 +1009,7 @@ async def confirm_registration_fee_payment(
             {"$set": {
                 "registration_fee_paid": True,
                 "registration_fee_payment_id": payload.razorpay_payment_id,
+                "pending_registration_fee_order_id": None,
                 "updated_at": datetime.now(timezone.utc)
             }}
         )
@@ -884,35 +1054,40 @@ async def mock_pay_registration_fee(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Demo-only: simulate the registration fee payment when running in mock mode."""
+    """Complete the host registration fee in local/demo Razorpay mode."""
     if not razorpay_service.is_mock:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Mock payment is only available in demo mode.",
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mock registration payment is only available in demo mode",
         )
 
-    user = await db.users.find_one({"user_id": current_user["user_id"]})
+    user = await db.users.find_one({"user_id": current_user["user_id"]}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
     if user.get("registration_fee_paid", False):
-        return {"message": "Registration fee already paid", "trial_activated": True}
+        return {
+            "message": "Registration fee already paid",
+            "trial_activated": True,
+            "trial_period_days": 90,
+            "already_paid": True,
+        }
+    if user.get("pending_registration_fee_order_id") and user.get("pending_registration_fee_order_id") != razorpay_order_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Payment order does not match this registration fee")
 
-    mock = razorpay_service.mock_complete_payment(razorpay_order_id)
-    if not mock.get("success"):
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=mock.get("error", "Mock payment failed"),
-        )
+    mock_payment = razorpay_service.mock_complete_payment(razorpay_order_id)
+    if not mock_payment.get("success"):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to complete mock registration payment")
 
     await db.users.update_one(
         {"user_id": current_user["user_id"]},
         {"$set": {
             "registration_fee_paid": True,
-            "registration_fee_payment_id": mock["razorpay_payment_id"],
+            "registration_fee_payment_id": mock_payment["razorpay_payment_id"],
+            "pending_registration_fee_order_id": None,
             "updated_at": datetime.now(timezone.utc),
         }},
     )
-    logger.info(f"[MOCK] Registration fee paid: {current_user['user_id']}")
 
-    # Phase 15 — registration fee ledger
     try:
         from models.transaction import TransactionType
         from services.account_service import record_transaction
@@ -921,24 +1096,23 @@ async def mock_pay_registration_fee(
             type=TransactionType.REGISTRATION_FEE,
             amount=int(REGISTRATION_FEE_AMOUNT),
             razorpay_order_id=razorpay_order_id,
-            razorpay_payment_id=mock["razorpay_payment_id"],
+            razorpay_payment_id=mock_payment["razorpay_payment_id"],
             user_id=current_user["user_id"],
             is_mock=True,
         )
     except Exception as txn_err:
-        logger.warning(f"Failed to record mock registration-fee transaction: {txn_err}")
+        logger.warning("Failed to record mock registration-fee transaction: %s", txn_err)
 
     return {
-        "message": "Registration fee paid (mock)",
+        "message": "Registration fee paid successfully",
         "trial_activated": True,
         "trial_period_days": 90,
-        "razorpay_payment_id": mock["razorpay_payment_id"],
+        "razorpay_payment_id": mock_payment["razorpay_payment_id"],
         "razorpay_order_id": razorpay_order_id,
-        "razorpay_signature": mock["razorpay_signature"],
+        "razorpay_signature": mock_payment["razorpay_signature"],
         "mock": True,
     }
 
-# ========== ADMIN: SUBSCRIPTION PLAN MANAGEMENT ==========
 
 @router.post("/admin/plans")
 async def create_subscription_plan(

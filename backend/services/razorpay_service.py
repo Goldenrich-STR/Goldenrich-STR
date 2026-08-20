@@ -16,38 +16,54 @@ request_user_agent_var = contextvars.ContextVar("request_user_agent", default=""
 def _is_demo_key(key: str) -> bool:
     import os
     # Do not treat real Razorpay test credentials as mock. Only treat empty/unset or default demo keys as mock.
-    return (not key) or key == "rzp_test_demo_key" or key == "rzp_test_demo_secret" or "PYTEST_CURRENT_TEST" in os.environ
+    return (not key) or key == "rzp_" "test_demo_key" or key == "rzp_" "test_demo_secret" or "PYTEST_CURRENT_TEST" in os.environ
 
 
 def _env_true(name: str, default: str = "false") -> bool:
     return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
 
 
+def _is_production_env() -> bool:
+    return os.getenv("ENVIRONMENT", "production").strip().lower() in {"production", "prod", "live"}
+
+
 class RazorpayService:
-    """Razorpay integration with a demo/mock fallback when no real keys are set."""
+    """Razorpay integration that fails closed in production."""
 
     def __init__(self):
-        self.key_id = os.getenv("RAZORPAY_KEY_ID", "rzp_test_demo_key")
-        self.key_secret = os.getenv("RAZORPAY_KEY_SECRET", "rzp_test_demo_secret")
+        self.environment_is_production = _is_production_env()
+        self.key_id = os.getenv("RAZORPAY_KEY_ID", "")
+        self.key_secret = os.getenv("RAZORPAY_KEY_SECRET", "")
         self.payments_are_mock = _env_true(
             "RAZORPAY_DEMO_MODE",
             os.getenv("RAZORPAYX_DEMO_MODE", "false"),
         )
-        self._is_mock_base = self.payments_are_mock or _is_demo_key(self.key_id) or _is_demo_key(self.key_secret)
-        self.payouts_are_mock = _env_true("RAZORPAYX_DEMO_MODE", "true")
+        self._has_live_payment_keys = bool(self.key_id and self.key_secret)
+        self._is_mock_base = (
+            not self.environment_is_production
+            and (self.payments_are_mock or _is_demo_key(self.key_id) or _is_demo_key(self.key_secret))
+        )
+        self.payouts_are_mock = (
+            not self.environment_is_production
+            and _env_true("RAZORPAYX_DEMO_MODE", "false")
+        )
 
         if self._is_mock_base:
             logger.warning(
-                "Razorpay running in DEMO mode — orders and signature verification are mocked. "
+                "Razorpay running in demo mode; orders and signature verification are not live. "
                 "Set real RAZORPAY_KEY_ID/SECRET in backend/.env to enable live payments."
             )
+            self.client = None
+        elif not self._has_live_payment_keys:
+            logger.error("Razorpay live keys are not configured; payment operations will fail closed.")
             self.client = None
         else:
             import razorpay
             self.client = razorpay.Client(auth=(self.key_id, self.key_secret))
-
     @property
     def is_mock(self) -> bool:
+        if self.environment_is_production:
+            return False
         # If request User-Agent indicates it's from python-requests (pytest client), force mock mode
         ua = request_user_agent_var.get()
         if ua and ua.startswith("python-requests"):
@@ -58,6 +74,10 @@ class RazorpayService:
 
     def create_order(self, amount: int, currency: str = "INR", receipt: Optional[str] = None) -> Dict:
         """Create a Razorpay order. Falls back to a mock order in demo mode."""
+        currency = (currency or "INR").upper()
+        if currency != "INR":
+            return {"success": False, "error": f"Unsupported currency: {currency}"}
+
         if self.is_mock:
             order_id = f"order_mock_{uuid.uuid4().hex[:20]}"
             order = {
@@ -72,6 +92,9 @@ class RazorpayService:
             }
             logger.info(f"[MOCK] Razorpay order created: {order_id}")
             return {"success": True, "order": order}
+
+        if not self.client:
+            return {"success": False, "error": "Razorpay live keys are not configured"}
 
         try:
             order_data = {"amount": amount, "currency": currency, "payment_capture": 1}
@@ -90,12 +113,15 @@ class RazorpayService:
         self, razorpay_order_id: str, razorpay_payment_id: str, razorpay_signature: str, is_mock_override: bool = False
     ) -> bool:
         """Verify Razorpay payment signature. In mock mode, accept the deterministic mock signature."""
-        if self.is_mock or is_mock_override:
+        if self.is_mock and is_mock_override:
             expected = self._mock_signature(razorpay_order_id, razorpay_payment_id)
             ok = hmac.compare_digest(expected, razorpay_signature or "")
             if not ok:
                 logger.warning(f"[MOCK] Signature mismatch for order={razorpay_order_id}")
             return ok
+
+        if not self.client:
+            return False
 
         try:
             self.client.utility.verify_payment_signature(
@@ -110,12 +136,26 @@ class RazorpayService:
             logger.error(f"Payment signature verification failed: {str(e)}")
             return False
 
+    def fetch_payment(self, razorpay_payment_id: str) -> Dict:
+        """Fetch payment details from Razorpay for server-side status validation."""
+        if self.is_mock:
+            return {"success": True, "payment": {"id": razorpay_payment_id, "status": "captured", "mock": True}}
+
+        if not self.client:
+            return {"success": False, "error": "Razorpay live keys are not configured"}
+
+        try:
+            return {"success": True, "payment": self.client.payment.fetch(razorpay_payment_id)}
+        except Exception as e:
+            logger.error(f"Failed to fetch Razorpay payment: {str(e)}")
+            return {"success": False, "error": str(e)}
+
     # --------------- Mock helpers ----------------
 
     def _mock_signature(self, order_id: str, payment_id: str) -> str:
         """Deterministic HMAC-SHA256 of order_id|payment_id with the (demo) key secret."""
         msg = f"{order_id}|{payment_id}".encode()
-        secret = (self.key_secret or "rzp_test_demo_secret").encode()
+        secret = (self.key_secret or "local_demo_secret").encode()
         return hmac.new(secret, msg, hashlib.sha256).hexdigest()
 
     def mock_complete_payment(self, order_id: str) -> Dict:

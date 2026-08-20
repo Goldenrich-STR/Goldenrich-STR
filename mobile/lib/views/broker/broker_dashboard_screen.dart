@@ -34,6 +34,26 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   Map<String, dynamic>? _commissionData;
   List<dynamic> _commissions = [];
 
+  String _pricingUnitSuffixFor(dynamic property) {
+    if (property is PropertyModel) return property.pricingUnitSuffix;
+    final map = property is Map ? property : const {};
+    final category = (map['category'] ?? map['property_category'] ?? '')
+        .toString()
+        .toLowerCase()
+        .trim();
+    if (category == 'commercial' || category == 'event_venue') return ' / day';
+    return ' / night';
+  }
+
+  String _customerDisplayPriceFor(dynamic property) {
+    if (property is PropertyModel) {
+      return property.customerDisplayPrice.toStringAsFixed(0);
+    }
+    final map = property is Map ? property : const {};
+    final amount = (map['price_per_night'] as num?)?.toDouble() ?? 0;
+    return (amount * 1.10).toStringAsFixed(0);
+  }
+
   // Lead Form state
   bool _showAddLeadForm = false;
   final _leadFormKey = GlobalKey<FormState>();
@@ -314,8 +334,8 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               'Pending Verifications', pendingVerify.toString(), null),
           _buildStatCard(
               'Total Commission',
-              '₹${(totalComm / 100).toStringAsFixed(0)}',
-              '₹${(paidComm / 100).toStringAsFixed(0)} Paid'),
+              'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${(totalComm / 100).toStringAsFixed(0)}',
+              'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${(paidComm / 100).toStringAsFixed(0)} Paid'),
         ]),
         const SizedBox(height: 24),
         // System Shortcuts
@@ -499,7 +519,8 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
     );
   }
 
-  void _showHostDocumentsSheet(BuildContext context, Map<String, dynamic> host, bool isEmployee) {
+  void _showHostDocumentsSheet(
+      BuildContext context, Map<String, dynamic> host, bool isEmployee) {
     final docs = host['kyc_documents'] as List? ?? [];
     final name = host['full_name'] ?? 'Host';
     final ownerName = host['agreement_owner_name'] ?? '';
@@ -563,29 +584,37 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
-                                leading: const Icon(Icons.description, color: AppTheme.primary),
+                                leading: const Icon(Icons.description,
+                                    color: AppTheme.primary),
                                 title: Text(
-                                  type.toString().replaceAll('_', ' ').toUpperCase(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  type
+                                      .toString()
+                                      .replaceAll('_', ' ')
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13),
                                 ),
                                 subtitle: val.toString().isNotEmpty
-                                    ? Text('Value: $val', style: const TextStyle(fontSize: 12))
+                                    ? Text('Value: $val',
+                                        style: const TextStyle(fontSize: 12))
                                     : url.toString().isNotEmpty
                                         ? InkWell(
                                             onTap: () async {
-                                              String docUrl = url;
-                                              if (docUrl.contains('localhost:8001')) {
-                                                docUrl = docUrl.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''));
-                                                if (!docUrl.startsWith('http')) {
-                                                  docUrl = 'http://$docUrl';
-                                                }
-                                              }
+                                              final docUrl =
+                                                  AppConfig.resolveImageUrl(
+                                                      url);
                                               final uri = Uri.parse(docUrl);
                                               if (await canLaunchUrl(uri)) {
-                                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                                await launchUrl(uri,
+                                                    mode: LaunchMode
+                                                        .externalApplication);
                                               } else {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text('Could not open document link: $docUrl')),
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                      content: Text(
+                                                          'Could not open document link: $docUrl')),
                                                 );
                                               }
                                             },
@@ -593,13 +622,16 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                               'View Uploaded File',
                                               style: TextStyle(
                                                   color: Colors.blue.shade700,
-                                                  decoration: TextDecoration.underline,
+                                                  decoration:
+                                                      TextDecoration.underline,
                                                   fontSize: 12),
                                             ),
                                           )
-                                        : const Text('No attachment/value', style: TextStyle(fontSize: 12)),
+                                        : const Text('No attachment/value',
+                                            style: TextStyle(fontSize: 12)),
                                 trailing: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: status == 'approved'
                                         ? Colors.green.withOpacity(0.1)
@@ -609,7 +641,9 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                   child: Text(
                                     status.toString().toUpperCase(),
                                     style: TextStyle(
-                                      color: status == 'approved' ? Colors.green : Colors.amber.shade800,
+                                      color: status == 'approved'
+                                          ? Colors.green
+                                          : Colors.amber.shade800,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -621,7 +655,10 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                         const SizedBox(height: 16),
                         const Text(
                           'Host STR Service Agreement',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: AppTheme.charcoal),
                         ),
                         const SizedBox(height: 8),
                         Card(
@@ -630,26 +667,34 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Agreement Owner Name: ${ownerName.isNotEmpty ? ownerName : "N/A"}'),
+                                Text(
+                                    'Agreement Owner Name: ${ownerName.isNotEmpty ? ownerName : "N/A"}'),
                                 const SizedBox(height: 6),
-                                Text('Agreement Owner Address: ${ownerAddress.isNotEmpty ? ownerAddress : "N/A"}'),
+                                Text(
+                                    'Agreement Owner Address: ${ownerAddress.isNotEmpty ? ownerAddress : "N/A"}'),
                                 const SizedBox(height: 6),
-                                if (signature.startsWith('http') || signature.contains('/api/uploads/')) ...[
-                                  const Text('Signature Image:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                if (signature.startsWith('http') ||
+                                    signature.contains('/api/uploads/')) ...[
+                                  const Text('Signature Image:',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12)),
                                   const SizedBox(height: 4),
                                   Image.network(
-                                    signature.contains('localhost:8001')
-                                        ? signature.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''))
-                                        : signature.startsWith('http')
-                                            ? signature
-                                            : '${ApiService().baseUrl}$signature',
+                                    AppConfig.resolveImageUrl(signature),
                                     height: 80,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        const Text('[Error loading signature image]', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                    errorBuilder: (context, error,
+                                            stackTrace) =>
+                                        const Text(
+                                            '[Error loading signature image]',
+                                            style: TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 12)),
                                   ),
                                 ] else ...[
-                                  Text('Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
+                                  Text(
+                                      'Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
                                 ],
                               ],
                             ),
@@ -668,28 +713,39 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: Colors.red),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                               onPressed: () async {
                                 try {
                                   final res = await ApiService().dio.patch(
                                     '/hosts/${host['user_id']}/kyc',
-                                    data: {'status': 'rejected', 'remarks': 'Rejected via Mobile app'},
+                                    data: {
+                                      'status': 'rejected',
+                                      'remarks': 'Rejected via Mobile app'
+                                    },
                                   );
                                   if (res.statusCode == 200) {
                                     Navigator.pop(context);
                                     _refreshData();
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('KYC rejected successfully.')),
+                                      const SnackBar(
+                                          content: Text(
+                                              'KYC rejected successfully.')),
                                     );
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error rejecting KYC: $e')),
+                                    SnackBar(
+                                        content:
+                                            Text('Error rejecting KYC: $e')),
                                   );
                                 }
                               },
-                              child: const Text('REJECT KYC', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                              child: const Text('REJECT KYC',
+                                  style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -697,28 +753,39 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                               onPressed: () async {
                                 try {
                                   final res = await ApiService().dio.patch(
                                     '/hosts/${host['user_id']}/kyc',
-                                    data: {'status': 'approved', 'remarks': 'Approved via Mobile app'},
+                                    data: {
+                                      'status': 'approved',
+                                      'remarks': 'Approved via Mobile app'
+                                    },
                                   );
                                   if (res.statusCode == 200) {
                                     Navigator.pop(context);
                                     _refreshData();
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('KYC approved successfully.')),
+                                      const SnackBar(
+                                          content: Text(
+                                              'KYC approved successfully.')),
                                     );
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error approving KYC: $e')),
+                                    SnackBar(
+                                        content:
+                                            Text('Error approving KYC: $e')),
                                   );
                                 }
                               },
-                              child: const Text('APPROVE KYC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              child: const Text('APPROVE KYC',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -779,9 +846,22 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                             children: [
                               CircleAvatar(
                                 radius: 28,
-                                backgroundImage: NetworkImage(owner[
-                                        'profile_image'] ??
-                                    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e'),
+                                backgroundImage:
+                                    owner['profile_image'] != null &&
+                                            owner['profile_image']
+                                                .toString()
+                                                .trim()
+                                                .isNotEmpty
+                                        ? NetworkImage(
+                                            owner['profile_image'].toString())
+                                        : null,
+                                child: owner['profile_image'] == null ||
+                                        owner['profile_image']
+                                            .toString()
+                                            .trim()
+                                            .isEmpty
+                                    ? const Icon(Icons.person_outline)
+                                    : null,
                               ),
                               const SizedBox(width: 16),
                               Expanded(
@@ -890,13 +970,18 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                             ],
                           ),
                           const SizedBox(height: 12),
-                           Row(
+                          Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               TextButton.icon(
-                                icon: const Icon(Icons.description_outlined, size: 16),
-                                label: const Text('DOCUMENTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                onPressed: () => _showHostDocumentsSheet(context, owner, false),
+                                icon: const Icon(Icons.description_outlined,
+                                    size: 16),
+                                label: const Text('DOCUMENTS',
+                                    style: TextStyle(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold)),
+                                onPressed: () => _showHostDocumentsSheet(
+                                    context, owner, false),
                               ),
                               if (formattedDate.isNotEmpty)
                                 Text('Registered: $formattedDate',
@@ -986,7 +1071,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                         color: AppTheme.charcoalMuted),
                                     const SizedBox(width: 2),
                                     Text(
-                                      '${prop['city']} · ${prop['category']}',
+                                      '${prop['city']} Ãƒâ€šÂ· ${prop['category']}',
                                       style: const TextStyle(
                                           fontSize: 10,
                                           color: AppTheme.charcoalMuted,
@@ -1000,7 +1085,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                       MainAxisAlignment.spaceBetween,
                                   children: [
                                     Text(
-                                      '₹${(prop['price_per_night'] as num?)?.toStringAsFixed(0)} /night',
+                                      'â‚¹${_customerDisplayPriceFor(prop)}${_pricingUnitSuffixFor(prop)}',
                                       style: const TextStyle(
                                           color: AppTheme.primary,
                                           fontWeight: FontWeight.bold,
@@ -1326,7 +1411,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                   size: 12, color: AppTheme.charcoalMuted),
                               const SizedBox(width: 4),
                               Text(
-                                '${lead['city']} · ${lead['property_type']?.toString().toUpperCase()}',
+                                '${lead['city']} Ãƒâ€šÂ· ${lead['property_type']?.toString().toUpperCase()}',
                                 style: const TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -1556,16 +1641,20 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
             Expanded(
                 child: _buildFinanceCard(
                     'Total Revenue',
-                    '₹${(totalEarned / 100).toStringAsFixed(0)}',
+                    'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${(totalEarned / 100).toStringAsFixed(0)}',
                     Colors.green)),
             const SizedBox(width: 8),
             Expanded(
-                child: _buildFinanceCard('Settled',
-                    '₹${(paid / 100).toStringAsFixed(0)}', Colors.blue)),
+                child: _buildFinanceCard(
+                    'Settled',
+                    'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${(paid / 100).toStringAsFixed(0)}',
+                    Colors.blue)),
             const SizedBox(width: 8),
             Expanded(
-                child: _buildFinanceCard('Pending',
-                    '₹${(pending / 100).toStringAsFixed(0)}', Colors.amber)),
+                child: _buildFinanceCard(
+                    'Pending',
+                    'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${(pending / 100).toStringAsFixed(0)}',
+                    Colors.amber)),
           ],
         ),
         const SizedBox(height: 24),
@@ -1608,7 +1697,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.end,
                             children: [
                               Text(
-                                '₹${((item['commission_amount'] ?? 0) / 100).toStringAsFixed(0)}',
+                                'ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¹${((item['commission_amount'] ?? 0) / 100).toStringAsFixed(0)}',
                                 style: const TextStyle(
                                     color: AppTheme.primary,
                                     fontWeight: FontWeight.bold,
@@ -2151,7 +2240,7 @@ class _VerificationSubmissionSheetState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Submit Visit – $propTitle',
+                        'Submit Visit ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ $propTitle',
                         style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -2270,8 +2359,11 @@ class _VerificationSubmissionSheetState
                                 child: _buildDetailColumn(
                                     'BHK Type', p?.bhkType ?? 'N/A')),
                             Expanded(
-                                child: _buildDetailColumn('Price Per Night',
-                                    '₹${p?.pricePerNight.toStringAsFixed(0) ?? 'N/A'}',
+                                child: _buildDetailColumn(
+                                    'Customer rate',
+                                    p == null
+                                        ? 'N/A'
+                                        : '₹${p.customerDisplayPrice.toStringAsFixed(0)}${p.pricingUnitSuffix}',
                                     isPrice: true)),
                             Expanded(
                                 child: _buildDetailColumn(
@@ -2518,7 +2610,7 @@ class _VerificationSubmissionSheetState
 
                   const SizedBox(height: 8),
                   const Text(
-                    'Tip: allow location access when prompted – we auto-fill coordinates from your device GPS.',
+                    'Tip: allow location access when prompted ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Å“ we auto-fill coordinates from your device GPS.',
                     style:
                         TextStyle(fontSize: 9, color: AppTheme.charcoalMuted),
                   ),

@@ -11,6 +11,7 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   bool _isLoading = false;
   String? _lastError;
+  String? _lastDemoOtp;
 
   UserModel? get currentUser => _currentUser;
   String? get token => _token;
@@ -18,6 +19,7 @@ class AuthProvider with ChangeNotifier {
   String? get lastError => _lastError;
   bool get isAuthenticated => _token != null;
   bool get isPromoClaimed => _currentUser?.isPromoClaimed ?? false;
+  String? get lastDemoOtp => _lastDemoOtp;
 
   Future<void> loadSession() async {
     _isLoading = true;
@@ -41,6 +43,8 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> sendOTP(String phone, {String purpose = 'registration'}) async {
     _isLoading = true;
+    _lastError = null;
+    _lastDemoOtp = null;
     notifyListeners();
     try {
       final response = await _apiService.dio.post('/api/auth/send-otp', data: {
@@ -48,10 +52,24 @@ class AuthProvider with ChangeNotifier {
         'purpose': purpose,
       });
       if (response.statusCode == 200) {
+        final data = response.data;
+        if (data is Map && data['demo_mode'] == true && data['otp'] != null) {
+          _lastDemoOtp = data['otp'].toString();
+        }
         return true;
+      }
+      _lastError = 'Failed to send OTP.';
+      return false;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['detail'] != null) {
+        _lastError = data['detail'].toString();
+      } else {
+        _lastError = e.message ?? 'Failed to send OTP.';
       }
       return false;
     } catch (e) {
+      _lastError = 'Failed to send OTP.';
       return false;
     } finally {
       _isLoading = false;
@@ -81,6 +99,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> register(Map<String, dynamic> userData) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
     try {
       final response =
@@ -93,8 +112,18 @@ class AuthProvider with ChangeNotifier {
         await SessionStorage.writeUser(json.encode(_currentUser!.toJson()));
         return true;
       }
+      _lastError = 'Registration failed.';
+      return false;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['detail'] != null) {
+        _lastError = data['detail'].toString();
+      } else {
+        _lastError = e.message ?? 'Registration failed.';
+      }
       return false;
     } catch (e) {
+      _lastError = 'Registration failed.';
       return false;
     } finally {
       _isLoading = false;
@@ -104,6 +133,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<bool> login(String email, String password) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
     try {
       final response = await _apiService.dio.post('/api/auth/login', data: {
@@ -119,8 +149,18 @@ class AuthProvider with ChangeNotifier {
         await SessionStorage.writeUser(json.encode(_currentUser!.toJson()));
         return true;
       }
+      _lastError = 'Unable to sign in. Please try again.';
+      return false;
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      if (data is Map && data['detail'] != null) {
+        _lastError = data['detail'].toString();
+      } else {
+        _lastError = e.message ?? 'Unable to sign in. Please try again.';
+      }
       return false;
     } catch (e) {
+      _lastError = 'Unable to sign in. Please try again.';
       return false;
     } finally {
       _isLoading = false;

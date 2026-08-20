@@ -93,12 +93,8 @@ def _normalize_special_image_page_url(url: str) -> str:
     host = parsed.netloc.lower()
     path = parsed.path.strip("/")
 
-    if "unsplash.com" in host and path.startswith("photos/"):
-        segments = [segment for segment in path.split("/") if segment]
-        if len(segments) >= 2:
-            slug = segments[-1]
-            photo_id = slug.rsplit("-", 1)[-1] if "-" in slug else slug
-            return f"https://unsplash.com/photos/{photo_id}/download?force=true&w=1600"
+    if "unsplash.com" in host:
+        raise ValueError("Unsplash URLs are not allowed for production property media")
 
     # Google Drive share links format support
     if "drive.google.com" in host or "docs.google.com" in host:

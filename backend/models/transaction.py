@@ -59,7 +59,7 @@ class HostPayoutPreference(BaseModel):
     bank_account_holder: Optional[str] = None
     bank_account_number: Optional[str] = None
     bank_ifsc: Optional[str] = None
-    payout_cycle: Optional[str] = "daily"  # "daily", "weekly", "monthly"
+    payout_cycle: Optional[str] = "weekly"  # 7-day host payout cycle
 
 
 class HostPayoutPreferenceUpdate(BaseModel):
@@ -68,7 +68,7 @@ class HostPayoutPreferenceUpdate(BaseModel):
     bank_account_holder: Optional[str] = None
     bank_account_number: Optional[str] = None
     bank_ifsc: Optional[str] = None
-    payout_cycle: Optional[str] = "daily"  # "daily", "weekly", "monthly"
+    payout_cycle: Optional[str] = "weekly"  # 7-day host payout cycle
 
 
 # --------------- Transaction ledger ----------------

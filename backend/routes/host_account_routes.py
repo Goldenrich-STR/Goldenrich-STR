@@ -49,7 +49,8 @@ async def get_payout_preference(
         {"user_id": current_user["user_id"]},
         {"_id": 0, "payout_preference": 1},
     )
-    pref = (user or {}).get("payout_preference") or {"preferred": "upi"}
+    pref = (user or {}).get("payout_preference") or {"preferred": "upi", "payout_cycle": "weekly"}
+    pref["payout_cycle"] = "weekly"
     return {"payout_preference": _sanitise(pref)}
 
 
@@ -73,6 +74,7 @@ async def update_payout_preference(
             )
 
     pref_doc = payload.model_dump()
+    pref_doc["payout_cycle"] = "weekly"
     pref_doc["updated_at"] = datetime.now(timezone.utc)
     await db.users.update_one(
         {"user_id": current_user["user_id"]},

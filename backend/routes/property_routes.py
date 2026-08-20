@@ -15,6 +15,10 @@ from services.booking_calculation_service import (
     get_booking_payment_config,
     money,
 )
+from services.nearby_property_service import (
+    DEFAULT_RADIUS_METERS,
+    find_nearby_properties,
+)
 from datetime import datetime, timezone
 import asyncio
 import logging
@@ -41,6 +45,7 @@ HOST_MANAGE_EDITABLE_FIELDS = {
     "pet_friendly",
     "smoking_allowed",
     "instant_booking",
+    "booking_mode",
     "has_cook",
     "cook_price",
     "has_self_cook",
@@ -59,10 +64,101 @@ HOST_MANAGE_EDITABLE_FIELDS = {
     "youtube_long_url",
 }
 
+INSTANT_BOOK_MODE = "INSTANT_BOOK"
+HOST_APPROVAL_MODE = "HOST_APPROVAL"
+HOST_APPROVAL_SLA_MINUTES = 24 * 60
+DISALLOWED_PROPERTY_MEDIA_HOSTS = {
+    "example.com",
+    "www.example.com",
+    "images.unsplash.com",
+    "source.unsplash.com",
+    "unsplash.com",
+    "images.pexels.com",
+    "videos.pexels.com",
+    "pexels.com",
+    "picsum.photos",
+    "placeholder.com",
+    "via.placeholder.com",
+    "placehold.co",
+    "dummyimage.com",
+}
+
+
 async def get_db():
     from server import db_instance
     return db_instance
 
+
+@router.get("/nearby")
+async def nearby_properties(
+    lat: float = Query(..., description="User/current map latitude"),
+    lng: float = Query(..., description="User/current map longitude"),
+    radius: int = Query(
+        DEFAULT_RADIUS_METERS,
+        ge=1,
+        le=20000,
+        description="Search radius in meters. Default 5000.",
+    ),
+    checkIn: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    checkOut: Optional[str] = Query(None, description="ISO date YYYY-MM-DD"),
+    guests: Optional[int] = Query(None, ge=1),
+    propertyType: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    minPrice: Optional[float] = Query(None, ge=0),
+    maxPrice: Optional[float] = Query(None, ge=0),
+    instantBook: Optional[bool] = Query(None),
+    limit: int = Query(100, ge=1, le=200),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Return compact LIVE property markers around a coordinate without exposing full listing payloads."""
+    return await find_nearby_properties(
+        db,
+        lat=lat,
+        lng=lng,
+        radius=radius,
+        check_in=checkIn,
+        check_out=checkOut,
+        guests=guests,
+        property_type=propertyType,
+        category=category,
+        min_price=minPrice,
+        max_price=maxPrice,
+        instant_book=instantBook,
+        limit=limit,
+    )
+
+
+def _normalize_booking_mode(prop: dict) -> dict:
+    mode = INSTANT_BOOK_MODE
+    prop["booking_mode"] = mode
+    prop["instant_booking"] = mode == INSTANT_BOOK_MODE
+    prop["host_approval_required"] = mode == HOST_APPROVAL_MODE
+    prop["host_approval_sla_minutes"] = HOST_APPROVAL_SLA_MINUTES if mode == HOST_APPROVAL_MODE else None
+    return prop
+
+
+def _is_disallowed_property_media_url(value: str) -> bool:
+    if not value:
+        return False
+    lowered = value.strip().lower()
+    return any(host in lowered for host in DISALLOWED_PROPERTY_MEDIA_HOSTS)
+
+
+def _sanitize_property_media(payload: dict) -> dict:
+    images = payload.get("images")
+    if isinstance(images, list):
+        payload["images"] = [
+            image
+            for image in images
+            if isinstance(image, str)
+            and image.strip()
+            and not _is_disallowed_property_media_url(image)
+        ]
+    for key in ("video_url", "youtube_short_url", "youtube_long_url"):
+        value = payload.get(key)
+        if isinstance(value, str) and _is_disallowed_property_media_url(value):
+            payload[key] = None
+    return payload
 
 def _property_host_nightly_price(prop: dict) -> float:
     try:
@@ -89,7 +185,7 @@ async def _add_customer_display_price(db: AsyncIOMotorDatabase, prop: dict, conf
         prop["display_price_includes"] = enabled_charges
     except Exception as exc:
         logger.warning("Failed to add customer display price for %s: %s", prop.get("property_id"), exc)
-    return prop
+    return _normalize_booking_mode(prop)
 
 
 class DeletePropertyRequest(BaseModel):
@@ -117,12 +213,15 @@ async def create_property(
         host_bm_id = host_user.get("branch_manager_id") if host_user else None
         
         # Create property object
+        create_payload = property_data.model_dump()
+        create_payload = _normalize_booking_mode(create_payload)
+        create_payload = _sanitize_property_media(create_payload)
         property_obj = Property(
             owner_id=current_user["user_id"],
             broker_id=host_broker_id,
             rm_id=host_rm_id,
             branch_manager_id=host_bm_id,
-            **property_data.model_dump()
+            **create_payload
         )
         
         # Insert into database
@@ -178,9 +277,10 @@ async def create_property(
 @router.get("/search")
 async def search_properties(
     response: Response,
+    search: Optional[str] = Query(None, description="Search text for property name, location, or description"),
+    q: Optional[str] = Query(None, description="Alias for search"),
     category: Optional[PropertyCategory] = None,
     city: Optional[str] = None,
-    search: Optional[str] = None,
     property_type: Optional[str] = None,
     min_price: Optional[float] = None,
     max_price: Optional[float] = None,
@@ -321,8 +421,30 @@ async def search_properties(
                     break
             return conditions
 
+        def text_match_conditions(text: str) -> list:
+            escaped = re.escape(text.strip())
+            return [
+                {"title": {"$regex": escaped, "$options": "i"}},
+                {"description": {"$regex": escaped, "$options": "i"}},
+                {"property_id": {"$regex": escaped, "$options": "i"}},
+                {"city": {"$regex": escaped, "$options": "i"}},
+                {"state": {"$regex": escaped, "$options": "i"}},
+                {"address": {"$regex": escaped, "$options": "i"}},
+                {"property_type": {"$regex": escaped, "$options": "i"}},
+                {"bhk_type": {"$regex": escaped, "$options": "i"}},
+            ]
+
+        text_search = (search or q or "").strip()
         if city and not radius_search:
             query["$or"] = city_match_conditions(city)
+
+        if text_search:
+            search_filter = {"$or": text_match_conditions(text_search)}
+            if "$or" in query:
+                city_filter = {"$or": query.pop("$or")}
+                query["$and"] = [city_filter, search_filter]
+            else:
+                query.update(search_filter)
 
         if property_type:
             if property_type.startswith("not:"):
@@ -553,6 +675,7 @@ async def search_properties(
         properties = raw_properties[skip: skip + limit]
         price_config = await get_booking_payment_config(db)
         for prop in properties:
+            _sanitize_property_media(prop)
             if prop.get("base_price") not in (None, ""):
                 prop["price_per_night"] = prop["base_price"]
             await _add_customer_display_price(db, prop, price_config)
@@ -565,6 +688,7 @@ async def search_properties(
                 "search_id": f"search_{uuid.uuid4().hex[:12]}",
                 "timestamp": datetime.now(timezone.utc),
                 "city": city or "",
+                "search": text_search,
                 "category": category.value if category else None,
                 "property_type": property_type,
                 "min_price": min_price,
@@ -624,6 +748,7 @@ async def search_properties(
             "filters_applied": {
                 "category": category.value if category else None,
                 "city": city,
+                "search": text_search,
                 "property_type": property_type,
                 "bhk_type": bhk_type,
                 "min_price": min_price,
@@ -666,6 +791,7 @@ async def get_property(
             )
         if property_dict.get("base_price") not in (None, ""):
             property_dict["price_per_night"] = property_dict["base_price"]
+        _sanitize_property_media(property_dict)
         await _add_customer_display_price(db, property_dict)
 
         # Get optional user from Request headers (Authorization)
@@ -823,6 +949,8 @@ async def get_host_properties(
                 plans = {p.get("plan_id"): p for p in plan_rows}
 
         for prop in properties:
+            _normalize_booking_mode(prop)
+            _sanitize_property_media(prop)
             sub = subscriptions.get(prop.get("subscription_id")) or {}
             plan = plans.get(sub.get("plan_id")) or {}
             prop["subscription_plan_name"] = plan.get("plan_name") or sub.get("plan_type") or "Trial"
@@ -869,6 +997,9 @@ async def update_property(
         # Hosts can manage only pricing/rules, amenities, and media after a
         # property has entered review or gone live. Admins keep full edit access.
         update_data = property_update.model_dump(exclude_unset=True)
+        if "booking_mode" in update_data or "instant_booking" in update_data:
+            update_data = _normalize_booking_mode(update_data)
+        update_data = _sanitize_property_media(update_data)
         if (
             current_user["role"] != UserRole.ADMIN.value
             and property_dict.get("status") in HOST_MANAGE_EDITABLE_STATUSES

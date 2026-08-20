@@ -50,7 +50,7 @@ async def sweep_subscriptions(db: AsyncIOMotorDatabase):
             # Fetch property title to customize notifications
             property_title = "Your Property"
             if property_id:
-                prop = await db.properties.find_one({"property_id": property_id}, {"title": 1})
+                prop = await db.properties.find_one({"property_id": property_id}, {"title": 1, "status": 1})
                 if prop:
                     property_title = prop.get("title", "Your Property")
             
@@ -94,6 +94,26 @@ async def sweep_subscriptions(db: AsyncIOMotorDatabase):
             
             # Case 2: Subscription is expiring within 10 days
             else:
+                if property_id and prop and prop.get("status") == PropertyStatus.DRAFT.value:
+                    now = datetime.now(timezone.utc)
+                    logger.info(f"Repairing paid draft property {property_id} from subscription {sub_id}")
+                    await db.properties.update_one(
+                        {"property_id": property_id},
+                        {"$set": {
+                            "subscription_id": sub_id,
+                            "subscription_status": SubscriptionStatus.ACTIVE.value,
+                            "status": PropertyStatus.PENDING_VERIFICATION.value,
+                            "submitted_at": now,
+                            "updated_at": now,
+                        }},
+                    )
+                    try:
+                        from services.verification_workflow import on_host_submit
+                        updated_property = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+                        await on_host_submit(db, updated_property)
+                    except Exception as wf_err:
+                        logger.warning(f"Verification workflow repair failed for {property_id}: {wf_err}")
+
                 days_remaining = (end_date - today).days
                 if 1 <= days_remaining <= 10:
                     logger.info(f"Subscription {sub_id} for property {property_id} is expiring in {days_remaining} days.")

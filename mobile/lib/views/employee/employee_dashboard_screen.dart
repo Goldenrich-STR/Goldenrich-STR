@@ -33,6 +33,21 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
 
   final ApiService _apiService = ApiService();
 
+  String _pricingUnitSuffixFor(Map<String, dynamic> property) {
+    final category =
+        (property['category'] ?? property['property_category'] ?? '')
+            .toString()
+            .toLowerCase()
+            .trim();
+    if (category == 'commercial' || category == 'event_venue') return ' / day';
+    return ' / night';
+  }
+
+  String _customerDisplayPriceFor(Map<String, dynamic> property) {
+    final amount = (property['price_per_night'] as num?)?.toDouble() ?? 0;
+    return (amount * 1.10).toStringAsFixed(0);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -1206,7 +1221,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                                       overflow: TextOverflow.ellipsis,
                                     ),
                                     Text(
-                                      '${prop['city'] ?? 'N/A'}  |  ${prop['bhk_type'] ?? 'N/A'}  |  ₹${prop['price_per_night'] ?? '0'}/night',
+                                      '${prop['city'] ?? 'N/A'}  |  ${prop['bhk_type'] ?? 'N/A'}  |  ₹${_customerDisplayPriceFor(Map<String, dynamic>.from(prop))}${_pricingUnitSuffixFor(Map<String, dynamic>.from(prop))}',
                                       style: const TextStyle(
                                           fontSize: 9,
                                           color: AppTheme.charcoalLight),
@@ -1248,7 +1263,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
     );
   }
 
-  void _showHostDocumentsSheet(BuildContext context, Map<String, dynamic> host, bool isEmployee) {
+  void _showHostDocumentsSheet(
+      BuildContext context, Map<String, dynamic> host, bool isEmployee) {
     final docs = host['kyc_documents'] as List? ?? [];
     final name = host['full_name'] ?? 'Host';
     final ownerName = host['agreement_owner_name'] ?? '';
@@ -1312,29 +1328,37 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                             return Card(
                               margin: const EdgeInsets.only(bottom: 12),
                               child: ListTile(
-                                leading: const Icon(Icons.description, color: AppTheme.primary),
+                                leading: const Icon(Icons.description,
+                                    color: AppTheme.primary),
                                 title: Text(
-                                  type.toString().replaceAll('_', ' ').toUpperCase(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  type
+                                      .toString()
+                                      .replaceAll('_', ' ')
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 13),
                                 ),
                                 subtitle: val.toString().isNotEmpty
-                                    ? Text('Value: $val', style: const TextStyle(fontSize: 12))
+                                    ? Text('Value: $val',
+                                        style: const TextStyle(fontSize: 12))
                                     : url.toString().isNotEmpty
                                         ? InkWell(
                                             onTap: () async {
-                                              String docUrl = url;
-                                              if (docUrl.contains('localhost:8001')) {
-                                                docUrl = docUrl.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''));
-                                                if (!docUrl.startsWith('http')) {
-                                                  docUrl = 'http://$docUrl';
-                                                }
-                                              }
+                                              final docUrl =
+                                                  AppConfig.resolveImageUrl(
+                                                      url);
                                               final uri = Uri.parse(docUrl);
                                               if (await canLaunchUrl(uri)) {
-                                                await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                                await launchUrl(uri,
+                                                    mode: LaunchMode
+                                                        .externalApplication);
                                               } else {
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(content: Text('Could not open document link: $docUrl')),
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                      content: Text(
+                                                          'Could not open document link: $docUrl')),
                                                 );
                                               }
                                             },
@@ -1342,13 +1366,16 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                                               'View Uploaded File',
                                               style: TextStyle(
                                                   color: Colors.blue.shade700,
-                                                  decoration: TextDecoration.underline,
+                                                  decoration:
+                                                      TextDecoration.underline,
                                                   fontSize: 12),
                                             ),
                                           )
-                                        : const Text('No attachment/value', style: TextStyle(fontSize: 12)),
+                                        : const Text('No attachment/value',
+                                            style: TextStyle(fontSize: 12)),
                                 trailing: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
                                     color: status == 'approved'
                                         ? Colors.green.withOpacity(0.1)
@@ -1358,7 +1385,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                                   child: Text(
                                     status.toString().toUpperCase(),
                                     style: TextStyle(
-                                      color: status == 'approved' ? Colors.green : Colors.amber.shade800,
+                                      color: status == 'approved'
+                                          ? Colors.green
+                                          : Colors.amber.shade800,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1370,7 +1399,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                         const SizedBox(height: 16),
                         const Text(
                           'Host STR Service Agreement',
-                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15, color: AppTheme.charcoal),
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 15,
+                              color: AppTheme.charcoal),
                         ),
                         const SizedBox(height: 8),
                         Card(
@@ -1379,26 +1411,34 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Agreement Owner Name: ${ownerName.isNotEmpty ? ownerName : "N/A"}'),
+                                Text(
+                                    'Agreement Owner Name: ${ownerName.isNotEmpty ? ownerName : "N/A"}'),
                                 const SizedBox(height: 6),
-                                Text('Agreement Owner Address: ${ownerAddress.isNotEmpty ? ownerAddress : "N/A"}'),
+                                Text(
+                                    'Agreement Owner Address: ${ownerAddress.isNotEmpty ? ownerAddress : "N/A"}'),
                                 const SizedBox(height: 6),
-                                if (signature.startsWith('http') || signature.contains('/api/uploads/')) ...[
-                                  const Text('Signature Image:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                                if (signature.startsWith('http') ||
+                                    signature.contains('/api/uploads/')) ...[
+                                  const Text('Signature Image:',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12)),
                                   const SizedBox(height: 4),
                                   Image.network(
-                                    signature.contains('localhost:8001')
-                                        ? signature.replaceAll('localhost:8001', ApiService().baseUrl.replaceAll('http://', '').replaceAll('https://', ''))
-                                        : signature.startsWith('http')
-                                            ? signature
-                                            : '${ApiService().baseUrl}$signature',
+                                    AppConfig.resolveImageUrl(signature),
                                     height: 80,
                                     fit: BoxFit.contain,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        const Text('[Error loading signature image]', style: TextStyle(color: Colors.red, fontSize: 12)),
+                                    errorBuilder: (context, error,
+                                            stackTrace) =>
+                                        const Text(
+                                            '[Error loading signature image]',
+                                            style: TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 12)),
                                   ),
                                 ] else ...[
-                                  Text('Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
+                                  Text(
+                                      'Signature Info: ${signature.isNotEmpty ? signature : "N/A"}'),
                                 ],
                               ],
                             ),
@@ -1417,28 +1457,39 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                             child: OutlinedButton(
                               style: OutlinedButton.styleFrom(
                                 side: const BorderSide(color: Colors.red),
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                               onPressed: () async {
                                 try {
                                   final res = await ApiService().dio.patch(
                                     '/hosts/${host['user_id']}/kyc',
-                                    data: {'status': 'rejected', 'remarks': 'Rejected via Mobile app'},
+                                    data: {
+                                      'status': 'rejected',
+                                      'remarks': 'Rejected via Mobile app'
+                                    },
                                   );
                                   if (res.statusCode == 200) {
                                     Navigator.pop(context);
                                     _loadAllData();
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('KYC rejected successfully.')),
+                                      const SnackBar(
+                                          content: Text(
+                                              'KYC rejected successfully.')),
                                     );
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error rejecting KYC: $e')),
+                                    SnackBar(
+                                        content:
+                                            Text('Error rejecting KYC: $e')),
                                   );
                                 }
                               },
-                              child: const Text('REJECT KYC', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                              child: const Text('REJECT KYC',
+                                  style: TextStyle(
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -1446,28 +1497,39 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.green,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 14),
                               ),
                               onPressed: () async {
                                 try {
                                   final res = await ApiService().dio.patch(
                                     '/hosts/${host['user_id']}/kyc',
-                                    data: {'status': 'approved', 'remarks': 'Approved via Mobile app'},
+                                    data: {
+                                      'status': 'approved',
+                                      'remarks': 'Approved via Mobile app'
+                                    },
                                   );
                                   if (res.statusCode == 200) {
                                     Navigator.pop(context);
                                     _loadAllData();
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('KYC approved successfully.')),
+                                      const SnackBar(
+                                          content: Text(
+                                              'KYC approved successfully.')),
                                     );
                                   }
                                 } catch (e) {
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error approving KYC: $e')),
+                                    SnackBar(
+                                        content:
+                                            Text('Error approving KYC: $e')),
                                   );
                                 }
                               },
-                              child: const Text('APPROVE KYC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                              child: const Text('APPROVE KYC',
+                                  style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
@@ -1492,7 +1554,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
           padding: EdgeInsets.all(16.0),
           child: Text(
             'Host Portfolio Management',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
           ),
         ),
         Expanded(
@@ -1516,18 +1581,25 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                               children: [
                                 Text(
                                   host['full_name'] ?? 'Host',
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
                                   decoration: BoxDecoration(
-                                    color: isKycApproved ? Colors.green.withOpacity(0.1) : Colors.amber.withOpacity(0.1),
+                                    color: isKycApproved
+                                        ? Colors.green.withOpacity(0.1)
+                                        : Colors.amber.withOpacity(0.1),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
                                     'KYC: ${host['kyc_status']?.toString().toUpperCase()}',
                                     style: TextStyle(
-                                      color: isKycApproved ? Colors.green : Colors.amber.shade800,
+                                      color: isKycApproved
+                                          ? Colors.green
+                                          : Colors.amber.shade800,
                                       fontSize: 10,
                                       fontWeight: FontWeight.bold,
                                     ),
@@ -1536,20 +1608,29 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                               ],
                             ),
                             const SizedBox(height: 8),
-                            Text('Email: ${host['email'] ?? 'N/A'}', style: const TextStyle(fontSize: 12)),
-                            Text('Phone: ${host['phone'] ?? 'N/A'}', style: const TextStyle(fontSize: 12)),
+                            Text('Email: ${host['email'] ?? 'N/A'}',
+                                style: const TextStyle(fontSize: 12)),
+                            Text('Phone: ${host['phone'] ?? 'N/A'}',
+                                style: const TextStyle(fontSize: 12)),
                             const Divider(height: 24),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
                                 TextButton.icon(
-                                  icon: const Icon(Icons.description_outlined, size: 16),
-                                  label: const Text('DOCUMENTS', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-                                  onPressed: () => _showHostDocumentsSheet(context, host, true),
+                                  icon: const Icon(Icons.description_outlined,
+                                      size: 16),
+                                  label: const Text('DOCUMENTS',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
+                                  onPressed: () => _showHostDocumentsSheet(
+                                      context, host, true),
                                 ),
                                 Text(
                                   'Assets: ${host['total_properties'] ?? 0}',
-                                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
@@ -1573,7 +1654,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
           padding: EdgeInsets.all(16.0),
           child: Text(
             'Property Inventory Oversight',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
           ),
         ),
         Expanded(
@@ -1588,15 +1672,20 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         leading: Image.network(
-                          AppConfig.resolveImageUrl((prop['images'] as List?)?.firstOrNull),
+                          AppConfig.resolveImageUrl(
+                              (prop['images'] as List?)?.firstOrNull),
                           width: 50,
                           height: 50,
                           fit: BoxFit.cover,
-                          errorBuilder: (c, e, s) => Container(width: 50, height: 50, color: Colors.grey[200]),
+                          errorBuilder: (c, e, s) => Container(
+                              width: 50, height: 50, color: Colors.grey[200]),
                         ),
                         title: Text(prop['title'] ?? 'Property'),
-                        subtitle: Text('${prop['city'] ?? 'N/A'} | ₹${prop['price_per_night'] ?? 0} /night'),
-                        trailing: Text(prop['status']?.toString().toUpperCase() ?? 'DRAFT'),
+                        subtitle: Text(
+                            '${prop['city'] ?? 'N/A'} | ₹${_customerDisplayPriceFor(Map<String, dynamic>.from(prop))}${_pricingUnitSuffixFor(Map<String, dynamic>.from(prop))}'),
+                        trailing: Text(
+                            prop['status']?.toString().toUpperCase() ??
+                                'DRAFT'),
                       ),
                     );
                   },
@@ -1615,7 +1704,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
           padding: EdgeInsets.all(16.0),
           child: Text(
             'Booking Management Control',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
           ),
         ),
         Expanded(
@@ -1629,9 +1721,14 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        title: Text('Booking ID: ${booking['booking_id'] ?? 'N/A'}'),
-                        subtitle: Text('Guest ID: ${booking['guest_id'] ?? 'N/A'}\nDates: ${booking['check_in_date'] ?? 'N/A'} to ${booking['check_out_date'] ?? 'N/A'}'),
-                        trailing: Text(booking['booking_status']?.toString().toUpperCase() ?? 'PENDING'),
+                        title: Text(
+                            'Booking ID: ${booking['booking_id'] ?? 'N/A'}'),
+                        subtitle: Text(
+                            'Guest ID: ${booking['guest_id'] ?? 'N/A'}\nDates: ${booking['check_in_date'] ?? 'N/A'} to ${booking['check_out_date'] ?? 'N/A'}'),
+                        trailing: Text(booking['booking_status']
+                                ?.toString()
+                                .toUpperCase() ??
+                            'PENDING'),
                       ),
                     );
                   },
@@ -1650,7 +1747,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
           padding: EdgeInsets.all(16.0),
           child: Text(
             'Tasks & Escalations SLA Watch',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
           ),
         ),
         Expanded(
@@ -1665,8 +1765,11 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
                         title: Text(task['title'] ?? 'Task'),
-                        subtitle: Text('SLA Status: ${task['sla_status'] ?? 'N/A'} | Age: ${task['age_hours'] ?? 0}h'),
-                        trailing: Text(task['status']?.toString().toUpperCase() ?? 'PENDING'),
+                        subtitle: Text(
+                            'SLA Status: ${task['sla_status'] ?? 'N/A'} | Age: ${task['age_hours'] ?? 0}h'),
+                        trailing: Text(
+                            task['status']?.toString().toUpperCase() ??
+                                'PENDING'),
                       ),
                     );
                   },
@@ -1685,7 +1788,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
           padding: EdgeInsets.all(16.0),
           child: Text(
             'Audit Log & System Activity',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
           ),
         ),
         Expanded(
@@ -1699,8 +1805,13 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        title: Text(log['action']?.toString().replaceAll('_', ' ').toUpperCase() ?? 'ACTION'),
-                        subtitle: Text('Module: ${log['module'] ?? 'N/A'}\nTime: ${log['created_at'] ?? 'N/A'}'),
+                        title: Text(log['action']
+                                ?.toString()
+                                .replaceAll('_', ' ')
+                                .toUpperCase() ??
+                            'ACTION'),
+                        subtitle: Text(
+                            'Module: ${log['module'] ?? 'N/A'}\nTime: ${log['created_at'] ?? 'N/A'}'),
                       ),
                     );
                   },

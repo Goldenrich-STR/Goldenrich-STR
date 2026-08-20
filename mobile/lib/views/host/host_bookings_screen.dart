@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:intl/intl.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/ai_call_provider.dart';
 import '../../theme.dart';
+import '../../utils/currency_formatter.dart';
 import '../guest/ai_call_log_dialog.dart';
 
 class HostBookingsScreen extends StatefulWidget {
@@ -62,7 +62,8 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
               decoration: BoxDecoration(
-                color: isActive ? Colors.white.withOpacity(0.2) : AppTheme.stone,
+                color:
+                    isActive ? Colors.white.withOpacity(0.2) : AppTheme.stone,
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Text(
@@ -97,21 +98,39 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
       return title.contains(q) || guest.contains(q) || id.contains(q);
     }).toList();
 
-    final pending = filteredBySearch.where((bk) => bk.bookingStatus.toLowerCase() == 'pending' || bk.bookingStatus.toLowerCase() == 'soft_lock').toList();
-    final confirmed = filteredBySearch.where((bk) => bk.bookingStatus.toLowerCase() == 'confirmed' || bk.bookingStatus.toLowerCase() == 'paid').toList();
-    final cancelled = filteredBySearch.where((bk) => bk.bookingStatus.toLowerCase() == 'cancelled').toList();
+    final approvalRequests = filteredBySearch
+        .where(
+            (bk) => bk.bookingStatus.toLowerCase() == 'awaiting_host_approval')
+        .toList();
+    final pending = filteredBySearch
+        .where((bk) =>
+            bk.bookingStatus.toLowerCase() == 'pending' ||
+            bk.bookingStatus.toLowerCase() == 'soft_lock')
+        .toList();
+    final confirmed = filteredBySearch
+        .where((bk) =>
+            bk.bookingStatus.toLowerCase() == 'confirmed' ||
+            bk.bookingStatus.toLowerCase() == 'paid')
+        .toList();
+    final cancelled = filteredBySearch
+        .where((bk) => bk.bookingStatus.toLowerCase() == 'cancelled')
+        .toList();
 
     final listToDisplay = _activeTab == 'confirmed'
         ? confirmed
-        : _activeTab == 'pending'
-            ? pending
-            : _activeTab == 'cancelled'
-                ? cancelled
-                : filteredBySearch;
+        : _activeTab == 'approval'
+            ? approvalRequests
+            : _activeTab == 'pending'
+                ? pending
+                : _activeTab == 'cancelled'
+                    ? cancelled
+                    : filteredBySearch;
 
     // Aggregates
     final totalEarnings = allBookings
-        .where((bk) => bk.bookingStatus.toLowerCase() == 'confirmed' || bk.bookingStatus.toLowerCase() == 'paid')
+        .where((bk) =>
+            bk.bookingStatus.toLowerCase() == 'confirmed' ||
+            bk.bookingStatus.toLowerCase() == 'paid')
         .fold<double>(0.0, (sum, bk) => sum + bk.totalAmount);
 
     return Scaffold(
@@ -129,15 +148,18 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
         elevation: 0.5,
       ),
       body: bookingProvider.isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
           : Column(
               children: [
                 // 1. Stats Bar
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   decoration: BoxDecoration(
                     color: Colors.amber.shade50.withOpacity(0.2),
-                    border: const Border(bottom: BorderSide(color: AppTheme.stone)),
+                    border:
+                        const Border(bottom: BorderSide(color: AppTheme.stone)),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -156,7 +178,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            '₹${NumberFormat('#,##,###').format(totalEarnings)}',
+                            CurrencyFormatter.format(totalEarnings),
                             style: GoogleFonts.manrope(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
@@ -209,26 +231,35 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                               },
                             )
                           : null,
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 0, horizontal: 16),
                     ),
-                    onChanged: (val) => setState(() => _searchQuery = val.trim()),
+                    onChanged: (val) =>
+                        setState(() => _searchQuery = val.trim()),
                   ),
                 ),
 
                 // Tab selectors
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.only(left: 16, right: 16, bottom: 12),
+                  padding:
+                      const EdgeInsets.only(left: 16, right: 16, bottom: 12),
                   child: Row(
                     children: [
                       _buildTabButton('all', 'ALL', filteredBySearch.length),
                       const SizedBox(width: 8),
-                      _buildTabButton('confirmed', 'CONFIRMED', confirmed.length),
+                      _buildTabButton(
+                          'confirmed', 'CONFIRMED', confirmed.length),
+                      const SizedBox(width: 8),
+                      _buildTabButton('approval', 'APPROVAL REQUESTS',
+                          approvalRequests.length),
                       const SizedBox(width: 8),
                       _buildTabButton('pending', 'PENDING', pending.length),
                       const SizedBox(width: 8),
-                      _buildTabButton('cancelled', 'CANCELLED', cancelled.length),
+                      _buildTabButton(
+                          'cancelled', 'CANCELLED', cancelled.length),
                     ],
                   ),
                 ),
@@ -242,7 +273,8 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const Icon(Icons.book_online_outlined, size: 48, color: AppTheme.charcoalMuted),
+                              const Icon(Icons.book_online_outlined,
+                                  size: 48, color: AppTheme.charcoalMuted),
                               const SizedBox(height: 12),
                               Text(
                                 'No bookings match filters.',
@@ -260,11 +292,18 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                           padding: const EdgeInsets.all(16.0),
                           itemBuilder: (context, index) {
                             final bk = listToDisplay[index];
-                            final isConfirmed = bk.bookingStatus.toLowerCase() == 'confirmed' || bk.bookingStatus.toLowerCase() == 'paid';
-                            final isCancelled = bk.bookingStatus.toLowerCase() == 'cancelled';
+                            final isConfirmed =
+                                bk.bookingStatus.toLowerCase() == 'confirmed' ||
+                                    bk.bookingStatus.toLowerCase() == 'paid';
+                            final isApprovalRequest =
+                                bk.bookingStatus.toLowerCase() ==
+                                    'awaiting_host_approval';
+                            final isCancelled =
+                                bk.bookingStatus.toLowerCase() == 'cancelled';
 
                             // Match AI Calls
-                            final matchingCall = aiCallProvider.myCalls.firstWhere(
+                            final matchingCall =
+                                aiCallProvider.myCalls.firstWhere(
                               (c) => c['booking_id'] == bk.bookingId,
                               orElse: () => null,
                             );
@@ -275,7 +314,8 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                               color: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
-                                side: const BorderSide(color: AppTheme.stone, width: 1),
+                                side: const BorderSide(
+                                    color: AppTheme.stone, width: 1),
                               ),
                               child: Padding(
                                 padding: const EdgeInsets.all(16.0),
@@ -284,13 +324,17 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                   children: [
                                     // Status Badge & Location Row
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Expanded(
                                           child: Text(
-                                            (bk.propertyCity != null && bk.propertyState != null)
+                                            (bk.propertyCity != null &&
+                                                    bk.propertyState != null)
                                                 ? '${bk.propertyCity!.toUpperCase()}, ${bk.propertyState!.toUpperCase()}'
-                                                : (bk.propertyCategory ?? 'STAY').toUpperCase(),
+                                                : (bk.propertyCategory ??
+                                                        'STAY')
+                                                    .toUpperCase(),
                                             style: TextStyle(
                                               fontSize: 9,
                                               fontWeight: FontWeight.w800,
@@ -302,16 +346,22 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                           ),
                                         ),
                                         Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
                                             color: isConfirmed
                                                 ? Colors.green.shade50
-                                                : (isCancelled ? Colors.red.shade50 : Colors.orange.shade50),
-                                            borderRadius: BorderRadius.circular(12),
+                                                : (isCancelled
+                                                    ? Colors.red.shade50
+                                                    : Colors.orange.shade50),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                             border: Border.all(
                                               color: isConfirmed
                                                   ? Colors.green.shade200
-                                                  : (isCancelled ? Colors.red.shade200 : Colors.orange.shade200),
+                                                  : (isCancelled
+                                                      ? Colors.red.shade200
+                                                      : Colors.orange.shade200),
                                               width: 0.5,
                                             ),
                                           ),
@@ -320,7 +370,9 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                             style: TextStyle(
                                               color: isConfirmed
                                                   ? Colors.green.shade700
-                                                  : (isCancelled ? Colors.red.shade700 : Colors.orange.shade700),
+                                                  : (isCancelled
+                                                      ? Colors.red.shade700
+                                                      : Colors.orange.shade700),
                                               fontWeight: FontWeight.bold,
                                               fontSize: 8,
                                             ),
@@ -353,24 +405,35 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                       child: Row(
                                         children: [
                                           CircleAvatar(
-                                            backgroundColor: AppTheme.primary.withOpacity(0.1),
+                                            backgroundColor: AppTheme.primary
+                                                .withOpacity(0.1),
                                             radius: 18,
-                                            child: const Icon(Icons.person, color: AppTheme.primary, size: 18),
+                                            child: const Icon(Icons.person,
+                                                color: AppTheme.primary,
+                                                size: 18),
                                           ),
                                           const SizedBox(width: 10),
                                           Expanded(
                                             child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Text(
                                                   bk.guestName ?? 'STR Guest',
-                                                  style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 13),
+                                                  style: GoogleFonts.manrope(
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                      fontSize: 13),
                                                 ),
                                                 Text(
                                                   '${bk.guestPhone ?? "No Phone"}  |  ${bk.guestEmail ?? "No Email"}',
-                                                  style: const TextStyle(fontSize: 10, color: AppTheme.charcoalLight),
+                                                  style: const TextStyle(
+                                                      fontSize: 10,
+                                                      color: AppTheme
+                                                          .charcoalLight),
                                                   maxLines: 1,
-                                                  overflow: TextOverflow.ellipsis,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
                                                 ),
                                               ],
                                             ),
@@ -384,7 +447,10 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                     // Dates & Guest Count
                                     Row(
                                       children: [
-                                        const Icon(Icons.calendar_today_outlined, size: 12, color: AppTheme.charcoalLight),
+                                        const Icon(
+                                            Icons.calendar_today_outlined,
+                                            size: 12,
+                                            color: AppTheme.charcoalLight),
                                         const SizedBox(width: 6),
                                         Expanded(
                                           child: Text(
@@ -419,34 +485,110 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                           onPressed: () {
                                             showDialog(
                                               context: context,
-                                              builder: (context) => AICallLogDialog(call: Map<String, dynamic>.from(matchingCall)),
+                                              builder: (context) =>
+                                                  AICallLogDialog(
+                                                      call: Map<String,
+                                                              dynamic>.from(
+                                                          matchingCall)),
                                             );
                                           },
-                                          icon: const Icon(Icons.phone_in_talk, size: 14, color: Colors.green),
+                                          icon: const Icon(Icons.phone_in_talk,
+                                              size: 14, color: Colors.green),
                                           label: const Text(
                                             'PLAY AI CALL LOG 📞',
-                                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.w800, fontSize: 11),
+                                            style: TextStyle(
+                                                color: Colors.green,
+                                                fontWeight: FontWeight.w800,
+                                                fontSize: 11),
                                           ),
                                           style: OutlinedButton.styleFrom(
-                                            side: BorderSide(color: Colors.green.shade200),
-                                            backgroundColor: Colors.green.shade50.withOpacity(0.3),
-                                            padding: const EdgeInsets.symmetric(vertical: 10),
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                            side: BorderSide(
+                                                color: Colors.green.shade200),
+                                            backgroundColor: Colors
+                                                .green.shade50
+                                                .withOpacity(0.3),
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 10),
+                                            shape: RoundedRectangleBorder(
+                                                borderRadius:
+                                                    BorderRadius.circular(8)),
                                           ),
                                         ),
                                       ),
                                     ],
 
                                     const SizedBox(height: 12),
-                                    const Divider(color: AppTheme.stone, height: 1),
+                                    if (isApprovalRequest) ...[
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton(
+                                              onPressed: () async {
+                                                final ok = await Provider.of<
+                                                            BookingProvider>(
+                                                        context,
+                                                        listen: false)
+                                                    .approveBooking(
+                                                        bk.bookingId);
+                                                if (!context.mounted) return;
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                      content: Text(ok
+                                                          ? 'Booking approved.'
+                                                          : bookingProvider
+                                                                  .lastError ??
+                                                              'Approval failed.')),
+                                                );
+                                              },
+                                              style: ElevatedButton.styleFrom(
+                                                  backgroundColor:
+                                                      Colors.green.shade700),
+                                              child: const Text('Approve',
+                                                  style: TextStyle(
+                                                      color: Colors.white)),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 10),
+                                          Expanded(
+                                            child: OutlinedButton(
+                                              onPressed: () async {
+                                                final ok = await Provider.of<
+                                                            BookingProvider>(
+                                                        context,
+                                                        listen: false)
+                                                    .rejectBooking(
+                                                        bk.bookingId);
+                                                if (!context.mounted) return;
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(
+                                                  SnackBar(
+                                                      content: Text(ok
+                                                          ? 'Booking rejected. Refund intent created if payment was captured.'
+                                                          : bookingProvider
+                                                                  .lastError ??
+                                                              'Rejection failed.')),
+                                                );
+                                              },
+                                              child: const Text('Reject'),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 12),
+                                    ],
+                                    const Divider(
+                                        color: AppTheme.stone, height: 1),
                                     const SizedBox(height: 12),
 
                                     // Total value & details
                                     Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
                                         Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Text(
                                               'RESERVATION VALUE',
@@ -458,7 +600,8 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                             ),
                                             const SizedBox(height: 2),
                                             Text(
-                                              '₹${NumberFormat('#,##,###').format(bk.totalAmount)}',
+                                              CurrencyFormatter.format(
+                                                  bk.totalAmount),
                                               style: GoogleFonts.manrope(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w800,
@@ -472,34 +615,66 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                             showDialog(
                                               context: context,
                                               builder: (context) => AlertDialog(
-                                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                                                title: Text(bk.propertyTitle ?? 'Booking Details'),
+                                                shape: RoundedRectangleBorder(
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            16)),
+                                                title: Text(bk.propertyTitle ??
+                                                    'Booking Details'),
                                                 content: SingleChildScrollView(
                                                   child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                                    mainAxisSize: MainAxisSize.min,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
                                                     children: [
-                                                      Text('Booking ID: ${bk.bookingId}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                                                      Text(
+                                                          'Booking ID: ${bk.bookingId}',
+                                                          style: const TextStyle(
+                                                              fontWeight:
+                                                                  FontWeight
+                                                                      .bold)),
                                                       const SizedBox(height: 8),
-                                                      Text('Guest: ${bk.guestName ?? "Guest"}'),
-                                                      Text('Email: ${bk.guestEmail ?? "N/A"}'),
-                                                      Text('Phone: ${bk.guestPhone ?? "N/A"}'),
+                                                      Text(
+                                                          'Guest: ${bk.guestName ?? "Guest"}'),
+                                                      Text(
+                                                          'Email: ${bk.guestEmail ?? "N/A"}'),
+                                                      Text(
+                                                          'Phone: ${bk.guestPhone ?? "N/A"}'),
                                                       const Divider(),
-                                                      Text('Check In: ${bk.checkInDate}'),
-                                                      Text('Check Out: ${bk.checkOutDate}'),
-                                                      Text('Guests: ${bk.numberOfGuests}'),
-                                                      Text('Status: ${bk.bookingStatus.toUpperCase()}'),
-                                                      Text('Payment Status: ${bk.paymentStatus ?? "Paid"}'),
+                                                      Text(
+                                                          'Check In: ${bk.checkInDate}'),
+                                                      Text(
+                                                          'Check Out: ${bk.checkOutDate}'),
+                                                      Text(
+                                                          'Guests: ${bk.numberOfGuests}'),
+                                                      Text(
+                                                          'Status: ${bk.bookingStatus.toUpperCase()}'),
+                                                      Text(
+                                                          'Payment Status: ${bk.paymentStatus ?? "Paid"}'),
                                                       const Divider(),
-                                                      Text('Base Price: ₹${NumberFormat('#,##,###').format(bk.baseAmount)}'),
-                                                      if (bk.discountAmount > 0) Text('Discount: -₹${NumberFormat('#,##,###').format(bk.discountAmount)}'),
-                                                      Text('Total Amount: ₹${NumberFormat('#,##,###').format(bk.totalAmount)}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                                                      Text(
+                                                          'Base Price: ${CurrencyFormatter.format(bk.baseAmount)}'),
+                                                      if (bk.discountAmount > 0)
+                                                        Text(
+                                                            'Discount: ${CurrencyFormatter.format(-bk.discountAmount)}'),
+                                                      Text(
+                                                          'Total Amount: ${CurrencyFormatter.format(bk.totalAmount)}',
+                                                          style:
+                                                              const TextStyle(
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .bold,
+                                                                  fontSize:
+                                                                      16)),
                                                     ],
                                                   ),
                                                 ),
                                                 actions: [
                                                   TextButton(
-                                                    onPressed: () => Navigator.pop(context),
+                                                    onPressed: () =>
+                                                        Navigator.pop(context),
                                                     child: const Text('Close'),
                                                   )
                                                 ],

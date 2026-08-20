@@ -38,14 +38,13 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.xspace360.app"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        manifestPlaceholders["appLabel"] = "X-Space360"
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
     }
 
     signingConfigs {
@@ -72,6 +71,29 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+        }
+    }
+
+    flavorDimensions += "environment"
+    productFlavors {
+        create("dev") {
+            dimension = "environment"
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+            manifestPlaceholders["appLabel"] = "X-Space360 Dev"
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
+        create("uat") {
+            dimension = "environment"
+            applicationIdSuffix = ".uat"
+            versionNameSuffix = "-uat"
+            manifestPlaceholders["appLabel"] = "X-Space360 UAT"
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+        }
+        create("prod") {
+            dimension = "environment"
+            manifestPlaceholders["appLabel"] = "X-Space360"
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
         }
     }
 }
