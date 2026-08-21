@@ -5,6 +5,7 @@ import apiClient, { verificationAPI, getImageUrl, accountAPI, uploadAPI } from '
 import { createPortal } from 'react-dom';
 import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import { NotificationBell } from '../components/NotificationCenter';
+import { openBrokerSettlementInvoice } from '../utils/brokerSettlementInvoice';
 import { 
   Users, Building2, FileCheck, Target, IndianRupee, 
   AlertCircle, Plus, CheckCircle, XCircle, Clock, 
@@ -3538,6 +3539,7 @@ const CommissionsSection = () => {
                  <tr className="bg-stone border-b border-gray-100">
                     <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Transaction ID</th>
                     <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Yield</th>
+                    <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Invoice</th>
                     <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest text-right">Status</th>
                  </tr>
               </thead>
@@ -3551,6 +3553,27 @@ const CommissionsSection = () => {
                        <td className="px-8 py-6">
                           <p className="text-sm font-bold tracking-tight text-terracotta mb-0.5">₹{(commission.commission_amount / 100).toFixed(2)}</p>
                           <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{commission.commission_percentage}% of ₹{(commission.booking_amount / 100).toFixed(2)}</p>
+                       </td>
+                       <td className="px-8 py-6">
+                          <button
+                            type="button"
+                            disabled={!['paid', 'approved', 'processed', 'success', 'completed'].includes(String(commission.payment_status || '').toLowerCase())}
+                            onClick={() => openBrokerSettlementInvoice({
+                              ...commission,
+                              settlement_id: commission.commission_id,
+                              name: commission.broker_name || commission.name || 'Broker',
+                              code: commission.broker_code || commission.employee_code || commission.broker_id || '',
+                              platform_fee_amount: commission.booking_amount,
+                              commission_percent: commission.commission_percentage,
+                              commission_amount: commission.commission_amount,
+                              gross_amount: commission.commission_amount,
+                              net_amount: commission.net_amount || commission.commission_amount,
+                              latest_at: commission.paid_at || commission.created_at,
+                            })}
+                            className="rounded-xl bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 disabled:opacity-40"
+                          >
+                            Invoice
+                          </button>
                        </td>
                        <td className="px-8 py-6 text-right">
                           <span className={`inline-flex px-4 py-1.5 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
