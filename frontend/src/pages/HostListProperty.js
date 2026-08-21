@@ -1556,6 +1556,10 @@ const HostListProperty = () => {
     const subOrder = subRes.data;
     const plan = plans.find(p => p.plan_id === planId);
 
+    if (subOrder.already_active) {
+      return subOrder;
+    }
+
     if (subOrder.is_mock || String(subOrder.razorpay_order_id || '').startsWith('order_mock_')) {
       await subscriptionAPI.mockPaySubscription(subOrder.subscription_id, subOrder.razorpay_order_id);
       return subOrder;

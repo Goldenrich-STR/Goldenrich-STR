@@ -107,6 +107,31 @@ async def _activate_property_after_subscription_payment(
 
     return property_id
 
+
+def _subscription_checkout_payload(subscription: dict, plan: dict, amount_breakdown: dict, coupon_code: Optional[str], already_active: bool = False) -> dict:
+    amount = float(subscription.get("amount") or amount_breakdown.get("total_amount") or 0)
+    return {
+        "subscription_id": subscription["subscription_id"],
+        "razorpay_order_id": subscription.get("razorpay_order_id"),
+        "razorpay_key_id": razorpay_service.key_id,
+        "is_mock": razorpay_service.is_mock,
+        "amount": int(round(amount * 100)),
+        "currency": "INR",
+        "plan_name": plan["plan_name"],
+        "plan_fee": amount_breakdown["plan_fee"],
+        "platform_fee": amount_breakdown["platform_fee"],
+        "tax_percent": amount_breakdown["tax_percent"],
+        "tax_amount": amount_breakdown["tax_amount"],
+        "coupon_code": coupon_code,
+        "discount_amount": float(subscription.get("discount_amount") or amount_breakdown["discount_amount"]),
+        "total_amount": amount,
+        "payable_amount": amount,
+        "property_id": subscription.get("property_id"),
+        "already_active": already_active,
+        "payment_status": subscription.get("payment_status"),
+        "status": subscription.get("status"),
+    }
+
 REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # ₹500 in paise
 
 def _subscription_amount_breakdown(plan: dict, billing_cycle: str = "monthly") -> dict:
@@ -431,6 +456,28 @@ async def create_subscription(
         amount_breakdown = _subscription_coupon_breakdown(plan, coupon, subscription_data.billing_cycle)
         discount_amount = amount_breakdown["discount_amount"]
         amount = amount_breakdown["total_amount"]
+
+        if subscription_data.property_id:
+            existing_subscription = await db.subscriptions.find_one(
+                {
+                    "user_id": current_user["user_id"],
+                    "property_id": subscription_data.property_id,
+                    "plan_id": subscription_data.plan_id,
+                    "status": {"$in": [SubscriptionStatus.ACTIVE.value, SubscriptionStatus.TRIAL.value]},
+                    "cancelled_at": None,
+                },
+                sort=[("created_at", -1)],
+            )
+            if existing_subscription:
+                existing_status = existing_subscription.get("status")
+                existing_payment_status = existing_subscription.get("payment_status")
+                has_active_payment = existing_status == SubscriptionStatus.ACTIVE.value or existing_payment_status == "paid"
+                has_open_order = existing_payment_status == "order_created" and existing_subscription.get("razorpay_order_id")
+                if has_active_payment:
+                    await _activate_property_after_subscription_payment(db, existing_subscription, existing_subscription["subscription_id"])
+                    return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code, already_active=True)
+                if has_open_order:
+                    return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code)
         
         # Calculate dates
         start_date = date.today()
@@ -480,23 +527,7 @@ async def create_subscription(
         
         logger.info(f"Subscription created: {subscription.subscription_id}")
         
-        return {
-            "subscription_id": subscription.subscription_id,
-            "razorpay_order_id": razorpay_result["order"]["id"],
-            "razorpay_key_id": razorpay_service.key_id,
-            "is_mock": razorpay_service.is_mock,
-            "amount": int(round(amount * 100)),
-            "currency": "INR",
-            "plan_name": plan["plan_name"],
-            "plan_fee": amount_breakdown["plan_fee"],
-            "platform_fee": amount_breakdown["platform_fee"],
-            "tax_percent": amount_breakdown["tax_percent"],
-            "tax_amount": amount_breakdown["tax_amount"],
-            "coupon_code": coupon_code,
-            "discount_amount": discount_amount,
-            "total_amount": amount_breakdown["total_amount"],
-            "payable_amount": amount,
-        }
+        return _subscription_checkout_payload(subscription_dict, plan, amount_breakdown, coupon_code)
     
     except HTTPException:
         raise
@@ -619,6 +650,7 @@ async def confirm_subscription_payment(
             {"$set": {
                 "status": SubscriptionStatus.ACTIVE.value,
                 "payment_status": "paid",
+                "razorpay_payment_id": razorpay_payment_id,
                 "razorpay_subscription_id": razorpay_payment_id,
                 "updated_at": datetime.now(timezone.utc)
             }}
@@ -629,7 +661,8 @@ async def confirm_subscription_payment(
                 detail="Subscription payment was already processed"
             )
         
-        await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+        updated_subscription = {**subscription, "status": SubscriptionStatus.ACTIVE.value, "payment_status": "paid", "razorpay_payment_id": razorpay_payment_id, "razorpay_subscription_id": razorpay_payment_id}
+        await _activate_property_after_subscription_payment(db, updated_subscription, subscription_id)
         
         logger.info(f"Subscription confirmed: {subscription_id}")
 
@@ -721,11 +754,13 @@ async def mock_pay_subscription(
         {"$set": {
             "status": SubscriptionStatus.ACTIVE.value,
             "payment_status": "paid",
+            "razorpay_payment_id": mock_payment["razorpay_payment_id"],
             "razorpay_subscription_id": mock_payment["razorpay_payment_id"],
             "updated_at": datetime.now(timezone.utc),
         }},
     )
-    await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+    updated_subscription = {**subscription, "status": SubscriptionStatus.ACTIVE.value, "payment_status": "paid", "razorpay_payment_id": mock_payment["razorpay_payment_id"], "razorpay_subscription_id": mock_payment["razorpay_payment_id"]}
+    await _activate_property_after_subscription_payment(db, updated_subscription, subscription_id)
 
     try:
         from models.transaction import TransactionType
@@ -792,13 +827,16 @@ async def confirm_subscription_upi_payment(
         {"subscription_id": payload.subscription_id},
         {"$set": {
             "status": SubscriptionStatus.ACTIVE.value,
+            "payment_status": "paid",
             "upi_transaction_id": upi_transaction_id,
+            "razorpay_payment_id": upi_transaction_id,
             "razorpay_subscription_id": upi_transaction_id,
             "updated_at": datetime.now(timezone.utc)
         }}
     )
 
-    await _activate_property_after_subscription_payment(db, subscription, payload.subscription_id)
+    updated_subscription = {**subscription, "status": SubscriptionStatus.ACTIVE.value, "payment_status": "paid", "upi_transaction_id": upi_transaction_id, "razorpay_payment_id": upi_transaction_id, "razorpay_subscription_id": upi_transaction_id}
+    await _activate_property_after_subscription_payment(db, updated_subscription, payload.subscription_id)
 
     try:
         from models.transaction import TransactionType
