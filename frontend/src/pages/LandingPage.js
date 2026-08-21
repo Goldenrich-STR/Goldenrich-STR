@@ -5,6 +5,7 @@ import { Crown, Building2, MapPin, Calendar, Star, Zap, Search, User, LogOut, Ch
 import apiClient, { propertyAPI, getImageUrl, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
+import ShareDropdown from '../components/ShareDropdown';
 import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
@@ -2174,17 +2175,20 @@ const CollectionsSection = ({
                           className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
                         />
 
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            handleWishlistToggle(item.property_id);
-                          }}
-                          className="absolute right-4 top-4 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur"
-                          aria-label="Toggle wishlist"
-                        >
-                          <Heart className={`h-5 w-5 ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-charcoal'}`} />
-                        </button>
+                        <div className="absolute right-4 top-4 z-10 flex space-x-2">
+                          <ShareDropdown property={item} align="right" className="!w-10 !h-10" />
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              handleWishlistToggle(item.property_id);
+                            }}
+                            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur text-charcoal hover:text-red-500"
+                            aria-label="Toggle wishlist"
+                          >
+                            <Heart className={`h-5 w-5 ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
+                          </button>
+                        </div>
                         <div className="absolute bottom-4 right-0 z-10 rounded-l-xl bg-[#171717] px-3 py-2 text-xs font-semibold text-white shadow-lg">
                           Best Rated
                         </div>
@@ -2833,12 +2837,13 @@ const LandingPage = () => {
                   />
                   
                   {/* Right Actions (Wishlist like Airbnb) */}
-                  <div className="absolute top-3 right-3 z-20">
+                  <div className="absolute top-3 right-3 z-20 flex space-x-2">
+                    <ShareDropdown property={item} align="right" />
                     <button
                       onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                      className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer"
+                      className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer text-charcoal hover:text-red-500"
                     >
-                      <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-gray-700'}`} />
+                      <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : ''}`} />
                     </button>
                   </div>
 
@@ -2909,7 +2914,7 @@ const LandingPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
+    <div className="landing-page-container min-h-screen bg-white font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
       <SEO
         title="Book Stays, Workspaces and Event Venues"
         description="Discover and book villas, farmhouses, residential stays, commercial workspaces and event venues across India with X-Space360."
@@ -2940,7 +2945,7 @@ const LandingPage = () => {
             <img
               src="/logo.png"
               alt="X-Space360 Logo"
-              className={`h-8 md:h-10 w-auto object-contain transition-all duration-300 ${isNavScrolled ? '' : 'logo-white'}`}
+              className="h-8 md:h-10 w-auto object-contain transition-all duration-300"
             />
           </div>
 

@@ -6,6 +6,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, getImageUrl, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
+import ShareDropdown from '../components/ShareDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
 import {
@@ -1508,16 +1509,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
       
       {/* Share & Wishlist Buttons overlay */}
       <div className="absolute top-4 right-4 flex space-x-2 z-20">
-         <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onShare(property);
-            }}
-            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
-            title="Share on WhatsApp"
-         >
-            <Share2 className="w-3.5 h-3.5 text-charcoal hover:text-green-600" />
-         </button>
+         <ShareDropdown property={property} align="right" />
          <button
             onClick={(e) => {
               e.stopPropagation();

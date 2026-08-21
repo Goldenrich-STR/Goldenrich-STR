@@ -157,10 +157,10 @@
     filter: brightness(0) invert(1) !important;
   }
 
-  /* Target all logo images globally: black by default */
-  img[src="/logo.png"], img[src="logo.png"] {
+  /* Target all logo images globally: original colors by default */
+  /* img[src="/logo.png"], img[src="logo.png"] {
     filter: brightness(0);
-  }
+  } */
 
   /* Utility class to force logo to be white */
   .logo-white {
@@ -226,4 +226,52 @@
 .custom-modal-scrollbar::-webkit-scrollbar-thumb {
   background: #0B6E4F;
   border-radius: 10px;
+}
+
+/* ==========================================
+   LANDING PAGE CLICAKBLE HOVER EFFECT SYSTEM
+   ========================================== */
+.landing-page-container a,
+.landing-page-container button,
+.landing-page-container [role="button"],
+.landing-page-container .cursor-pointer {
+  cursor: pointer !important;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+/* Property cards scale & lift with enhanced shadow */
+.landing-page-container .group\/card,
+.landing-page-container button[class*="shadow-subtle"] {
+  will-change: transform;
+}
+.landing-page-container .group\/card:hover,
+.landing-page-container button[class*="shadow-subtle"]:hover {
+  transform: translateY(-5px) scale(1.01) !important;
+  box-shadow: 0 20px 38px -10px rgba(0, 0, 0, 0.08), 0 12px 24px -10px rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Category cards / shortcut items */
+.landing-page-container .snap-start:hover {
+  transform: translateY(-3px);
+}
+
+/* Generic buttons (e.g. Navigation arrows, close buttons, standard action buttons) */
+.landing-page-container button:not(.btn-primary):not(.btn-premium):hover,
+.landing-page-container a:not(.btn-primary):not(.btn-premium):hover {
+  transform: translateY(-1px);
+  filter: brightness(0.95);
+}
+
+/* Active links and main navbar items */
+.landing-page-container nav a:hover,
+.landing-page-container nav button:hover {
+  transform: scale(1.03) !important;
+  opacity: 0.95;
+}
+
+/* Make sure inner icons inside hover elements transition smoothly */
+.landing-page-container button:hover svg,
+.landing-page-container a:hover svg {
+  transform: scale(1.08);
+  transition: transform 0.3s ease !important;
 }

@@ -8,6 +8,7 @@ import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
+import ShareDropdown from '../components/ShareDropdown';
 import {
   ArrowLeft,
   Building2,
@@ -43,7 +44,9 @@ import {
   Crown,
   Lock,
   Minus,
-  Plus
+  Plus,
+  Heart,
+  Share2
 } from 'lucide-react';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
@@ -492,6 +495,49 @@ const PropertyDetail = () => {
   const [lang, setLang] = useState(() => localStorage.getItem('preferredLanguage') || 'en');
   const t = (key) => {
     return TRANSLATIONS[lang]?.[key] || TRANSLATIONS['en']?.[key] || key;
+  };
+
+  const [wishlist, setWishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('guest_wishlist')) || [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    const syncWishlist = () => {
+      try {
+        setWishlist(JSON.parse(localStorage.getItem('guest_wishlist')) || []);
+      } catch (e) {
+        setWishlist([]);
+      }
+    };
+    window.addEventListener('focus', syncWishlist);
+    window.addEventListener('storage', syncWishlist);
+    syncWishlist();
+    return () => {
+      window.removeEventListener('focus', syncWishlist);
+      window.removeEventListener('storage', syncWishlist);
+    };
+  }, []);
+
+  const handleWishlistToggle = (propertyId) => {
+    if (!user) {
+      sessionStorage.setItem('pending_wishlist_property', propertyId);
+      navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`);
+      return;
+    }
+    setWishlist(prev => {
+      let updated;
+      if (prev.includes(propertyId)) {
+        updated = prev.filter(id => id !== propertyId);
+      } else {
+        updated = [...prev, propertyId];
+      }
+      localStorage.setItem('guest_wishlist', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const [property, setProperty] = useState(null);
@@ -1478,7 +1524,7 @@ const PropertyDetail = () => {
       </header>
 
       <div className="max-w-7xl mx-auto px-8 py-8">
-        <div className="mb-8 animate-fade-in">
+        <div className="relative z-30 mb-8 animate-fade-in">
            <div className="flex items-center gap-2 flex-wrap mb-3">
               <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-[0.2em] rounded-full">
                 {formatCategoryLabel(property.category)}
@@ -1495,9 +1541,27 @@ const PropertyDetail = () => {
                 </span>
               )}
            </div>
-           <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight mb-4" data-testid="property-title">
-             {property.title}
-           </h1>
+           <div className="relative z-30 flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
+             <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight" data-testid="property-title">
+               {property.title}
+             </h1>
+             <div className="flex items-center gap-3 shrink-0 mt-2 md:mt-0">
+               {/* Share Option */}
+               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm">
+                 <ShareDropdown property={property} align="right" className="!w-5 !h-5 !bg-transparent !shadow-none hover:!scale-100" />
+                 <span className="text-xs font-bold text-charcoal">Share</span>
+               </div>
+               
+               {/* Save (Wishlist) Option */}
+               <button
+                 onClick={() => handleWishlistToggle(property.property_id)}
+                 className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm text-charcoal hover:text-red-500"
+               >
+                 <Heart className={`w-4 h-4 ${wishlist.includes(property.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
+                 <span className="text-xs font-bold">{wishlist.includes(property.property_id) ? 'Saved' : 'Save'}</span>
+               </button>
+             </div>
+           </div>
            <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
              <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address ? `${property.address}, ` : ''}{property.city}</span>
              <div className="flex items-center space-x-1">
