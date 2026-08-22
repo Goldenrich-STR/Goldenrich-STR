@@ -1187,7 +1187,7 @@ const GuestBrowse = () => {
                 "Signature Series"
              ) : loading ? t('searching') : (
                 <>
-                   {displayedProperties.length} {displayedProperties.length === 1 ? t('spaceFound') : t('spacesFound')}
+                   {showWishlistOnly ? displayedProperties.length : totalProperties} {(showWishlistOnly ? displayedProperties.length : totalProperties) === 1 ? t('spaceFound') : t('spacesFound')}
                 </>
              )}
           </h2>
