@@ -2938,7 +2938,7 @@ const LandingPage = () => {
           {/* Left Logo */}
           <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
             <img
-              src="/logo.png"
+              src={isNavScrolled ? "/logo.png" : "/logo-white-text.png"}
               alt="X-Space360 Logo"
               className="h-8 md:h-10 w-auto object-contain transition-all duration-300"
             />
