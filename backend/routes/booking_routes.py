@@ -1232,6 +1232,80 @@ async def confirm_payment(
             detail="Failed to confirm payment"
         )
 
+
+@router.post("/{booking_id}/mock-pay")
+async def mock_pay_booking(
+    booking_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Complete a booking payment in local/demo mode using the normal confirmation flow."""
+    if not razorpay_service.is_mock:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Mock booking payment is only available in demo mode",
+        )
+
+    booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not booking_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if booking_dict.get("guest_id") != current_user.get("user_id"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+
+    if booking_dict.get("booking_status") == BookingStatus.CONFIRMED.value:
+        return {
+            "message": "Booking already confirmed",
+            "booking_id": booking_id,
+            "booking_status": BookingStatus.CONFIRMED.value,
+            "razorpay_payment_id": booking_dict.get("razorpay_payment_id"),
+            "already_confirmed": True,
+            "mock": True,
+        }
+
+    if booking_dict.get("booking_status") != BookingStatus.SOFT_LOCK.value:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Mock payment can only be completed for an active booking hold",
+        )
+
+    order_id = booking_dict.get("razorpay_order_id")
+    if not order_id:
+        amount = int(round(_booking_payable_amount(booking_dict) * 100))
+        order_result = razorpay_service.create_order(amount=amount, currency="INR", receipt=booking_id[:40])
+        if not order_result.get("success"):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create mock payment order")
+        order_id = order_result["order"]["id"]
+        await db.bookings.update_one(
+            {"booking_id": booking_id},
+            {"$set": {"razorpay_order_id": order_id, "updated_at": datetime.now(timezone.utc)}},
+        )
+
+    mock_payment = razorpay_service.mock_complete_payment(order_id)
+    if not mock_payment.get("success"):
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to complete mock payment")
+
+    class _MockRequest:
+        headers = {"user-agent": "local-mock-checkout"}
+
+    result = await confirm_payment(
+        ConfirmPaymentRequest(
+            booking_id=booking_id,
+            razorpay_order_id=order_id,
+            razorpay_payment_id=mock_payment["razorpay_payment_id"],
+            razorpay_signature=mock_payment["razorpay_signature"],
+        ),
+        _MockRequest(),
+        current_user,
+        db,
+    )
+    return {
+        **result,
+        "razorpay_payment_id": mock_payment["razorpay_payment_id"],
+        "razorpay_signature": mock_payment["razorpay_signature"],
+        "mock": True,
+    }
+
+
 async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> list:
     """Embed property info needed by booking cards and customer invoices."""
     if not bookings:

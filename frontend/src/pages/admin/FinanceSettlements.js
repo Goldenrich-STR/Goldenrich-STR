@@ -579,11 +579,16 @@ const FinanceSettlements = () => {
   const load = useCallback(async () => {
     try {
       setState((current) => ({ ...current, loading: true }));
-      const transactionLimit = ['broker_employee_settlements', 'transactions_ledger'].includes(active) ? 300 : 8;
+      const transactionLimit = active === 'broker_employee_settlements' ? 500 : active === 'transactions_ledger' ? 300 : 8;
+      const transactionParams = {
+        q: search,
+        limit: transactionLimit,
+        ...(active === 'broker_employee_settlements' ? { type: 'booking_payment' } : {}),
+      };
       const [overview, transactions, payouts, refunds, autoStatus, taxCommission, paymentConfig, tdsConfig] = await Promise.all([
         adminPhase1API.financeOverview(),
-        adminPhase1API.financeTransactions({ q: search, limit: transactionLimit }),
-        adminPhase1API.financePayouts({ status: payoutStatus, limit: active === 'settlements' ? 100 : 8 }),
+        adminPhase1API.financeTransactions(transactionParams),
+        adminPhase1API.financePayouts({ status: payoutStatus, limit: ['settlements', 'broker_employee_settlements'].includes(active) ? 500 : 8 }),
         adminPhase1API.financeRefunds({ status: refundStatus, limit: active === 'refunds' ? 100 : 8 }),
         adminPhase1API.financePayoutAutoStatus(),
         adminPhase1API.financeTaxCommission(),
@@ -603,7 +608,13 @@ const FinanceSettlements = () => {
         tdsConfig: tdsConfig.data,
       });
     } catch (error) {
-      setState((current) => ({ ...current, loading: false, error: error.response?.data?.detail || 'Failed to load finance overview' }));
+      const detail = error.response?.data?.detail;
+      const message = typeof detail === 'string'
+        ? detail
+        : Array.isArray(detail)
+          ? detail.map((item) => item?.msg || item?.message || JSON.stringify(item)).join(', ')
+          : detail?.message || 'Failed to load finance overview';
+      setState((current) => ({ ...current, loading: false, error: message }));
     }
   }, [active, payoutStatus, refundStatus, search]);
 
@@ -996,7 +1007,7 @@ const FinanceSettlements = () => {
                 </div>
               </Panel>
             </div>
-          </div> : active === 'settlements' ? <SettlementWorkspace payouts={state.payouts} totals={settlementTotals} payoutStatus={payoutStatus} setPayoutStatus={setPayoutStatus} autoStatus={state.autoStatus} busy={busy} onProcess={processOne} onAction={runPayoutAction} paymentConfig={state.paymentConfig} /> : active === 'broker_employee_settlements' ? <BrokerEmployeeSettlementWorkspace data={state.taxCommission} transactions={state.transactions} tdsConfig={state.tdsConfig} paymentConfig={state.paymentConfig} /> : active === 'refunds' ? <RefundWorkspace refunds={state.refunds} refundStatus={refundStatus} setRefundStatus={setRefundStatus} busy={busy} onInitiate={initiateRefund} onPreview={previewRefundPolicy} policyPreview={policyPreview} onApproveRefund={approveRefund} onRejectRefund={rejectRefund} paymentConfig={state.paymentConfig} /> : active === 'tax_commission' ? <TaxesWorkspace data={state.taxCommission} /> : active === 'commissions' ? <CommissionWorkspace data={state.taxCommission} payouts={state.payouts} busy={busy} onProcessHost={processOne} /> : active === 'transactions_ledger' ? <AdminAccountTransactionsTab /> : <ReportsConfigWorkspace transactions={state.transactions} paymentConfig={state.paymentConfig} autoStatus={state.autoStatus} onExport={exportTransactions} onShare={shareInvoice} onSavePaymentConfig={savePaymentConfig} />}
+          </div> : active === 'settlements' ? <SettlementWorkspace payouts={state.payouts} totals={settlementTotals} payoutStatus={payoutStatus} setPayoutStatus={setPayoutStatus} autoStatus={state.autoStatus} busy={busy} onProcess={processOne} onAction={runPayoutAction} paymentConfig={state.paymentConfig} /> : active === 'broker_employee_settlements' ? <BrokerEmployeeSettlementWorkspace data={state.taxCommission} transactions={state.transactions} payouts={state.payouts} tdsConfig={state.tdsConfig} paymentConfig={state.paymentConfig} /> : active === 'refunds' ? <RefundWorkspace refunds={state.refunds} refundStatus={refundStatus} setRefundStatus={setRefundStatus} busy={busy} onInitiate={initiateRefund} onPreview={previewRefundPolicy} policyPreview={policyPreview} onApproveRefund={approveRefund} onRejectRefund={rejectRefund} paymentConfig={state.paymentConfig} /> : active === 'tax_commission' ? <TaxesWorkspace data={state.taxCommission} /> : active === 'commissions' ? <CommissionWorkspace data={state.taxCommission} payouts={state.payouts} busy={busy} onProcessHost={processOne} /> : active === 'transactions_ledger' ? <AdminAccountTransactionsTab /> : <ReportsConfigWorkspace transactions={state.transactions} paymentConfig={state.paymentConfig} autoStatus={state.autoStatus} onExport={exportTransactions} onShare={shareInvoice} onSavePaymentConfig={savePaymentConfig} />}
           {!['transactions_ledger', 'settlements', 'broker_employee_settlements'].includes(active) && (
             <div className="grid gap-4 lg:grid-cols-2">
               <QueuePanel title="Payout Queue" rows={state.payouts} idKey="payout_id" amountKey="net_amount" />
@@ -1889,7 +1900,68 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
   );
 };
 
-const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentConfig = {}) => {
+const payoutToPartnerTransaction = (payout = {}) => {
+  const property = payout.property || {};
+  const booking = payout.booking || {};
+  const host = payout.host || {};
+  const pricingSnapshot = payout.pricing_snapshot || booking.pricing_snapshot || {};
+  const hostActualPaise = toPaiseAmount(firstPresent(
+    payout.host_actual_value_amount,
+    payout.gross_amount,
+    payout.tds_base_amount,
+    booking.host_actual_value_amount,
+    booking.gross_amount,
+    booking.tds_base_amount,
+    0
+  ));
+  return {
+    ...payout,
+    type: 'booking_payment',
+    status: payout.transaction_status || 'success',
+    booking_status: booking.booking_status || payout.booking_status || 'confirmed',
+    payment_status: booking.payment_status || payout.payment_status || 'paid',
+    booking_id: payout.booking_id || booking.booking_id,
+    property_id: payout.property_id || property.property_id || booking.property_id,
+    host_id: payout.host_id || host.user_id || booking.host_id,
+    created_at: payout.created_at || payout.eligible_at || payout.settlement_due_at || booking.created_at,
+    broker: payout.broker || booking.broker || property.broker,
+    employee: payout.employee || payout.rm || booking.employee || booking.rm || property.employee || property.rm,
+    branch_manager: payout.branch_manager || booking.branch_manager || property.branch_manager,
+    broker_id: firstPresent(payout.broker_id, booking.broker_id, property.broker_id, host.broker_id),
+    broker_code: firstPresent(payout.broker_code, booking.broker_code, property.broker_code, property.lg_code, host.lg_code),
+    rm_id: firstPresent(payout.rm_id, payout.employee_id, booking.rm_id, booking.employee_id, property.rm_id, property.employee_id, host.rm_id),
+    employee_id: firstPresent(payout.employee_id, payout.rm_id, booking.employee_id, booking.rm_id, property.employee_id, property.rm_id, host.employee_id),
+    employee_code: firstPresent(payout.employee_code, payout.rm_code, booking.employee_code, booking.rm_code, property.employee_code, property.rm_code, host.employee_code),
+    branch_manager_id: firstPresent(payout.branch_manager_id, booking.branch_manager_id, property.branch_manager_id, host.branch_manager_id),
+    branch_manager_code: firstPresent(payout.branch_manager_code, booking.branch_manager_code, property.branch_manager_code, host.branch_manager_code),
+    property,
+    host,
+    booking: {
+      ...booking,
+      booking_id: payout.booking_id || booking.booking_id,
+      property_id: payout.property_id || property.property_id || booking.property_id,
+      host_id: payout.host_id || host.user_id || booking.host_id,
+      check_in_date: booking.check_in_date || payout.check_in_date || payout.eligible_at || payout.settlement_due_at || payout.created_at,
+      booking_status: booking.booking_status || payout.booking_status || 'confirmed',
+      payment_status: booking.payment_status || payout.payment_status || 'paid',
+      host_actual_value: hostActualPaise / 100,
+      base_amount: hostActualPaise / 100,
+      pricing_snapshot: pricingSnapshot,
+    },
+    booking_invoice_breakdown: {
+      ...(payout.booking_invoice_breakdown || payout.invoice_breakdown || {}),
+      base_amount: hostActualPaise / 100,
+      gross: hostActualPaise / 100,
+    },
+    invoice_breakdown: {
+      ...(payout.booking_invoice_breakdown || payout.invoice_breakdown || {}),
+      base_amount: hostActualPaise / 100,
+      gross: hostActualPaise / 100,
+    },
+  };
+};
+
+const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentConfig = {}, payouts = []) => {
   const config = tdsConfig?.data || tdsConfig || {};
   const brokerTdsRule = partnerTdsRule(config, 'broker');
   const employeeTdsRule = partnerTdsRule(config, 'employee');
@@ -2033,7 +2105,13 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
     });
   });
 
-  (transactions || []).forEach((txn) => {
+  const seenPartnerBookings = new Set();
+  const partnerSourceRows = [
+    ...(payouts || []).map(payoutToPartnerTransaction),
+    ...(transactions || []),
+  ];
+
+  partnerSourceRows.forEach((txn) => {
     if (txn.type && txn.type !== 'booking_payment') return;
 
     const bookingStatusText = String(firstPresent(
@@ -2054,15 +2132,24 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
     today.setHours(0, 0, 0, 0);
     if (Number.isNaN(checkInDate.getTime()) || checkInDate > today) return;
 
+    const bookingId = txn.booking_id || txn.booking?.booking_id;
+    if (bookingId && seenPartnerBookings.has(bookingId)) return;
+    if (bookingId) seenPartnerBookings.add(bookingId);
+
     const breakdown = txn.booking_invoice_breakdown || txn.invoice_breakdown || {};
-    const baseRupees = Number(
-      breakdown.base_amount ??
-      breakdown.gross ??
-      txn.booking?.host_actual_value ??
-      txn.booking?.base_amount ??
+    const basePaise = toPaiseAmount(firstPresent(
+      breakdown.base_amount,
+      breakdown.gross,
+      txn.booking?.host_actual_value,
+      txn.booking?.host_actual_value_amount,
+      txn.booking?.host_base_amount,
+      txn.booking?.base_amount,
+      txn.host_actual_value,
+      txn.host_actual_value_amount,
+      txn.gross_amount,
+      txn.tds_base_amount,
       0
-    );
-    const basePaise = rupeesToPaise(baseRupees);
+    ));
     const platformFeeContext = settlementContext(txn);
     const platformFeePaise = partnerPlatformFeePaise(txn, basePaise, paymentConfig, platformFeeContext);
     if (platformFeePaise <= 0) return;
@@ -2095,7 +2182,7 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
         id: brokerInfo.id,
         name: brokerInfo.name,
         code: brokerInfo.code,
-        bookingId: txn.booking_id || txn.booking?.booking_id,
+        bookingId,
         propertyId,
         propertyName,
         grossAmount: brokerAmountPaise,
@@ -2131,7 +2218,7 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
         id: employeeInfo.id,
         name: employeeInfo.name,
         code: employeeInfo.code,
-        bookingId: txn.booking_id || txn.booking?.booking_id,
+        bookingId,
         propertyId,
         propertyName,
         grossAmount: employeeAmountPaise,
@@ -2165,7 +2252,7 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
         id: branchManagerInfo.id,
         name: branchManagerInfo.name,
         code: branchManagerInfo.code,
-        bookingId: txn.booking_id || txn.booking?.booking_id,
+        bookingId,
         propertyId,
         propertyName,
         grossAmount: branchManagerAmountPaise,
@@ -2328,10 +2415,10 @@ const PartnerSettlementTable = ({ title, rows, emptyText, codeLabel, compactPayo
   );
 };
 
-const BrokerEmployeeSettlementWorkspace = ({ data, transactions, tdsConfig, paymentConfig }) => {
+const BrokerEmployeeSettlementWorkspace = ({ data, transactions, payouts, tdsConfig, paymentConfig }) => {
   const [filters, setFilters] = useState({ from: '', to: '', host: '', broker: '', employee: '', branchManager: '' });
   const [partnerDecisions, setPartnerDecisions] = useState({});
-  const rows = useMemo(() => buildPartnerSettlementRows(data, transactions, tdsConfig, paymentConfig), [data, transactions, tdsConfig, paymentConfig]);
+  const rows = useMemo(() => buildPartnerSettlementRows(data, transactions, tdsConfig, paymentConfig, payouts), [data, transactions, tdsConfig, paymentConfig, payouts]);
   const decisionRows = useMemo(() => rows.map((row) => {
     const key = `${row.role}:${row.id}`;
     const decision = partnerDecisions[key];
