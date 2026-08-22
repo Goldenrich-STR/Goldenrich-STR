@@ -126,6 +126,7 @@ export const getImageUrl = (url) => {
     return url;
   }
   if (url.startsWith('/api/')) return `${BACKEND_URL}${url}`;
+  if (url.startsWith('/uploads/')) return `${BACKEND_URL}/api${url}`;
   if (url.startsWith('api/uploads/')) return `${BACKEND_URL}/${url}`;
   if (url.startsWith('uploads/')) return `${BACKEND_URL}/api/${url}`;
   if (/^[^/?#]+\.(png|jpe?g|webp|gif)(?:[?#].*)?$/i.test(url)) {
