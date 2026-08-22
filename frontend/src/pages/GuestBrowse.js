@@ -1524,11 +1524,6 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
 
       <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center z-20">
         <div className="flex items-center gap-2">
-          {property.instant_booking && (
-             <div className="bg-amber-500 text-white p-1.5 rounded-lg shadow-premium" title="Instant Booking">
-                <Zap className="w-3.5 h-3.5 fill-current" />
-             </div>
-          )}
           {property.rating && property.rating > 0 && property.review_count && property.review_count > 0 ? (
             <div className="flex items-center bg-charcoal/70 backdrop-blur-sm text-white px-2.5 py-1 rounded-full text-xs font-bold gap-1 shadow-sm">
                <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400 mr-0.5" />

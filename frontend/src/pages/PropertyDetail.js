@@ -2806,11 +2806,6 @@ const PropertyDetail = () => {
                       <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal shadow-sm">
                         {formatCategoryLabel(prop.category)}
                       </div>
-                      {prop.instant_booking && (
-                        <div className="absolute top-4 right-4 bg-amber-500 text-white p-1.5 rounded-full shadow-subtle">
-                          <Zap className="w-3.5 h-3.5 fill-current" />
-                        </div>
-                      )}
                     </div>
                     <div className="p-6 flex flex-col flex-1 justify-between">
                       <div>

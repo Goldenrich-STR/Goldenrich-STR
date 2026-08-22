@@ -2858,11 +2858,6 @@ const LandingPage = () => {
 
                   {/* Instant Booking / Rating bottom left */}
                   <div className="absolute bottom-3 left-3 flex items-center gap-1.5 z-20">
-                    {item.instant_booking && (
-                       <div className="bg-amber-500 text-white p-1 rounded-lg shadow-premium" title="Instant Booking">
-                          <Zap className="w-3.5 h-3.5 fill-current" />
-                       </div>
-                    )}
                   </div>
                 </div>
 
