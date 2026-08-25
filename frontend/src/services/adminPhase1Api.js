@@ -89,6 +89,7 @@ export const adminPhase1API = {
   exportFinanceTransactions: (params = {}) => apiClient.get('/admin/account/transactions/export-csv', { params, responseType: 'blob' }),
   shareFinanceInvoice: (transactionId, channel) => apiClient.post(`/admin/account/transactions/${transactionId}/share-invoice`, { channel }),
   financePayouts: (params = {}) => apiClient.get('/admin/account/payouts', { params }),
+  savePartnerSettlementDecision: (payload) => apiClient.post('/admin/account/partner-settlement-decisions', payload),
   processFinancePayout: (payoutId, payload = {}) => apiClient.post(`/admin/account/payouts/${payoutId}/process`, payload),
   sweepFinancePayoutEligibility: () => apiClient.post('/admin/account/payouts/sweep-eligibility'),
   processEligibleFinancePayouts: () => apiClient.post('/admin/account/payouts/process-eligible'),

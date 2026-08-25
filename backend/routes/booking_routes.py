@@ -2010,6 +2010,7 @@ class BookingPaymentConfigUpdate(BaseModel):
     coupon_discount: Optional[dict] = None
     host_payout: Optional[dict] = None
     commission_rules: Optional[dict] = None
+    rcm_rules: Optional[dict] = None
 
 @router.put("/admin/payment/config")
 async def update_payment_config(

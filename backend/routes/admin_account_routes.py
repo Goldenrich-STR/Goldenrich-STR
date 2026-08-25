@@ -43,6 +43,15 @@ class RefundDecisionRequest(BaseModel):
     reason: Optional[str] = None
 
 
+class PartnerSettlementDecisionRequest(BaseModel):
+    settlement_id: str
+    role: str
+    status: str
+    booking_id: Optional[str] = None
+    partner_id: Optional[str] = None
+    partner_code: Optional[str] = None
+
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -809,21 +818,6 @@ def _customer_booking_invoice_no(record: Optional[dict] = None, fallback_date=No
     if explicit and explicit.upper().startswith("STRC/"):
         return explicit
 
-    suffix = _booking_invoice_suffix(
-        record.get("booking_id"),
-        record.get("bookingId"),
-        record.get("id"),
-        record.get("transaction_id"),
-    )
-    if suffix:
-        invoice_date = _useful_text(
-            record.get("invoice_date"),
-            record.get("created_at"),
-            record.get("booking_date"),
-            fallback_date,
-        )
-        return f"STRC/{_financial_year_label(invoice_date)}/{suffix}"
-
     if explicit and explicit.upper().startswith("STRB/"):
         return f"STRC/{explicit.split('/', 1)[1]}"
     return explicit
@@ -1167,7 +1161,7 @@ async def list_transactions(
                 if broker_id:
                     broker_info = await db.users.find_one(
                         {"user_id": broker_id, "role": "broker"},
-                        {"_id": 0, "user_id": 1, "uid": 1, "full_name": 1, "lg_code": 1, "employee_code": 1, "rm_id": 1},
+                        {"_id": 0, "user_id": 1, "uid": 1, "full_name": 1, "lg_code": 1, "employee_code": 1, "rm_id": 1, "pan_number": 1, "pan": 1, "gst_number": 1, "gst_no": 1, "gstin": 1},
                     )
                 if not broker_info and broker_code:
                     broker_info = await db.users.find_one(
@@ -1180,7 +1174,7 @@ async def list_transactions(
                                 {"user_id": {"$regex": f"^{re.escape(str(broker_code))}$", "$options": "i"}},
                             ],
                         },
-                        {"_id": 0, "user_id": 1, "uid": 1, "full_name": 1, "lg_code": 1, "employee_code": 1, "rm_id": 1},
+                        {"_id": 0, "user_id": 1, "uid": 1, "full_name": 1, "lg_code": 1, "employee_code": 1, "rm_id": 1, "pan_number": 1, "pan": 1, "gst_number": 1, "gst_no": 1, "gstin": 1},
                     )
                 if rm_id:
                     employee_info = await db.users.find_one(
@@ -1940,6 +1934,37 @@ async def list_payouts(
 
     total = await db.payouts.count_documents(query)
     return {"payouts": items, "total": total}
+
+
+@router.post("/partner-settlement-decisions")
+async def save_partner_settlement_decision(
+    payload: PartnerSettlementDecisionRequest,
+    current_user: dict = Depends(require_admin),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    status_value = str(payload.status or "").strip().lower()
+    if status_value not in {"approved", "rejected", "pending"}:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invalid settlement status")
+    settlement_id = str(payload.settlement_id or "").strip()
+    if not settlement_id:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Settlement ID is required")
+    now = datetime.now(timezone.utc)
+    doc = {
+        "settlement_id": settlement_id,
+        "role": str(payload.role or "").strip().lower(),
+        "status": status_value,
+        "booking_id": payload.booking_id,
+        "partner_id": payload.partner_id,
+        "partner_code": payload.partner_code,
+        "updated_by": current_user.get("user_id"),
+        "updated_at": now,
+    }
+    await db.partner_settlement_decisions.update_one(
+        {"settlement_id": settlement_id},
+        {"$set": doc, "$setOnInsert": {"created_at": now}},
+        upsert=True,
+    )
+    return {"message": "Settlement decision saved", "decision": {**doc, "updated_at": now.isoformat()}}
 
 
 @router.post("/payouts/{payout_id}/process")

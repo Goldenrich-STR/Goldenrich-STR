@@ -3074,11 +3074,149 @@ async def finance_tax_commission(current_user: dict = Depends(require_admin), db
     booking_txns = await db.transactions.find({"type": "booking_payment", "status": "success"}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(length=500)
     subscription_txns = await db.transactions.find({"type": "subscription", "status": "success"}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(length=500)
     commissions = await db.commissions.find({}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(length=500)
+    existing_commission_bookings = {row.get("booking_id") for row in commissions if row.get("booking_id")}
+    payment_config = await get_booking_payment_config(db)
+    broker_rule = (payment_config.get("commission_rules") or {}).get("broker") or {}
+    broker_rate = float((broker_rule.get("value") or broker_rule.get("percent") or 0) if broker_rule.get("enabled") else 0)
+    if broker_rate:
+        today = datetime.now(timezone.utc).date()
+        paid_bookings = await db.bookings.find(
+            {
+                "payment_status": {"$in": ["paid", "success", "captured", "completed", "partially_paid"]},
+                "booking_status": {"$in": ["confirmed", "completed"]},
+            },
+            {"_id": 0},
+        ).sort("created_at", -1).limit(500).to_list(length=500)
+        property_ids = list({booking.get("property_id") for booking in paid_bookings if booking.get("property_id")})
+        host_ids = list({booking.get("host_id") for booking in paid_bookings if booking.get("host_id")})
+        properties = await db.properties.find({"property_id": {"$in": property_ids}}, {"_id": 0}).to_list(length=len(property_ids) or 1)
+        hosts = await db.users.find({"user_id": {"$in": host_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(host_ids) or 1)
+        property_map = {prop.get("property_id"): prop for prop in properties}
+        host_map = {host.get("user_id"): host for host in hosts}
+        broker_candidate_values = set()
+        for booking in paid_bookings:
+            prop = property_map.get(booking.get("property_id")) or {}
+            host = host_map.get(booking.get("host_id")) or {}
+            for value in (
+                booking.get("broker_id"),
+                booking.get("broker_code"),
+                host.get("broker_id"),
+                host.get("broker_code"),
+                host.get("lg_code"),
+                prop.get("broker_id"),
+                prop.get("broker_code"),
+                prop.get("assigned_broker_id"),
+                prop.get("assigned_broker_code"),
+                prop.get("managed_by_broker_id"),
+            ):
+                if value:
+                    broker_candidate_values.add(value)
+        broker_candidates = await db.users.find(
+            {
+                "role": "broker",
+                "$or": [
+                    {"user_id": {"$in": list(broker_candidate_values)}},
+                    {"lg_code": {"$in": list(broker_candidate_values)}},
+                    {"employee_code": {"$in": list(broker_candidate_values)}},
+                    {"uid": {"$in": list(broker_candidate_values)}},
+                ],
+            },
+            {"_id": 0, "password_hash": 0},
+        ).to_list(length=max(len(broker_candidate_values), 1))
+        broker_candidate_map = {}
+        for broker in broker_candidates:
+            for key in (broker.get("user_id"), broker.get("lg_code"), broker.get("employee_code"), broker.get("uid")):
+                if key:
+                    broker_candidate_map[str(key)] = broker
+        for booking in paid_bookings:
+            booking_id = booking.get("booking_id")
+            if not booking_id or booking_id in existing_commission_bookings:
+                continue
+            check_in = booking.get("check_in_date")
+            if check_in:
+                try:
+                    if datetime.fromisoformat(str(check_in).replace("Z", "+00:00")).date() > today:
+                        continue
+                except Exception:
+                    pass
+            prop = property_map.get(booking.get("property_id")) or {}
+            host = host_map.get(booking.get("host_id")) or {}
+            broker_values = [
+                booking.get("broker_id")
+                or booking.get("broker_code"),
+                host.get("broker_id")
+                or host.get("broker_code")
+                or host.get("lg_code"),
+                prop.get("broker_id")
+                or prop.get("broker_code")
+                or prop.get("assigned_broker_id")
+                or prop.get("assigned_broker_code")
+                or prop.get("managed_by_broker_id"),
+            ]
+            broker = next((broker_candidate_map.get(str(value)) for value in broker_values if value and broker_candidate_map.get(str(value))), None)
+            if not broker:
+                continue
+            broker_id = broker.get("user_id")
+            broker_code = broker.get("lg_code") or broker.get("employee_code") or broker.get("uid") or broker_id
+            base_amount = float(
+                booking.get("host_actual_value")
+                or booking.get("host_base_amount")
+                or booking.get("base_amount")
+                or booking.get("booking_amount")
+                or booking.get("total_amount")
+                or 0
+            )
+            commission_amount = round(base_amount * broker_rate / 100, 2)
+            if commission_amount <= 0:
+                continue
+            commissions.append({
+                "commission_id": f"SET-BROKER-{str(broker_id).replace('-', '')[-8:]}-{str(booking_id).replace('-', '')[-6:]}",
+                "broker_id": broker_id,
+                "broker_code": broker_code,
+                "broker_name": broker.get("full_name"),
+                "broker": broker,
+                "booking_id": booking_id,
+                "property_id": booking.get("property_id"),
+                "property_name": prop.get("title") or prop.get("property_name") or booking.get("property_name"),
+                "host_actual_value": base_amount,
+                "base_amount": base_amount,
+                "platform_fee_amount": base_amount,
+                "commission_amount": commission_amount,
+                "commission_percent": broker_rate,
+                "payment_status": "pending",
+                "created_at": booking.get("confirmed_at") or booking.get("created_at"),
+            })
+            existing_commission_bookings.add(booking_id)
     broker_ids = list({row.get("broker_id") for row in commissions if row.get("broker_id")})
-    brokers = await db.users.find({"user_id": {"$in": broker_ids}}, {"_id": 0, "password_hash": 0}).to_list(length=len(broker_ids) or 1)
-    broker_map = {broker["user_id"]: broker for broker in brokers}
+    broker_codes = list({row.get("broker_code") for row in commissions if row.get("broker_code")})
+    broker_query = {"$or": []}
+    if broker_ids:
+        broker_query["$or"].append({"user_id": {"$in": broker_ids}})
+    if broker_codes:
+        broker_query["$or"].extend([
+            {"lg_code": {"$in": broker_codes}},
+            {"employee_code": {"$in": broker_codes}},
+        ])
+    brokers = await db.users.find(
+        {"role": "broker", **broker_query} if broker_query["$or"] else {"role": "broker", "user_id": {"$in": []}},
+        {"_id": 0, "password_hash": 0},
+    ).to_list(length=max(len(broker_ids) + len(broker_codes), 1))
+    broker_map = {}
+    for broker in brokers:
+        for key in (broker.get("user_id"), broker.get("lg_code"), broker.get("employee_code"), broker.get("uid")):
+            if key:
+                broker_map[key] = broker
+    verified_commissions = []
     for row in commissions:
-        row["broker"] = broker_map.get(row.get("broker_id"), {})
+        broker = broker_map.get(row.get("broker_id")) or broker_map.get(row.get("broker_code")) or {}
+        if not broker:
+            continue
+        row["broker"] = broker
+        row["broker_id"] = broker.get("user_id") or row.get("broker_id")
+        row["broker_code"] = broker.get("lg_code") or broker.get("employee_code") or row.get("broker_code")
+        row["broker_name"] = broker.get("full_name") or row.get("broker_name")
+        verified_commissions.append(row)
+    commissions = verified_commissions
 
     booking_ids = [txn.get("booking_id") for txn in booking_txns if txn.get("booking_id")]
     booking_docs = await db.bookings.find(

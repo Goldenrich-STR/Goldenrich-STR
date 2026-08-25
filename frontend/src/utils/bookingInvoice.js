@@ -33,8 +33,6 @@ const customerBookingInvoiceNo = (booking = {}) => {
     booking.invoice_number,
   );
   if (explicit?.toUpperCase().startsWith('STRC/')) return explicit;
-  const suffix = bookingIdSuffix(booking.booking_id, booking.id, booking.transaction_id);
-  if (suffix) return `STRC/${invoiceFinancialYear(booking.invoice_date || booking.created_at)}/${suffix}`;
   if (explicit?.toUpperCase().startsWith('STRB/')) return `STRC/${explicit.split('/').slice(1).join('/')}`;
   return explicit || 'NA';
 };
@@ -399,6 +397,7 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
 <body>
   ${options.hideToolbar ? '' : `<div class="toolbar">
     <button class="print" onclick="window.print()">Print / Download PDF</button>
+    <button onclick="(function(){var clone=document.documentElement.cloneNode(true); var toolbar=clone.querySelector('.toolbar'); if(toolbar) toolbar.remove(); var blob=new Blob(['<!doctype html>\\n'+clone.outerHTML],{type:'text/html;charset=utf-8'}); var a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='${escapeHtml(String(invoiceNo).replace(/[^a-z0-9_-]+/gi, '_'))}.html'; a.click(); setTimeout(function(){URL.revokeObjectURL(a.href)},500);})()">Download HTML</button>
     <button onclick="window.close()">Close</button>
   </div>`}
   <main class="invoice-page">

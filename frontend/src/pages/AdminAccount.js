@@ -72,17 +72,6 @@ const customerBookingInvoiceNo = (record = {}, booking = {}) => {
     booking.invoice_number,
   );
   if (explicit?.toUpperCase().startsWith('STRC/')) return explicit;
-  const suffix = bookingInvoiceSuffix(
-    record.booking_id,
-    record.bookingId,
-    booking.booking_id,
-    booking.id,
-    record.transaction_id,
-  );
-  if (suffix) {
-    const dateValue = usefulInvoiceText(record.invoice_date, booking.invoice_date, record.created_at, booking.created_at);
-    return `STRC/${invoiceFinancialYearLabel(dateValue)}/${suffix}`;
-  }
   if (explicit?.toUpperCase().startsWith('STRB/')) return `STRC/${explicit.split('/').slice(1).join('/')}`;
   return explicit || 'NA';
 };
@@ -3890,29 +3879,18 @@ const InvoiceModal = ({ transaction, onClose }) => {
         <tbody>
           <tr>
             <td class="company-cell">
-              <table class="company-heading-table">
+              <table>
                 <tbody>
-                  <tr>
-                    <td class="logo-cell"><img src="/logo.png" alt="X-Space360 Logo" /></td>
-                    <td class="company-name-cell">
-                      <strong>Golden Rich Financial &amp; Real Estate<br />Solutions Pvt. Ltd.</strong><br />
-                      Office No-804, Royal Avaan Avenue,<br />
-                      Opp. Bhosla School Gate, Jehan Circle,<br />
-                      Gangapur Road, Nashik-422013
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-              <table class="company-meta-table">
-                <tbody>
-                  <tr>
-                    <td class="company-meta">
-                      <strong>GSTIN/UIN:</strong> 27AAKCG1285C1ZP<br />
-                      <strong>State Name:</strong> Maharashtra, Code : 27<br />
-                      <strong>Contact:</strong> 9225586001<br />
-                      <strong>Email:</strong> finance.director@goldenrichproperties.com
-                    </td>
-                  </tr>
+                  <tr><td class="buyer-top-cell">
+                    <span>Buyer (Bill to)</span><br />
+                    <strong>${escapeInvoiceHtml(propertyName)}</strong><br />
+                    Address: ${escapeInvoiceHtml(propertyAddress)}<br />
+                    GSTIN/UIN: ${escapeInvoiceHtml(user.gst_number || user.gst_no || 'NA')}<br />
+                    State Name: ${escapeInvoiceHtml(user.gst_number && user.gst_number.length >= 2 ? (user.gst_number.startsWith('27') ? 'Maharashtra, Code : 27' : 'Other State, Code : ' + user.gst_number.substring(0, 2)) : 'Maharashtra, Code : 27')}<br />
+                    Contact Person: ${escapeInvoiceHtml(user.full_name || 'NA')}<br />
+                    Mobile: ${escapeInvoiceHtml(user.phone || 'NA')}<br />
+                    Email: ${escapeInvoiceHtml(user.email || 'NA')}
+                  </td></tr>
                 </tbody>
               </table>
             </td>
@@ -3927,28 +3905,27 @@ const InvoiceModal = ({ transaction, onClose }) => {
                     <td><span>Mode/Terms of Payment</span><strong>${t.upi_transaction_id ? 'UPI QR' : 'NET BANKING'}</strong></td>
                     <td><span>Reference No. &amp; Date</span><strong>${escapeInvoiceHtml(t.upi_transaction_id || t.razorpay_payment_id || t.transaction_id || 'NA')}</strong></td>
                   </tr>
-                  <tr>
-                    <td class="blank-detail">&nbsp;</td>
-                    <td class="blank-detail">&nbsp;</td>
-                  </tr>
                 </tbody>
               </table>
             </td>
           </tr>
           <tr>
             <td class="buyer-cell">
-              <table>
+              <table class="company-heading-table">
                 <tbody>
-                  <tr><td>
-                    <span>Buyer (Bill to)</span><br />
-                    <strong>${escapeInvoiceHtml(propertyName)}</strong><br />
-                    Address: ${escapeInvoiceHtml(propertyAddress)}<br />
-                    GSTIN/UIN: ${escapeInvoiceHtml(user.gst_number || user.gst_no || 'NA')}<br />
-                    State Name: ${escapeInvoiceHtml(user.gst_number && user.gst_number.length >= 2 ? (user.gst_number.startsWith('27') ? 'Maharashtra, Code : 27' : 'Other State, Code : ' + user.gst_number.substring(0, 2)) : 'Maharashtra, Code : 27')}<br />
-                    Contact Person: ${escapeInvoiceHtml(user.full_name || 'NA')}<br />
-                    Mobile: ${escapeInvoiceHtml(user.phone || 'NA')}<br />
-                    Email: ${escapeInvoiceHtml(user.email || 'NA')}
-                  </td></tr>
+                  <tr>
+                    <td class="logo-cell"><img src="/logo.png" alt="X-Space360 Logo" /></td>
+                    <td class="company-name-cell">
+                      <strong>Golden Rich Financial &amp; Real Estate<br />Solutions Pvt. Ltd.</strong><br />
+                      Office No-804, Royal Avaan Avenue,<br />
+                      Opp. Bhosla School Gate, Jehan Circle,<br />
+                      Gangapur Road, Nashik-422013<br />
+                      <strong>GSTIN/UIN:</strong> 27AAKCG1285C1ZP<br />
+                      <strong>State Name:</strong> Maharashtra, Code : 27<br />
+                      <strong>Contact:</strong> 9225586001<br />
+                      <strong>Email:</strong> finance.director@goldenrichproperties.com
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </td>
@@ -4092,6 +4069,9 @@ const InvoiceModal = ({ transaction, onClose }) => {
 
       <table class="signature-table">
         <tbody>
+          <tr>
+            <td colspan="2" class="jurisdiction-note">Subject to Nashik Juridiction</td>
+          </tr>
           <tr>
             <td class="bank-cell">
               <strong><u>Company's Bank Details:</u></strong><br />
@@ -4240,18 +4220,16 @@ const InvoiceModal = ({ transaction, onClose }) => {
             .invoice-shell { border-bottom: 0 !important; }
             .company-cell { width: 50%; padding: 0; }
             .details-cell { width: 50%; padding: 0; }
-            .logo-cell { width: 33%; padding: 8px; border-right: 0 !important; }
-            .logo-cell img { width: 136px; height: 38px; object-fit: contain; object-position: left center; display: block; }
-            .company-name-cell { width: 67%; padding: 8px 6px; border-left: 0 !important; font-size: 9.5px; line-height: 1.2; }
+            .logo-cell { width: 30%; padding: 6px; border-right: 0 !important; }
+            .logo-cell img { width: 124px; height: 34px; object-fit: contain; object-position: left center; display: block; }
+            .company-name-cell { width: 70%; padding: 6px; border-left: 0 !important; font-size: 8.4px; line-height: 1.18; }
             .company-name-cell strong { font-size: 12px; line-height: 1.12; }
-            .company-meta { padding: 6px 8px; font-size: 8.5px; line-height: 1.25; }
-            .details-cell td { width: 50%; height: 27px; font-size: 9px; line-height: 1.2; }
-            .blank-detail { height: 76px; }
+            .details-cell td { width: 50%; height: 26px; font-size: 9px; line-height: 1.18; }
             .buyer-cell { width: 50%; padding: 0; }
-            .buyer-cell td { height: 105px; padding: 9px; font-size: 9px; line-height: 1.32; }
-            .buyer-blank-cell { width: 50%; height: 105px; }
-            .services-table th { background: #f9f9f9; font-size: 9px; padding: 7px 5px; text-align: center; vertical-align: middle; }
-            .services-table td { font-size: 9px; padding: 6px 5px; }
+            .buyer-top-cell { min-height: 84px; padding: 7px 8px; font-size: 9px; line-height: 1.25; }
+            .buyer-blank-cell { width: 50%; height: 86px; }
+            .services-table th { background: #f9f9f9; font-size: 8.5px; padding: 5px 4px; text-align: center; vertical-align: middle; }
+            .services-table td { font-size: 8.5px; padding: 4px 4px; }
             .sr { width: 5%; }
             .desc { width: 42%; text-align: left !important; }
             .hsn { width: 10%; }
@@ -4267,13 +4245,14 @@ const InvoiceModal = ({ transaction, onClose }) => {
             .desc-text { text-align: left; line-height: 1.18; }
             .sub-desc { padding-left: 18px !important; text-align: left; font-weight: 700; color: #555; }
             .total-row td { background: #f9f9f9; font-weight: 700; }
-            .words-table td { padding: 8px 9px; font-size: 9px; line-height: 1.3; }
-            .gst-table th { background: #f9f9f9; font-size: 9px; padding: 7px 5px; text-align: center; vertical-align: middle; }
-            .gst-table td { font-size: 9px; padding: 7px 5px; }
-            .signature-table td { height: 92px; font-size: 9px; line-height: 1.35; }
-            .bank-cell { width: 58%; padding: 10px; }
-            .bank-cell em { display: block; margin-top: 10px; color: #555; font-size: 8px; }
-            .sign-cell { width: 42%; padding: 10px; text-align: right; }
+            .words-table td { padding: 6px 8px; font-size: 8.7px; line-height: 1.25; }
+            .gst-table th { background: #f9f9f9; font-size: 8.5px; padding: 5px 4px; text-align: center; vertical-align: middle; }
+            .gst-table td { font-size: 8.5px; padding: 5px 4px; }
+            .signature-table td { height: 78px; font-size: 8.7px; line-height: 1.28; }
+            .jurisdiction-note { height: auto !important; padding: 5px 8px !important; font-size: 9px !important; font-weight: 800; text-align: center; }
+            .bank-cell { width: 58%; padding: 8px; }
+            .bank-cell em { display: block; margin-top: 7px; color: #555; font-size: 8px; }
+            .sign-cell { width: 42%; padding: 8px; text-align: right; }
 
             @media print {
               html, body {
@@ -4350,6 +4329,19 @@ const InvoiceModal = ({ transaction, onClose }) => {
     printWindow.document.close();
   };
 
+  const handleDownloadInvoice = () => {
+    const frameDoc = bookingInvoiceFrameRef.current?.contentDocument;
+    const html = t.type === 'booking_payment' && frameDoc
+      ? `<!doctype html>\n${frameDoc.documentElement.outerHTML}`
+      : `<!doctype html><html><head><meta charset="utf-8"><title>${invoiceNo || 'Tax Invoice'}</title></head><body>${document.getElementById('printable-invoice')?.outerHTML || ''}</body></html>`;
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${String(invoiceNo || 'tax-invoice').replace(/[^a-z0-9_-]+/gi, '_')}.html`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
   if (t.type === 'booking_payment') {
     const bookingObj = t.booking || {};
     const bookingBaseAmount = Number(invoiceBreakdown.base_amount ?? invoiceBreakdown.gross ?? invoiceBreakdown.plan_fee ?? baseAmount);
@@ -4413,6 +4405,13 @@ const InvoiceModal = ({ transaction, onClose }) => {
                 Print / Download PDF
               </button>
               <button
+                onClick={handleDownloadInvoice}
+                className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition flex items-center gap-2"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </button>
+              <button
                 onClick={onClose}
                 className="px-4 py-2 border border-gray-200 text-charcoal rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
               >
@@ -4469,6 +4468,13 @@ const InvoiceModal = ({ transaction, onClose }) => {
               Print / Download PDF
             </button>
             <button
+              onClick={handleDownloadInvoice}
+              className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition flex items-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              Download
+            </button>
+            <button
               onClick={onClose}
               className="px-4 py-2 border border-gray-200 text-charcoal rounded-lg text-sm font-semibold hover:bg-gray-50 transition"
             >
@@ -4498,24 +4504,15 @@ const InvoiceModal = ({ transaction, onClose }) => {
               <tbody>
                 <tr>
                   <td className="w-1/2 p-3 align-top border-r-2 border-black" style={{ width: '50%', padding: '8px', borderRight: '2px solid black', verticalAlign: 'top' }}>
-                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
-                      <img src="/logo.png" alt="X-Space360 Logo" style={{ width: '150px', height: '40px', objectFit: 'contain', objectPosition: 'left center', display: 'block' }} />
-                      <div>
-                        <div className="font-bold text-sm mb-1" style={{ fontSize: '13px', fontWeight: 'bold', lineHeight: '1.15' }}>
-                          Golden Rich Financial & Real Estate<br />Solutions Pvt. Ltd.
-                        </div>
-                        <div style={{ fontSize: '9px', lineHeight: '1.25' }}>
-                          Office No-804, Royal Avaan Avenue,<br />
-                          Opp. Bhosla School Gate, Jehan Circle,<br />
-                          Gangapur Road, Nashik-422013<br />
-                        </div>
-                      </div>
-                    </div>
-                    <div style={{ fontSize: '9px', lineHeight: '1.3', marginTop: '2px' }}>
-                      <strong>GSTIN/UIN:</strong> 27AAKCG1285C1ZP<br />
-                      <strong>State Name:</strong> Maharashtra, Code : 27<br />
-                      <strong>Contact:</strong> 9225586001<br />
-                      <strong>Email:</strong> finance.director@goldenrichproperties.com
+                    <div style={{ fontSize: '9px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '2px' }}>Buyer (Bill to)</div>
+                    <div className="font-bold text-xs mb-1" style={{ fontSize: '11px', fontWeight: 'bold' }}>{propertyName}</div>
+                    <div style={{ fontSize: '9px', lineHeight: '1.3' }}>
+                      Address: {propertyAddress}<br />
+                      GSTIN/UIN: {user.gst_number || user.gst_no || 'NA'}<br />
+                      State Name: {user.gst_number && user.gst_number.length >= 2 ? (user.gst_number.startsWith('27') ? 'Maharashtra, Code : 27' : 'Other State, Code : ' + user.gst_number.substring(0, 2)) : 'Maharashtra, Code : 27'}<br />
+                      Contact Person: {user.full_name || 'NA'}<br />
+                      Mobile: {user.phone || 'NA'}<br />
+                      Email: {user.email || 'NA'}
                     </div>
                   </td>
                   <td className="w-1/2 p-0 align-top" style={{ width: '50%', padding: 0, verticalAlign: 'top' }}>
@@ -4550,20 +4547,27 @@ const InvoiceModal = ({ transaction, onClose }) => {
               </tbody>
             </table>
 
-            {/* Buyer (Bill to) & Dispatch section */}
+            {/* Company section */}
             <table className="w-full border-collapse border-b-2 border-black" style={{ borderCollapse: 'collapse', width: '100%' }}>
               <tbody>
                 <tr>
-                  <td className="w-1/2 p-3 align-top border-r-2 border-black" style={{ width: '50%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top' }}>
-                    <div style={{ fontSize: '9px', color: '#666', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '2px' }}>Buyer (Bill to)</div>
-                    <div className="font-bold text-xs mb-1" style={{ fontSize: '11px', fontWeight: 'bold' }}>{propertyName}</div>
-                    <div style={{ fontSize: '9px', lineHeight: '1.4' }}>
-                      Address: {propertyAddress}<br />
-                      GSTIN/UIN: {user.gst_number || user.gst_no || 'NA'}<br />
-                      State Name: {user.gst_number && user.gst_number.length >= 2 ? (user.gst_number.startsWith('27') ? 'Maharashtra, Code : 27' : 'Other State, Code : ' + user.gst_number.substring(0, 2)) : 'Maharashtra, Code : 27'}<br />
-                      Contact Person: {user.full_name || 'NA'}<br />
-                      Mobile: {user.phone || 'NA'}<br />
-                      Email: {user.email || 'NA'}
+                  <td className="w-1/2 p-3 align-top border-r-2 border-black" style={{ width: '50%', padding: '8px', borderRight: '2px solid black', verticalAlign: 'top' }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <img src="/logo.png" alt="X-Space360 Logo" style={{ width: '130px', height: '36px', objectFit: 'contain', objectPosition: 'left center', display: 'block' }} />
+                      <div>
+                        <div className="font-bold text-sm mb-1" style={{ fontSize: '12px', fontWeight: 'bold', lineHeight: '1.12' }}>
+                          Golden Rich Financial & Real Estate<br />Solutions Pvt. Ltd.
+                        </div>
+                        <div style={{ fontSize: '8.5px', lineHeight: '1.22' }}>
+                          Office No-804, Royal Avaan Avenue,<br />
+                          Opp. Bhosla School Gate, Jehan Circle,<br />
+                          Gangapur Road, Nashik-422013<br />
+                          <strong>GSTIN/UIN:</strong> 27AAKCG1285C1ZP<br />
+                          <strong>State Name:</strong> Maharashtra, Code : 27<br />
+                          <strong>Contact:</strong> 9225586001<br />
+                          <strong>Email:</strong> finance.director@goldenrichproperties.com
+                        </div>
+                      </div>
                     </div>
                   </td>
                   <td className="w-1/2 p-0 align-top" style={{ width: '50%', padding: 0, verticalAlign: 'top' }}>
@@ -4745,6 +4749,11 @@ const InvoiceModal = ({ transaction, onClose }) => {
             {/* Bank details and signature */}
             <table className="w-full border-collapse" style={{ borderCollapse: 'collapse', width: '100%', minHeight: '120px' }}>
               <tbody>
+                <tr>
+                  <td colSpan="2" style={{ padding: '6px 12px', borderBottom: '2px solid black', textAlign: 'center', fontSize: '10px', fontWeight: 'bold' }}>
+                    Subject to Nashik Juridiction
+                  </td>
+                </tr>
                 <tr>
                   <td style={{ width: '58%', padding: '12px', borderRight: '2px solid black', verticalAlign: 'top' }}>
                     <div style={{ fontSize: '10px', fontWeight: 'bold', textDecoration: 'underline', marginBottom: '6px' }}>Company's Bank Details:</div>

@@ -9,12 +9,23 @@ from models.property import Property, PropertyCreate, PropertyUpdate
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user
 from services.audit_service import write_audit_log
+from services.booking_calculation_service import get_booking_payment_config
+from services.tds_service import get_active_tds_config
 from datetime import datetime, timezone, timedelta
 import logging
 import asyncio
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/broker", tags=["Broker"])
+
+
+class BrokerPayoutSettingsUpdate(BaseModel):
+    payout_method: Optional[str] = None
+    account_holder_name: Optional[str] = None
+    bank_name: Optional[str] = None
+    account_number: Optional[str] = None
+    ifsc_code: Optional[str] = None
+    upi_id: Optional[str] = None
 
 async def require_broker(current_user: dict = Depends(get_current_user)):
     """Dependency to check if user is broker."""
@@ -34,6 +45,14 @@ async def get_db():
 
 def _clean_identifier(value):
     return str(value).strip() if value not in (None, "", "-", "NA", "N/A") else ""
+
+
+def _first_present(*values):
+    for value in values:
+        cleaned = _clean_identifier(value)
+        if cleaned:
+            return cleaned
+    return ""
 
 
 def _user_identifiers(user: dict) -> list[str]:
@@ -91,10 +110,64 @@ def _get_broker_or_rm_query(current_user: dict, additional_query: dict = None) -
             conditions.append(additional_query)
         q["$and"] = conditions
     else:
-        q["broker_id"] = user_id
+        identifiers = _user_identifiers(current_user)
+        q["broker_id"] = {"$in": identifiers}
         if additional_query:
             q.update(additional_query)
     return q
+
+
+def _paise(value) -> int:
+    try:
+        amount = float(value or 0)
+    except (TypeError, ValueError):
+        return 0
+    if amount <= 0:
+        return 0
+    return int(round(amount if amount >= 100000 else amount * 100))
+
+
+def _commission_rule(config: dict, role: str) -> dict:
+    rule = (config.get("commission_rules") or {}).get(role) or {}
+    return rule if rule.get("enabled") else {}
+
+
+def _gst_split(amount_paise: int) -> dict:
+    gst_total = int(round(amount_paise * 0.18))
+    cgst = gst_total // 2
+    sgst = gst_total - cgst
+    return {"commission_cgst": cgst, "commission_sgst": sgst, "commission_igst": 0, "commission_gst_total": gst_total}
+
+
+def _pan_from_user(user: dict) -> str:
+    return _clean_identifier(user.get("pan_number") or user.get("pan") or (user.get("kyc") or {}).get("pan_number"))
+
+
+def _gstin_from_user(user: dict) -> str:
+    return _clean_identifier(
+        user.get("gstin")
+        or user.get("gst_number")
+        or user.get("gst_no")
+        or user.get("gstin_number")
+        or (user.get("gst") or {}).get("gstin")
+        or (user.get("kyc") or {}).get("gstin")
+        or (user.get("documents") or {}).get("gstin")
+    )
+
+
+def _settlement_status(value) -> str:
+    status_value = str(value or "pending").lower()
+    if status_value in {"approved", "paid", "processed", "success", "completed"}:
+        return "approved"
+    if status_value in {"rejected", "failed", "hold", "cancelled"}:
+        return status_value
+    return "pending"
+
+
+def _partner_settlement_id(role: str, partner_code: str, booking_id: str) -> str:
+    safe_partner = "".join(ch for ch in str(partner_code or "") if ch.isalnum())[-8:] or "NA"
+    safe_booking = "".join(ch for ch in str(booking_id or "") if ch.isalnum())[-6:] or "NA"
+    return f"SET-{role.upper()}-{safe_partner}-{safe_booking}"
 
 
 async def _assigned_host_ids_for_current_user(db: AsyncIOMotorDatabase, current_user: dict) -> list[str]:
@@ -1524,29 +1597,232 @@ async def get_broker_commissions(
     current_user: dict = Depends(require_broker),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Get all commissions for this broker (view only)."""
+    """Get saved and calculated commissions for this broker/RM workspace."""
     try:
         broker_id = current_user["user_id"]
-        
-        query = {"broker_id": broker_id}
+        lookup_values = _user_identifiers(current_user)
+        db_user = None
+        for field in ("user_id", "employee_code", "lg_code", "uid"):
+            for value in lookup_values:
+                db_user = await db.users.find_one({field: value}, {"_id": 0})
+                if db_user:
+                    break
+            if db_user:
+                break
+        current_email = _clean_identifier(current_user.get("email"))
+        if not db_user and current_email:
+            db_user = await db.users.find_one({"email": current_email}, {"_id": 0})
+        db_user = db_user or current_user
+        broker_id = db_user.get("user_id") or broker_id
+        identifiers = list(dict.fromkeys(_user_identifiers(current_user) + _user_identifiers(db_user)))
+        payment_config = await get_booking_payment_config(db)
+        broker_rule = _commission_rule(payment_config, "broker")
+        broker_rate = float(broker_rule.get("value") or broker_rule.get("percent") or 0)
+        tds_config = await get_active_tds_config(db, role="broker")
+        pan_number = _pan_from_user(db_user)
+        gstin_number = _gstin_from_user(db_user)
+        tds_rate = float((tds_config.get("rate_percent") if pan_number else tds_config.get("missing_pan_rate")) or 0)
+        is_rm_workspace = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
+        partner_role = "employee" if is_rm_workspace else "broker"
+        partner_code = db_user.get("lg_code") or db_user.get("employee_code") or broker_id
+
+        # Partner dashboard must mirror the admin settlement ledger. Legacy
+        # commission documents can contain non-settlement/future rows, so the
+        # dashboard below is derived only from eligible payout rows.
+        saved_commissions = []
+        commissions_by_booking = {}
+        for item in saved_commissions:
+            amount = _paise(item.get("commission_amount"))
+            gst = _gst_split(amount) if gstin_number else {"commission_cgst": 0, "commission_sgst": 0, "commission_igst": 0, "commission_gst_total": 0}
+            tds_amount = _paise(item.get("tds_amount")) or int(round(amount * (tds_rate / 100)))
+            row = {
+                **item,
+                "commission_id": _partner_settlement_id("broker", db_user.get("lg_code") or db_user.get("employee_code") or item.get("broker_code") or broker_id, item.get("booking_id") or item.get("commission_id")),
+                "broker_id": broker_id,
+                "broker_name": db_user.get("full_name") or item.get("broker_name"),
+                "broker_code": db_user.get("lg_code") or db_user.get("employee_code") or item.get("broker_code"),
+                "broker_pan_number": pan_number,
+                "broker_gstin": gstin_number,
+                "commission_amount": amount,
+                "gross_amount": amount,
+                **gst,
+                "tds_rate_percent": tds_rate,
+                "tds_amount": tds_amount,
+                "net_amount": max(0, amount + gst["commission_gst_total"] - tds_amount),
+                "payment_status": _settlement_status(item.get("payment_status") or item.get("status")),
+            }
+            commissions_by_booking[row.get("booking_id") or row.get("commission_id")] = row
+
+        payout_rows = await db.payouts.find({}, {"_id": 0}).sort("eligible_at", -1).limit(1000).to_list(length=1000)
+        transaction_rows = await db.transactions.find(
+            {"type": "booking_payment", "status": "success"},
+            {"_id": 0},
+        ).sort("created_at", -1).limit(1000).to_list(length=1000)
+        source_rows = [
+            {**row, "_settlement_source": "Payout"} for row in payout_rows
+        ] + [
+            {**row, "_settlement_source": "Transaction"} for row in transaction_rows
+        ]
+        for payout in source_rows:
+            booking_id = payout.get("booking_id") or (payout.get("booking") or {}).get("booking_id")
+            if not booking_id or booking_id in commissions_by_booking:
+                continue
+            booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0}) or {}
+            prop = await db.properties.find_one({"property_id": payout.get("property_id") or booking.get("property_id")}, {"_id": 0}) or {}
+            host = await db.users.find_one({"user_id": payout.get("host_id") or booking.get("host_id") or prop.get("owner_id")}, {"_id": 0}) or {}
+            booking_status_text = " ".join(str(value or "").lower() for value in [
+                booking.get("status"),
+                booking.get("booking_status"),
+                booking.get("payment_status"),
+                payout.get("status"),
+                (payout.get("booking") or {}).get("status"),
+                (payout.get("booking") or {}).get("booking_status"),
+                (payout.get("booking") or {}).get("payment_status"),
+            ])
+            cancelled_at = _first_present(
+                booking.get("cancelled_at"),
+                booking.get("canceled_at"),
+                booking.get("cancellation_date"),
+                payout.get("cancelled_at"),
+                payout.get("canceled_at"),
+                payout.get("cancellation_date"),
+                (payout.get("booking") or {}).get("cancelled_at"),
+                (payout.get("booking") or {}).get("canceled_at"),
+                (payout.get("booking") or {}).get("cancellation_date"),
+            )
+            if cancelled_at or any(status_word in booking_status_text for status_word in ("cancelled", "canceled", "refund_initiated", "refunded")):
+                continue
+            check_in = booking.get("check_in_date") or payout.get("check_in_date") or (payout.get("booking") or {}).get("check_in_date")
+            if not check_in:
+                continue
+            try:
+                if datetime.fromisoformat(str(check_in).replace("Z", "+00:00")).date() > datetime.now(timezone.utc).date():
+                    continue
+            except Exception:
+                continue
+            broker_ref = _first_present(
+                prop.get("broker_id"),
+                prop.get("assigned_broker_id"),
+                prop.get("broker_code"),
+                prop.get("lg_code"),
+                host.get("broker_id"),
+                host.get("assigned_broker_id"),
+                host.get("broker_code"),
+                host.get("lg_code"),
+                booking.get("broker_id"),
+                booking.get("assigned_broker_id"),
+                booking.get("broker_code"),
+                booking.get("broker_lg_code"),
+            )
+            employee_ref = _first_present(
+                prop.get("rm_id"),
+                prop.get("employee_id"),
+                prop.get("assigned_employee_id"),
+                prop.get("employee_code"),
+                host.get("rm_id"),
+                host.get("employee_id"),
+                host.get("assigned_employee_id"),
+                host.get("employee_code"),
+                booking.get("rm_id"),
+                booking.get("employee_id"),
+                booking.get("employee_code"),
+                booking.get("rm_code"),
+            )
+            matched_ref = employee_ref if is_rm_workspace else broker_ref
+            if matched_ref not in identifiers:
+                continue
+            rule = _commission_rule(payment_config, partner_role)
+            rate = float(rule.get("value") or rule.get("percent") or 0)
+            base_amount = _paise(
+                payout.get("host_actual_value_amount")
+                or payout.get("gross_amount")
+                or payout.get("tds_base_amount")
+                or booking.get("host_actual_value")
+                or booking.get("host_base_amount")
+                or booking.get("base_amount")
+            )
+            if not base_amount:
+                try:
+                    pricing = booking.get("pricing_snapshot") or booking.get("pricing") or {}
+                    base_amount = _paise(pricing.get("host_actual_value"))
+                except Exception:
+                    base_amount = 0
+            commission_amount = int(round(base_amount * (broker_rate / 100))) if broker_rate else 0
+            if is_rm_workspace:
+                commission_amount = int(round(base_amount * (rate / 100))) if rate else 0
+            if commission_amount <= 0:
+                continue
+            gst = _gst_split(commission_amount) if gstin_number else {
+                "commission_cgst": 0,
+                "commission_sgst": 0,
+                "commission_igst": 0,
+                "commission_gst_total": 0,
+            }
+            row_tds_rate = tds_rate if not is_rm_workspace else 0
+            tds_amount = int(round(commission_amount * (row_tds_rate / 100)))
+            commissions_by_booking[booking_id] = {
+                "commission_id": _partner_settlement_id(partner_role, partner_code or matched_ref, booking_id),
+                "broker_id": broker_id,
+                "broker_name": db_user.get("full_name") or ("RM" if is_rm_workspace else "Broker"),
+                "broker_code": partner_code or matched_ref,
+                "broker_pan_number": pan_number,
+                "broker_gstin": gstin_number,
+                "booking_id": booking_id,
+                "booking_source": payout.get("_settlement_source") or "Settlement",
+                "property_id": prop.get("property_id") or payout.get("property_id") or booking.get("property_id"),
+                "property_name": prop.get("title") or prop.get("property_name") or booking.get("property_name") or "NA",
+                "booking_amount": base_amount,
+                "base_amount": base_amount,
+                "platform_fee_amount": base_amount,
+                "commission_percentage": rate if is_rm_workspace else broker_rate,
+                "commission_percent": rate if is_rm_workspace else broker_rate,
+                "commission_amount": commission_amount,
+                "gross_amount": commission_amount,
+                **gst,
+                "tds_rate_percent": row_tds_rate,
+                "tds_amount": tds_amount,
+                "net_amount": max(0, commission_amount + gst["commission_gst_total"] - tds_amount),
+                "payment_status": _settlement_status(payout.get(f"{partner_role}_commission_status") or "pending"),
+                "created_at": payout.get("eligible_at") or payout.get("created_at") or booking.get("created_at"),
+            }
+
+        commissions = sorted(commissions_by_booking.values(), key=lambda row: str(row.get("created_at") or ""), reverse=True)
+        decision_ids = [row.get("commission_id") for row in commissions if row.get("commission_id")]
+        if decision_ids:
+            decisions = await db.partner_settlement_decisions.find(
+                {"settlement_id": {"$in": decision_ids}},
+                {"_id": 0, "settlement_id": 1, "status": 1},
+            ).to_list(length=len(decision_ids))
+            decision_map = {item.get("settlement_id"): item.get("status") for item in decisions}
+            for row in commissions:
+                saved_status = decision_map.get(row.get("commission_id"))
+                if saved_status:
+                    row["payment_status"] = _settlement_status(saved_status)
+                    row["status"] = row["payment_status"]
         if payment_status:
-            query["payment_status"] = payment_status
-        
-        cursor = db.commissions.find(query, {"_id": 0}).sort("created_at", -1)
-        commissions = await cursor.to_list(length=200)
-        
-        # Calculate totals
-        total_earned = sum(c.get("commission_amount", 0) for c in commissions)
-        paid = sum(c.get("commission_amount", 0) for c in commissions if c.get("payment_status") == "paid")
-        pending = total_earned - paid
-        
+            commissions = [row for row in commissions if row.get("payment_status") == payment_status]
+        total_earned = sum(c.get("net_amount", 0) for c in commissions)
+        gst_total = sum(c.get("commission_gst_total", 0) for c in commissions)
+        tds_total = sum(c.get("tds_amount", 0) for c in commissions)
+        net_total = sum(c.get("net_amount", 0) for c in commissions)
+        paid = sum(c.get("net_amount", 0) for c in commissions if c.get("payment_status") in {"paid", "processed", "success", "completed"})
+        approved = sum(c.get("net_amount", 0) for c in commissions if c.get("payment_status") == "approved")
+        pending = sum(c.get("net_amount", 0) for c in commissions if c.get("payment_status") == "pending")
+        payout_settings = db_user.get("payout_settings") or {}
+
         return {
             "commissions": commissions,
             "total": len(commissions),
+            "payout_settings": payout_settings,
             "summary": {
                 "total_earned": total_earned,
+                "gst_total": gst_total,
+                "tds_total": tds_total,
+                "net_total": net_total,
+                "approved": approved,
                 "paid": paid,
-                "pending": pending
+                "pending": pending,
+                "payout_ready": bool((payout_settings.get("upi_id") or "") or ((payout_settings.get("account_number") or "") and (payout_settings.get("ifsc_code") or ""))),
             }
         }
     
@@ -1556,6 +1832,34 @@ async def get_broker_commissions(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to fetch commissions"
         )
+
+
+@router.put("/commissions/payout-settings")
+async def update_broker_payout_settings(
+    payload: BrokerPayoutSettingsUpdate,
+    current_user: dict = Depends(require_broker),
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    clean_payload = {
+        key: _clean_identifier(value)
+        for key, value in payload.dict().items()
+        if value is not None
+    }
+    method = clean_payload.get("payout_method") if clean_payload.get("payout_method") in {"bank", "upi"} else "bank"
+    clean_payload["payout_method"] = method
+    if method == "upi":
+        clean_payload["account_holder_name"] = ""
+        clean_payload["bank_name"] = ""
+        clean_payload["account_number"] = ""
+        clean_payload["ifsc_code"] = ""
+    else:
+        clean_payload["upi_id"] = ""
+    clean_payload["updated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.users.update_one(
+        {"user_id": current_user["user_id"]},
+        {"$set": {"payout_settings": clean_payload, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    return {"message": "Payout settings saved", "payout_settings": clean_payload}
 
 # ========== SUBSCRIPTION ALERTS ==========
 

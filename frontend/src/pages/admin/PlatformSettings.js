@@ -551,6 +551,10 @@ const buildPaymentDraft = (paymentConfig = {}) => {
       key,
       defaultCommissionRule(key, paymentConfig.commission_rules?.[key]),
     ])),
+    rcm_rules: {
+      host: { role: 'host', enabled: Boolean(paymentConfig.rcm_rules?.host?.enabled), applicable_from: paymentConfig.rcm_rules?.host?.applicable_from || '', label: paymentConfig.rcm_rules?.host?.label || 'Host' },
+      broker: { role: 'broker', enabled: Boolean(paymentConfig.rcm_rules?.broker?.enabled), applicable_from: paymentConfig.rcm_rules?.broker?.applicable_from || '', label: paymentConfig.rcm_rules?.broker?.label || 'Broker' },
+    },
   };
 };
 
@@ -702,6 +706,20 @@ const PaymentTaxCommission = ({
     }));
   };
 
+  const updateRcmRule = (role, patch) => {
+    setDraft((current) => ({
+      ...current,
+      rcm_rules: {
+        ...current.rcm_rules,
+        [role]: {
+          ...(current.rcm_rules?.[role] || { role }),
+          ...patch,
+          role,
+        },
+      },
+    }));
+  };
+
   const validateConfig = () => {
     const rows = [
       ...Object.values(draft.charges),
@@ -715,6 +733,8 @@ const PaymentTaxCommission = ({
       const type = row.charge_type || row.discount_type;
       if (type === 'percentage' && value > 100) return 'Percentage values must be between 0 and 100.';
     }
+    const missingRcmDate = Object.values(draft.rcm_rules || {}).find((row) => row.enabled && !row.applicable_from);
+    if (missingRcmDate) return `${missingRcmDate.label || missingRcmDate.role || 'RCM'} Applicable From date is required when RCM is Yes.`;
     return '';
   };
 
@@ -747,6 +767,10 @@ const PaymentTaxCommission = ({
       commission_rules: Object.fromEntries(Object.entries(draft.commission_rules || {}).map(([key, value]) => [
         key,
         { ...value, enabled: Boolean(value.enabled), charge_type: 'percentage' },
+      ])),
+      rcm_rules: Object.fromEntries(Object.entries(draft.rcm_rules || {}).map(([key, value]) => [
+        key,
+        { role: key, label: value.label || (key === 'host' ? 'Host' : 'Broker'), enabled: Boolean(value.enabled), applicable_from: value.applicable_from || '' },
       ])),
     });
   };
@@ -903,6 +927,56 @@ const PaymentTaxCommission = ({
               onChange={(patch) => updateCommissionRule(key, patch)}
             />
           ))}
+        </div>
+      </Panel>
+
+      <Panel className="p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-200 pb-4">
+          <div>
+            <h2 className="font-black">RCM Applicable Configuration</h2>
+            <p className="mt-1 text-xs text-slate-500">Select role-wise RCM applicability and effective date for future payout and partner settlement rows.</p>
+          </div>
+          <button
+            disabled={saving}
+            onClick={saveConfig}
+            className="rounded-xl bg-charcoal px-5 py-3 text-sm font-black text-white shadow-sm disabled:opacity-60"
+          >
+            {saving ? 'Saving...' : 'Save Configuration'}
+          </button>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-2">
+          {[
+            ['host', 'Host', 'Shows RCM Applicable = Yes in host settlement payouts.'],
+            ['broker', 'Broker', 'Shows RCM Applicable = Yes in broker settlement rows.'],
+          ].map(([role, label, help]) => {
+            const row = draft.rcm_rules?.[role] || {};
+            return (
+              <div key={role} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <label className="flex items-center justify-between gap-3 text-sm font-black text-slate-800">
+                  <span>{label}</span>
+                  <span className="inline-flex items-center gap-2 text-xs uppercase tracking-wide text-slate-500">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(row.enabled)}
+                      onChange={(event) => updateRcmRule(role, { enabled: event.target.checked })}
+                      className="h-4 w-4 accent-emerald-700"
+                    />
+                    {row.enabled ? 'Yes' : 'No'}
+                  </span>
+                </label>
+                <p className="mt-2 text-xs leading-5 text-slate-500">{help}</p>
+                <label className="mt-4 block text-xs font-black uppercase tracking-wide text-slate-500">
+                  Applicable From
+                  <input
+                    type="date"
+                    value={row.applicable_from || ''}
+                    onChange={(event) => updateRcmRule(role, { applicable_from: event.target.value })}
+                    className="mt-2 h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-semibold normal-case tracking-normal outline-none focus:border-gold"
+                  />
+                </label>
+              </div>
+            );
+          })}
         </div>
       </Panel>
 

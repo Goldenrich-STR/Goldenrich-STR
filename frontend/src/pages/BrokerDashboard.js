@@ -26,6 +26,35 @@ const brokerNavigation = [
   { id: 'audit', label: 'Activity & Audit', group: 'Compliance', icon: Briefcase },
 ];
 
+const PARTNER_SETTLEMENT_DECISIONS_KEY = 'xspace360.partnerSettlementDecisions.v1';
+const readPartnerSettlementDecisions = () => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PARTNER_SETTLEMENT_DECISIONS_KEY) || '{}');
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+};
+const settlementDecisionKey = (row = {}, role = 'broker') => `${role}:${row.commission_id || row.settlement_id || row.booking_id || row.id || ''}`;
+const applySettlementDecisions = (rows = [], role = 'broker') => {
+  const decisions = readPartnerSettlementDecisions();
+  return rows.map((row) => {
+    const decision = decisions[settlementDecisionKey(row, role)];
+    return decision ? { ...row, payment_status: decision, status: decision } : row;
+  });
+};
+const commissionSummaryFromRows = (rows = []) => rows.reduce((acc, row) => {
+  const net = Number(row.net_amount || row.commission_amount || 0);
+  const status = String(row.payment_status || row.status || 'pending').toLowerCase();
+  acc.total_earned += net;
+  acc.net_total += net;
+  if (['approved', 'processing'].includes(status)) acc.approved += net;
+  if (['paid', 'processed', 'success', 'completed'].includes(status)) acc.paid += net;
+  if (!['approved', 'processing', 'paid', 'processed', 'success', 'completed', 'rejected', 'failed', 'hold', 'cancelled'].includes(status)) acc.pending += net;
+  return acc;
+}, { total_earned: 0, net_total: 0, approved: 0, paid: 0, pending: 0 });
+
 const BrokerModulePlaceholder = ({ title, description, checkpoints }) => (
   <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium animate-slide-up">
     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
@@ -64,8 +93,24 @@ const BrokerDashboard = () => {
 
   const fetchDashboardStats = async () => {
     try {
-      const response = await apiClient.get('/broker/dashboard/stats');
-      setStats(response.data);
+      const statsResponse = await apiClient.get('/broker/dashboard/stats');
+      let commissionRows = [];
+      try {
+        const commissionsResponse = await apiClient.get('/broker/commissions');
+        commissionRows = applySettlementDecisions(commissionsResponse.data.commissions || [], isRm ? 'employee' : 'broker');
+      } catch (commissionError) {
+        console.error('Error fetching commission stats:', commissionError);
+      }
+      const commissionSummary = commissionSummaryFromRows(commissionRows);
+      setStats({
+        ...statsResponse.data,
+        commission: {
+          ...(statsResponse.data.commission || {}),
+          total: commissionRows.length ? commissionSummary.total_earned : (statsResponse.data.commission?.total || 0),
+          paid: commissionRows.length ? commissionSummary.paid + commissionSummary.approved : (statsResponse.data.commission?.paid || 0),
+          pending: commissionRows.length ? commissionSummary.pending : (statsResponse.data.commission?.pending || 0),
+        },
+      });
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
@@ -3475,9 +3520,14 @@ const LeadsSection = () => {
 
 // Commissions Section
 const CommissionsSection = () => {
+  const { user } = useAuth();
+  const isRm = user?.admin_role_key === 'rm' || user?.admin_role_key === 'relationship_manager';
   const [commissions, setCommissions] = useState([]);
   const [summary, setSummary] = useState(null);
+  const [payoutSettings, setPayoutSettings] = useState({});
+  const [savingPayout, setSavingPayout] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     fetchCommissions();
@@ -3486,12 +3536,39 @@ const CommissionsSection = () => {
   const fetchCommissions = async () => {
     try {
       const response = await apiClient.get('/broker/commissions');
-      setCommissions(response.data.commissions || []);
-      setSummary(response.data.summary);
+      const rows = applySettlementDecisions(response.data.commissions || [], isRm ? 'employee' : 'broker');
+      const computedSummary = commissionSummaryFromRows(rows);
+      setCommissions(rows);
+      setPage(1);
+      setSummary({ ...(response.data.summary || {}), ...computedSummary, paid: computedSummary.paid + computedSummary.approved });
+      setPayoutSettings(response.data.payout_settings || {});
     } catch (error) {
       console.error('Error fetching commissions:', error);
+      setCommissions([]);
+      setPage(1);
+      setSummary({ total_earned: 0, net_total: 0, approved: 0, paid: 0, pending: 0 });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const money = (value) => `Rs. ${Math.round(Number(value || 0) / 100).toLocaleString('en-IN')}`;
+  const itemsPerPage = 10;
+  const totalPages = Math.max(1, Math.ceil(commissions.length / itemsPerPage));
+  const visibleCommissions = commissions.slice((page - 1) * itemsPerPage, page * itemsPerPage);
+  const payoutMethod = payoutSettings.payout_method === 'upi' ? 'upi' : 'bank';
+  const payoutReady = Boolean(payoutSettings.upi_id || (payoutSettings.account_number && payoutSettings.ifsc_code));
+  const updatePayoutField = (key, value) => setPayoutSettings((current) => ({ ...current, [key]: value }));
+  const savePayoutSettings = async () => {
+    setSavingPayout(true);
+    try {
+      const response = await apiClient.put('/broker/commissions/payout-settings', { ...payoutSettings, payout_method: payoutMethod });
+      setPayoutSettings(response.data.payout_settings || payoutSettings);
+    } catch (error) {
+      console.error('Error saving payout settings:', error);
+      alert(error.response?.data?.detail || 'Failed to save payout settings');
+    } finally {
+      setSavingPayout(false);
     }
   };
 
@@ -3528,54 +3605,133 @@ const CommissionsSection = () => {
         </div>
       )}
 
+      <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-6 mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-5">
+          <div>
+            <h4 className="text-lg font-bold text-charcoal">Payout Account</h4>
+            <p className="text-xs text-charcoal-muted mt-1">Bank account or UPI details used by finance for broker commission payout.</p>
+          </div>
+          <span className={`w-fit rounded-full px-4 py-2 text-[10px] font-black uppercase tracking-widest ${payoutReady ? 'bg-slate-100 text-slate-700' : 'bg-red-50 text-red-600'}`}>
+            {payoutReady ? 'Ready' : 'Setup Required'}
+          </span>
+        </div>
+        <div className="mb-4 inline-flex rounded-2xl bg-stone p-1">
+          {[
+            ['bank', 'Bank Details'],
+            ['upi', 'UPI'],
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              type="button"
+              onClick={() => updatePayoutField('payout_method', value)}
+              className={`rounded-xl px-4 py-2 text-[10px] font-black uppercase tracking-widest ${payoutMethod === value ? 'bg-charcoal text-white' : 'text-charcoal-muted'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className={`grid grid-cols-1 md:grid-cols-2 gap-3 ${payoutMethod === 'bank' ? 'xl:grid-cols-4' : 'xl:grid-cols-2'}`}>
+          {(payoutMethod === 'bank' ? [
+            ['account_holder_name', 'Account Holder'],
+            ['bank_name', 'Bank Name'],
+            ['account_number', 'Account Number'],
+            ['ifsc_code', 'IFSC Code'],
+          ] : [
+            ['upi_id', 'UPI ID'],
+          ]).map(([key, label]) => (
+            <label key={key} className="text-[10px] font-black uppercase tracking-widest text-charcoal-muted">
+              {label}
+              <input
+                value={payoutSettings[key] || ''}
+                onChange={(event) => updatePayoutField(key, event.target.value)}
+                className="mt-2 h-11 w-full rounded-2xl border border-sand-200 px-3 text-sm font-semibold normal-case tracking-normal outline-none"
+              />
+            </label>
+          ))}
+        </div>
+        <button disabled={savingPayout} onClick={savePayoutSettings} className="mt-4 rounded-2xl bg-charcoal px-5 py-3 text-xs font-black uppercase tracking-widest text-white disabled:opacity-50">
+          {savingPayout ? 'Saving...' : 'Save Payout Details'}
+        </button>
+      </div>
+
       {loading ? (
         <div className="space-y-4">
            {[1,2,3].map(i => <div key={i} className="h-20 bg-white rounded-3xl animate-pulse"></div>)}
         </div>
       ) : commissions.length > 0 ? (
         <div className="bg-white rounded-3xl overflow-hidden border border-gray-100 shadow-premium" data-testid="commissions-list">
-           <table className="w-full text-left border-collapse">
+           <table className="w-full min-w-[1680px] text-left border-collapse">
               <thead>
                  <tr className="bg-stone border-b border-gray-100">
-                    <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Transaction ID</th>
-                    <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Yield</th>
+                    <th className="px-6 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Property Name</th>
+                    <th className="px-6 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Booking ID</th>
+                    <th className="px-6 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Commission %</th>
+                    <th className="px-6 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Commission Amount</th>
+                    <th className="px-6 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">TDS Rate</th>
+                    <th className="px-6 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">TDS</th>
+                    <th className="px-6 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Net Commission</th>
+                    <th className="px-6 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Status</th>
                     <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Invoice</th>
-                    <th className="px-8 py-5 text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest text-right">Status</th>
                  </tr>
               </thead>
               <tbody>
-                 {commissions.map((commission) => (
+                 {visibleCommissions.map((commission) => (
                     <tr key={commission.commission_id} className="border-b border-sand-100 hover:bg-stone/50 transition-colors">
-                       <td className="px-8 py-6">
-                          <p className="text-sm font-bold tracking-tight text-charcoal mb-0.5">{commission.booking_id}</p>
-                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Source: {commission.booking_source}</p>
+                       <td className="px-6 py-6">
+                          <p className="text-sm font-bold tracking-tight text-charcoal mb-0.5">{commission.property_name || 'NA'}</p>
+                          <p className="font-mono text-[10px] text-charcoal-muted">{commission.property_id || 'NA'}</p>
                        </td>
-                       <td className="px-8 py-6">
+                       <td className="px-6 py-6">
+                          <p className="font-mono text-xs font-bold text-charcoal">{commission.booking_id}</p>
+                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Source: {commission.booking_source || 'Booking'}</p>
+                       </td>
+                       <td className="hidden">
                           <p className="text-sm font-bold tracking-tight text-terracotta mb-0.5">₹{(commission.commission_amount / 100).toFixed(2)}</p>
                           <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{commission.commission_percentage}% of ₹{(commission.booking_amount / 100).toFixed(2)}</p>
+                       </td>
+                       <td className="px-6 py-6 text-sm font-black text-charcoal">{commission.commission_percentage || commission.commission_percent || 0}%</td>
+                       <td className="px-6 py-6">
+                          <p className="text-sm font-black tracking-tight text-terracotta mb-0.5">{money(commission.commission_amount)}</p>
+                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Base {money(commission.booking_amount || commission.base_amount)}</p>
+                       </td>
+                       <td className="px-6 py-6 text-sm font-black text-charcoal">{commission.tds_rate_percent || commission.tds_percent || commission.tds_percentage || 0}%</td>
+                       <td className="px-6 py-6 text-sm font-bold text-red-700">{money(commission.tds_amount)}</td>
+                       <td className="px-6 py-6 text-sm font-black text-charcoal">{money(commission.net_amount || commission.commission_amount)}</td>
+                       <td className="px-6 py-6">
+                          <span className={`inline-flex px-4 py-1.5 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
+                             ['approved', 'paid', 'processed', 'success', 'completed'].includes(String(commission.payment_status || '').toLowerCase()) ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                          }`}>
+                             {commission.payment_status || 'pending'}
+                          </span>
                        </td>
                        <td className="px-8 py-6">
                           <button
                             type="button"
-                            disabled={!['paid', 'approved', 'processed', 'success', 'completed'].includes(String(commission.payment_status || '').toLowerCase())}
+                            disabled={!['approved', 'paid', 'processed', 'success', 'completed'].includes(String(commission.payment_status || '').toLowerCase())}
                             onClick={() => openBrokerSettlementInvoice({
                               ...commission,
                               settlement_id: commission.commission_id,
                               name: commission.broker_name || commission.name || 'Broker',
                               code: commission.broker_code || commission.employee_code || commission.broker_id || '',
-                              platform_fee_amount: commission.booking_amount,
+                              broker_pan_number: commission.broker_pan_number || commission.pan_number || commission.pan || commission.broker?.pan_number || commission.broker?.pan,
+                              platform_fee_amount: Number(commission.booking_amount || 0) / 100,
                               commission_percent: commission.commission_percentage,
-                              commission_amount: commission.commission_amount,
-                              gross_amount: commission.commission_amount,
-                              net_amount: commission.net_amount || commission.commission_amount,
+                              tds_rate_percent: commission.tds_rate_percent || commission.tds_percent || commission.tds_percentage || commission.tds_breakdown?.rate_percent,
+                              commission_amount: Number(commission.commission_amount || 0) / 100,
+                              gross_amount: Number(commission.commission_amount || 0) / 100,
+                              commission_cgst: Number(commission.commission_cgst || commission.cgst || 0) / 100,
+                              commission_sgst: Number(commission.commission_sgst || commission.sgst || 0) / 100,
+                              commission_igst: Number(commission.commission_igst || commission.igst || 0) / 100,
+                              tds_amount: Number(commission.tds_amount || 0) / 100,
+                              net_amount: Number(commission.net_amount || commission.commission_amount || 0) / 100,
                               latest_at: commission.paid_at || commission.created_at,
                             })}
-                            className="rounded-xl bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 disabled:opacity-40"
+                            className="rounded-xl bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             Invoice
                           </button>
                        </td>
-                       <td className="px-8 py-6 text-right">
+                       <td className="hidden">
                           <span className={`inline-flex px-4 py-1.5 text-[9px] font-bold tracking-tight uppercase tracking-widest rounded-full ${
                              commission.payment_status === 'paid' ? 'bg-slate-100 text-slate-700' : 'bg-slate-100 text-slate-600'
                           }`}>
@@ -3586,6 +3742,25 @@ const CommissionsSection = () => {
                  ))}
               </tbody>
            </table>
+           <div className="flex items-center justify-between border-t border-sand-100 px-6 py-4 text-xs font-black uppercase tracking-widest text-charcoal-muted">
+               <button
+                 type="button"
+                 disabled={page === 1}
+                 onClick={() => setPage((current) => Math.max(1, current - 1))}
+                 className="rounded-xl border border-sand-200 px-4 py-2 disabled:opacity-40"
+               >
+                 Previous
+               </button>
+               <span>Page {page} of {totalPages}</span>
+               <button
+                 type="button"
+                 disabled={page === totalPages}
+                 onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+                 className="rounded-xl border border-sand-200 px-4 py-2 disabled:opacity-40"
+               >
+                 Next
+               </button>
+             </div>
         </div>
       ) : (
         <div className="text-center py-20 bg-white rounded-3xl border-2 border-dashed border-gray-200">

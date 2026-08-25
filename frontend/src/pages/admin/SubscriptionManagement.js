@@ -209,9 +209,83 @@ const SubscriptionActions = ({ subscription, onStatus, onDelete }) => (
   </div>
 );
 
+const PLAN_CATEGORY_OPTIONS = [
+  { value: 'residential', label: 'Residential' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'event_venue', label: 'Event Venue' },
+];
+
+const PLAN_PROPERTY_OPTIONS = {
+  residential: [
+    { value: 'apartment', label: 'Apartment' },
+    { value: 'villa', label: 'Villa' },
+    { value: 'bungalow', label: 'Bungalow' },
+    { value: 'studio', label: 'Studio' },
+    { value: 'independent_house', label: 'Private House' },
+    { value: 'farmhouse', label: 'Farmhouse' },
+  ],
+  commercial: [
+    { value: 'private_office', label: 'Private Office' },
+    { value: 'co_working', label: 'Co-working' },
+    { value: 'meeting_room', label: 'Meeting Room' },
+    { value: 'conference_room', label: 'Conference Room' },
+    { value: 'shop', label: 'Shop/Showroom' },
+    { value: 'warehouse', label: 'Warehouse' },
+  ],
+  event_venue: [
+    { value: 'banquet_hall', label: 'Banquet' },
+    { value: 'hotel_ballroom', label: 'Hotel Ballroom' },
+    { value: 'wedding_venue', label: 'Wedding Venue' },
+  ],
+};
+
+const PLAN_TYPE_OPTIONS = [
+  { value: 'studio', label: 'Studio' },
+  { value: '1bhk', label: '1 BHK' },
+  { value: '2bhk', label: '2 BHK' },
+  { value: '3bhk', label: '3 BHK' },
+  { value: '4bhk', label: '4 BHK' },
+  { value: '4bhk_plus', label: '5+ BHK' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'event_venue', label: 'Event Venue' },
+];
+
+const inferPlanCategory = (plan) => (
+  plan.property_category
+  || (plan.plan_type === 'commercial' ? 'commercial' : plan.plan_type === 'event_venue' || plan.plan_type === 'banquet' ? 'event_venue' : 'residential')
+);
+
+const parseSqftRange = (rangeText) => {
+  const text = String(rangeText || '').toLowerCase().replace(/sq\.?ft/g, '').replace(/,/g, '').replace(/\s/g, '');
+  if (!text) return { sqft_from: '', sqft_to: '' };
+  if (text.endsWith('+')) return { sqft_from: text.slice(0, -1), sqft_to: '' };
+  if (text.startsWith('>=')) return { sqft_from: text.slice(2), sqft_to: '' };
+  if (text.startsWith('>')) return { sqft_from: String(Number(text.slice(1)) + 1), sqft_to: '' };
+  if (text.startsWith('<=')) return { sqft_from: '', sqft_to: text.slice(2) };
+  if (text.startsWith('<')) return { sqft_from: '', sqft_to: String(Number(text.slice(1)) - 1) };
+  if (text.includes('-')) {
+    const [from, to] = text.split('-');
+    return { sqft_from: from || '', sqft_to: to || '' };
+  }
+  return { sqft_from: text, sqft_to: '' };
+};
+
+const buildSqftRange = (from, to) => {
+  const start = String(from || '').trim();
+  const end = String(to || '').trim();
+  if (start && end) return `${start}-${end}`;
+  if (start) return `${start}+`;
+  if (end) return `<=${end}`;
+  return '';
+};
+
 const emptyPlan = {
   plan_name: '',
   plan_type: '1bhk',
+  property_category: 'residential',
+  property_type: 'apartment',
+  sqft_from: '',
+  sqft_to: '',
   price_monthly: '',
   platform_fee: '',
   tax_percent: 18,
@@ -220,8 +294,11 @@ const emptyPlan = {
 };
 
 const planToForm = (plan) => ({
+  ...parseSqftRange(plan.sqft_range),
   plan_name: plan.plan_name || '',
   plan_type: plan.plan_type || '1bhk',
+  property_category: inferPlanCategory(plan),
+  property_type: plan.property_type || PLAN_PROPERTY_OPTIONS[inferPlanCategory(plan)]?.[0]?.value || '',
   price_monthly: plan.price_monthly || '',
   platform_fee: plan.platform_fee || '',
   tax_percent: plan.tax_percent ?? 18,
@@ -245,6 +322,15 @@ const PlanCatalog = ({ plans, onStatus, onCreate, onUpdate, onDelete }) => {
   const [error, setError] = useState('');
 
   const update = (key, value) => setForm((current) => ({ ...current, [key]: value }));
+  const updateCategory = (value) => {
+    const firstPropertyType = PLAN_PROPERTY_OPTIONS[value]?.[0]?.value || '';
+    setForm((current) => ({
+      ...current,
+      property_category: value,
+      property_type: firstPropertyType,
+      plan_type: value === 'commercial' ? 'commercial' : value === 'event_venue' ? 'event_venue' : current.plan_type === 'commercial' || current.plan_type === 'event_venue' ? '1bhk' : current.plan_type,
+    }));
+  };
 
   const submit = async (event) => {
     event.preventDefault();
@@ -263,7 +349,12 @@ const PlanCatalog = ({ plans, onStatus, onCreate, onUpdate, onDelete }) => {
         platform_fee: Number(form.platform_fee || 0),
         tax_percent: Number(form.tax_percent || 0),
         validity_days: Number(form.validity_days || 30),
+        property_category: form.property_category || null,
+        property_type: form.property_type || null,
+        sqft_range: buildSqftRange(form.sqft_from, form.sqft_to) || null,
       };
+      delete payload.sqft_from;
+      delete payload.sqft_to;
       if (editingPlanId) {
         await onUpdate(editingPlanId, payload);
       } else {
@@ -310,9 +401,19 @@ const PlanCatalog = ({ plans, onStatus, onCreate, onUpdate, onDelete }) => {
           <Field label="Plan Name" help="Example: Family Stay, Premium Stay, Villa 3BHK Plan">
             <input value={form.plan_name} onChange={(event) => update('plan_name', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm" placeholder="Enter plan display name" />
           </Field>
-          <Field label="Property Type" help="Select kontya property category sathi plan aahe">
+          <Field label="Plan Type" help="Residential sathi BHK, commercial/event venue sathi category type">
             <select value={form.plan_type} onChange={(event) => update('plan_type', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm">
-              {['studio', '1bhk', '2bhk', '3bhk', '4bhk', '4bhk_plus', 'commercial', 'banquet', 'event_venue'].map((item) => <option key={item} value={item}>{item.replace(/_/g, ' ')}</option>)}
+              {PLAN_TYPE_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Property Category" help="Host property listing madhe je category options aahet tech">
+            <select value={form.property_category} onChange={(event) => updateCategory(event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm">
+              {PLAN_CATEGORY_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Property Type" help="Selected category nusar host listing madhle same property types">
+            <select value={form.property_type} onChange={(event) => update('property_type', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm">
+              {(PLAN_PROPERTY_OPTIONS[form.property_category] || []).map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
             </select>
           </Field>
           <Field label="Monthly Price" help="Host kadun mahinyala charge honari plan fee">
@@ -326,6 +427,12 @@ const PlanCatalog = ({ plans, onStatus, onCreate, onUpdate, onDelete }) => {
           </Field>
           <Field label="Validity Days" help="Plan active rahnar divas, example 30">
             <input value={form.validity_days} onChange={(event) => update('validity_days', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm" placeholder="Example: 30" type="number" min="1" />
+          </Field>
+          <Field label="Sq.ft From" help="Minimum area. Example: 2501">
+            <input value={form.sqft_from} onChange={(event) => update('sqft_from', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm" placeholder="Example: 2501" type="number" min="0" />
+          </Field>
+          <Field label="Sq.ft To" help="Maximum area blank thevla tar From+ hoil">
+            <input value={form.sqft_to} onChange={(event) => update('sqft_to', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm" placeholder="Example: 10000" type="number" min="0" />
           </Field>
           <Field label="Description" help="Host la plan card madhe disnar short description">
             <input value={form.description} onChange={(event) => update('description', event.target.value)} className="h-10 w-full rounded-lg border border-slate-200 px-3 text-sm" placeholder="Example: Ideal for 1BHK apartments" />
@@ -346,6 +453,9 @@ const PlanCatalog = ({ plans, onStatus, onCreate, onUpdate, onDelete }) => {
           <p><span className="block text-xs font-bold uppercase text-slate-500">Monthly</span>{formatMoney(plan.price_monthly || 0)}</p>
           <p><span className="block text-xs font-bold uppercase text-slate-500">Platform Fee</span>{formatMoney(plan.platform_fee || 0)}</p>
           <p><span className="block text-xs font-bold uppercase text-slate-500">Tax</span>{plan.tax_percent || 0}%</p>
+          <p><span className="block text-xs font-bold uppercase text-slate-500">Category</span>{(plan.property_category || inferPlanCategory(plan) || '-').replace(/_/g, ' ')}</p>
+          <p><span className="block text-xs font-bold uppercase text-slate-500">Type</span>{(plan.property_type || '-').replace(/_/g, ' ')}</p>
+          <p><span className="block text-xs font-bold uppercase text-slate-500">Sq.ft Range</span>{plan.sqft_range || '-'}</p>
           <p><span className="block text-xs font-bold uppercase text-slate-500">Active Subs</span>{plan.active_subscriptions || 0}</p>
           <p><span className="block text-xs font-bold uppercase text-slate-500">Trial Subs</span>{plan.trial_subscriptions || 0}</p>
         </div>

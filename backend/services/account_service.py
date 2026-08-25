@@ -264,7 +264,7 @@ async def _next_credit_note_number(db: AsyncIOMotorDatabase, value: Optional[dat
             max_sequence = max(max_sequence, int(credit_note_no.rsplit("/", 1)[-1]))
         except (TypeError, ValueError):
             continue
-    return f"{prefix}{str(max_sequence + 1).zfill(4)}"
+    return f"{prefix}{str(max_sequence + 1).zfill(3)}"
 
 
 def _split_gst_from_total(total_paise: int, taxable_paise: int) -> tuple[int, int, int]:

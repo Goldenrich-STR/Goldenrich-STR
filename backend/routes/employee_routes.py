@@ -1512,6 +1512,23 @@ async def _get_rm_property_query(db: AsyncIOMotorDatabase, rm_id: str):
     identifiers = await _get_rm_identifiers(db, rm_id)
     property_or = _field_matches_identifiers("rm_id", identifiers)
     property_or.extend(_field_matches_identifiers("branch_manager_id", identifiers))
+    verification_or = [
+        *_field_matches_identifiers("rm_id", identifiers),
+        *_field_matches_identifiers("assigned_rm_id", identifiers),
+        *_field_matches_identifiers("user_rm_id", identifiers),
+    ]
+    if verification_or:
+        verification_rows = await db.property_verifications.find(
+            {"$or": verification_or},
+            {"_id": 0, "property_id": 1}
+        ).to_list(length=5000)
+        verification_property_ids = [
+            row.get("property_id")
+            for row in verification_rows
+            if row.get("property_id")
+        ]
+        if verification_property_ids:
+            property_or.append({"property_id": {"$in": list(set(verification_property_ids))}})
     if broker_ids:
         property_or.append({"broker_id": {"$in": broker_ids}})
     if host_ids:

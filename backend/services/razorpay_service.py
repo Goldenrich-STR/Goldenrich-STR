@@ -116,7 +116,7 @@ class RazorpayService:
         self, razorpay_order_id: str, razorpay_payment_id: str, razorpay_signature: str, is_mock_override: bool = False
     ) -> bool:
         """Verify Razorpay payment signature. In mock mode, accept the deterministic mock signature."""
-        if self.is_mock and is_mock_override:
+        if self.is_mock:
             expected = self._mock_signature(razorpay_order_id, razorpay_payment_id)
             ok = hmac.compare_digest(expected, razorpay_signature or "")
             if not ok:
