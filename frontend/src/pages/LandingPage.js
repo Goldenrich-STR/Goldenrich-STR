@@ -3284,8 +3284,8 @@ const LandingPage = () => {
           {(() => {
             const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
             return (
-              <div className="flex flex-col items-center space-y-3 md:space-y-5 w-full animate-fade-in mb-0 md:mb-4 -mt-8 md:mt-0" key={currentHeroSlide}>
-                 <div className="flex items-center justify-center gap-2 md:gap-4 w-full px-1">
+              <div className="flex flex-col items-center space-y-3 md:space-y-5 w-full mb-0 md:mb-4 -mt-8 md:mt-0">
+                 <div className="flex items-center justify-center gap-2 md:gap-4 w-full px-1 animate-fade-in" key={`title-${currentHeroSlide}`}>
                    <button
                      type="button"
                      onClick={() => setCurrentHeroSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
@@ -3310,7 +3310,7 @@ const LandingPage = () => {
                  </div>
                  
                  {/* Custom Badges / Batches instead of Subtitle */}
-                 <div className="flex flex-wrap justify-center gap-2">
+                 <div className="flex flex-wrap justify-center gap-2 animate-fade-in" key={`badges-${currentHeroSlide}`}>
                    {activeHero.badges && activeHero.badges.map((badge, idx) => (
                      <span key={idx} className="border border-white bg-white/10 backdrop-blur-md rounded-full px-4 md:px-6 py-2 text-white font-bold text-[11px] md:text-sm drop-shadow-sm select-none">
                        {badge}
