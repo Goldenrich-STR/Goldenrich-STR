@@ -177,10 +177,18 @@ async def get_property_coupons(
         cursor = db.coupons.find({
             "is_active": True,
             "coupon_type": "booking",
-            "property_id": property_id
+            "$or": [
+                {"property_id": property_id},
+                {"property_id": None},
+                {"property_id": ""},
+                {"property_id": "all"},
+                {"property_id": "global"},
+                {"property_id": "all_properties"},
+                {"property_id": {"$exists": False}}
+            ]
         }, {"_id": 0})
         
-        coupons = await cursor.to_list(length=10)
+        coupons = await cursor.to_list(length=20)
         
         return {"coupons": coupons}
         

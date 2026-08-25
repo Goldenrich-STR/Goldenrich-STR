@@ -275,15 +275,3 @@
   transform: scale(1.08);
   transition: transform 0.3s ease !important;
 }
-
-/* White stroke outline for logos on dark backgrounds */
-.logo-white-stroke {
-  filter: drop-shadow(1px 0 0 #fff) 
-          drop-shadow(-1px 0 0 #fff) 
-          drop-shadow(0 1px 0 #fff) 
-          drop-shadow(0 -1px 0 #fff)
-          drop-shadow(1px 1px 0px #fff)
-          drop-shadow(-1px -1px 0px #fff)
-          drop-shadow(1px -1px 0px #fff)
-          drop-shadow(-1px 1px 0px #fff);
-}

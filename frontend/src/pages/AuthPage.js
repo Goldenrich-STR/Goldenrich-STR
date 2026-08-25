@@ -98,6 +98,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
   const [success, setSuccess] = useState('');
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showRegisterPassword, setShowRegisterPassword] = useState(false);
+  const [registerPasswordError, setRegisterPasswordError] = useState('');
   
   const [loginData, setLoginData] = useState({
     email: '',
@@ -177,6 +178,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
 
   useEffect(() => {
     setIsLogin(location.pathname !== '/register');
+    setRegisterPasswordError('');
   }, [location.pathname]);
 
   useEffect(() => {
@@ -406,9 +408,10 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
     }
     const passwordError = getPasswordError(registerData.password);
     if (passwordError) {
-      setError(passwordError);
+      setRegisterPasswordError(passwordError);
       return;
     }
+    setRegisterPasswordError('');
 
     setError('');
     setLoading(true);
@@ -663,6 +666,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                           setIsLogin(false);
                           setError('');
                           setSuccess('');
+                          setRegisterPasswordError('');
                           resetOtpFlow();
                         }}
                         className="text-blue-600 hover:underline font-extrabold cursor-pointer ml-1 text-sm"
@@ -779,18 +783,26 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                       </div>
 
                       <div className="space-y-1 text-left md:col-span-2">
-                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Password</label>
+                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Set New Password</label>
                         <div className="relative">
                           <input
                             id="register-password"
                             type={showRegisterPassword ? 'text' : 'password'}
                             value={registerData.password}
-                            onChange={(e) => setRegisterData({
-                              ...registerData,
-                              password: e.target.value.replace(/\s/g, '').slice(0, 32)
-                            })}
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\s/g, '').slice(0, 32);
+                              setRegisterData({
+                                ...registerData,
+                                password: val
+                              });
+                              if (val === '') {
+                                setRegisterPasswordError('');
+                              } else {
+                                setRegisterPasswordError(getPasswordError(val));
+                              }
+                            }}
                             className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl pl-4 pr-10 py-3 text-sm font-medium outline-none"
-                            placeholder="Password"
+                            placeholder="Set your new password"
                             required
                             autoComplete="new-password"
                           />
@@ -802,6 +814,11 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                             {showRegisterPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                           </button>
                         </div>
+                        {registerPasswordError && (
+                          <p className="text-xs font-semibold text-red-500 mt-1 animate-shake">
+                            {registerPasswordError}
+                          </p>
+                        )}
                       </div>
                     </div>
  
@@ -861,6 +878,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                           setIsLogin(true);
                           setError('');
                           setSuccess('');
+                          setRegisterPasswordError('');
                           resetOtpFlow();
                         }}
                         className="text-blue-600 hover:underline font-extrabold cursor-pointer ml-1 text-xs"

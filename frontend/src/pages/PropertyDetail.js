@@ -2000,7 +2000,7 @@ const PropertyDetail = () => {
                             return `${hour % 12 || 12}:${m} ${ampm}`;
                           })()}
                         </p>
-                        <p className="text-xs text-charcoal-muted font-medium mt-0.5">Please vacate by this time</p>
+                        <p className="text-xs text-charcoal-muted font-medium mt-0.5">Please check-out by this time</p>
                       </div>
                     </div>
                   )}

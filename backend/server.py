@@ -14,7 +14,7 @@ from create_missing_users import create_missing_users
 from collections import defaultdict, deque
 import time
 
-# Reload triggered for new admin email
+# Reload triggered for environment development configurations
 # Load environment variables
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
