@@ -2834,7 +2834,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           fontWeight: FontWeight.w800,
           color: AppTheme.charcoalLight,
           fontSize: 11,
-          letterSpacing: 1.0,
+          letterSpacing: 0,
         ),
       ),
     );
@@ -4410,7 +4410,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           content: TextField(
             controller: controller,
             decoration: InputDecoration(
-              hintText: 'https://api.x-space360.in/api/uploads/property-image.jpg',
+              hintText:
+                  'https://api.x-space360.in/api/uploads/property-image.jpg',
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -4456,7 +4457,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           content: TextField(
             controller: controller,
             decoration: InputDecoration(
-              hintText: 'https://api.x-space360.in/api/uploads/property-video.mp4',
+              hintText:
+                  'https://api.x-space360.in/api/uploads/property-video.mp4',
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -4689,7 +4691,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                                   color: Colors.white,
                                   fontSize: 8,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.5,
+                                  letterSpacing: 0,
                                 ),
                               ),
                             ),
@@ -4711,7 +4713,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.charcoalLight,
-                                letterSpacing: 0.8,
+                                letterSpacing: 0,
                               ),
                             ),
                             const SizedBox(height: 4),

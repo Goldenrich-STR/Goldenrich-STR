@@ -320,7 +320,7 @@ class _AuthHero extends StatelessWidget {
                                 'Find. Book. Enjoy.',
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: isCompact ? 11.5 : 18,
                                   fontWeight: FontWeight.w800,
                                   color: Colors.white.withValues(alpha: 0.94),
@@ -355,7 +355,7 @@ class _AuthHero extends StatelessWidget {
                             'Book a Room.',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: heroTitleSize,
                               height: 1.02,
                               fontWeight: FontWeight.w900,
@@ -367,7 +367,7 @@ class _AuthHero extends StatelessWidget {
                             'Enjoy A Villa Getaway',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: heroTitleSize,
                               height: 1.02,
                               fontWeight: FontWeight.w900,
@@ -379,7 +379,7 @@ class _AuthHero extends StatelessWidget {
                             'Enjoy the luxuries and privacy of a villa\nwith curated premium stays.',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: heroSubtitleSize,
                               height: 1.32,
                               fontWeight: FontWeight.w800,
@@ -412,7 +412,7 @@ class _AuthHero extends StatelessWidget {
                                       'Rooms Starting at ₹5,000+',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontSize: isCompact ? 13 : 16,
                                         fontWeight: FontWeight.w900,
                                         color: Colors.white,
@@ -661,17 +661,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Text(
                                 'X-SPACE360 LEGAL DOCUMENT',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: 2.2,
+                                  letterSpacing: 0,
                                   color: AppTheme.primary,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 title,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: 24,
                                   height: 1.05,
                                   fontWeight: FontWeight.w900,
@@ -706,7 +706,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: Text(
                               'Please read this document carefully. It explains the agreement and policy terms that apply when you use X-Space360.',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 13,
                                 height: 1.45,
                                 color: AppTheme.charcoalLight,
@@ -727,9 +727,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () => Navigator.pop(context),
                         child: Text(
                           'CLOSE',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
+                            letterSpacing: 0,
                           ),
                         ),
                       ),
@@ -755,7 +755,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return [
         Text(
           'This document is currently being updated by the administrator.',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             height: 1.55,
             color: AppTheme.charcoalLight,
@@ -774,11 +774,11 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.only(top: 2, bottom: 12),
           child: Text(
             cleaned,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 15,
               height: 1.35,
               fontWeight: FontWeight.w900,
-              letterSpacing: 1.4,
+              letterSpacing: 0,
               color: AppTheme.secondary,
             ),
           ),
@@ -789,7 +789,7 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.only(bottom: 16),
         child: Text(
           cleaned,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             height: 1.6,
             color: AppTheme.charcoalLight,
@@ -826,13 +826,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  TextStyle get _inputTextStyle => GoogleFonts.manrope(
+  TextStyle get _inputTextStyle => GoogleFonts.inter(
         fontSize: 15,
         fontWeight: FontWeight.w600,
         color: AppTheme.charcoal,
       );
 
-  TextStyle get _inputHintStyle => GoogleFonts.manrope(
+  TextStyle get _inputHintStyle => GoogleFonts.inter(
         fontSize: 15,
         fontWeight: FontWeight.w500,
         color: AppTheme.charcoalMuted,
@@ -863,11 +863,11 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.bold,
             color: AppTheme.charcoal,
-            letterSpacing: 0.5,
+            letterSpacing: 0,
           ),
         ),
         const SizedBox(height: 6),
@@ -885,7 +885,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(
                     '${item['full_name'] ?? 'User'} (${item[codeKey] ?? ''})',
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.charcoal,
@@ -897,13 +897,13 @@ class _LoginScreenState extends State<LoginScreen> {
           onChanged: onChanged,
           hint: Text(
             hint,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppTheme.charcoalMuted,
             ),
           ),
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w700,
             color: AppTheme.charcoal,
@@ -986,7 +986,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Expanded(
                             child: Text(
                               city,
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.charcoal,
@@ -1015,7 +1015,7 @@ class _LoginScreenState extends State<LoginScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Build Configuration',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -1023,7 +1023,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Text(
                 'Environment: ${AppConfig.environmentLabel}',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppTheme.charcoalMuted,
                 ),
@@ -1031,7 +1031,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               Text(
                 'API: ${ApiService().baseUrl}',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontSize: 13,
                   color: AppTheme.charcoalMuted,
                 ),
@@ -1039,15 +1039,15 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 12),
               Text(
                 'API environment is selected at build time and cannot be changed from the app.',
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey),
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: Text('OK',
-                  style: GoogleFonts.outfit(color: AppTheme.primary)),
+              child:
+                  Text('OK', style: GoogleFonts.inter(color: AppTheme.primary)),
             ),
           ],
         );
@@ -1386,7 +1386,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ] else ...[
                           Text(
                             eyebrow,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.primary,
@@ -1410,7 +1410,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: Text(
                               _errorMessage!,
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 color: Colors.red.shade900,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
@@ -1432,7 +1432,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   child: Divider(color: Colors.grey.shade200)),
                               Text(
                                 'Secure & Trusted',
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: isCompact ? 12 : 15,
                                   fontWeight: FontWeight.w800,
                                   color: AppTheme.charcoalMuted,
@@ -1456,7 +1456,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               children: [
                                 TextSpan(
                                   text: 'Terms & Conditions',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     color: const Color(0xFF07142F),
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -1464,7 +1464,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 const TextSpan(text: ' and '),
                                 TextSpan(
                                   text: 'Privacy Policy.',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     color: const Color(0xFF07142F),
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -1472,7 +1472,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ],
                             ),
                             textAlign: TextAlign.center,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: isCompact ? 11 : 14,
                               height: isCompact ? 1.35 : 1.55,
                               fontWeight: FontWeight.w600,
@@ -1561,7 +1561,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(width: isCompact ? 6 : 10),
                     Text(
                       'Sign In',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: isCompact ? 14 : 20,
                         fontWeight: FontWeight.w900,
                         color: !_isSignUpMode
@@ -1611,7 +1611,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     SizedBox(width: isCompact ? 6 : 10),
                     Text(
                       'Sign Up',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: isCompact ? 14 : 20,
                         fontWeight: FontWeight.w900,
                         color: _isSignUpMode
@@ -1635,7 +1635,7 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Text(
           'Welcome to',
-          style: GoogleFonts.caveat(
+          style: GoogleFonts.inter(
             fontSize: isCompact ? 22 : 34,
             height: 1,
             fontWeight: FontWeight.w800,
@@ -1649,7 +1649,7 @@ class _LoginScreenState extends State<LoginScreen> {
           'Log in or sign up to continue',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: isCompact ? 11.5 : 18,
             fontWeight: FontWeight.w600,
             color: AppTheme.charcoalMuted,
@@ -1665,7 +1665,7 @@ class _LoginScreenState extends State<LoginScreen> {
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
       text: TextSpan(
-        style: GoogleFonts.manrope(
+        style: GoogleFonts.inter(
           fontSize: isCompact ? 25 : 42,
           height: 1.02,
           fontWeight: FontWeight.w900,
@@ -1675,7 +1675,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const TextSpan(text: 'X-'),
           TextSpan(
             text: 'Space360',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: AppTheme.primary,
               fontWeight: FontWeight.w900,
             ),
@@ -1806,7 +1806,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Remember me',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: isCompact ? 11.5 : 15,
                       fontWeight: FontWeight.w800,
                       color: const Color(0xFF07142F),
@@ -1833,7 +1833,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   child: Text(
                     'Forgot Password?',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: isCompact ? 11.5 : 15,
                       color: AppTheme.primary,
                       fontWeight: FontWeight.w800,
@@ -1864,7 +1864,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       label: Text(
                         'Sign In',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: isCompact ? 16 : 20,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
@@ -1929,7 +1929,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Text(
                         'Send OTP',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -1948,17 +1948,17 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Text(
             'VERIFICATION CODE SENT TO',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoalMuted,
-              letterSpacing: 1.0,
+              letterSpacing: 0,
             ),
             textAlign: TextAlign.center,
           ),
           Text(
             _phoneController.text,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
@@ -1977,7 +1977,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Text(
                 'Demo OTP: ${auth.lastDemoOtp}',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   color: const Color(0xFF6D4B00),
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
@@ -2000,7 +2000,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                   maxLength: 6,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.charcoal,
@@ -2039,7 +2039,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'OTP valid for $_otpTimerLabel',
                     key: const ValueKey('otpTimer'),
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.charcoalMuted,
@@ -2050,7 +2050,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: auth.isLoading ? null : _sendOTP,
                     child: Text(
                       'Resend OTP',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primary,
@@ -2076,7 +2076,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Text(
                       'Verify & Continue',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -2096,7 +2096,7 @@ class _LoginScreenState extends State<LoginScreen> {
             },
             child: Text(
               'Change Phone Number',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: AppTheme.charcoalMuted,
               ),
@@ -2113,11 +2113,11 @@ class _LoginScreenState extends State<LoginScreen> {
           Center(
             child: Text(
               'SELECT ROLE',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.charcoalMuted,
-                letterSpacing: 1.0,
+                letterSpacing: 0,
               ),
             ),
           ),
@@ -2151,13 +2151,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.center,
                     child: Text(
                       'GUEST',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                         color: _selectedRole == 'guest'
                             ? Colors.white
                             : AppTheme.charcoalMuted,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0,
                       ),
                     ),
                   ),
@@ -2189,13 +2189,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.center,
                     child: Text(
                       'HOST',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                         color: _selectedRole == 'host'
                             ? Colors.white
                             : AppTheme.charcoalMuted,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0,
                       ),
                     ),
                   ),
@@ -2207,11 +2207,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'FULL NAME',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2263,11 +2263,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'EMAIL ADDRESS',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2294,11 +2294,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'PHONE NUMBER',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2325,11 +2325,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'PASSWORD',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2374,7 +2374,7 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.only(left: 4),
               child: Text(
                 _passwordValidationError(_registrationPassword)!,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: Colors.redAccent,
@@ -2386,11 +2386,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'CITY',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2450,11 +2450,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 Expanded(
                   child: RichText(
                     text: TextSpan(
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.charcoalMuted,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0,
                       ),
                       children: [
                         const TextSpan(text: 'I ACCEPT THE '),
@@ -2511,7 +2511,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Text(
                       'Complete Registration',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -2529,7 +2529,7 @@ class _LoginScreenState extends State<LoginScreen> {
             },
             child: Text(
               'Already have an account? Sign In',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: AppTheme.charcoalMuted,
               ),

@@ -210,7 +210,7 @@ class _SupportHeader extends StatelessWidget {
         Expanded(
           child: Text(
             'Support',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 30,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -228,7 +228,7 @@ class _SupportHeader extends StatelessWidget {
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
-            textStyle: GoogleFonts.manrope(
+            textStyle: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.w800,
             ),
@@ -300,7 +300,7 @@ class _SupportTabs extends StatelessWidget {
                         tab.$3,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: selected
@@ -389,7 +389,7 @@ class _SupportTicketCard extends StatelessWidget {
                         ticket['subject'] ?? 'Support ticket',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoal,
@@ -405,7 +405,7 @@ class _SupportTicketCard extends StatelessWidget {
                       ),
                       child: Text(
                         status.replaceAll('_', ' ').toUpperCase(),
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: statusColor,
                           fontSize: 11,
                           fontWeight: FontWeight.w900,
@@ -419,7 +419,7 @@ class _SupportTicketCard extends StatelessWidget {
                   ticket['message'] ?? '',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     color: AppTheme.charcoalLight,
                     fontSize: 14,
                     height: 1.45,
@@ -437,7 +437,7 @@ class _SupportTicketCard extends StatelessWidget {
                     ),
                     child: Text(
                       'ADMIN RESPONSE',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         color: AppTheme.primaryHover,
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
@@ -449,7 +449,7 @@ class _SupportTicketCard extends StatelessWidget {
                     response,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       color: AppTheme.charcoalLight,
                       fontSize: 14,
                       height: 1.45,
@@ -464,7 +464,7 @@ class _SupportTicketCard extends StatelessWidget {
                     const SizedBox(width: 6),
                     Text(
                       formatDate(ticket['created_at']),
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         color: AppTheme.charcoalLight,
                         fontSize: 13,
                         fontWeight: FontWeight.w700,
@@ -528,7 +528,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: AppTheme.primary, width: 1.5),
       ),
-      hintStyle: GoogleFonts.manrope(
+      hintStyle: GoogleFonts.inter(
         color: AppTheme.charcoalMuted,
         fontSize: 14,
         fontWeight: FontWeight.w600,
@@ -571,7 +571,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
                 Expanded(
                   child: Text(
                     'Raise Support Ticket',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 21,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.charcoal,
@@ -595,7 +595,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
               textInputAction: TextInputAction.next,
               decoration:
                   _fieldDecoration('Enter subject', Icons.description_outlined),
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.charcoal,
@@ -618,7 +618,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
                         decoration: _fieldDecoration(
                             'General', Icons.format_list_bulleted_rounded),
                         icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.charcoal,
@@ -654,7 +654,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
                         decoration:
                             _fieldDecoration('Normal', Icons.flag_outlined),
                         icon: const Icon(Icons.keyboard_arrow_down_rounded),
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.charcoal,
@@ -694,7 +694,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
                               'Type your message here...', Icons.message,
                               message: true)
                           .copyWith(counterText: ''),
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 15,
                         height: 1.4,
                         color: AppTheme.charcoal,
@@ -708,7 +708,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
                       padding: const EdgeInsets.only(top: 6),
                       child: Text(
                         '${value.text.length}/1000',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: AppTheme.charcoalMuted,
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
@@ -738,7 +738,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
                     children: [
                       Text(
                         'Attach files (Optional)',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: AppTheme.charcoal,
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
@@ -746,7 +746,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
                       ),
                       Text(
                         'PNG, JPG, PDF up to 10MB',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: AppTheme.charcoalMuted,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -775,7 +775,7 @@ class _InlineSupportTicketForm extends StatelessWidget {
                         color: Colors.white, size: 24),
                 label: Text(
                   provider.isLoading ? 'Submitting...' : 'Submit Ticket',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 17,
                     fontWeight: FontWeight.w800,
@@ -809,7 +809,7 @@ class _RequiredLabel extends StatelessWidget {
     return RichText(
       text: TextSpan(
         text: text,
-        style: GoogleFonts.manrope(
+        style: GoogleFonts.inter(
           color: AppTheme.charcoal,
           fontSize: 14,
           fontWeight: FontWeight.w700,
@@ -817,7 +817,7 @@ class _RequiredLabel extends StatelessWidget {
         children: [
           TextSpan(
             text: ' *',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: Colors.red.shade600,
               fontWeight: FontWeight.w800,
             ),
@@ -846,7 +846,7 @@ class _EmptyTickets extends StatelessWidget {
           const SizedBox(height: 16),
           Text(
             'No support tickets yet.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: AppTheme.charcoalLight,
               fontWeight: FontWeight.w700,
             ),
@@ -908,7 +908,7 @@ class _CmsFaqPanel extends StatelessWidget {
           const SizedBox(height: 14),
           Text(
             title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: AppTheme.charcoal,
               fontSize: 20,
               fontWeight: FontWeight.w800,
@@ -918,7 +918,7 @@ class _CmsFaqPanel extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 color: AppTheme.charcoalMuted,
                 fontSize: 14,
                 height: 1.45,
@@ -930,7 +930,7 @@ class _CmsFaqPanel extends StatelessWidget {
           if (visibleItems.isEmpty)
             Text(
               'No FAQs added yet.',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 color: AppTheme.charcoalMuted,
                 fontWeight: FontWeight.w700,
               ),
@@ -958,7 +958,7 @@ class _CmsFaqPanel extends StatelessWidget {
                     collapsedIconColor: AppTheme.charcoalMuted,
                     title: Text(
                       (faq['question'] ?? '').toString(),
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         color: AppTheme.charcoal,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -971,7 +971,7 @@ class _CmsFaqPanel extends StatelessWidget {
                           answer.isEmpty
                               ? 'Details will be updated soon.'
                               : answer,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: AppTheme.charcoalLight,
                             fontSize: 13,
                             height: 1.5,
@@ -1073,7 +1073,7 @@ class _ContactUsPanel extends StatelessWidget {
                     children: [
                       Text(
                         'Contact Us',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: AppTheme.charcoal,
                           fontSize: 24,
                           fontWeight: FontWeight.w900,
@@ -1082,7 +1082,7 @@ class _ContactUsPanel extends StatelessWidget {
                       const SizedBox(height: 8),
                       Text(
                         "We're here to help! Reach out to us through any of the following channels.",
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: AppTheme.charcoalLight,
                           fontSize: 14,
                           height: 1.45,
@@ -1103,7 +1103,7 @@ class _ContactUsPanel extends StatelessWidget {
               children: [
                 Text(
                   'Get in Touch',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     color: AppTheme.charcoal,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
@@ -1160,7 +1160,7 @@ class _ContactUsPanel extends StatelessWidget {
                           children: [
                             Text(
                               'Need Immediate Help?',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 color: AppTheme.charcoal,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
@@ -1169,7 +1169,7 @@ class _ContactUsPanel extends StatelessWidget {
                             const SizedBox(height: 8),
                             Text(
                               'Raise a support ticket and our team will get back to you as soon as possible.',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 color: AppTheme.charcoalLight,
                                 fontSize: 14,
                                 height: 1.45,
@@ -1204,7 +1204,7 @@ class _ContactUsPanel extends StatelessWidget {
                           color: Colors.white),
                       label: Text(
                         'Raise a Ticket',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
@@ -1242,7 +1242,7 @@ class _ContactUsPanel extends StatelessWidget {
                           children: [
                             Text(
                               'FAQs',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 color: AppTheme.charcoal,
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
@@ -1251,7 +1251,7 @@ class _ContactUsPanel extends StatelessWidget {
                             const SizedBox(height: 8),
                             Text(
                               'Find quick answers to common questions.',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 color: AppTheme.charcoalLight,
                                 fontSize: 14,
                                 height: 1.45,
@@ -1297,7 +1297,7 @@ class _ContactUsPanel extends StatelessWidget {
                         children: [
                           Text(
                             'View FAQs',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               color: AppTheme.primaryHover,
                               fontSize: 16,
                               fontWeight: FontWeight.w900,
@@ -1352,7 +1352,7 @@ class _ContactActionRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     color: AppTheme.charcoal,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
@@ -1363,7 +1363,7 @@ class _ContactActionRow extends StatelessWidget {
                   value,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     color: AppTheme.charcoalLight,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,

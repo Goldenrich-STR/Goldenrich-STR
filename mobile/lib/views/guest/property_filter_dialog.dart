@@ -318,26 +318,12 @@ class _PropertyFilterDialogState extends State<PropertyFilterDialog> {
                       _PreferenceRow(
                           icon: Icons.flash_on_rounded,
                           title: 'Instant Book',
-                          subtitle: 'Book without waiting for host approval',
+                          subtitle: 'Confirmed automatically after payment verification',
                           trailing: Checkbox(
                               value: _instantBooking,
                               onChanged: (v) => setState(() {
                                     _instantBooking = v ?? false;
-                                    if (_instantBooking) {
-                                      _hostApprovalRequired = false;
-                                    }
-                                  }))),
-                      _PreferenceRow(
-                          icon: Icons.shield_outlined,
-                          title: 'Host Approval Required',
-                          subtitle: 'Request to book and wait for approval',
-                          trailing: Checkbox(
-                              value: _hostApprovalRequired,
-                              onChanged: (v) => setState(() {
-                                    _hostApprovalRequired = v ?? false;
-                                    if (_hostApprovalRequired) {
-                                      _instantBooking = false;
-                                    }
+                                    _hostApprovalRequired = false;
                                   }))),
                       _PreferenceRow(
                           icon: Icons.pets_rounded,
@@ -353,7 +339,7 @@ class _PropertyFilterDialogState extends State<PropertyFilterDialog> {
                     const _SectionTitle('Essential Amenities'),
                     const SizedBox(height: 4),
                     Text('Select amenities that matter to you',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                             fontSize: 12,
                             color: AppTheme.charcoalMuted,
                             fontWeight: FontWeight.w600)),
@@ -398,14 +384,14 @@ class _PropertyFilterDialogState extends State<PropertyFilterDialog> {
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
-                        textStyle: GoogleFonts.manrope(
+                        textStyle: GoogleFonts.inter(
                             fontSize: 17, fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
                   const SizedBox(height: 10),
                   Text('100% Secure  •  Trusted by 10,000+ users',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 11,
                           color: AppTheme.charcoalMuted,
                           fontWeight: FontWeight.w700)),
@@ -436,7 +422,7 @@ class _Header extends StatelessWidget {
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Text('Filters',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   fontSize: 30,
                   height: 1,
                   fontWeight: FontWeight.w900,
@@ -445,7 +431,7 @@ class _Header extends StatelessWidget {
           Text('Refine your search to find the perfect space',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   fontSize: 12,
                   color: AppTheme.charcoalMuted,
                   fontWeight: FontWeight.w600)),
@@ -453,7 +439,7 @@ class _Header extends StatelessWidget {
         TextButton(
             onPressed: onClear,
             child: Text('Clear All',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     color: AppTheme.primary, fontWeight: FontWeight.w900))),
       ]);
 }
@@ -463,7 +449,7 @@ class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.text);
   @override
   Widget build(BuildContext context) => Text(text,
-      style: GoogleFonts.manrope(
+      style: GoogleFonts.inter(
           fontSize: 17, fontWeight: FontWeight.w900, color: AppTheme.charcoal));
 }
 
@@ -596,7 +582,7 @@ class _PreferenceRow extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(title,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.charcoal)),
@@ -604,7 +590,7 @@ class _PreferenceRow extends StatelessWidget {
                   Text(subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 11, color: AppTheme.charcoalMuted)),
               ])),
           trailing,
@@ -638,7 +624,7 @@ class _AmenityChip extends StatelessWidget {
       backgroundColor: Colors.white,
       side: BorderSide(color: selected ? AppTheme.primary : AppTheme.border),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-      labelStyle: GoogleFonts.manrope(
+      labelStyle: GoogleFonts.inter(
           fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.charcoal),
     );
   }

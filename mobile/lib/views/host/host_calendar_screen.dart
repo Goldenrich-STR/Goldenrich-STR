@@ -49,7 +49,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
   }
 
   Future<void> _loadInitialData() async {
-    final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
+    final propertyProvider =
+        Provider.of<PropertyProvider>(context, listen: false);
     await propertyProvider.getHostProperties();
     if (propertyProvider.hostProperties.isNotEmpty) {
       _selectedProperty = propertyProvider.hostProperties.first;
@@ -62,7 +63,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
 
   Future<void> _fetchCalendarData() async {
     if (_selectedProperty == null) return;
-    final propertyProvider = Provider.of<PropertyProvider>(context, listen: false);
+    final propertyProvider =
+        Provider.of<PropertyProvider>(context, listen: false);
     await propertyProvider.getUnifiedCalendar(
       _selectedProperty!.propertyId,
       _currentMonth.month,
@@ -121,7 +123,9 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
 
         if (isMatch) {
           final colorHex = event['color']?.toString() ??
-              (source == 'booking' ? '#10B981' : (source == 'manual' ? '#EF4444' : '#F59E0B'));
+              (source == 'booking'
+                  ? '#10B981'
+                  : (source == 'manual' ? '#EF4444' : '#F59E0B'));
           final eventColor = _colorFromHex(colorHex);
 
           return {
@@ -167,7 +171,7 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                     children: [
                       Text(
                         'Block Dates',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoal,
@@ -196,10 +200,12 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (picked != null) {
-                        _startDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+                        _startDateController.text =
+                            DateFormat('yyyy-MM-dd').format(picked);
                       }
                     },
-                    validator: (v) => v == null || v.isEmpty ? 'Select start date' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Select start date' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -222,10 +228,12 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                         lastDate: DateTime.now().add(const Duration(days: 365)),
                       );
                       if (picked != null) {
-                        _endDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+                        _endDateController.text =
+                            DateFormat('yyyy-MM-dd').format(picked);
                       }
                     },
-                    validator: (v) => v == null || v.isEmpty ? 'Select end date' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Select end date' : null,
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
@@ -235,35 +243,40 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                       prefixIcon: Icon(Icons.note),
                       border: OutlineInputBorder(),
                     ),
-                    validator: (v) => v == null || v.isEmpty ? 'Reason required' : null,
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Reason required' : null,
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       backgroundColor: AppTheme.primary,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12)),
                     ),
                     onPressed: () async {
                       if (!_blockFormKey.currentState!.validate()) return;
-                      final success = await Provider.of<PropertyProvider>(context, listen: false)
+                      final success = await Provider.of<PropertyProvider>(
+                              context,
+                              listen: false)
                           .blockDates(
-                            _selectedProperty!.propertyId,
-                            _startDateController.text,
-                            _endDateController.text,
-                            _reasonController.text,
-                          );
+                        _selectedProperty!.propertyId,
+                        _startDateController.text,
+                        _endDateController.text,
+                        _reasonController.text,
+                      );
                       if (success && context.mounted) {
                         Navigator.pop(context);
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Dates blocked successfully')),
+                          const SnackBar(
+                              content: Text('Dates blocked successfully')),
                         );
                         _fetchCalendarData();
                       }
                     },
                     child: Text(
                       'Confirm Block',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
@@ -312,7 +325,7 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                         children: [
                           Text(
                             'Import External iCal Calendar',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoal,
@@ -331,7 +344,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                           labelText: 'Calendar Name (e.g. Airbnb)',
                           border: OutlineInputBorder(),
                         ),
-                        validator: (v) => v == null || v.isEmpty ? 'Name required' : null,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? 'Name required' : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -349,7 +363,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                       const SizedBox(height: 16),
                       Text(
                         'Select Color Badge',
-                        style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.bold, fontSize: 13),
                       ),
                       const SizedBox(height: 8),
                       Row(
@@ -373,7 +388,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                               backgroundColor: _colorFromHex(colorHex),
                               radius: 18,
                               child: isSelected
-                                  ? const Icon(Icons.check, color: Colors.white, size: 16)
+                                  ? const Icon(Icons.check,
+                                      color: Colors.white, size: 16)
                                   : null,
                             ),
                           );
@@ -384,28 +400,33 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                         style: ElevatedButton.styleFrom(
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           backgroundColor: AppTheme.primary,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () async {
                           if (!_calFormKey.currentState!.validate()) return;
-                          final success = await Provider.of<PropertyProvider>(context, listen: false)
+                          final success = await Provider.of<PropertyProvider>(
+                                  context,
+                                  listen: false)
                               .addExternalCalendar(
-                                _selectedProperty!.propertyId,
-                                _calNameController.text,
-                                _calUrlController.text,
-                                _calColor,
-                              );
+                            _selectedProperty!.propertyId,
+                            _calNameController.text,
+                            _calUrlController.text,
+                            _calColor,
+                          );
                           if (success && context.mounted) {
                             Navigator.pop(context);
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('External Calendar sync initiated')),
+                              const SnackBar(
+                                  content:
+                                      Text('External Calendar sync initiated')),
                             );
                             _fetchCalendarData();
                           }
                         },
                         child: Text(
                           'Sync Calendar',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
                           ),
@@ -425,11 +446,13 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
 
   void _showExportLinkDialog() async {
     final provider = Provider.of<PropertyProvider>(context, listen: false);
-    String? exportUrl = await provider.getIcalFeedUrl(_selectedProperty!.propertyId);
+    String? exportUrl =
+        await provider.getIcalFeedUrl(_selectedProperty!.propertyId);
 
     if (exportUrl == null && context.mounted) {
       // If it doesn't exist, try rotating to create it
-      exportUrl = await provider.rotateIcalFeedUrl(_selectedProperty!.propertyId);
+      exportUrl =
+          await provider.rotateIcalFeedUrl(_selectedProperty!.propertyId);
     }
 
     if (!context.mounted) return;
@@ -440,10 +463,11 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
         return StatefulBuilder(
           builder: (context, setStateDialog) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
               title: Text(
                 'Export Calendar (iCal)',
-                style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+                style: GoogleFonts.inter(fontWeight: FontWeight.w800),
               ),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -451,7 +475,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                 children: [
                   const Text(
                     'Use this feed link to sync your X-Space360 bookings to external channels like Airbnb or Vrbo.',
-                    style: TextStyle(fontSize: 13, color: AppTheme.charcoalLight),
+                    style:
+                        TextStyle(fontSize: 13, color: AppTheme.charcoalLight),
                   ),
                   const SizedBox(height: 12),
                   Container(
@@ -462,8 +487,9 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                       border: Border.all(color: AppTheme.stone),
                     ),
                     child: Text(
-                      exportUrl ?? 'No link available. Click Rotate to generate.',
-                      style: GoogleFonts.sourceCodePro(fontSize: 11),
+                      exportUrl ??
+                          'No link available. Click Rotate to generate.',
+                      style: GoogleFonts.inter(fontSize: 11),
                       maxLines: 4,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -473,22 +499,33 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       TextButton.icon(
-                        icon: const Icon(Icons.copy, size: 16, color: AppTheme.primary),
-                        label: const Text('COPY LINK', style: TextStyle(color: AppTheme.primary, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.copy,
+                            size: 16, color: AppTheme.primary),
+                        label: const Text('COPY LINK',
+                            style: TextStyle(
+                                color: AppTheme.primary,
+                                fontWeight: FontWeight.bold)),
                         onPressed: () {
                           if (exportUrl != null) {
                             Clipboard.setData(ClipboardData(text: exportUrl!));
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Feed link copied to clipboard')),
+                              const SnackBar(
+                                  content:
+                                      Text('Feed link copied to clipboard')),
                             );
                           }
                         },
                       ),
                       TextButton.icon(
-                        icon: const Icon(Icons.refresh, size: 16, color: Colors.red),
-                        label: const Text('ROTATE LINK', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                        icon: const Icon(Icons.refresh,
+                            size: 16, color: Colors.red),
+                        label: const Text('ROTATE LINK',
+                            style: TextStyle(
+                                color: Colors.red,
+                                fontWeight: FontWeight.bold)),
                         onPressed: () async {
-                          final newUrl = await provider.rotateIcalFeedUrl(_selectedProperty!.propertyId);
+                          final newUrl = await provider
+                              .rotateIcalFeedUrl(_selectedProperty!.propertyId);
                           if (newUrl != null) {
                             setStateDialog(() {
                               exportUrl = newUrl;
@@ -529,7 +566,7 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
         const SizedBox(width: 4),
         Text(
           label,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 9,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoalLight,
@@ -545,8 +582,10 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
     final textTheme = Theme.of(context).textTheme;
 
     // Calendar logic
-    final firstDayOfMonth = DateTime(_currentMonth.year, _currentMonth.month, 1);
-    final totalDaysInMonth = DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
+    final firstDayOfMonth =
+        DateTime(_currentMonth.year, _currentMonth.month, 1);
+    final totalDaysInMonth =
+        DateTime(_currentMonth.year, _currentMonth.month + 1, 0).day;
     final leadingEmptyDays = firstDayOfMonth.weekday % 7; // Sunday starting
 
     return Scaffold(
@@ -554,7 +593,7 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
       appBar: AppBar(
         title: Text(
           'Property Calendar',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontWeight: FontWeight.w800,
             fontSize: 22,
             color: AppTheme.primary,
@@ -564,7 +603,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
         elevation: 0.5,
       ),
       body: _initializing
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
           : propertyProvider.hostProperties.isEmpty
               ? Center(
                   child: Padding(
@@ -572,11 +612,13 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.calendar_today_outlined, size: 60, color: AppTheme.charcoalMuted),
+                        const Icon(Icons.calendar_today_outlined,
+                            size: 60, color: AppTheme.charcoalMuted),
                         const SizedBox(height: 16),
                         Text(
                           'No properties listed yet.',
-                          style: GoogleFonts.manrope(fontSize: 16, fontWeight: FontWeight.bold),
+                          style: GoogleFonts.inter(
+                              fontSize: 16, fontWeight: FontWeight.bold),
                         ),
                       ],
                     ),
@@ -590,7 +632,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                       Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 12, vertical: 4),
                           decoration: BoxDecoration(
                             border: Border.all(color: AppTheme.stone),
                             borderRadius: BorderRadius.circular(12),
@@ -604,7 +647,9 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                                   value: p,
                                   child: Text(
                                     p.title,
-                                    style: GoogleFonts.manrope(fontWeight: FontWeight.w600, fontSize: 14),
+                                    style: GoogleFonts.inter(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 14),
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                   ),
@@ -636,7 +681,7 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                             ),
                             Text(
                               DateFormat('MMMM yyyy').format(_currentMonth),
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.charcoal,
@@ -656,12 +701,20 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
                         child: Row(
-                          children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) {
+                          children: [
+                            'Sun',
+                            'Mon',
+                            'Tue',
+                            'Wed',
+                            'Thu',
+                            'Fri',
+                            'Sat'
+                          ].map((day) {
                             return Expanded(
                               child: Center(
                                 child: Text(
                                   day,
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.charcoalLight,
@@ -681,7 +734,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                         child: GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 7,
                             mainAxisSpacing: 8,
                             crossAxisSpacing: 8,
@@ -693,7 +747,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                             }
 
                             final day = index - leadingEmptyDays + 1;
-                            final date = DateTime(_currentMonth.year, _currentMonth.month, day);
+                            final date = DateTime(
+                                _currentMonth.year, _currentMonth.month, day);
                             final isSelected = _selectedDate != null &&
                                 _selectedDate!.year == date.year &&
                                 _selectedDate!.month == date.month &&
@@ -705,7 +760,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                                 DateTime.now().day == date.day;
 
                             Color dayBg = Colors.transparent;
-                            Color borderCol = isToday ? AppTheme.primary : AppTheme.stone;
+                            Color borderCol =
+                                isToday ? AppTheme.primary : AppTheme.stone;
                             Color textCol = AppTheme.charcoal;
 
                             if (event != null) {
@@ -729,14 +785,16 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                                 decoration: BoxDecoration(
                                   color: dayBg,
                                   borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: borderCol, width: isSelected || isToday ? 2 : 1),
+                                  border: Border.all(
+                                      color: borderCol,
+                                      width: isSelected || isToday ? 2 : 1),
                                 ),
                                 child: Stack(
                                   alignment: Alignment.center,
                                   children: [
                                     Text(
                                       '$day',
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontSize: 14,
                                         fontWeight: FontWeight.bold,
                                         color: textCol,
@@ -760,13 +818,16 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
 
                       // 4.5 Legend Indicators
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24.0, vertical: 8.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _buildLegendItem('Booked', const Color(0xFF10B981)),
-                            _buildLegendItem('Blocked', const Color(0xFFEF4444)),
-                            _buildLegendItem('iCal Sync', const Color(0xFFF59E0B)),
+                            _buildLegendItem(
+                                'Blocked', const Color(0xFFEF4444)),
+                            _buildLegendItem(
+                                'iCal Sync', const Color(0xFFF59E0B)),
                             _buildLegendItem('Available', Colors.grey.shade400),
                           ],
                         ),
@@ -779,7 +840,8 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                         Builder(builder: (context) {
                           final event = _getEventForDate(_selectedDate!);
                           return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 16.0),
+                            margin:
+                                const EdgeInsets.symmetric(horizontal: 16.0),
                             padding: const EdgeInsets.all(16.0),
                             decoration: BoxDecoration(
                               color: AppTheme.white,
@@ -797,32 +859,47 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  DateFormat('EEEE, dd MMM yyyy').format(_selectedDate!),
-                                  style: GoogleFonts.manrope(fontWeight: FontWeight.w800, fontSize: 15),
+                                  DateFormat('EEEE, dd MMM yyyy')
+                                      .format(_selectedDate!),
+                                  style: GoogleFonts.inter(
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 15),
                                 ),
                                 const SizedBox(height: 10),
                                 if (event == null) ...[
                                   Text(
                                     'This date is open and available for reservations.',
-                                    style: TextStyle(color: Colors.green.shade700, fontSize: 13, fontWeight: FontWeight.w600),
+                                    style: TextStyle(
+                                        color: Colors.green.shade700,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600),
                                   ),
                                   const SizedBox(height: 12),
                                   ElevatedButton.icon(
                                     onPressed: _showBlockDatesSheet,
-                                    icon: const Icon(Icons.block, size: 16, color: Colors.white),
-                                    label: const Text('BLOCK THIS DATE', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                    icon: const Icon(Icons.block,
+                                        size: 16, color: Colors.white),
+                                    label: const Text('BLOCK THIS DATE',
+                                        style: TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold)),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: AppTheme.primary,
                                       elevation: 0,
-                                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 16, vertical: 10),
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(8)),
                                     ),
                                   ),
                                 ] else ...[
                                   Row(
                                     children: [
                                       Icon(
-                                        event['type'] == 'booking' ? Icons.bookmark : Icons.block,
+                                        event['type'] == 'booking'
+                                            ? Icons.bookmark
+                                            : Icons.block,
                                         color: event['color'],
                                         size: 20,
                                       ),
@@ -830,12 +907,14 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                                       Text(
                                         event['type'] == 'booking'
                                             ? 'RESERVATION'
-                                            : (event['type'] == 'manual' ? 'MANUAL BLOCK' : 'EXTERNAL BLOCK'),
+                                            : (event['type'] == 'manual'
+                                                ? 'MANUAL BLOCK'
+                                                : 'EXTERNAL BLOCK'),
                                         style: TextStyle(
                                           fontWeight: FontWeight.w800,
                                           fontSize: 12,
                                           color: event['color'],
-                                          letterSpacing: 0.5,
+                                          letterSpacing: 0,
                                         ),
                                       ),
                                     ],
@@ -844,36 +923,60 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                                   if (event['type'] == 'booking') ...[
                                     Text(
                                       'Guest: ${event['data']['details']?['guest']?['full_name'] ?? 'STR Guest'}',
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14),
                                     ),
-                                    Text('Booking ID: ${event['data']['event_id']}'),
-                                    Text('Nights: ${event['data']['start_date'].toString().split('T')[0]} to ${event['data']['end_date'].toString().split('T')[0]}'),
-                                    Text('Total Value: ₹${event['data']['details']?['total_amount'] ?? "0"}'),
+                                    Text(
+                                        'Booking ID: ${event['data']['event_id']}'),
+                                    Text(
+                                        'Nights: ${event['data']['start_date'].toString().split('T')[0]} to ${event['data']['end_date'].toString().split('T')[0]}'),
+                                    Text(
+                                        'Total Value: ₹${event['data']['details']?['total_amount'] ?? "0"}'),
                                   ] else if (event['type'] == 'manual') ...[
-                                    Text('Reason: ${event['data']['details']?['reason'] ?? 'Blocked by host'}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    Text('Dates: ${event['data']['start_date']} to ${event['data']['end_date']}'),
+                                    Text(
+                                        'Reason: ${event['data']['details']?['reason'] ?? 'Blocked by host'}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Text(
+                                        'Dates: ${event['data']['start_date']} to ${event['data']['end_date']}'),
                                     const SizedBox(height: 12),
                                     OutlinedButton.icon(
                                       onPressed: () async {
-                                        final success = await propertyProvider.unblockDates(event['data']['event_id']);
+                                        final success =
+                                            await propertyProvider.unblockDates(
+                                                event['data']['event_id']);
                                         if (success && context.mounted) {
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            const SnackBar(content: Text('Dates unblocked successfully')),
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(
+                                            const SnackBar(
+                                                content: Text(
+                                                    'Dates unblocked successfully')),
                                           );
                                           _fetchCalendarData();
                                         }
                                       },
                                       icon: const Icon(Icons.refresh, size: 14),
-                                      label: const Text('UNBLOCK DATES', style: TextStyle(fontWeight: FontWeight.bold)),
+                                      label: const Text('UNBLOCK DATES',
+                                          style: TextStyle(
+                                              fontWeight: FontWeight.bold)),
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: Colors.red,
-                                        side: const BorderSide(color: Colors.red),
+                                        side:
+                                            const BorderSide(color: Colors.red),
                                       ),
                                     ),
                                   ] else ...[
-                                    Text('Source: ${event['data']['title'] ?? 'External Feed'}', style: const TextStyle(fontWeight: FontWeight.bold)),
-                                    Text('Dates: ${event['data']['start_date']} to ${event['data']['end_date']}'),
-                                    if (event['data']['details']?['reason'] != null) Text('Detail: ${event['data']['details']?['reason']}'),
+                                    Text(
+                                        'Source: ${event['data']['title'] ?? 'External Feed'}',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.bold)),
+                                    Text(
+                                        'Dates: ${event['data']['start_date']} to ${event['data']['end_date']}'),
+                                    if (event['data']['details']?['reason'] !=
+                                        null)
+                                      Text(
+                                          'Detail: ${event['data']['details']?['reason']}'),
                                   ]
                                 ],
                               ],
@@ -895,7 +998,7 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                               children: [
                                 Text(
                                   'iCal Sync Channels',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 16,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.charcoal,
@@ -904,12 +1007,14 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                                 Row(
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.share, color: AppTheme.primary, size: 20),
+                                      icon: const Icon(Icons.share,
+                                          color: AppTheme.primary, size: 20),
                                       tooltip: 'Export Feed URL',
                                       onPressed: _showExportLinkDialog,
                                     ),
                                     IconButton(
-                                      icon: const Icon(Icons.add_link, color: AppTheme.primary, size: 22),
+                                      icon: const Icon(Icons.add_link,
+                                          color: AppTheme.primary, size: 22),
                                       tooltip: 'Import Feed URL',
                                       onPressed: _showAddExternalCalendarSheet,
                                     ),
@@ -928,7 +1033,9 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                                 child: const Center(
                                   child: Text(
                                     'No external iCal channels synced yet.',
-                                    style: TextStyle(fontSize: 12, color: AppTheme.charcoalLight),
+                                    style: TextStyle(
+                                        fontSize: 12,
+                                        color: AppTheme.charcoalLight),
                                   ),
                                 ),
                               )
@@ -936,15 +1043,19 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                               ListView.builder(
                                 shrinkWrap: true,
                                 physics: const NeverScrollableScrollPhysics(),
-                                itemCount: propertyProvider.externalCalendars.length,
+                                itemCount:
+                                    propertyProvider.externalCalendars.length,
                                 itemBuilder: (context, index) {
-                                  final cal = propertyProvider.externalCalendars[index];
-                                  final color = _colorFromHex(cal['color'] ?? '#D4AF37');
+                                  final cal =
+                                      propertyProvider.externalCalendars[index];
+                                  final color =
+                                      _colorFromHex(cal['color'] ?? '#D4AF37');
                                   return Card(
                                     elevation: 0,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(12),
-                                      side: const BorderSide(color: AppTheme.stone),
+                                      side: const BorderSide(
+                                          color: AppTheme.stone),
                                     ),
                                     margin: const EdgeInsets.only(bottom: 8),
                                     child: ListTile(
@@ -954,31 +1065,56 @@ class _HostCalendarScreenState extends State<HostCalendarScreen> {
                                       ),
                                       title: Text(
                                         cal['name'] ?? 'External iCal',
-                                        style: GoogleFonts.manrope(fontWeight: FontWeight.bold, fontSize: 14),
+                                        style: GoogleFonts.inter(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14),
                                       ),
                                       subtitle: Text(
                                         'Last Synced: ${cal['last_synced_at'] != null ? DateFormat('dd MMM, hh:mm a').format(DateTime.parse(cal['last_synced_at']).toLocal()) : "Never"}',
                                         style: const TextStyle(fontSize: 11),
                                       ),
                                       trailing: IconButton(
-                                        icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                                        icon: const Icon(Icons.delete_outline,
+                                            color: Colors.red, size: 20),
                                         onPressed: () async {
-                                          final confirm = await showDialog<bool>(
+                                          final confirm =
+                                              await showDialog<bool>(
                                             context: context,
                                             builder: (context) => AlertDialog(
-                                              title: const Text('Delete Channel?'),
-                                              content: const Text('Are you sure you want to stop syncing with this calendar?'),
+                                              title:
+                                                  const Text('Delete Channel?'),
+                                              content: const Text(
+                                                  'Are you sure you want to stop syncing with this calendar?'),
                                               actions: [
-                                                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                                TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
+                                                TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(
+                                                            context, false),
+                                                    child:
+                                                        const Text('Cancel')),
+                                                TextButton(
+                                                    onPressed: () =>
+                                                        Navigator.pop(
+                                                            context, true),
+                                                    child: const Text('Delete',
+                                                        style: TextStyle(
+                                                            color:
+                                                                Colors.red))),
                                               ],
                                             ),
                                           );
-                                          if (confirm == true && context.mounted) {
-                                            final success = await propertyProvider.removeExternalCalendar(cal['calendar_id']);
+                                          if (confirm == true &&
+                                              context.mounted) {
+                                            final success =
+                                                await propertyProvider
+                                                    .removeExternalCalendar(
+                                                        cal['calendar_id']);
                                             if (success && context.mounted) {
-                                              ScaffoldMessenger.of(context).showSnackBar(
-                                                const SnackBar(content: Text('External calendar deleted')),
+                                              ScaffoldMessenger.of(context)
+                                                  .showSnackBar(
+                                                const SnackBar(
+                                                    content: Text(
+                                                        'External calendar deleted')),
                                               );
                                               _fetchCalendarData();
                                             }

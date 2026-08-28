@@ -47,11 +47,11 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
           children: [
             Text(
               label,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w800,
                 color: isActive ? AppTheme.primary : AppTheme.charcoalLight,
-                letterSpacing: 0.5,
+                letterSpacing: 0,
               ),
             ),
             const SizedBox(width: 6),
@@ -65,7 +65,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
               ),
               child: Text(
                 '$count',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
                   color: isActive ? AppTheme.primary : AppTheme.charcoalLight,
@@ -124,7 +124,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
       appBar: AppBar(
         title: Text(
           'My Bookings',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontWeight: FontWeight.w800,
             fontSize: 24,
             color: AppTheme.primary,
@@ -173,7 +173,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                       const SizedBox(height: 12),
                       Text(
                         'You have no bookings yet.',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           color: AppTheme.charcoalMuted,
                           fontWeight: FontWeight.w600,
@@ -248,7 +248,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                                 fontSize: 9,
                                                 fontWeight: FontWeight.w800,
                                                 color: Colors.orange.shade800,
-                                                letterSpacing: 0.5,
+                                                letterSpacing: 0,
                                               ),
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
@@ -284,7 +284,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                       // Property Title
                                       Text(
                                         bk.propertyTitle ?? 'Property Rental',
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 15,
                                           fontWeight: FontWeight.w800,
                                           color: AppTheme.charcoal,
@@ -307,7 +307,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                           Expanded(
                                             child: Text(
                                               '${bk.checkInDate} - ${bk.checkOutDate}  |  ${bk.numberOfGuests} Guest${bk.numberOfGuests > 1 ? 's' : ''}',
-                                              style: GoogleFonts.manrope(
+                                              style: GoogleFonts.inter(
                                                 fontSize: 11,
                                                 color: AppTheme.charcoalLight,
                                                 fontWeight: FontWeight.w500,
@@ -323,7 +323,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                       // Booking ID
                                       Text(
                                         'BOOKING ID: ${bk.bookingId}',
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 9,
                                           color: AppTheme.charcoalMuted,
                                           fontWeight: FontWeight.w600,
@@ -432,7 +432,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                   children: [
                                     Text(
                                       'TOTAL PAID',
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontSize: 9,
                                         color: AppTheme.charcoalMuted,
                                         fontWeight: FontWeight.w800,
@@ -441,7 +441,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                     const SizedBox(height: 2),
                                     Text(
                                       CurrencyFormatter.format(bk.totalAmount),
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.charcoal,
@@ -466,7 +466,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                       },
                                       child: Text(
                                         'VIEW DETAILS',
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 12,
                                           fontWeight: FontWeight.w800,
                                           color: AppTheme.charcoalLight,
@@ -526,7 +526,7 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                         },
                                         child: Text(
                                           'CANCEL',
-                                          style: GoogleFonts.manrope(
+                                          style: GoogleFonts.inter(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w800,
                                             color: Colors.red.shade700,
@@ -548,37 +548,26 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
   }
 
   Widget _bookingModeChip(bk) {
-    final mode = (bk.bookingMode ?? '').toString().toUpperCase();
-    final instant = mode == 'INSTANT_BOOK';
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color:
-            instant ? AppTheme.primary.withValues(alpha: 0.10) : AppTheme.stone,
+        color: AppTheme.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: instant
-              ? AppTheme.primary.withValues(alpha: 0.25)
-              : AppTheme.border,
+          color: AppTheme.primary.withValues(alpha: 0.25),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            instant
-                ? Icons.flash_on_rounded
-                : Icons.assignment_turned_in_outlined,
-            size: 12,
-            color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
-          ),
+          const Icon(Icons.flash_on_rounded, size: 12, color: AppTheme.primary),
           const SizedBox(width: 4),
           Text(
-            instant ? 'Instant Book' : 'Host Approval Required',
-            style: GoogleFonts.manrope(
+            'Instant Book',
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w800,
-              color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
+              color: AppTheme.primary,
             ),
           ),
         ],
@@ -651,7 +640,7 @@ class _BookingDetailsDialog extends StatelessWidget {
                             booking.propertyTitle ?? 'Booking Details',
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 19,
                               height: 1.15,
                               fontWeight: FontWeight.w900,
@@ -764,7 +753,7 @@ class _BookingDetailsDialog extends StatelessWidget {
                     ),
                     child: Text(
                       'Close',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                       ),
@@ -810,7 +799,7 @@ class _DetailSection extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w900,
               color: AppTheme.charcoal,
@@ -843,7 +832,7 @@ class _DetailStatusChip extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: GoogleFonts.manrope(
+        style: GoogleFonts.inter(
           fontSize: 11,
           fontWeight: FontWeight.w900,
           color: color,
@@ -876,7 +865,7 @@ class _DetailRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.charcoalMuted,
@@ -889,7 +878,7 @@ class _DetailRow extends StatelessWidget {
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.charcoal,
@@ -920,7 +909,7 @@ class _DetailNote extends StatelessWidget {
       ),
       child: Text(
         text,
-        style: GoogleFonts.manrope(
+        style: GoogleFonts.inter(
           fontSize: 12,
           height: 1.35,
           fontWeight: FontWeight.w600,
@@ -953,7 +942,7 @@ class _AmountRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: isTotal ? 14 : 12.5,
                 fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
                 color: isTotal ? AppTheme.charcoal : AppTheme.charcoalMuted,
@@ -967,7 +956,7 @@ class _AmountRow extends StatelessWidget {
               alignment: Alignment.centerRight,
               child: Text(
                 value,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: isTotal ? 17 : 13,
                   fontWeight: FontWeight.w900,
                   color: valueColor ?? AppTheme.charcoal,

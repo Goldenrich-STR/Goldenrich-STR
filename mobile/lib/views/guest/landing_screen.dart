@@ -629,7 +629,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 Text('Find Your Perfect Space',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 12,
                         height: 1.1,
                         fontWeight: FontWeight.w600,
@@ -734,7 +734,7 @@ class _LandingScreenState extends State<LandingScreen> {
                     child: Text(activeSlide.tag,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w900)),
@@ -744,7 +744,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       '${activeSlide.titlePrefix}\n${activeSlide.titleHighlight}',
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           color: Colors.white,
                           fontSize: media.width < 360 ? 22 : 25,
                           height: 1.04,
@@ -753,7 +753,7 @@ class _LandingScreenState extends State<LandingScreen> {
                   Text(activeSlide.badge,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           color: Colors.white.withValues(alpha: 0.92),
                           fontSize: media.width < 360 ? 11 : 12,
                           fontWeight: FontWeight.w600)),
@@ -773,7 +773,7 @@ class _LandingScreenState extends State<LandingScreen> {
                     iconAlignment: IconAlignment.end,
                     icon: const Icon(Icons.arrow_forward, size: 18),
                     label: Text('Explore Now',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                             fontSize: 13, fontWeight: FontWeight.w900)),
                   ),
                 ],
@@ -835,7 +835,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text('Where to?',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 13,
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF07142F))),
@@ -848,7 +848,7 @@ class _LandingScreenState extends State<LandingScreen> {
                               : 'Search city, area\nor property'),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 10, color: AppTheme.charcoalLight)),
                 ],
               ),
@@ -896,14 +896,14 @@ class _LandingScreenState extends State<LandingScreen> {
             const SizedBox(height: 5),
             Text(title,
                 maxLines: 1,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontSize: 9,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF07142F))),
             Text(sub,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontSize: 8, color: AppTheme.charcoalLight)),
           ],
         ),
@@ -940,7 +940,7 @@ class _LandingScreenState extends State<LandingScreen> {
                     textAlign: TextAlign.center,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 10,
                         height: 1.1,
                         fontWeight: FontWeight.w900,
@@ -1005,7 +1005,7 @@ class _LandingScreenState extends State<LandingScreen> {
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             text: TextSpan(
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 height: 1.35,
                 fontWeight: FontWeight.w600,
@@ -1078,7 +1078,7 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
             child: Text(
               'No listed locations available yet.',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.charcoalMuted,
@@ -1120,7 +1120,7 @@ class _LandingScreenState extends State<LandingScreen> {
                               Text(location.city,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                       fontSize: 15,
                                       fontWeight: FontWeight.w900,
                                       color: const Color(0xFF07142F))),
@@ -1132,7 +1132,7 @@ class _LandingScreenState extends State<LandingScreen> {
                                   const SizedBox(width: 4),
                                   Text(
                                       '${location.listingCount}+ ${location.listingCount == 1 ? 'Space' : 'Spaces'}',
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                           fontSize: 12,
                                           color: AppTheme.charcoalLight)),
                                 ],
@@ -1259,13 +1259,13 @@ class _LandingScreenState extends State<LandingScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("You haven’t viewed any spaces yet",
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w900,
                               color: const Color(0xFF07142F))),
                       const SizedBox(height: 4),
                       Text('Explore and save your favourite spaces.',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                               fontSize: 13, color: AppTheme.charcoalLight)),
                     ],
                   ),
@@ -1358,13 +1358,13 @@ class _LandingScreenState extends State<LandingScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Special Offers for You!',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 17,
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF07142F))),
                 const SizedBox(height: 4),
                 Text('Book now and get up to 20% OFF on selected spaces.',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 13, color: AppTheme.charcoalLight)),
               ],
             ),
@@ -1394,7 +1394,7 @@ class _LandingScreenState extends State<LandingScreen> {
       children: [
         Expanded(
           child: Text(title,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                   color: const Color(0xFF07142F))),
@@ -1495,7 +1495,7 @@ class _LandingScreenState extends State<LandingScreen> {
             },
             child: Text(
               'Sign In',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 color: Colors.white,
                 fontWeight: FontWeight.w800,
                 fontSize: 13,
@@ -1553,7 +1553,7 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
               child: Text(
                 'Sign Out',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w800,
@@ -1618,7 +1618,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       children: [
                         Text(
                           user.fullName,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.charcoal,
@@ -1627,7 +1627,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         const SizedBox(height: 3),
                         Text(
                           user.email,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             color: AppTheme.charcoalMuted,
                           ),
@@ -1635,7 +1635,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         const SizedBox(height: 4),
                         Text(
                           'Role: ${_roleLabel(user.role)}',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.primary,
@@ -1728,10 +1728,10 @@ class _LandingScreenState extends State<LandingScreen> {
           ),
           child: Text(
             slide.tag,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w800,
-              letterSpacing: 2.4,
+              letterSpacing: 0,
               color: Colors.white,
             ),
           ),
@@ -1740,7 +1740,7 @@ class _LandingScreenState extends State<LandingScreen> {
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 33,
               height: 1.12,
               fontWeight: FontWeight.w800,
@@ -1750,7 +1750,7 @@ class _LandingScreenState extends State<LandingScreen> {
               TextSpan(text: slide.titlePrefix),
               TextSpan(
                 text: slide.titleHighlight,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 33,
                   fontWeight: FontWeight.w800,
                   color: Colors.white,
@@ -1772,7 +1772,7 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
               child: Text(
                 slide.badge,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -1822,7 +1822,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         children: [
                           Text(
                             'Where to?',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoal,
@@ -1833,7 +1833,7 @@ class _LandingScreenState extends State<LandingScreen> {
                             _searchSummary,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 11,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.charcoalMuted,
@@ -1920,17 +1920,17 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Text(
             title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.7,
+              letterSpacing: 0,
               color: AppTheme.charcoal,
             ),
           ),
           const SizedBox(height: 8),
           Text(
             subtitle,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               height: 1.6,
               color: AppTheme.charcoalMuted,
@@ -1990,10 +1990,10 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Text(
             'Holiday Getaway',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.w800,
-              letterSpacing: -0.7,
+              letterSpacing: 0,
               color: AppTheme.charcoal,
             ),
           ),
@@ -2024,7 +2024,7 @@ class _LandingScreenState extends State<LandingScreen> {
                     ),
                     child: Text(
                       tab,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight:
                             isActive ? FontWeight.w800 : FontWeight.w600,
@@ -2043,7 +2043,7 @@ class _LandingScreenState extends State<LandingScreen> {
               alignment: Alignment.center,
               child: Text(
                 'No properties found in this location.',
-                style: GoogleFonts.manrope(color: AppTheme.charcoalMuted),
+                style: GoogleFonts.inter(color: AppTheme.charcoalMuted),
               ),
             )
           else
@@ -2077,7 +2077,7 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Text(
             'Offers & Highlights',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -2086,7 +2086,7 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 8),
           Text(
             'Web-style promo blocks adapted for mobile so guests discover new offers faster.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               height: 1.6,
               color: AppTheme.charcoalMuted,
@@ -2131,17 +2131,17 @@ class _LandingScreenState extends State<LandingScreen> {
                       children: [
                         Text(
                           card.eyebrow,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1.6,
+                            letterSpacing: 0,
                             color: AppTheme.primary,
                           ),
                         ),
                         const SizedBox(height: 8),
                         Text(
                           card.title,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: Colors.white,
@@ -2150,7 +2150,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         const SizedBox(height: 8),
                         Text(
                           card.description,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             height: 1.6,
                             color: Colors.white.withValues(alpha: 0.72),
@@ -2189,7 +2189,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       children: [
                         Text(
                           'Pick a Destination',
-                          style: GoogleFonts.cormorantGaramond(
+                          style: GoogleFonts.inter(
                             fontSize: 30,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.charcoal,
@@ -2249,7 +2249,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         Text(
                           destination.city,
                           textAlign: TextAlign.center,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoal,
@@ -2286,7 +2286,7 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Text(
             'Ready to Host with Us?',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 26,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -2295,7 +2295,7 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 10),
           Text(
             'Join India\'s premium short-term rental network and turn curated spaces into high-yield assets.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               height: 1.6,
               color: AppTheme.charcoalMuted,
@@ -2334,7 +2334,7 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Text(
             'Loved by Guests & Hosts',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -2343,7 +2343,7 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 8),
           Text(
             'A premium experience should feel refined on every screen, from discovery to checkout.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               height: 1.6,
               color: AppTheme.charcoalMuted,
@@ -2387,7 +2387,7 @@ class _LandingScreenState extends State<LandingScreen> {
                         item.quote,
                         maxLines: 5,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           height: 1.7,
                           color: AppTheme.charcoal,
@@ -2396,7 +2396,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       const Spacer(),
                       Text(
                         item.name,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoal,
@@ -2405,7 +2405,7 @@ class _LandingScreenState extends State<LandingScreen> {
                       const SizedBox(height: 2),
                       Text(
                         item.role,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
                           color: AppTheme.charcoalMuted,
                         ),
@@ -2429,7 +2429,7 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Text(
             'From the Blog',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 24,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -2438,7 +2438,7 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 8),
           Text(
             'Content-led trust sections from the website, now shaped for app discovery.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               height: 1.6,
               color: AppTheme.charcoalMuted,
@@ -2513,7 +2513,7 @@ class _LandingScreenState extends State<LandingScreen> {
                                   ),
                                   child: Text(
                                     blog.category,
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       fontSize: 11,
                                       fontWeight: FontWeight.w800,
                                       color: AppTheme.charcoal,
@@ -2525,7 +2525,7 @@ class _LandingScreenState extends State<LandingScreen> {
                                   blog.title,
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 17,
                                     fontWeight: FontWeight.w800,
                                     height: 1.25,
@@ -2538,7 +2538,7 @@ class _LandingScreenState extends State<LandingScreen> {
                                     blog.excerpt,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       fontSize: 13,
                                       height: 1.65,
                                       color: AppTheme.charcoalMuted,
@@ -2578,7 +2578,7 @@ class _LandingScreenState extends State<LandingScreen> {
               children: [
                 Text(
                   'Need instant help?',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.charcoal,
@@ -2587,7 +2587,7 @@ class _LandingScreenState extends State<LandingScreen> {
                 const SizedBox(height: 8),
                 Text(
                   'Use the AI concierge for stay suggestions, booking help, and quick answers anytime.',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     height: 1.6,
                     color: AppTheme.charcoalMuted,
@@ -2644,7 +2644,7 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 16),
           Text(
             'Redefining short-term rentals in India through curation, technology, and premium service.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: Colors.white.withValues(alpha: 0.76),
               fontSize: 13,
               height: 1.6,
@@ -2667,7 +2667,7 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 16),
           Text(
             'Call Us: +91 8104 954 254',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: Colors.white,
               fontWeight: FontWeight.w800,
               fontSize: 15,
@@ -2690,7 +2690,7 @@ class _LandingScreenState extends State<LandingScreen> {
           const SizedBox(height: 18),
           Text(
             '© 2026 X-Space360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: Colors.white.withValues(alpha: 0.54),
               fontSize: 11,
               height: 1.6,
@@ -2788,7 +2788,7 @@ class _LandingScreenState extends State<LandingScreen> {
                   children: [
                     Text(
                       'Recently Visited',
-                      style: GoogleFonts.cormorantGaramond(
+                      style: GoogleFonts.inter(
                         fontSize: 30,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.charcoal,
@@ -2821,7 +2821,7 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
               child: Text(
                 'Open any property once and it will appear here just like the website recently visited section.',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 13,
                   height: 1.6,
                   fontWeight: FontWeight.w600,
@@ -2860,7 +2860,7 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           Text(
             'Discover Our Collection',
-            style: GoogleFonts.cormorantGaramond(
+            style: GoogleFonts.inter(
               fontSize: 30,
               fontWeight: FontWeight.w700,
               color: AppTheme.charcoal,
@@ -2976,7 +2976,7 @@ class _CommercialFeaturedCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(tag,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 11,
                         fontWeight: FontWeight.w900)),
@@ -3021,7 +3021,7 @@ class _CommercialFeaturedCard extends StatelessWidget {
                     Text(property.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                             fontSize: 15,
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF07142F))),
@@ -3035,7 +3035,7 @@ class _CommercialFeaturedCard extends StatelessWidget {
                           child: Text('${property.city}, ${property.state}',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                   fontSize: 11, color: AppTheme.charcoalLight)),
                         ),
                       ],
@@ -3047,7 +3047,7 @@ class _CommercialFeaturedCard extends StatelessWidget {
                             color: Color(0xFFFFB000), size: 16),
                         const SizedBox(width: 4),
                         Text(rating.toStringAsFixed(1),
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w900,
                                 color: const Color(0xFF07142F))),
@@ -3057,13 +3057,13 @@ class _CommercialFeaturedCard extends StatelessWidget {
                           children: [
                             Text(
                               '${CurrencyFormatter.format(property.customerDisplayPrice)} / ${property.pricingUnitLabel}',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF07142F)),
                             ),
                             Text('Starts from',
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                     fontSize: 10,
                                     color: AppTheme.charcoalMuted)),
                           ],
@@ -3107,7 +3107,7 @@ class _CommercialEmptyCard extends StatelessWidget {
           Expanded(
             child: Text(
               message,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700, color: AppTheme.charcoalLight),
             ),
           ),
@@ -3188,11 +3188,11 @@ class _PropertyCard extends StatelessWidget {
                           ),
                           child: Text(
                             property.category.toUpperCase(),
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               color: AppTheme.charcoal,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 1.0,
+                              letterSpacing: 0,
                             ),
                           ),
                         ),
@@ -3218,11 +3218,11 @@ class _PropertyCard extends StatelessWidget {
                                 const SizedBox(width: 4),
                                 Text(
                                   'SIGNATURE SERIES',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     color: const Color(0xFFD4AF37),
                                     fontSize: 8.5,
                                     fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.0,
+                                    letterSpacing: 0,
                                   ),
                                 ),
                               ],
@@ -3301,7 +3301,7 @@ class _PropertyCard extends StatelessWidget {
                     property.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.charcoal,
@@ -3317,7 +3317,7 @@ class _PropertyCard extends StatelessWidget {
                     const SizedBox(width: 3),
                     Text(
                       rating.toStringAsFixed(1),
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.w700,
                         color: AppTheme.charcoal,
                       ),
@@ -3329,7 +3329,7 @@ class _PropertyCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               '${property.city}, ${property.state}',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 color: AppTheme.charcoalMuted,
               ),
@@ -3339,7 +3339,7 @@ class _PropertyCard extends StatelessWidget {
             const SizedBox(height: 6),
             Text(
               '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.charcoal,
@@ -3359,36 +3359,26 @@ class _BookingModeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final instant = property.isInstantBook;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color:
-            instant ? AppTheme.primary.withValues(alpha: 0.10) : AppTheme.stone,
+        color: AppTheme.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
         border: Border.all(
-          color: instant
-              ? AppTheme.primary.withValues(alpha: 0.24)
-              : AppTheme.border,
+          color: AppTheme.primary.withValues(alpha: 0.24),
         ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            instant
-                ? Icons.flash_on_rounded
-                : Icons.assignment_turned_in_outlined,
-            size: 12,
-            color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
-          ),
+          const Icon(Icons.flash_on_rounded, size: 12, color: AppTheme.primary),
           const SizedBox(width: 4),
           Text(
-            instant ? 'Instant Book' : 'Host Approval Required',
-            style: GoogleFonts.manrope(
+            'Instant Book',
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w800,
-              color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
+              color: AppTheme.primary,
             ),
           ),
         ],
@@ -3476,10 +3466,10 @@ class _DiscoverCollectionCard extends StatelessWidget {
                             const SizedBox(width: 4),
                             Text(
                               'Signature Series',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 8.5,
                                 fontWeight: FontWeight.w800,
-                                letterSpacing: 0.8,
+                                letterSpacing: 0,
                                 color: const Color(0xFFD4AF37),
                               ),
                             ),
@@ -3497,10 +3487,10 @@ class _DiscoverCollectionCard extends StatelessWidget {
                         ),
                         child: Text(
                           card.tag,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
-                            letterSpacing: 1.0,
+                            letterSpacing: 0,
                             color: AppTheme.charcoal,
                           ),
                         ),
@@ -3515,17 +3505,17 @@ class _DiscoverCollectionCard extends StatelessWidget {
                   children: [
                     Text(
                       'Explore',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 9,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 1.6,
+                        letterSpacing: 0,
                         color: Colors.white.withValues(alpha: 0.66),
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       card.label,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 19,
                         height: 1.2,
                         fontWeight: FontWeight.w800,
@@ -3537,7 +3527,7 @@ class _DiscoverCollectionCard extends StatelessWidget {
                       card.detail,
                       maxLines: 5,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 11.5,
                         height: 1.55,
                         color: Colors.white.withValues(alpha: 0.80),
@@ -3626,7 +3616,7 @@ class _RecentlyVisitedCard extends StatelessWidget {
                             property.title,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoal,
@@ -3641,7 +3631,7 @@ class _RecentlyVisitedCard extends StatelessWidget {
                             const SizedBox(width: 3),
                             Text(
                               rating.toStringAsFixed(1),
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 12,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.charcoal,
@@ -3662,7 +3652,7 @@ class _RecentlyVisitedCard extends StatelessWidget {
                             '${property.city}${property.state.isNotEmpty ? ', ${property.state}' : ''}',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.charcoalMuted,
@@ -3684,7 +3674,7 @@ class _RecentlyVisitedCard extends StatelessWidget {
                         'Up to ${property.maxGuests} Guests - ${property.bhkType.isNotEmpty ? property.bhkType.toUpperCase() : property.propertyType.replaceAll('_', ' ')}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 11.5,
                           fontWeight: FontWeight.w700,
                           color: AppTheme.charcoalMuted,
@@ -3971,7 +3961,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                         const SizedBox(width: 14),
                         Text(
                           'Search Stays',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 19,
                             fontWeight: FontWeight.w900,
                           ),
@@ -3998,7 +3988,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
             children: [
               Text(
                 'Find Your Perfect Stay',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 28,
                   height: 1.05,
                   fontWeight: FontWeight.w900,
@@ -4008,7 +3998,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
               const SizedBox(height: 8),
               Text(
                 'Search top properties in your favorite destinations',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
                   color: AppTheme.charcoalMuted,
@@ -4048,7 +4038,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
         Expanded(
           child: Text(
             title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 19,
               fontWeight: FontWeight.w900,
               color: const Color(0xFF07142F),
@@ -4058,7 +4048,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
         if (action != null)
           Text(
             '$action  >',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w800,
               color: AppTheme.primary,
@@ -4139,7 +4129,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                                 city,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w900,
                                   color: const Color(0xFF07142F),
@@ -4151,7 +4141,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                         const SizedBox(height: 3),
                         Text(
                           'Explore stays',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             color: AppTheme.charcoalMuted,
                             fontWeight: FontWeight.w600,
@@ -4213,7 +4203,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                   const SizedBox(width: 10),
                   Text(
                     item.$1,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
                       color: selected ? Colors.white : AppTheme.charcoal,
@@ -4257,7 +4247,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
             padding: const EdgeInsets.symmetric(horizontal: 18),
             child: Text(
               '$_guests',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 18,
                 fontWeight: FontWeight.w900,
                 color: const Color(0xFF07142F),
@@ -4305,7 +4295,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                           items[i].$2,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w900,
                             color: const Color(0xFF07142F),
@@ -4315,7 +4305,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                           items[i].$3,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 10,
                             color: AppTheme.charcoalMuted,
                           ),
@@ -4451,7 +4441,7 @@ class _SuggestionDropdown extends StatelessWidget {
                           suggestion.title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: AppTheme.charcoal,
@@ -4465,7 +4455,7 @@ class _SuggestionDropdown extends StatelessWidget {
                           ].where((part) => part.trim().isNotEmpty).join(' - '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 11,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoalMuted,
@@ -4530,7 +4520,7 @@ class _SearchOptionRow extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 17,
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF07142F),
@@ -4541,7 +4531,7 @@ class _SearchOptionRow extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.charcoalMuted,
@@ -5244,7 +5234,7 @@ class _BlogDetailScreen extends StatelessWidget {
         ),
         title: Text(
           'Blog',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             color: AppTheme.charcoal,
             fontWeight: FontWeight.w800,
           ),
@@ -5285,7 +5275,7 @@ class _BlogDetailScreen extends StatelessWidget {
               ),
               child: Text(
                 blog.category,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 11,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.charcoal,
@@ -5295,7 +5285,7 @@ class _BlogDetailScreen extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               blog.title,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 28,
                 height: 1.2,
                 fontWeight: FontWeight.w800,
@@ -5305,7 +5295,7 @@ class _BlogDetailScreen extends StatelessWidget {
             const SizedBox(height: 14),
             Text(
               blog.excerpt,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 15,
                 height: 1.7,
                 color: AppTheme.charcoalMuted,
@@ -5322,7 +5312,7 @@ class _BlogDetailScreen extends StatelessWidget {
               ),
               child: Text(
                 blog.content,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 15,
                   height: 1.85,
                   color: AppTheme.charcoal,
@@ -5370,7 +5360,7 @@ class _HostEarnPill extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             'EARN MORE',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w900,
               color: Colors.white,
@@ -5393,7 +5383,7 @@ class _HostTitle extends StatelessWidget {
       maxLines: 2,
       overflow: TextOverflow.ellipsis,
       text: TextSpan(
-        style: GoogleFonts.manrope(
+        style: GoogleFonts.inter(
           fontSize: fontSize,
           height: 1.05,
           fontWeight: FontWeight.w900,
@@ -5482,7 +5472,7 @@ class _HostMobileVisual extends StatelessWidget {
               bottom: 12,
               child: Text(
                 'Verified spaces earn better',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
@@ -5508,7 +5498,7 @@ class _HostMobileVisual extends StatelessWidget {
                 ),
                 child: Text(
                   _hostCountLabel,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF07142F),
@@ -5571,7 +5561,7 @@ class _HostListButton extends StatelessWidget {
             ],
             Text(
               fullWidth ? 'List Your Space' : 'List',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: fullWidth ? 15 : 13,
                 fontWeight: FontWeight.w900,
               ),
@@ -5617,7 +5607,7 @@ class _HostBenefit extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 10,
             height: 1,
             fontWeight: FontWeight.w900,
@@ -5630,7 +5620,7 @@ class _HostBenefit extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           textAlign: TextAlign.center,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 9,
             height: 1,
             fontWeight: FontWeight.w700,
@@ -5668,7 +5658,7 @@ class _FooterChip extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: GoogleFonts.manrope(
+        style: GoogleFonts.inter(
           color: Colors.white,
           fontSize: 12,
           fontWeight: FontWeight.w700,
@@ -5696,7 +5686,7 @@ class _FooterAccordion extends StatelessWidget {
           collapsedIconColor: Colors.white,
           title: Text(
             section.title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: Colors.white,
               fontSize: 15,
               fontWeight: FontWeight.w700,
@@ -5763,7 +5753,7 @@ class _AccountActionTile extends StatelessWidget {
         leading: Icon(icon, color: color),
         title: Text(
           label,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w700,
             color: color,

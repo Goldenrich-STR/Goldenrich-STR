@@ -96,8 +96,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           ),
                           title: Text(
                             item['title'] ?? 'Notification',
-                            style: GoogleFonts.manrope(
-                                fontWeight: FontWeight.w800),
+                            style:
+                                GoogleFonts.inter(fontWeight: FontWeight.w800),
                           ),
                           subtitle: Padding(
                             padding: const EdgeInsets.only(top: 6),

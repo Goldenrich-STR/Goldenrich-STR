@@ -132,7 +132,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 const SizedBox(height: 18),
                 Text(
                   'Share property',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.charcoal,
@@ -143,7 +143,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   prop.title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 13,
                     color: AppTheme.charcoalMuted,
                   ),
@@ -396,19 +396,19 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: Text(
             'Guest Booking Only',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
                 fontWeight: FontWeight.w800, color: AppTheme.charcoal),
           ),
           content: Text(
             'Property booking is available only for guest accounts. Please sign in with a guest account to continue booking.',
             style:
-                GoogleFonts.manrope(color: AppTheme.charcoalMuted, height: 1.5),
+                GoogleFonts.inter(color: AppTheme.charcoalMuted, height: 1.5),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
               child: Text('OK',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                       color: AppTheme.primary, fontWeight: FontWeight.w800)),
             ),
           ],
@@ -478,7 +478,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(height: 24),
         Text(
           'CATERING & FOOD PREFERENCE',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -528,7 +528,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           children: [
                             Text(
                               'Vegetarian Menu',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.charcoal,
                                 fontSize: 14,
@@ -536,7 +536,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             ),
                             Text(
                               'Standard catering service included',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 color: AppTheme.charcoalMuted,
                                 fontSize: 11,
                               ),
@@ -546,7 +546,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       ),
                       Text(
                         '${CurrencyFormatter.format(prop.vegPrice ?? 0)} / Plate',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoal,
                           fontSize: 14,
@@ -591,7 +591,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           children: [
                             Text(
                               'Non-Vegetarian Menu',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontWeight: FontWeight.bold,
                                 color: AppTheme.charcoal,
                                 fontSize: 14,
@@ -599,7 +599,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             ),
                             Text(
                               'Standard catering service included',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 color: AppTheme.charcoalMuted,
                                 fontSize: 11,
                               ),
@@ -609,7 +609,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       ),
                       Text(
                         '${CurrencyFormatter.format(prop.nonVegPrice ?? 0)} / Plate',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoal,
                           fontSize: 14,
@@ -625,7 +625,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(height: 24),
         Text(
           'SELECT TIMING SLOT',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -643,7 +643,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             child: DropdownButton<String>(
               value: _selectedSlot,
               isExpanded: true,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.charcoal,
@@ -673,7 +673,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(height: 24),
         Text(
           'PAYMENT PREFERENCE',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -697,7 +697,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   child: Center(
                     child: Text(
                       'Full Payment',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                         color: _paymentType == 'full'
@@ -725,7 +725,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   child: Center(
                     child: Text(
                       'Pay 50% Advance',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
                         color: _paymentType == 'advance'
@@ -759,7 +759,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       children: [
         Text(
           'Videos & Tours',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -880,7 +880,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   children: [
                     Text(
                       title,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontWeight: FontWeight.bold,
                         fontSize: 13,
                         color: AppTheme.charcoal,
@@ -893,7 +893,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       children: [
                         Text(
                           subtitle,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 10,
                             color: AppTheme.charcoalMuted,
                             fontWeight: FontWeight.w600,
@@ -1045,7 +1045,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           ),
                           child: Text(
                             '${images.isEmpty ? 0 : _currentImageIndex + 1}/${images.isEmpty ? 0 : images.length}',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
@@ -1082,7 +1082,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   const SizedBox(width: 6),
                                   Text(
                                     'View all photos',
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w700,
                                       color: AppTheme.charcoal,
@@ -1126,11 +1126,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 ),
                                 child: Text(
                                   prop.category.toUpperCase(),
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 10,
                                     fontWeight: FontWeight.w800,
                                     color: AppTheme.primary,
-                                    letterSpacing: 1.1,
+                                    letterSpacing: 0,
                                   ),
                                 ),
                               ),
@@ -1158,11 +1158,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       const SizedBox(width: 5),
                                       Text(
                                         'SIGNATURE SERIES',
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 9,
                                           fontWeight: FontWeight.w800,
                                           color: const Color(0xFFD4AF37),
-                                          letterSpacing: 1.0,
+                                          letterSpacing: 0,
                                         ),
                                       ),
                                     ],
@@ -1174,7 +1174,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           // Title
                           Text(
                             prop.title,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 22,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoal,
@@ -1186,7 +1186,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           // Subtitle & Info
                           Text(
                             '${prop.maxGuests} guests · ${prop.bhkType.toUpperCase()} · ${prop.areaSqft.toStringAsFixed(0)} Sqft',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 13,
                               color: AppTheme.charcoalLight,
                               fontWeight: FontWeight.w500,
@@ -1213,7 +1213,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         children: [
                                           Text(
                                             prop.rating!.toStringAsFixed(1),
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w800,
                                               color: AppTheme.charcoal,
@@ -1230,7 +1230,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         List.generate(
                                             prop.rating!.round().clamp(1, 5),
                                             (index) => '★').join(''),
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 8,
                                           color: AppTheme.charcoalMuted,
                                         ),
@@ -1253,7 +1253,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                               color: AppTheme.charcoal),
                                           Text(
                                             'Guest favourite',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w800,
                                               color: AppTheme.charcoal,
@@ -1269,7 +1269,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       const SizedBox(height: 2),
                                       Text(
                                         'Highly rated stay',
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 10,
                                           color: AppTheme.charcoalMuted,
                                           fontWeight: FontWeight.w600,
@@ -1285,7 +1285,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     children: [
                                       Text(
                                         (prop.reviewCount ?? 0).toString(),
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 14,
                                           fontWeight: FontWeight.w800,
                                           color: AppTheme.charcoal,
@@ -1294,7 +1294,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       const SizedBox(height: 2),
                                       Text(
                                         'Reviews',
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 10,
                                           fontWeight: FontWeight.bold,
                                           color: AppTheme.charcoalMuted,
@@ -1352,7 +1352,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             overflow: _isDescriptionExpanded
                                 ? TextOverflow.visible
                                 : TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               color: AppTheme.charcoalLight,
                               height: 1.6,
@@ -1372,7 +1372,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   _isDescriptionExpanded
                                       ? 'Show less'
                                       : 'Read more',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: AppTheme.charcoal,
@@ -1403,7 +1403,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               prop.hasTaxi) ...[
                             Text(
                               'Services & Kitchen',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 18,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.charcoal,
@@ -1442,7 +1442,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         children: [
                                           Text(
                                             'Cook Available',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontWeight: FontWeight.bold,
                                               color: AppTheme.charcoal,
                                               fontSize: 14,
@@ -1451,7 +1451,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                           const SizedBox(height: 2),
                                           Text(
                                             'Personal cook service is available at this property.',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               color: AppTheme.charcoalMuted,
                                               fontSize: 12,
                                             ),
@@ -1461,7 +1461,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     ),
                                     Text(
                                       '${CurrencyFormatter.format(prop.cookPrice ?? 0.0)}/day',
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.primary,
                                         fontSize: 15,
@@ -1505,7 +1505,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         children: [
                                           Text(
                                             'Self Cooking Allowed',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontWeight: FontWeight.bold,
                                               color: AppTheme.charcoal,
                                               fontSize: 14,
@@ -1514,7 +1514,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                           const SizedBox(height: 2),
                                           Text(
                                             'Guests can use the kitchen facility to cook meals.',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               color: AppTheme.charcoalMuted,
                                               fontSize: 12,
                                             ),
@@ -1524,7 +1524,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     ),
                                     Text(
                                       'Free',
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontWeight: FontWeight.w800,
                                         color: const Color(0xFF10B981),
                                         fontSize: 15,
@@ -1567,7 +1567,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                         children: [
                                           Text(
                                             'Taxi Service Available',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontWeight: FontWeight.bold,
                                               color: AppTheme.charcoal,
                                               fontSize: 14,
@@ -1576,7 +1576,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                           const SizedBox(height: 2),
                                           Text(
                                             'Taxi or transportation service is available at this property.',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               color: AppTheme.charcoalMuted,
                                               fontSize: 12,
                                             ),
@@ -1586,7 +1586,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     ),
                                     Text(
                                       'Available',
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontWeight: FontWeight.w800,
                                         color: Colors.amber.shade700,
                                         fontSize: 14,
@@ -1604,7 +1604,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           // What this place offers (Amenities)
                           Text(
                             'What this place offers',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoal,
@@ -1614,7 +1614,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           if (prop.amenities.isEmpty)
                             Text(
                               'No specific amenities listed.',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                   color: AppTheme.charcoalMuted),
                             )
                           else
@@ -1651,7 +1651,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                     Expanded(
                                       child: Text(
                                         amenity.toUpperCase(),
-                                        style: GoogleFonts.manrope(
+                                        style: GoogleFonts.inter(
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                           color: AppTheme.charcoal,
@@ -1684,7 +1684,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                           children: [
                                             Text(
                                               'What this place offers',
-                                              style: GoogleFonts.manrope(
+                                              style: GoogleFonts.inter(
                                                 fontSize: 20,
                                                 fontWeight: FontWeight.w800,
                                                 color: AppTheme.charcoal,
@@ -1709,8 +1709,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                             AppTheme.primary),
                                                     title: Text(
                                                       amenity.toUpperCase(),
-                                                      style:
-                                                          GoogleFonts.manrope(
+                                                      style: GoogleFonts.inter(
                                                         fontWeight:
                                                             FontWeight.w600,
                                                         color:
@@ -1738,7 +1737,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 ),
                                 child: Text(
                                   'Show all ${prop.amenities.length} amenities',
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: AppTheme.charcoal,
@@ -1755,7 +1754,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           // Location block
                           Text(
                             "Where you'll be",
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 28,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.charcoal,
@@ -1764,7 +1763,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const SizedBox(height: 12),
                           Text(
                             '${prop.address}, ${prop.city}, ${prop.state}, India',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 17,
                               color: AppTheme.charcoalLight,
                               fontWeight: FontWeight.w600,
@@ -1873,7 +1872,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                             children: [
                                               Text(
                                                 prop.city,
-                                                style: GoogleFonts.manrope(
+                                                style: GoogleFonts.inter(
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w900,
                                                   color: AppTheme.charcoal,
@@ -1882,7 +1881,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                               const SizedBox(height: 2),
                                               Text(
                                                 '${prop.state} • Pin ${prop.pinCode}',
-                                                style: GoogleFonts.manrope(
+                                                style: GoogleFonts.inter(
                                                   fontSize: 11,
                                                   fontWeight: FontWeight.w600,
                                                   color: AppTheme.charcoalMuted,
@@ -1906,7 +1905,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                           ),
                                           child: Text(
                                             'Open Map',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontSize: 11,
                                               fontWeight: FontWeight.w800,
                                               color: AppTheme.charcoal,
@@ -1935,7 +1934,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   const SizedBox(height: 8),
                                   Text(
                                     'Guest favourite',
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       fontSize: 18,
                                       fontWeight: FontWeight.w800,
                                       color: AppTheme.charcoal,
@@ -1945,7 +1944,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                   Text(
                                     'One of the most loved homes on X-Space360,\nbased on ratings, reviews, and reliability',
                                     textAlign: TextAlign.center,
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       fontSize: 12,
                                       color: AppTheme.charcoalMuted,
                                       fontWeight: FontWeight.w500,
@@ -1963,7 +1962,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           // Stay Dates Selection Card
                           Text(
                             prop.bookingDateTitle,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 18,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoal,
@@ -1995,7 +1994,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                 isEvent
                                                     ? 'EVENT DATE'
                                                     : 'CHECK-IN',
-                                                style: GoogleFonts.manrope(
+                                                style: GoogleFonts.inter(
                                                   fontSize: 10,
                                                   fontWeight: FontWeight.w800,
                                                   color: AppTheme.charcoalMuted,
@@ -2016,7 +2015,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                                 'dd-MM-yyyy')
                                                             .format(
                                                                 _checkInDate!),
-                                                    style: GoogleFonts.manrope(
+                                                    style: GoogleFonts.inter(
                                                       fontSize: 14,
                                                       fontWeight:
                                                           FontWeight.w700,
@@ -2050,7 +2049,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                               children: [
                                                 Text(
                                                   'CHECK-OUT',
-                                                  style: GoogleFonts.manrope(
+                                                  style: GoogleFonts.inter(
                                                     fontSize: 10,
                                                     fontWeight: FontWeight.w800,
                                                     color: _checkInDate == null
@@ -2083,8 +2082,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                                   'dd-MM-yyyy')
                                                               .format(
                                                                   _checkOutDate!),
-                                                      style:
-                                                          GoogleFonts.manrope(
+                                                      style: GoogleFonts.inter(
                                                         fontSize: 14,
                                                         fontWeight:
                                                             FontWeight.w700,
@@ -2144,7 +2142,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                 children: [
                                                   Text(
                                                     'TOTAL ${prop.participantLabelUpper}',
-                                                    style: GoogleFonts.manrope(
+                                                    style: GoogleFonts.inter(
                                                       fontSize: 10,
                                                       fontWeight:
                                                           FontWeight.w800,
@@ -2162,8 +2160,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                           Icons.arrow_drop_down,
                                                           color:
                                                               AppTheme.primary),
-                                                      style:
-                                                          GoogleFonts.manrope(
+                                                      style: GoogleFonts.inter(
                                                         fontSize: 15,
                                                         fontWeight:
                                                             FontWeight.w700,
@@ -2234,8 +2231,8 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                             width: 12),
                                                         Text(
                                                           '$_guestCount',
-                                                          style: GoogleFonts
-                                                              .manrope(
+                                                          style:
+                                                              GoogleFonts.inter(
                                                             fontSize: 16,
                                                             fontWeight:
                                                                 FontWeight.w700,
@@ -2281,7 +2278,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                       if (!isEvent)
                                         Text(
                                           'MAX ${prop.maxGuests} ${prop.participantLabelUpper}',
-                                          style: GoogleFonts.manrope(
+                                          style: GoogleFonts.inter(
                                             fontSize: 11,
                                             fontWeight: FontWeight.w800,
                                             color: AppTheme.primary,
@@ -2434,7 +2431,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             Text(
                               CurrencyFormatter.format(
                                   prop.customerDisplayPrice),
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 20,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.charcoal,
@@ -2442,7 +2439,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                             ),
                             Text(
                               prop.pricingUnitSuffix,
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 13,
                                 color: AppTheme.charcoalLight,
                                 fontWeight: FontWeight.w500,
@@ -2469,7 +2466,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                 prop.bookingModeLabel,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 11,
                                   color: prop.isInstantBook
                                       ? AppTheme.primary
@@ -2487,7 +2484,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           },
                           child: Text(
                             'View price breakup',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               color: AppTheme.charcoal,
                               fontWeight: FontWeight.w700,
@@ -2515,7 +2512,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       isEvent && prop.isInstantBook
                           ? 'Reserve Venue'
                           : prop.bookingCtaLabel,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
@@ -2594,7 +2591,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(height: 32),
         Text(
           'Availability',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -2632,7 +2629,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   ),
                   Text(
                     DateFormat('MMMM yyyy').format(_calendarMonth),
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 16,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.charcoal,
@@ -2660,7 +2657,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     child: Center(
                       child: Text(
                         day,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoalMuted,
@@ -2703,7 +2700,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   Widget cellContent = Center(
                     child: Text(
                       '$day',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 14,
                         fontWeight: FontWeight.w600,
                         color: isSelected
@@ -2735,7 +2732,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       children: [
                         Text(
                           '$day',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.primary,
@@ -2820,11 +2817,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(width: 6),
         Text(
           label,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 9,
             fontWeight: FontWeight.w700,
             color: AppTheme.charcoalMuted,
-            letterSpacing: 0.5,
+            letterSpacing: 0,
           ),
         ),
       ],
@@ -2841,7 +2838,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             flex: 4,
             child: Text(
               label.toUpperCase(),
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.charcoalMuted,
@@ -2861,7 +2858,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           const SizedBox(width: 12),
           Text(
             rating.toStringAsFixed(1),
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -2897,7 +2894,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(height: 32),
         Text(
           'Guest Reviews',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 18,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -2921,7 +2918,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   children: [
                     Text(
                       avgRating.toStringAsFixed(1),
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 32,
                         fontWeight: FontWeight.w800,
                         color: Colors.white,
@@ -2943,11 +2940,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     const SizedBox(height: 6),
                     Text(
                       'OVERALL RATING',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 8,
                         fontWeight: FontWeight.w800,
                         color: Colors.white.withValues(alpha: 0.6),
-                        letterSpacing: 1.0,
+                        letterSpacing: 0,
                       ),
                     ),
                   ],
@@ -2991,11 +2988,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 Text(
                   'NO REVIEWS YET. BE THE FIRST TO SHARE YOUR STAY.',
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.charcoalMuted,
-                    letterSpacing: 0.5,
+                    letterSpacing: 0,
                   ),
                 ),
               ],
@@ -3026,7 +3023,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         children: [
                           Text(
                             review['guest_display_name'] ?? 'Guest',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 14,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.charcoal,
@@ -3034,7 +3031,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           ),
                           Text(
                             dateStr,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               color: AppTheme.charcoalMuted,
                             ),
@@ -3047,7 +3044,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const SizedBox(width: 4),
                           Text(
                             rating.toStringAsFixed(1),
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 13,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoal,
@@ -3060,7 +3057,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                   const SizedBox(height: 8),
                   Text(
                     review['comment'] ?? '',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       color: AppTheme.charcoalLight,
                       height: 1.5,
@@ -3079,7 +3076,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         children: [
                           Text(
                             'Host Response',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
                               color: AppTheme.charcoal,
@@ -3088,7 +3085,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                           const SizedBox(height: 4),
                           Text(
                             review['host_response'],
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 12,
                               color: AppTheme.charcoalLight,
                             ),
@@ -3123,7 +3120,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.charcoal,
@@ -3132,7 +3129,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 12,
                     color: AppTheme.charcoalMuted,
                     height: 1.3,
@@ -3217,7 +3214,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           icon: const Icon(Icons.map_outlined, size: 18),
           label: Text(
             'Open directions',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontWeight: FontWeight.w800,
               fontSize: 14,
             ),
@@ -3236,28 +3233,17 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   }
 
   Widget _buildBookingInfoPanel(PropertyModel prop) {
-    final instant = prop.isInstantBook;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color:
-            instant ? AppTheme.primary.withValues(alpha: 0.08) : AppTheme.stone,
+        color: AppTheme.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(
-          color: instant
-              ? AppTheme.primary.withValues(alpha: 0.22)
-              : AppTheme.border,
-        ),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.22)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(
-            instant
-                ? Icons.flash_on_rounded
-                : Icons.assignment_turned_in_outlined,
-            color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
-          ),
+          const Icon(Icons.flash_on_rounded, color: AppTheme.primary),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -3265,7 +3251,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               children: [
                 Text(
                   prop.bookingModeLabel,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontWeight: FontWeight.w900,
                     color: AppTheme.charcoal,
                   ),
@@ -3273,7 +3259,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                 const SizedBox(height: 4),
                 Text(
                   prop.bookingModeDescription,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 12,
                     color: AppTheme.charcoalMuted,
                     height: 1.35,
@@ -3302,17 +3288,17 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           const SizedBox(height: 10),
           Text(
             label.toUpperCase(),
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoalMuted,
-              letterSpacing: 0.8,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
           Text(
             value,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppTheme.charcoal,
@@ -3353,7 +3339,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
               const SizedBox(width: 10),
               Text(
                 'Host profile stays locked',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.charcoal,
@@ -3364,7 +3350,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           const SizedBox(height: 10),
           Text(
             'Host details and direct contact are revealed only after booking confirmation and successful payment. This keeps guest and host interactions secure on X-Space360.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppTheme.charcoalMuted,
@@ -3383,7 +3369,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       children: [
         Text(
           'Meet your host',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 20,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -3439,7 +3425,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                     const SizedBox(height: 12),
                     Text(
                       'Shivani',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.charcoal,
@@ -3453,7 +3439,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         const SizedBox(width: 4),
                         Text(
                           'Superhost',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.charcoal,
@@ -3482,7 +3468,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       children: [
                         Text(
                           (prop.reviewCount ?? 0).toString(),
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.charcoal,
@@ -3490,7 +3476,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         ),
                         Text(
                           'Reviews',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoalMuted,
@@ -3508,7 +3494,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                               prop.rating != null && prop.rating! > 0
                                   ? prop.rating!.toStringAsFixed(1)
                                   : '—',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w800,
                                 color: AppTheme.charcoal,
@@ -3521,7 +3507,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         ),
                         Text(
                           'Rating',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoalMuted,
@@ -3535,7 +3521,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                       children: [
                         Text(
                           '1',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.charcoal,
@@ -3543,7 +3529,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                         ),
                         Text(
                           'Year hosting',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 10,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoalMuted,
@@ -3566,7 +3552,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             const SizedBox(width: 12),
             Text(
               "Shivani's work: School Director",
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.charcoal,
@@ -3582,7 +3568,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             const SizedBox(width: 12),
             Text(
               "My favorite: Traveling",
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.charcoal,
@@ -3595,7 +3581,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         // Superhost Description
         Text(
           'Shivani is a Superhost',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -3604,7 +3590,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(height: 4),
         Text(
           'Superhosts are experienced, highly rated hosts who are committed to providing great stays for guests.',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 13,
             color: AppTheme.charcoalMuted,
             height: 1.4,
@@ -3615,7 +3601,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         // Co-Hosts
         Text(
           'Co-Hosts',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -3633,7 +3619,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             const SizedBox(width: 12),
             Text(
               'Ritesh',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.charcoal,
@@ -3646,7 +3632,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         // Host details
         Text(
           'Host details',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 15,
             fontWeight: FontWeight.w800,
             color: AppTheme.charcoal,
@@ -3655,7 +3641,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         const SizedBox(height: 8),
         Text(
           'Response rate: 100%\nResponds within an hour',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 13,
             color: AppTheme.charcoal,
             height: 1.6,
@@ -3682,7 +3668,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             ),
             child: Text(
               'Message host',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontWeight: FontWeight.w800,
                 fontSize: 15,
               ),
@@ -3700,7 +3686,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
             Expanded(
               child: Text(
                 'To protect your payment, never transfer money or communicate outside the X-Space360 website or app.',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 11,
                   color: AppTheme.charcoalMuted,
                   height: 1.4,
@@ -3734,7 +3720,7 @@ class LaurelWreathWidget extends StatelessWidget {
           children: [
             Text(
               rating.toStringAsFixed(2),
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 32,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.charcoal,
@@ -3870,7 +3856,7 @@ class _ShareActionTile extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.charcoal,
@@ -3881,7 +3867,7 @@ class _ShareActionTile extends StatelessWidget {
                     subtitle,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 12,
                       color: AppTheme.charcoalMuted,
                     ),
@@ -3948,7 +3934,7 @@ class _PropertyImageGalleryDialogState
                   const Spacer(),
                   Text(
                     '${_currentIndex + 1} / ${widget.images.length}',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,

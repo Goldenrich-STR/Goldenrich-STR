@@ -22,7 +22,7 @@ class OffersScreen extends StatelessWidget {
         elevation: 0,
         title: Text(
           'Offers',
-          style: GoogleFonts.manrope(fontWeight: FontWeight.w900),
+          style: GoogleFonts.inter(fontWeight: FontWeight.w900),
         ),
       ),
       body: FutureBuilder<List<Map<String, dynamic>>>(
@@ -51,7 +51,7 @@ class OffersScreen extends StatelessWidget {
                     Text(
                       'No live offers right now',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 19,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.charcoal,
@@ -61,7 +61,7 @@ class OffersScreen extends StatelessWidget {
                     Text(
                       'Admin-applied property offers will appear here.',
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         height: 1.4,
                         fontWeight: FontWeight.w600,
@@ -168,7 +168,7 @@ class _OfferPropertyCard extends StatelessWidget {
                     property.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 17,
                       height: 1.18,
                       fontWeight: FontWeight.w900,
@@ -186,7 +186,7 @@ class _OfferPropertyCard extends StatelessWidget {
                           '${property.city}, ${property.state}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoalMuted,
@@ -203,7 +203,7 @@ class _OfferPropertyCard extends StatelessWidget {
                           '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
                             color: AppTheme.primary,
@@ -216,7 +216,7 @@ class _OfferPropertyCard extends StatelessWidget {
                         const SizedBox(width: 3),
                         Text(
                           property.rating!.toStringAsFixed(1),
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 13,
                             fontWeight: FontWeight.w900,
                             color: AppTheme.charcoal,
@@ -231,7 +231,7 @@ class _OfferPropertyCard extends StatelessWidget {
                       'Code $couponCode will be applied at booking.',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.charcoalMuted,
@@ -275,7 +275,7 @@ class _OfferBadge extends StatelessWidget {
           const SizedBox(width: 5),
           Text(
             label.toUpperCase(),
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 11,
               fontWeight: FontWeight.w900,
               color: Colors.white,

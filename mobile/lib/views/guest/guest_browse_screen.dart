@@ -263,7 +263,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                           'Find Your Perfect Space',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 12,
                             height: 1.1,
                             fontWeight: FontWeight.w600,
@@ -328,14 +328,14 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                     }
                   },
                   onSubmitted: (_) => _loadProperties(),
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
                     color: Colors.black87,
                   ),
                   decoration: InputDecoration(
                     hintText: 'Search property or destination',
-                    hintStyle: GoogleFonts.manrope(
+                    hintStyle: GoogleFonts.inter(
                       color: Colors.black54,
                       fontWeight: FontWeight.w500,
                       fontSize: 15,
@@ -487,7 +487,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       fontWeight: FontWeight.w900,
                       color: isActive ? Colors.white : const Color(0xFF07142F),
@@ -513,7 +513,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                       fontSize: 8,
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
-                      letterSpacing: 0.5,
+                      letterSpacing: 0,
                     ),
                   ),
                 ),
@@ -535,7 +535,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
             : null,
         label: Text(
           label,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: isSelected ? FontWeight.w900 : FontWeight.w700,
             color: isSelected ? Colors.white : AppTheme.charcoal,
@@ -691,7 +691,7 @@ class _BrowsePropertyGridCard extends StatelessWidget {
                           const SizedBox(width: 3),
                           Text(
                             'Guest favourite',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 9,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.primary,
@@ -709,7 +709,7 @@ class _BrowsePropertyGridCard extends StatelessWidget {
             property.title,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w900,
               color: AppTheme.charcoal,
@@ -726,7 +726,7 @@ class _BrowsePropertyGridCard extends StatelessWidget {
                   '${property.city}, ${property.state}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 10.5,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.charcoalMuted,
@@ -745,7 +745,7 @@ class _BrowsePropertyGridCard extends StatelessWidget {
                   '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.primary,
@@ -758,7 +758,7 @@ class _BrowsePropertyGridCard extends StatelessWidget {
                 const SizedBox(width: 2),
                 Text(
                   property.rating!.toStringAsFixed(1),
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
                     color: AppTheme.charcoal,
@@ -780,36 +780,24 @@ class _BookingModeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final instant = property.isInstantBook;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color:
-            instant ? AppTheme.primary.withValues(alpha: 0.10) : AppTheme.stone,
+        color: AppTheme.primary.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: instant
-              ? AppTheme.primary.withValues(alpha: 0.24)
-              : AppTheme.border,
-        ),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.24)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            instant
-                ? Icons.flash_on_rounded
-                : Icons.assignment_turned_in_outlined,
-            size: 12,
-            color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
-          ),
+          const Icon(Icons.flash_on_rounded, size: 12, color: AppTheme.primary),
           const SizedBox(width: 4),
           Text(
-            instant ? 'Instant Book' : 'Host Approval Required',
-            style: GoogleFonts.manrope(
+            'Instant Book',
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.w800,
-              color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
+              color: AppTheme.primary,
             ),
           ),
         ],

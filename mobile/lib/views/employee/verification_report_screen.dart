@@ -16,7 +16,8 @@ class VerificationReportScreen extends StatefulWidget {
   });
 
   @override
-  State<VerificationReportScreen> createState() => _VerificationReportScreenState();
+  State<VerificationReportScreen> createState() =>
+      _VerificationReportScreenState();
 }
 
 class _VerificationReportScreenState extends State<VerificationReportScreen> {
@@ -45,7 +46,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
       });
     } else {
       // Show reason input dialog
-      final controller = TextEditingController(text: _checklistRejectionReasons[key] ?? '');
+      final controller =
+          TextEditingController(text: _checklistRejectionReasons[key] ?? '');
       final formKey = GlobalKey<FormState>();
       final formattedKey = key.replaceAll('_', ' ').toUpperCase();
 
@@ -53,11 +55,13 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
         context: context,
         builder: (dialogContext) {
           return AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             backgroundColor: Colors.white,
             title: Text(
               'Reject: $formattedKey',
-              style: const TextStyle(fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+              style: const TextStyle(
+                  fontWeight: FontWeight.bold, color: AppTheme.charcoal),
             ),
             content: Form(
               key: formKey,
@@ -67,7 +71,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                 children: [
                   const Text(
                     'Specify the discrepancy or reason for rejecting this item. This will be shared with the host.',
-                    style: TextStyle(fontSize: 12, color: AppTheme.charcoalLight),
+                    style:
+                        TextStyle(fontSize: 12, color: AppTheme.charcoalLight),
                   ),
                   const SizedBox(height: 12),
                   TextFormField(
@@ -77,10 +82,14 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                       hintText: 'e.g. GPS coordinates show a different town...',
                       filled: true,
                       fillColor: const Color(0xFFF9F9F9),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none),
                     ),
                     maxLines: 3,
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Reason is required.' : null,
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Reason is required.'
+                        : null,
                   ),
                 ],
               ),
@@ -88,7 +97,10 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('CANCEL', style: TextStyle(color: AppTheme.charcoalLight, fontWeight: FontWeight.bold)),
+                child: const Text('CANCEL',
+                    style: TextStyle(
+                        color: AppTheme.charcoalLight,
+                        fontWeight: FontWeight.bold)),
               ),
               ElevatedButton(
                 onPressed: () {
@@ -102,9 +114,11 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primary,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8)),
                 ),
-                child: const Text('SAVE', style: TextStyle(fontWeight: FontWeight.bold)),
+                child: const Text('SAVE',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
               ),
             ],
           );
@@ -120,16 +134,21 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
     );
     // Mimic file download trigger
     try {
-      final response = await _apiService.dio.get('/employee/verifications/$verificationId/export-report');
+      final response = await _apiService.dio
+          .get('/employee/verifications/$verificationId/export-report');
       if (response.statusCode == 200 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Verification Report exported successfully!'), backgroundColor: Colors.green),
+          const SnackBar(
+              content: Text('Verification Report exported successfully!'),
+              backgroundColor: Colors.green),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Export failed: $e'), backgroundColor: AppTheme.primary),
+          SnackBar(
+              content: Text('Export failed: $e'),
+              backgroundColor: AppTheme.primary),
         );
       }
     }
@@ -148,13 +167,21 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           backgroundColor: Colors.white,
           title: Text(
             approve
-                ? (widget.isAdmin ? 'Approve Listing & Go Live' : 'Approve Verification Report')
-                : (widget.isAdmin ? 'Reject Listing' : 'Reject Verification Report'),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                ? (widget.isAdmin
+                    ? 'Approve Listing & Go Live'
+                    : 'Approve Verification Report')
+                : (widget.isAdmin
+                    ? 'Reject Listing'
+                    : 'Reject Verification Report'),
+            style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
           ),
           content: SingleChildScrollView(
             child: Form(
@@ -164,27 +191,34 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    approve 
-                        ? (widget.isAdmin 
-                            ? 'Confirming will publish this property listing live on the application inventory.' 
-                            : 'Confirming this report will verify all checklist specifications and forward the property to Admin for listing live.') 
-                        : (widget.isAdmin 
-                            ? 'Please provide the rejection reason. The property listing status will be set to rejected.' 
+                    approve
+                        ? (widget.isAdmin
+                            ? 'Confirming will publish this property listing live on the application inventory.'
+                            : 'Confirming this report will verify all checklist specifications and forward the property to Admin for listing live.')
+                        : (widget.isAdmin
+                            ? 'Please provide the rejection reason. The property listing status will be set to rejected.'
                             : 'Please provide the rejection reason. The property listing will revert to draft status.'),
-                    style: const TextStyle(fontSize: 12, color: AppTheme.charcoalLight),
+                    style: const TextStyle(
+                        fontSize: 12, color: AppTheme.charcoalLight),
                   ),
                   const SizedBox(height: 16),
                   TextFormField(
                     controller: remarksController,
                     decoration: InputDecoration(
                       labelText: approve ? 'Remarks' : 'Reason for Rejection',
-                      hintText: approve ? 'Enter comments...' : 'Enter discrepancy details...',
+                      hintText: approve
+                          ? 'Enter comments...'
+                          : 'Enter discrepancy details...',
                       filled: true,
                       fillColor: const Color(0xFFF9F9F9),
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none),
                     ),
                     maxLines: 3,
-                    validator: (v) => v == null || v.trim().isEmpty ? 'Remarks/Reason required.' : null,
+                    validator: (v) => v == null || v.trim().isEmpty
+                        ? 'Remarks/Reason required.'
+                        : null,
                   ),
                 ],
               ),
@@ -193,13 +227,16 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('CANCEL', style: TextStyle(color: AppTheme.charcoalLight, fontWeight: FontWeight.bold)),
+              child: const Text('CANCEL',
+                  style: TextStyle(
+                      color: AppTheme.charcoalLight,
+                      fontWeight: FontWeight.bold)),
             ),
             ElevatedButton(
               onPressed: () async {
                 if (!formKey.currentState!.validate()) return;
                 Navigator.pop(dialogContext); // Close dialog
-                
+
                 setState(() {
                   _isActionLoading = true;
                 });
@@ -214,7 +251,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                 }
 
                 // Use outerContext to access the provider
-                final prov = Provider.of<VerificationProvider>(outerContext, listen: false);
+                final prov = Provider.of<VerificationProvider>(outerContext,
+                    listen: false);
 
                 final bool success;
                 if (widget.isAdmin) {
@@ -226,12 +264,13 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                       : await prov.adminReject(propertyId, finalRemarks);
                 } else {
                   success = approve
-                      ? await prov.employeeApprove(verificationId, remarksController.text.trim())
+                      ? await prov.employeeApprove(
+                          verificationId, remarksController.text.trim())
                       : await prov.employeeReject(verificationId, finalRemarks);
                 }
 
                 if (!mounted) return;
-                
+
                 setState(() {
                   _isActionLoading = false;
                 });
@@ -240,10 +279,16 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                   if (outerContext.mounted) {
                     ScaffoldMessenger.of(outerContext).showSnackBar(
                       SnackBar(
-                        content: Text(approve 
-                            ? (widget.isAdmin ? 'Property is now LIVE!' : 'Report approved successfully!') 
-                            : (widget.isAdmin ? 'Property listing rejected.' : 'Report rejected successfully.')),
-                        backgroundColor: approve ? const Color(0xFF4CAF50) : AppTheme.primary,
+                        content: Text(approve
+                            ? (widget.isAdmin
+                                ? 'Property is now LIVE!'
+                                : 'Report approved successfully!')
+                            : (widget.isAdmin
+                                ? 'Property listing rejected.'
+                                : 'Report rejected successfully.')),
+                        backgroundColor: approve
+                            ? const Color(0xFF4CAF50)
+                            : AppTheme.primary,
                       ),
                     );
                     Navigator.pop(outerContext); // Go back to dashboard list
@@ -252,7 +297,9 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                   if (outerContext.mounted) {
                     ScaffoldMessenger.of(outerContext).showSnackBar(
                       SnackBar(
-                        content: Text(approve ? 'Failed to submit approval.' : 'Failed to submit rejection.'),
+                        content: Text(approve
+                            ? 'Failed to submit approval.'
+                            : 'Failed to submit rejection.'),
                         backgroundColor: AppTheme.primary,
                       ),
                     );
@@ -260,14 +307,17 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                 }
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: approve ? const Color(0xFF4CAF50) : AppTheme.primary,
+                backgroundColor:
+                    approve ? const Color(0xFF4CAF50) : AppTheme.primary,
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               ),
               child: Text(
-                approve 
-                    ? (widget.isAdmin ? 'Publish Live' : 'Approve') 
+                approve
+                    ? (widget.isAdmin ? 'Publish Live' : 'Approve')
                     : (widget.isAdmin ? 'Reject Listing' : 'Reject'),
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
@@ -283,7 +333,7 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
     final prop = widget.reviewData['property_details'] ?? {};
     final broker = widget.reviewData['broker_details'] ?? {};
     final photos = widget.reviewData['geo_tagged_photos'] as List? ?? [];
-    
+
     final propTitle = prop['title'] ?? 'Luxury Stay';
     final propLoc = prop['city'] ?? 'N/A';
     final bhkType = prop['bhk_type'] ?? 'N/A';
@@ -292,10 +342,23 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
     final pricePerNight = prop['price_per_night']?.toString() ?? '15555';
     final description = prop['description'] ?? 'No description available.';
     final fullAddress = prop['address'] ?? 'Address details not provided.';
-    final amenities = prop['amenities'] as List? ?? ['Wifi', 'Ac', 'Parking', 'Kitchen', 'Pool', 'Gym', 'Washer', 'Fireplace', 'Tv', 'Heating'];
+    final amenities = prop['amenities'] as List? ??
+        [
+          'Wifi',
+          'Ac',
+          'Parking',
+          'Kitchen',
+          'Pool',
+          'Gym',
+          'Washer',
+          'Fireplace',
+          'Tv',
+          'Heating'
+        ];
     final brokerName = broker['full_name'] ?? 'Vikram Joshi';
     final brokerId = broker['user_id'] ?? 'user_broker_joshua11';
-    final propertyId = widget.reviewData['property_id'] ?? 'prop_6e885de7a0f1cde';
+    final propertyId =
+        widget.reviewData['property_id'] ?? 'prop_6e885de7a0f1cde';
     final hostId = widget.reviewData['owner_id'] ?? 'user_1FBD7411C6';
 
     // Simple formatted visit date
@@ -312,12 +375,18 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.isAdmin ? 'Property Audit & Compliance Verification' : 'Verification Report',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppTheme.charcoal),
+              widget.isAdmin
+                  ? 'Property Audit & Compliance Verification'
+                  : 'Verification Report',
+              style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.charcoal),
             ),
             Text(
               '$propTitle | $propLoc',
-              style: const TextStyle(fontSize: 11, color: AppTheme.charcoalMuted),
+              style:
+                  const TextStyle(fontSize: 11, color: AppTheme.charcoalMuted),
             ),
           ],
         ),
@@ -329,24 +398,31 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
               side: BorderSide(color: Colors.grey.shade300),
               backgroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20)),
             ),
-            icon: const Icon(Icons.download, size: 14, color: AppTheme.charcoalLight),
+            icon: const Icon(Icons.download,
+                size: 14, color: AppTheme.charcoalLight),
             label: const Text(
               'Export Report',
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoalLight),
+              style: TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.charcoalLight),
             ),
           ),
           const SizedBox(width: 8),
           IconButton(
-            icon: const Icon(Icons.cancel_outlined, color: AppTheme.charcoalMuted),
+            icon: const Icon(Icons.cancel_outlined,
+                color: AppTheme.charcoalMuted),
             onPressed: () => Navigator.pop(context),
           ),
           const SizedBox(width: 8),
         ],
       ),
       body: _isActionLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -355,11 +431,16 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                   // --- SECTION 1: METADATA CARDS ROW ---
                   Row(
                     children: [
-                      Expanded(child: _buildMetaCard('PROPERTY DETAILS', 'ID: $propertyId', 'HOST: $hostId')),
+                      Expanded(
+                          child: _buildMetaCard('PROPERTY DETAILS',
+                              'ID: $propertyId', 'HOST: $hostId')),
                       const SizedBox(width: 8),
-                      Expanded(child: _buildMetaCard('ASSIGNED BROKER', brokerName, 'ID: $brokerId')),
+                      Expanded(
+                          child: _buildMetaCard(
+                              'ASSIGNED BROKER', brokerName, 'ID: $brokerId')),
                       const SizedBox(width: 8),
-                      Expanded(child: _buildMetaCard('VISIT DATE', visitDate, '')),
+                      Expanded(
+                          child: _buildMetaCard('VISIT DATE', visitDate, '')),
                     ],
                   ),
                   const SizedBox(height: 16),
@@ -377,7 +458,11 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                       children: [
                         const Text(
                           'PROPERTY SPECIFICATIONS & LISTING INFO',
-                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: AppTheme.charcoalMuted, letterSpacing: 0.5),
+                          style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.charcoalMuted,
+                              letterSpacing: 0),
                         ),
                         const SizedBox(height: 12),
 
@@ -388,7 +473,9 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                             scrollDirection: Axis.horizontal,
                             itemCount: (prop['images'] as List?)?.length ?? 3,
                             itemBuilder: (context, index) {
-                              final imgPath = (prop['images'] as List?) != null && index < (prop['images'] as List).length
+                              final imgPath = (prop['images'] as List?) !=
+                                          null &&
+                                      index < (prop['images'] as List).length
                                   ? prop['images'][index]
                                   : null;
                               return Container(
@@ -401,7 +488,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                                     fit: BoxFit.cover,
                                     errorBuilder: (c, e, s) => Container(
                                       color: AppTheme.stone,
-                                      child: const Icon(Icons.broken_image, color: AppTheme.charcoalMuted),
+                                      child: const Icon(Icons.broken_image,
+                                          color: AppTheme.charcoalMuted),
                                     ),
                                   ),
                                 ),
@@ -412,8 +500,9 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                         const SizedBox(height: 16),
 
                         // Grid Specs
-                        _buildSpecsGrid(bhkType, category, areaSqft, pricePerNight, propLoc),
-                        
+                        _buildSpecsGrid(bhkType, category, areaSqft,
+                            pricePerNight, propLoc),
+
                         const SizedBox(height: 16),
                         const Divider(color: Color(0xFFF2F2F2)),
                         const SizedBox(height: 8),
@@ -421,12 +510,18 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                         // Description
                         const Text(
                           'DESCRIPTION',
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+                          style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.charcoalMuted),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           description,
-                          style: const TextStyle(fontSize: 11, color: AppTheme.charcoal, height: 1.4),
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.charcoal,
+                              height: 1.4),
                         ),
 
                         const SizedBox(height: 12),
@@ -434,12 +529,18 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                         // Address
                         const Text(
                           'FULL ADDRESS',
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+                          style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.charcoalMuted),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           fullAddress,
-                          style: const TextStyle(fontSize: 11, color: AppTheme.charcoal, height: 1.4),
+                          style: const TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.charcoal,
+                              height: 1.4),
                         ),
 
                         const SizedBox(height: 16),
@@ -447,7 +548,10 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                         // Amenities
                         const Text(
                           'AMENITIES',
-                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+                          style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.charcoalMuted),
                         ),
                         const SizedBox(height: 8),
                         Wrap(
@@ -455,15 +559,20 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                           runSpacing: 6,
                           children: amenities.map<Widget>((a) {
                             return Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: const Color(0xFFE5E5DF)),
+                                border:
+                                    Border.all(color: const Color(0xFFE5E5DF)),
                               ),
                               child: Text(
                                 a.toString(),
-                                style: const TextStyle(fontSize: 10, color: AppTheme.charcoalLight, fontWeight: FontWeight.w500),
+                                style: const TextStyle(
+                                    fontSize: 10,
+                                    color: AppTheme.charcoalLight,
+                                    fontWeight: FontWeight.w500),
                               ),
                             );
                           }).toList(),
@@ -476,14 +585,19 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                   // --- SECTION 3: VERIFICATION CHECKLIST AUDIT ---
                   const Text(
                     'VERIFICATION CHECKLIST AUDIT',
-                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.charcoal, letterSpacing: 0.3),
+                    style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.charcoal,
+                        letterSpacing: 0),
                   ),
                   const SizedBox(height: 12),
 
                   GridView.builder(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
                       crossAxisCount: 2,
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
@@ -494,7 +608,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                       final entry = _checklist.entries.elementAt(index);
                       final key = entry.key;
                       final bool isVerified = entry.value == true;
-                      final formattedKey = key.replaceAll('_', ' ').toUpperCase();
+                      final formattedKey =
+                          key.replaceAll('_', ' ').toUpperCase();
 
                       return Container(
                         padding: const EdgeInsets.all(10),
@@ -513,23 +628,33 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                                 Expanded(
                                   child: Text(
                                     formattedKey,
-                                    style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                                    style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.charcoal),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 4, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: isVerified ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE),
+                                    color: isVerified
+                                        ? const Color(0xFFE8F5E9)
+                                        : const Color(0xFFFFEBEE),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Icon(
-                                        isVerified ? Icons.verified_user : Icons.cancel,
-                                        color: isVerified ? Colors.green : Colors.red,
+                                        isVerified
+                                            ? Icons.verified_user
+                                            : Icons.cancel,
+                                        color: isVerified
+                                            ? Colors.green
+                                            : Colors.red,
                                         size: 8,
                                       ),
                                       const SizedBox(width: 2),
@@ -538,7 +663,9 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                                         style: TextStyle(
                                           fontSize: 7,
                                           fontWeight: FontWeight.bold,
-                                          color: isVerified ? Colors.green.shade800 : Colors.red.shade800,
+                                          color: isVerified
+                                              ? Colors.green.shade800
+                                              : Colors.red.shade800,
                                         ),
                                       ),
                                     ],
@@ -546,41 +673,61 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                                 ),
                               ],
                             ),
-                            if (!isVerified && _checklistRejectionReasons[key] != null)
+                            if (!isVerified &&
+                                _checklistRejectionReasons[key] != null)
                               Padding(
-                                padding: const EdgeInsets.only(top: 2, bottom: 2),
+                                padding:
+                                    const EdgeInsets.only(top: 2, bottom: 2),
                                 child: Text(
                                   'Reason: ${_checklistRejectionReasons[key]}',
-                                  style: const TextStyle(fontSize: 8, color: Colors.red, fontWeight: FontWeight.w500, fontStyle: FontStyle.italic),
+                                  style: const TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.red,
+                                      fontWeight: FontWeight.w500,
+                                      fontStyle: FontStyle.italic),
                                   maxLines: 2,
                                   overflow: TextOverflow.ellipsis,
                                 ),
                               ),
-                            
+
                             // Audit Actions Row
                             Row(
                               children: [
                                 Expanded(
                                   child: InkWell(
-                                    onTap: () => _toggleChecklistItem(key, true),
+                                    onTap: () =>
+                                        _toggleChecklistItem(key, true),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: isVerified ? const Color(0xFFE8F5E9) : const Color(0xFFF9F9F9),
+                                        color: isVerified
+                                            ? const Color(0xFFE8F5E9)
+                                            : const Color(0xFFF9F9F9),
                                         borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: isVerified ? Colors.green.shade200 : Colors.grey.shade200),
+                                        border: Border.all(
+                                            color: isVerified
+                                                ? Colors.green.shade200
+                                                : Colors.grey.shade200),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.check_circle_outline, size: 10, color: isVerified ? Colors.green.shade800 : Colors.grey),
+                                          Icon(Icons.check_circle_outline,
+                                              size: 10,
+                                              color: isVerified
+                                                  ? Colors.green.shade800
+                                                  : Colors.grey),
                                           const SizedBox(width: 2),
                                           Text(
                                             'APPROVE',
                                             style: TextStyle(
                                               fontSize: 8,
                                               fontWeight: FontWeight.bold,
-                                              color: isVerified ? Colors.green.shade800 : Colors.grey,
+                                              color: isVerified
+                                                  ? Colors.green.shade800
+                                                  : Colors.grey,
                                             ),
                                           ),
                                         ],
@@ -591,25 +738,39 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: InkWell(
-                                    onTap: () => _toggleChecklistItem(key, false),
+                                    onTap: () =>
+                                        _toggleChecklistItem(key, false),
                                     child: Container(
-                                      padding: const EdgeInsets.symmetric(vertical: 4),
+                                      padding: const EdgeInsets.symmetric(
+                                          vertical: 4),
                                       decoration: BoxDecoration(
-                                        color: !isVerified ? const Color(0xFFFFEBEE) : const Color(0xFFF9F9F9),
+                                        color: !isVerified
+                                            ? const Color(0xFFFFEBEE)
+                                            : const Color(0xFFF9F9F9),
                                         borderRadius: BorderRadius.circular(6),
-                                        border: Border.all(color: !isVerified ? Colors.red.shade200 : Colors.grey.shade200),
+                                        border: Border.all(
+                                            color: !isVerified
+                                                ? Colors.red.shade200
+                                                : Colors.grey.shade200),
                                       ),
                                       child: Row(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.cancel_outlined, size: 10, color: !isVerified ? Colors.red.shade800 : Colors.grey),
+                                          Icon(Icons.cancel_outlined,
+                                              size: 10,
+                                              color: !isVerified
+                                                  ? Colors.red.shade800
+                                                  : Colors.grey),
                                           const SizedBox(width: 2),
                                           Text(
                                             'REJECT',
                                             style: TextStyle(
                                               fontSize: 8,
                                               fontWeight: FontWeight.bold,
-                                              color: !isVerified ? Colors.red.shade800 : Colors.grey,
+                                              color: !isVerified
+                                                  ? Colors.red.shade800
+                                                  : Colors.grey,
                                             ),
                                           ),
                                         ],
@@ -629,7 +790,10 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                   // --- SECTION 4: GEO-TAGGED EVIDENCE ---
                   Text(
                     'GEO-TAGGED EVIDENCE (${photos.length})',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800, color: AppTheme.charcoal),
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.charcoal),
                   ),
                   const SizedBox(height: 12),
 
@@ -637,7 +801,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                       ? GridView.builder(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          gridDelegate:
+                              const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
@@ -650,20 +815,23 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: const Color(0xFFECECEC)),
+                                border:
+                                    Border.all(color: const Color(0xFFECECEC)),
                               ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Expanded(
                                     child: ClipRRect(
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                                      borderRadius: const BorderRadius.vertical(
+                                          top: Radius.circular(12)),
                                       child: Image.network(
                                         _getImageUrl(p['photo_url']),
                                         fit: BoxFit.cover,
                                         errorBuilder: (ctx, _, __) => Container(
                                           color: AppTheme.stone,
-                                          child: const Icon(Icons.broken_image, color: AppTheme.charcoalMuted),
+                                          child: const Icon(Icons.broken_image,
+                                              color: AppTheme.charcoalMuted),
                                         ),
                                       ),
                                     ),
@@ -671,15 +839,22 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                                   Padding(
                                     padding: const EdgeInsets.all(6.0),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           'Lat: ${p['latitude']}',
-                                          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                                          style: const TextStyle(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.charcoal),
                                         ),
                                         Text(
                                           'Lng: ${p['longitude']}',
-                                          style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+                                          style: const TextStyle(
+                                              fontSize: 8,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.charcoal),
                                         ),
                                       ],
                                     ),
@@ -699,7 +874,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                           child: const Center(
                             child: Text(
                               'No evidence photos provided by broker.',
-                              style: TextStyle(fontSize: 12, color: AppTheme.charcoalMuted),
+                              style: TextStyle(
+                                  fontSize: 12, color: AppTheme.charcoalMuted),
                             ),
                           ),
                         ),
@@ -709,7 +885,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
             ),
       // --- STICKY BOTTOM BUTTONS ---
       bottomNavigationBar: Container(
-        padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 20),
+        padding:
+            const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 20),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(top: BorderSide(color: Colors.grey.shade200)),
@@ -736,7 +913,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                     const SizedBox(width: 8),
                     Text(
                       widget.isAdmin ? 'REJECT LISTING' : 'REJECT REPORT',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ],
                 ),
@@ -762,7 +940,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                     const SizedBox(width: 8),
                     Text(
                       widget.isAdmin ? 'APPROVE & GO LIVE' : 'APPROVE REPORT',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                   ],
                 ),
@@ -789,19 +968,26 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+            style: const TextStyle(
+                fontSize: 8,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoalMuted),
           ),
           const SizedBox(height: 4),
           Text(
             val1,
-            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppTheme.charcoal),
+            style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.charcoal),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
           if (val2.isNotEmpty)
             Text(
               val2,
-              style: const TextStyle(fontSize: 8, color: AppTheme.charcoalMuted),
+              style:
+                  const TextStyle(fontSize: 8, color: AppTheme.charcoalMuted),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
@@ -810,7 +996,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
     );
   }
 
-  Widget _buildSpecsGrid(String bhk, String category, String area, String price, String loc) {
+  Widget _buildSpecsGrid(
+      String bhk, String category, String area, String price, String loc) {
     final Map<String, List<String>> specs = {
       'PROPERTY TYPE': ['Apartment', 'residential'],
       'CATEGORY': [category.toUpperCase(), 'residential'],
@@ -839,7 +1026,10 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
           children: [
             Text(
               entry.key,
-              style: const TextStyle(fontSize: 8, fontWeight: FontWeight.bold, color: AppTheme.charcoalMuted),
+              style: const TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.charcoalMuted),
             ),
             const SizedBox(height: 2),
             Text(
@@ -859,7 +1049,8 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
 
 // Simple extension helper to build Custom Button Style
 extension ButtonStyleHelper on ButtonStyle {
-  Widget buildButton(BuildContext context, {required VoidCallback onPressed, required Widget child}) {
+  Widget buildButton(BuildContext context,
+      {required VoidCallback onPressed, required Widget child}) {
     return ElevatedButton(
       onPressed: onPressed,
       style: this,

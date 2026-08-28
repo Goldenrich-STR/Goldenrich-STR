@@ -617,7 +617,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
             textAlign: TextAlign.center,
             style: const TextStyle(
                 fontSize: 11,
-                letterSpacing: 0.8,
+                letterSpacing: 0,
                 color: AppTheme.charcoalLight,
                 fontWeight: FontWeight.w600),
           ),
@@ -687,7 +687,7 @@ class _HostDashboardTopBar extends StatelessWidget {
                           'X-SPACE360',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: compact ? 15 : 20,
                             height: 1,
                             fontWeight: FontWeight.w900,
@@ -699,7 +699,7 @@ class _HostDashboardTopBar extends StatelessWidget {
                           'Host Dashboard',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: compact ? 10 : 12,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.charcoalMuted,
@@ -733,7 +733,7 @@ class _HostDashboardTopBar extends StatelessWidget {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  textStyle: GoogleFonts.manrope(
+                  textStyle: GoogleFonts.inter(
                     fontSize: compact ? 11 : 14,
                     fontWeight: FontWeight.w900,
                   ),
@@ -758,7 +758,7 @@ class _PortfolioHero extends StatelessWidget {
       children: [
         Text(
           'Your Portfolio',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: compact ? 26 : 30,
             height: 1.05,
             fontWeight: FontWeight.w900,
@@ -770,7 +770,7 @@ class _PortfolioHero extends StatelessWidget {
           'Manage your properties and track performance',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 13,
             height: 1.35,
             fontWeight: FontWeight.w700,
@@ -811,7 +811,7 @@ class _DashboardHeroImage extends StatelessWidget {
               bottom: 12,
               child: Text(
                 'Grow your hosting business',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
@@ -898,7 +898,7 @@ class _StatsGrid extends StatelessWidget {
                       alignment: Alignment.centerLeft,
                       child: Text(
                         item.value,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: compact ? 26 : 30,
                           height: 1,
                           fontWeight: FontWeight.w900,
@@ -911,7 +911,7 @@ class _StatsGrid extends StatelessWidget {
                       item.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: compact ? 11 : 13,
                         height: 1.15,
                         fontWeight: FontWeight.w800,
@@ -927,7 +927,7 @@ class _StatsGrid extends StatelessWidget {
                             'View all',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: compact ? 11 : 13,
                               fontWeight: FontWeight.w900,
                               color: item.tint,
@@ -987,7 +987,7 @@ class _EarningsBanner extends StatelessWidget {
                       fit: BoxFit.scaleDown,
                       child: Text(
                         totalEarningsLabel,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: compact ? 22 : 26,
                           height: 1,
                           fontWeight: FontWeight.w900,
@@ -997,7 +997,7 @@ class _EarningsBanner extends StatelessWidget {
                     ),
                     Text(
                       'Total Earnings',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: compact ? 12 : 15,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.charcoalMuted,
@@ -1010,7 +1010,7 @@ class _EarningsBanner extends StatelessWidget {
                   'Lifetime earnings from all bookings',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: compact ? 11 : 13,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.charcoalMuted,
@@ -1071,7 +1071,7 @@ class _HostVerificationBanner extends StatelessWidget {
                   : rejected
                       ? 'Host verification was rejected. Update and re-submit your documents.'
                       : 'Submit host verification documents to activate listing features.',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 height: 1.35,
                 fontWeight: FontWeight.w700,
@@ -1115,7 +1115,7 @@ class _SectionHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 23,
                   height: 1.1,
                   fontWeight: FontWeight.w900,
@@ -1126,7 +1126,7 @@ class _SectionHeader extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   subtitle!,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.charcoalMuted,
@@ -1144,7 +1144,7 @@ class _SectionHeader extends StatelessWidget {
             icon: const Icon(Icons.arrow_forward_rounded),
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.primary,
-              textStyle: GoogleFonts.manrope(
+              textStyle: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),
@@ -1252,7 +1252,7 @@ class _FeatureCard extends StatelessWidget {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 height: 1.18,
                 fontWeight: FontWeight.w900,
@@ -1264,7 +1264,7 @@ class _FeatureCard extends StatelessWidget {
               subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 height: 1.2,
                 fontWeight: FontWeight.w600,
@@ -1354,7 +1354,7 @@ class _HostPropertyCard extends StatelessWidget {
                   ),
                   child: Text(
                     property.status.replaceAll('_', ' ').toUpperCase(),
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                       color: statusColor,
@@ -1372,7 +1372,7 @@ class _HostPropertyCard extends StatelessWidget {
                 property.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 18,
                   height: 1.15,
                   fontWeight: FontWeight.w900,
@@ -1442,7 +1442,7 @@ class _HostPropertyCard extends StatelessWidget {
                         minimumSize: const Size(double.infinity, 46),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
-                        textStyle: GoogleFonts.manrope(
+                        textStyle: GoogleFonts.inter(
                             fontWeight: FontWeight.w900, fontSize: 12),
                       ),
                     ),
@@ -1463,7 +1463,7 @@ class _HostPropertyCard extends StatelessWidget {
                         minimumSize: const Size(double.infinity, 46),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
-                        textStyle: GoogleFonts.manrope(
+                        textStyle: GoogleFonts.inter(
                             fontWeight: FontWeight.w900, fontSize: 12),
                       ),
                     ),
@@ -1495,7 +1495,7 @@ class _MetaLine extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppTheme.charcoalMuted,
@@ -1528,7 +1528,7 @@ class _PropertyMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w700,
             color: AppTheme.charcoalMuted,
@@ -1539,7 +1539,7 @@ class _PropertyMetric extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w900,
             color: valueColor ?? const Color(0xFF07142F),
@@ -1597,7 +1597,7 @@ class _HostTrustStrip extends StatelessWidget {
                           item.$2.replaceAll('\n', ' '),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 11,
                             height: 1.1,
                             fontWeight: FontWeight.w900,
@@ -1609,7 +1609,7 @@ class _HostTrustStrip extends StatelessWidget {
                           item.$3,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoalMuted,
@@ -1867,7 +1867,7 @@ class _DocumentVerificationSheetState
                                     color: AppTheme.charcoalLight,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.9,
+                                    letterSpacing: 0,
                                   ),
                                 ),
                               ],
@@ -1939,7 +1939,7 @@ class _DocumentVerificationSheetState
                                       color: AppTheme.charcoal,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.7,
+                                      letterSpacing: 0,
                                     ),
                                   ),
                                 ),
@@ -2022,7 +2022,7 @@ class _DocumentVerificationSheetState
                                   color: AppTheme.charcoalLight,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.8,
+                                  letterSpacing: 0,
                                 ),
                               ),
                             ),
@@ -2133,7 +2133,7 @@ class _DocumentVerificationSheetState
                   fontSize: 13,
                   height: 1.35,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
+                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(height: 14),
@@ -2643,7 +2643,7 @@ class _DocumentVerificationSheetState
                                     style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5),
+                                        letterSpacing: 0),
                                   ),
                                 ],
                               ),

@@ -468,11 +468,11 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(title,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                       fontSize: 22, fontWeight: FontWeight.w900)),
               const SizedBox(height: 8),
               Text(message,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                       color: AppTheme.charcoalMuted, height: 1.4)),
               const SizedBox(height: 16),
               _summaryHeader(),
@@ -549,7 +549,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       backgroundColor: Colors.white,
       appBar: AppBar(
         title: Text(_isInstantBook ? 'Reserve' : 'Request to Book',
-            style: GoogleFonts.manrope(fontWeight: FontWeight.w800)),
+            style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
         backgroundColor: Colors.white,
         foregroundColor: AppTheme.charcoal,
         elevation: 0,
@@ -567,7 +567,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(_step == 4 ? 'Payable now' : 'Current quote',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                             fontSize: 12, color: AppTheme.charcoalMuted)),
                     Text(
                         payable > 0
@@ -575,7 +575,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                                 currencyCode:
                                     (_quote?['currency'] ?? 'INR').toString())
                             : '${_money(widget.property.customerDisplayPrice)} + taxes & fees',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                             fontSize: 18,
                             fontWeight: FontWeight.w900,
                             color: AppTheme.charcoal)),
@@ -603,7 +603,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
                               : _step == 4
                                   ? finalPayLabel
                                   : 'Continue',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                       fontWeight: FontWeight.w800, color: Colors.white),
                 ),
               ),
@@ -650,7 +650,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               ),
               const SizedBox(height: 6),
               Text(labels[index],
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       color:
@@ -708,7 +708,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             (v) => setState(() => _children = v)),
         const SizedBox(height: 8),
         Text('Maximum $_maxGuests guests',
-            style: GoogleFonts.manrope(color: AppTheme.charcoalMuted)),
+            style: GoogleFonts.inter(color: AppTheme.charcoalMuted)),
       ],
     );
   }
@@ -771,7 +771,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         if (widget.property.houseRules?.isNotEmpty == true) ...[
           _sectionTitle('Property rules'),
           Text(widget.property.houseRules!,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   color: AppTheme.charcoalMuted, height: 1.5)),
         ],
         const SizedBox(height: 18),
@@ -794,9 +794,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         ),
         const SizedBox(height: 18),
         _notice(
-            _isInstantBook
-                ? "Razorpay will open only after you tap Pay. Booking is confirmed only after backend verification."
-                : "Razorpay will open only after you tap Pay. After backend payment verification, your request will wait for host approval.",
+            "Razorpay will open only after you tap Pay. Booking is confirmed only after backend payment verification.",
             Icons.verified_user_outlined,
             AppTheme.secondary),
         const SizedBox(height: 18),
@@ -804,7 +802,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
         const SizedBox(height: 18),
         Text(
             "By confirming this booking, you agree to X-Space360's Terms, Cancellation Policy and applicable Property Rules.",
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
                 fontSize: 12, color: AppTheme.charcoalMuted, height: 1.5)),
       ],
     );
@@ -832,9 +830,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(widget.property.title,
-                    style: GoogleFonts.manrope(fontWeight: FontWeight.w900)),
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w900)),
                 Text('${widget.property.city}, ${widget.property.state}',
-                    style: GoogleFonts.manrope(color: AppTheme.charcoalMuted)),
+                    style: GoogleFonts.inter(color: AppTheme.charcoalMuted)),
               ],
             ),
           ),
@@ -894,7 +892,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   Widget _sectionTitle(String text) => Padding(
         padding: const EdgeInsets.only(bottom: 12, top: 8),
         child: Text(text,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.w900,
                 color: AppTheme.charcoal)),
@@ -953,11 +951,11 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
           children: [
             Expanded(
                 child: Text(label,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontWeight:
                             strong ? FontWeight.w800 : FontWeight.w500))),
             Text(value,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontWeight: strong ? FontWeight.w900 : FontWeight.w700)),
           ],
         ),
@@ -982,7 +980,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             const SizedBox(width: 10),
             Expanded(
                 child: Text(text,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         color: AppTheme.charcoal, height: 1.4))),
           ],
         ),

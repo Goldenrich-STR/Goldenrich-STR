@@ -128,7 +128,7 @@ class _PropertyCard extends StatelessWidget {
                     property.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.charcoal),

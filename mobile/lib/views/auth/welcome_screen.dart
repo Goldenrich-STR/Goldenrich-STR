@@ -13,7 +13,8 @@ class WelcomeScreen extends StatefulWidget {
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateMixin {
+class _WelcomeScreenState extends State<WelcomeScreen>
+    with TickerProviderStateMixin {
   late AnimationController _entryController;
   late AnimationController _idleController;
 
@@ -49,7 +50,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
       ),
     );
 
-    _logoSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+    _logoSlide =
+        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
       CurvedAnimation(
         parent: _entryController,
         curve: const Interval(0.0, 0.6, curve: Curves.easeOutCubic),
@@ -83,7 +85,8 @@ class _WelcomeScreenState extends State<WelcomeScreen> with TickerProviderStateM
           PageRouteBuilder(
             pageBuilder: (context, animation, secondaryAnimation) =>
                 auth.isAuthenticated ? const AppShell() : const LoginScreen(),
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            transitionsBuilder:
+                (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
             transitionDuration: const Duration(milliseconds: 800),

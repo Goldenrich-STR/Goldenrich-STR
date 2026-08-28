@@ -77,9 +77,13 @@ class _AICallLogDialogState extends State<AICallLogDialog> {
 
       // Detect language from script content
       String locale = 'en-US';
-      if (script.contains('bolat aahe') || script.contains('tumchyasathi') || script.contains('Dhanyawad') && script.contains('Me')) {
+      if (script.contains('bolat aahe') ||
+          script.contains('tumchyasathi') ||
+          script.contains('Dhanyawad') && script.contains('Me')) {
         locale = 'mr-IN';
-      } else if (script.contains('bol raha hoon') || script.contains('aapki reservation') || script.contains('Dhanyawad')) {
+      } else if (script.contains('bol raha hoon') ||
+          script.contains('aapki reservation') ||
+          script.contains('Dhanyawad')) {
         locale = 'hi-IN';
       }
 
@@ -115,7 +119,7 @@ class _AICallLogDialogState extends State<AICallLogDialog> {
     final String agentName = widget.call['agent_name'] ?? 'X-Space360 AI Agent';
     final String status = widget.call['status'] ?? 'completed';
     final String script = widget.call['script'] ?? 'No script loaded';
-    final String timestamp = widget.call['created_at'] != null 
+    final String timestamp = widget.call['created_at'] != null
         ? widget.call['created_at'].toString().split('T')[0]
         : 'Recent';
 
@@ -149,15 +153,19 @@ class _AICallLogDialogState extends State<AICallLogDialog> {
                 CircleAvatar(
                   backgroundColor: AppTheme.primary.withOpacity(0.1),
                   radius: 20,
-                  child: const Icon(Icons.keyboard_voice, color: AppTheme.primary),
+                  child:
+                      const Icon(Icons.keyboard_voice, color: AppTheme.primary),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(agentName, style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-                      Text('Status: ${status.toUpperCase()} • $timestamp', style: textTheme.labelLarge),
+                      Text(agentName,
+                          style: textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.bold)),
+                      Text('Status: ${status.toUpperCase()} • $timestamp',
+                          style: textTheme.labelLarge),
                     ],
                   ),
                 ),
@@ -193,7 +201,11 @@ class _AICallLogDialogState extends State<AICallLogDialog> {
               child: Row(
                 children: [
                   IconButton(
-                    icon: Icon(_isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled, size: 36),
+                    icon: Icon(
+                        _isPlaying
+                            ? Icons.pause_circle_filled
+                            : Icons.play_circle_filled,
+                        size: 36),
                     color: AppTheme.primary,
                     onPressed: _togglePlayback,
                   ),
@@ -202,8 +214,11 @@ class _AICallLogDialogState extends State<AICallLogDialog> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          _isPlaying ? 'Playing Voice Agent Call...' : 'Listen to Call Recording',
-                          style: textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                          _isPlaying
+                              ? 'Playing Voice Agent Call...'
+                              : 'Listen to Call Recording',
+                          style: textTheme.labelLarge
+                              ?.copyWith(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 4),
                         LinearProgressIndicator(

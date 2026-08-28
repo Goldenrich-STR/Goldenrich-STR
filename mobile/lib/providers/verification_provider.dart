@@ -35,7 +35,8 @@ class VerificationProvider with ChangeNotifier {
     try {
       final response = await _apiService.dio.get(
         '/broker/verifications',
-        queryParameters: statusFilter != null ? {'status_filter': statusFilter} : null,
+        queryParameters:
+            statusFilter != null ? {'status_filter': statusFilter} : null,
       );
       if (response.statusCode == 200) {
         _brokerTasks = response.data;
@@ -49,7 +50,8 @@ class VerificationProvider with ChangeNotifier {
   }
 
   // Broker: Submit visit verification report
-  Future<bool> submitVisit(String propertyId, Map<String, dynamic> payload) async {
+  Future<bool> submitVisit(
+      String propertyId, Map<String, dynamic> payload) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -71,7 +73,8 @@ class VerificationProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.get('/employee/verifications/pending');
+      final response =
+          await _apiService.dio.get('/employee/verifications/pending');
       if (response.statusCode == 200) {
         _pendingReviews = response.data['verifications'] ?? [];
       }
@@ -88,7 +91,8 @@ class VerificationProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.get('/employee/verifications/history');
+      final response =
+          await _apiService.dio.get('/employee/verifications/history');
       if (response.statusCode == 200) {
         _reviewHistory = response.data['verifications'] ?? [];
       }
@@ -105,7 +109,8 @@ class VerificationProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      debugPrint('Approving verification: $verificationId with remarks: $remarks');
+      debugPrint(
+          'Approving verification: $verificationId with remarks: $remarks');
       final response = await _apiService.dio.post(
         '/employee/verifications/$verificationId/approve',
         data: {'remarks': remarks},
@@ -132,7 +137,8 @@ class VerificationProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      debugPrint('Rejecting verification: $verificationId with reason: $reason');
+      debugPrint(
+          'Rejecting verification: $verificationId with reason: $reason');
       final response = await _apiService.dio.post(
         '/employee/verifications/$verificationId/reject',
         data: {'reason': reason},
@@ -193,7 +199,8 @@ class VerificationProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.get('/employee/reports/properties-not-booked');
+      final response =
+          await _apiService.dio.get('/employee/reports/properties-not-booked');
       if (response.statusCode == 200) {
         _propertiesNotBooked = response.data['properties'] ?? [];
       }
@@ -206,7 +213,8 @@ class VerificationProvider with ChangeNotifier {
   }
 
   // Admin: List properties with different moderation filters
-  Future<void> getAwaitingFinalApprovals({String filter = 'awaiting_approval'}) async {
+  Future<void> getAwaitingFinalApprovals(
+      {String filter = 'awaiting_approval'}) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -237,7 +245,8 @@ class VerificationProvider with ChangeNotifier {
   }
 
   // Admin: Approve property verification
-  Future<bool> adminApprove(String propertyId, Map<String, dynamic> payload) async {
+  Future<bool> adminApprove(
+      String propertyId, Map<String, dynamic> payload) async {
     _isLoading = true;
     notifyListeners();
     try {

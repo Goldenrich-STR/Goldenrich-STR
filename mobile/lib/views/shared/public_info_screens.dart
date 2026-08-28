@@ -41,7 +41,7 @@ class AboutUsScreen extends StatelessWidget {
         elevation: 0,
         title: Text(
           'About Us',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             color: AppTheme.charcoal,
             fontWeight: FontWeight.w800,
           ),
@@ -62,7 +62,7 @@ class AboutUsScreen extends StatelessWidget {
               children: [
                 Text(
                   'Redefining short-term rentals in India through curation, technology, and superior service.',
-                  style: GoogleFonts.cormorantGaramond(
+                  style: GoogleFonts.inter(
                     fontSize: 34,
                     height: 1.05,
                     fontWeight: FontWeight.w700,
@@ -72,7 +72,7 @@ class AboutUsScreen extends StatelessWidget {
                 const SizedBox(height: 16),
                 Text(
                   'X-Space360 was founded to create a curated portfolio of short-term rentals, event venues, and commercial spaces across India that offer a higher standard of comfort, design, and trust.',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 15,
                     height: 1.7,
                     color: AppTheme.charcoalMuted,
@@ -102,7 +102,7 @@ class AboutUsScreen extends StatelessWidget {
           const SizedBox(height: 22),
           Text(
             'Core Values',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -138,7 +138,7 @@ class AboutUsScreen extends StatelessWidget {
                         children: [
                           Text(
                             card.title,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 15,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoal,
@@ -147,7 +147,7 @@ class AboutUsScreen extends StatelessWidget {
                           const SizedBox(height: 6),
                           Text(
                             card.body,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 13,
                               height: 1.65,
                               color: AppTheme.charcoalMuted,
@@ -230,7 +230,8 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
       _subjectController.clear();
       _messageController.clear();
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Support request submitted successfully.')),
+        const SnackBar(
+            content: Text('Support request submitted successfully.')),
       );
     } catch (_) {
       if (!mounted) return;
@@ -260,8 +261,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
         'We are here to help with bookings, hosts, billing, and support requests.';
     final faqs = provider.faqItems
         .map((item) => Map<String, dynamic>.from(item as Map))
-        .where((item) =>
-            (item['question'] ?? '').toString().trim().isNotEmpty)
+        .where((item) => (item['question'] ?? '').toString().trim().isNotEmpty)
         .toList();
     final filteredFaqs = faqs.where((faq) {
       final q = (faq['question'] ?? '').toString().toLowerCase();
@@ -277,7 +277,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
         elevation: 0,
         title: Text(
           'Support',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             color: AppTheme.charcoal,
             fontWeight: FontWeight.w800,
           ),
@@ -298,7 +298,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
               children: [
                 Text(
                   supportTitle,
-                  style: GoogleFonts.cormorantGaramond(
+                  style: GoogleFonts.inter(
                     fontSize: 34,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.charcoal,
@@ -307,7 +307,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                 const SizedBox(height: 10),
                 Text(
                   supportSubtitle,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     height: 1.7,
                     color: AppTheme.charcoalMuted,
@@ -394,7 +394,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                         card['title']?.toString() ?? '',
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 14,
                           fontWeight: FontWeight.w800,
                           color: AppTheme.charcoal,
@@ -405,7 +405,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                         card['description']?.toString() ?? '',
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
                           height: 1.5,
                           color: AppTheme.charcoalMuted,
@@ -420,7 +420,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
           const SizedBox(height: 22),
           Text(
             'Frequently Asked Questions',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 22,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -445,11 +445,10 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                 },
                 tilePadding:
                     const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
-                childrenPadding:
-                    const EdgeInsets.fromLTRB(18, 0, 18, 18),
+                childrenPadding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
                 title: Text(
                   faq['question']?.toString() ?? '',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.charcoal,
@@ -460,7 +459,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                     (faq['answer']?.toString().trim().isNotEmpty == true)
                         ? faq['answer'].toString()
                         : 'Details will be updated soon.',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       height: 1.65,
                       color: AppTheme.charcoalMuted,
@@ -483,7 +482,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
               children: [
                 Text(
                   'Contact Support',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.charcoal,
@@ -554,7 +553,7 @@ class LegalPoliciesScreen extends StatelessWidget {
           elevation: 0,
           title: Text(
             'Legal',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               color: AppTheme.charcoal,
               fontWeight: FontWeight.w800,
             ),
@@ -587,7 +586,7 @@ class LegalPoliciesScreen extends StatelessWidget {
                       children: [
                         Text(
                           policy.title,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
                             color: AppTheme.charcoal,
@@ -596,7 +595,7 @@ class LegalPoliciesScreen extends StatelessWidget {
                         const SizedBox(height: 14),
                         Text(
                           policy.content,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             height: 1.8,
                             color: AppTheme.charcoalMuted,
@@ -649,7 +648,7 @@ class _SectionCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -658,7 +657,7 @@ class _SectionCard extends StatelessWidget {
           const SizedBox(height: 10),
           Text(
             body,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               height: 1.75,
               color: AppTheme.charcoalMuted,

@@ -52,7 +52,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
           children: [
             Text(
               label,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 11,
                 fontWeight: FontWeight.w800,
                 color: isActive ? Colors.white : AppTheme.charcoalLight,
@@ -68,7 +68,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
               ),
               child: Text(
                 '$count',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 9,
                   fontWeight: FontWeight.w800,
                   color: isActive ? Colors.white : AppTheme.charcoal,
@@ -98,10 +98,6 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
       return title.contains(q) || guest.contains(q) || id.contains(q);
     }).toList();
 
-    final approvalRequests = filteredBySearch
-        .where(
-            (bk) => bk.bookingStatus.toLowerCase() == 'awaiting_host_approval')
-        .toList();
     final pending = filteredBySearch
         .where((bk) =>
             bk.bookingStatus.toLowerCase() == 'pending' ||
@@ -118,13 +114,11 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
 
     final listToDisplay = _activeTab == 'confirmed'
         ? confirmed
-        : _activeTab == 'approval'
-            ? approvalRequests
-            : _activeTab == 'pending'
-                ? pending
-                : _activeTab == 'cancelled'
-                    ? cancelled
-                    : filteredBySearch;
+        : _activeTab == 'pending'
+            ? pending
+            : _activeTab == 'cancelled'
+                ? cancelled
+                : filteredBySearch;
 
     // Aggregates
     final totalEarnings = allBookings
@@ -138,7 +132,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
       appBar: AppBar(
         title: Text(
           'Booking Manager',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontWeight: FontWeight.w800,
             fontSize: 22,
             color: AppTheme.primary,
@@ -173,13 +167,13 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.charcoalLight,
-                              letterSpacing: 0.5,
+                              letterSpacing: 0,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             CurrencyFormatter.format(totalEarnings),
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.primary,
@@ -196,13 +190,13 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
                               color: AppTheme.charcoalLight,
-                              letterSpacing: 0.5,
+                              letterSpacing: 0,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             '${allBookings.length}',
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 20,
                               fontWeight: FontWeight.w900,
                               color: AppTheme.charcoal,
@@ -253,9 +247,6 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                       _buildTabButton(
                           'confirmed', 'CONFIRMED', confirmed.length),
                       const SizedBox(width: 8),
-                      _buildTabButton('approval', 'APPROVAL REQUESTS',
-                          approvalRequests.length),
-                      const SizedBox(width: 8),
                       _buildTabButton('pending', 'PENDING', pending.length),
                       const SizedBox(width: 8),
                       _buildTabButton(
@@ -278,7 +269,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                               const SizedBox(height: 12),
                               Text(
                                 'No bookings match filters.',
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 14,
                                   color: AppTheme.charcoalMuted,
                                   fontWeight: FontWeight.w600,
@@ -295,9 +286,6 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                             final isConfirmed =
                                 bk.bookingStatus.toLowerCase() == 'confirmed' ||
                                     bk.bookingStatus.toLowerCase() == 'paid';
-                            final isApprovalRequest =
-                                bk.bookingStatus.toLowerCase() ==
-                                    'awaiting_host_approval';
                             final isCancelled =
                                 bk.bookingStatus.toLowerCase() == 'cancelled';
 
@@ -339,7 +327,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                               fontSize: 9,
                                               fontWeight: FontWeight.w800,
                                               color: Colors.orange.shade800,
-                                              letterSpacing: 0.5,
+                                              letterSpacing: 0,
                                             ),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
@@ -385,7 +373,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                     // Property Title
                                     Text(
                                       bk.propertyTitle ?? 'Property Listing',
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w800,
                                         color: AppTheme.charcoal,
@@ -420,7 +408,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                               children: [
                                                 Text(
                                                   bk.guestName ?? 'STR Guest',
-                                                  style: GoogleFonts.manrope(
+                                                  style: GoogleFonts.inter(
                                                       fontWeight:
                                                           FontWeight.bold,
                                                       fontSize: 13),
@@ -455,7 +443,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                         Expanded(
                                           child: Text(
                                             '${bk.checkInDate} - ${bk.checkOutDate}  |  ${bk.numberOfGuests} Guest${bk.numberOfGuests > 1 ? "s" : ""}',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontSize: 11,
                                               color: AppTheme.charcoalLight,
                                               fontWeight: FontWeight.w500,
@@ -469,7 +457,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                     const SizedBox(height: 4),
                                     Text(
                                       'BOOKING ID: ${bk.bookingId}',
-                                      style: GoogleFonts.manrope(
+                                      style: GoogleFonts.inter(
                                         fontSize: 9,
                                         color: AppTheme.charcoalMuted,
                                         fontWeight: FontWeight.w600,
@@ -518,65 +506,6 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                     ],
 
                                     const SizedBox(height: 12),
-                                    if (isApprovalRequest) ...[
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: ElevatedButton(
-                                              onPressed: () async {
-                                                final ok = await Provider.of<
-                                                            BookingProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .approveBooking(
-                                                        bk.bookingId);
-                                                if (!context.mounted) return;
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                      content: Text(ok
-                                                          ? 'Booking approved.'
-                                                          : bookingProvider
-                                                                  .lastError ??
-                                                              'Approval failed.')),
-                                                );
-                                              },
-                                              style: ElevatedButton.styleFrom(
-                                                  backgroundColor:
-                                                      Colors.green.shade700),
-                                              child: const Text('Approve',
-                                                  style: TextStyle(
-                                                      color: Colors.white)),
-                                            ),
-                                          ),
-                                          const SizedBox(width: 10),
-                                          Expanded(
-                                            child: OutlinedButton(
-                                              onPressed: () async {
-                                                final ok = await Provider.of<
-                                                            BookingProvider>(
-                                                        context,
-                                                        listen: false)
-                                                    .rejectBooking(
-                                                        bk.bookingId);
-                                                if (!context.mounted) return;
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(
-                                                  SnackBar(
-                                                      content: Text(ok
-                                                          ? 'Booking rejected. Refund intent created if payment was captured.'
-                                                          : bookingProvider
-                                                                  .lastError ??
-                                                              'Rejection failed.')),
-                                                );
-                                              },
-                                              child: const Text('Reject'),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                    ],
                                     const Divider(
                                         color: AppTheme.stone, height: 1),
                                     const SizedBox(height: 12),
@@ -592,7 +521,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                           children: [
                                             Text(
                                               'RESERVATION VALUE',
-                                              style: GoogleFonts.manrope(
+                                              style: GoogleFonts.inter(
                                                 fontSize: 9,
                                                 color: AppTheme.charcoalMuted,
                                                 fontWeight: FontWeight.w800,
@@ -602,7 +531,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                             Text(
                                               CurrencyFormatter.format(
                                                   bk.totalAmount),
-                                              style: GoogleFonts.manrope(
+                                              style: GoogleFonts.inter(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w800,
                                                 color: AppTheme.charcoal,
@@ -683,7 +612,7 @@ class _HostBookingsScreenState extends State<HostBookingsScreen> {
                                           },
                                           child: Text(
                                             'DETAILS',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontSize: 12,
                                               fontWeight: FontWeight.w800,
                                               color: AppTheme.primary,

@@ -507,7 +507,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                     color: Colors.white,
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 1.0,
+                    letterSpacing: 0,
                   ),
                 ),
               ],
@@ -2020,7 +2020,7 @@ class _VerificationSubmissionSheetState
               fontSize: 8,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoalMuted,
-              letterSpacing: 0.5),
+              letterSpacing: 0),
         ),
         const SizedBox(height: 4),
         Text(
@@ -2300,7 +2300,7 @@ class _VerificationSubmissionSheetState
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoalMuted,
-                              letterSpacing: 0.5),
+                              letterSpacing: 0),
                         ),
                         const SizedBox(height: 6),
                         p != null && p.images.isNotEmpty
@@ -2382,7 +2382,7 @@ class _VerificationSubmissionSheetState
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoalMuted,
-                              letterSpacing: 0.5),
+                              letterSpacing: 0),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -2402,7 +2402,7 @@ class _VerificationSubmissionSheetState
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoalMuted,
-                              letterSpacing: 0.5),
+                              letterSpacing: 0),
                         ),
                         const SizedBox(height: 4),
                         Text(
@@ -2424,7 +2424,7 @@ class _VerificationSubmissionSheetState
                               fontSize: 8,
                               fontWeight: FontWeight.w800,
                               color: AppTheme.charcoalMuted,
-                              letterSpacing: 0.5),
+                              letterSpacing: 0),
                         ),
                         const SizedBox(height: 8),
                         p != null && p.amenities.isNotEmpty
