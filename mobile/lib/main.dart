@@ -18,7 +18,7 @@ import 'views/shared/app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  GoogleFonts.config.allowRuntimeFetching = false;
+  GoogleFonts.config.allowRuntimeFetching = true;
   await ApiService().init();
   runApp(
     MultiProvider(
@@ -49,7 +49,57 @@ class MyApp extends StatelessWidget {
       title: 'X-Space360',
       theme: AppTheme.lightTheme,
       debugShowCheckedModeBanner: false,
+      builder: (context, child) => const _ResponsiveAppShell()
+          .wrap(context, child ?? const SizedBox.shrink()),
       home: const AppShell(),
     );
+  }
+}
+
+class _ResponsiveAppShell extends StatelessWidget {
+  const _ResponsiveAppShell();
+
+  Widget wrap(BuildContext context, Widget child) =>
+      buildWithChild(context, child);
+
+  Widget buildWithChild(BuildContext context, Widget child) {
+    final media = MediaQuery.of(context);
+    final width = media.size.width;
+    final height = media.size.height;
+    final shortestSide = media.size.shortestSide;
+    final currentScale = media.textScaler.scale(1);
+
+    final maxScale = shortestSide < 340
+        ? 0.82
+        : shortestSide < 380
+            ? 0.88
+            : shortestSide < 430
+                ? 0.96
+                : 1.0;
+    final minScale = height < 680 || width < 340 ? 0.78 : 0.84;
+    final safeScale = currentScale.clamp(minScale, maxScale).toDouble();
+
+    return ScrollConfiguration(
+      behavior: const _MobileScrollBehavior(),
+      child: MediaQuery(
+        data: media.copyWith(
+          textScaler: TextScaler.linear(safeScale),
+          boldText: false,
+        ),
+        child: child,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => const SizedBox.shrink();
+}
+
+class _MobileScrollBehavior extends ScrollBehavior {
+  const _MobileScrollBehavior();
+
+  @override
+  ScrollPhysics getScrollPhysics(BuildContext context) {
+    return const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics());
   }
 }

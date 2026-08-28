@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import '../../models/booking_model.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/ai_call_provider.dart';
 import '../../theme.dart';
@@ -455,63 +456,11 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                     // View Details Button
                                     TextButton(
                                       onPressed: () {
-                                        // Show a quick details dialog
                                         showDialog(
                                           context: context,
-                                          builder: (context) => AlertDialog(
-                                            shape: RoundedRectangleBorder(
-                                                borderRadius:
-                                                    BorderRadius.circular(16)),
-                                            title: Text(bk.propertyTitle ??
-                                                'Booking Details'),
-                                            content: SingleChildScrollView(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  Text(
-                                                      'Booking ID: ${bk.bookingId}',
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold)),
-                                                  const SizedBox(height: 8),
-                                                  Text(
-                                                      'Check In: ${bk.checkInDate}'),
-                                                  Text(
-                                                      'Check Out: ${bk.checkOutDate}'),
-                                                  Text(
-                                                      'Guests: ${bk.numberOfGuests}'),
-                                                  Text(
-                                                      'Status: ${statusUi.label}'),
-                                                  Text(statusUi.description),
-                                                  Text(
-                                                      'Payment Type: ${bk.paymentType == "advance" ? "Advance" : "Full"}'),
-                                                  if (bk.couponCode != null)
-                                                    Text(
-                                                        'Coupon Applied: ${bk.couponCode}'),
-                                                  const Divider(),
-                                                  Text(
-                                                      'Base Amount: ${CurrencyFormatter.format(bk.baseAmount)}'),
-                                                  if (bk.discountAmount > 0)
-                                                    Text(
-                                                        'Discount: ${CurrencyFormatter.format(-bk.discountAmount)}'),
-                                                  Text(
-                                                      'Total Paid: ${CurrencyFormatter.format(bk.totalAmount)}',
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 16)),
-                                                ],
-                                              ),
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed: () =>
-                                                    Navigator.pop(context),
-                                                child: const Text('Close'),
-                                              )
-                                            ],
+                                          builder: (context) =>
+                                              _BookingDetailsDialog(
+                                            booking: bk,
                                           ),
                                         );
                                       },
@@ -630,6 +579,400 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
               fontSize: 10,
               fontWeight: FontWeight.w800,
               color: instant ? AppTheme.primary : AppTheme.charcoalMuted,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookingDetailsDialog extends StatelessWidget {
+  final BookingModel booking;
+
+  const _BookingDetailsDialog({required this.booking});
+
+  @override
+  Widget build(BuildContext context) {
+    final statusUi = booking.statusUi;
+    final coupon = booking.couponCode?.trim();
+    final hasDiscount = booking.discountAmount > 0;
+    final screen = MediaQuery.sizeOf(context);
+
+    return Dialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
+      backgroundColor: Colors.transparent,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 420,
+          maxHeight: screen.height * 0.82,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.18),
+                blurRadius: 32,
+                offset: const Offset(0, 18),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(18, 18, 12, 16),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFFFFFBF1), Color(0xFFFFF4DD)],
+                  ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CircleAvatar(
+                      radius: 24,
+                      backgroundColor: AppTheme.primary.withValues(alpha: 0.14),
+                      child: const Icon(Icons.receipt_long_rounded,
+                          color: AppTheme.primary, size: 25),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            booking.propertyTitle ?? 'Booking Details',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.manrope(
+                              fontSize: 19,
+                              height: 1.15,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.charcoal,
+                            ),
+                          ),
+                          const SizedBox(height: 7),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              _DetailStatusChip(
+                                label: statusUi.label,
+                                color: statusUi.color,
+                              ),
+                              _DetailStatusChip(
+                                label: _paymentLabel(booking.paymentType),
+                                color: AppTheme.primary,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded),
+                    ),
+                  ],
+                ),
+              ),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(18, 16, 18, 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _DetailSection(
+                        title: 'Trip Details',
+                        children: [
+                          _DetailRow(
+                            icon: Icons.confirmation_number_outlined,
+                            label: 'Booking ID',
+                            value: booking.bookingId,
+                          ),
+                          _DetailRow(
+                            icon: Icons.login_rounded,
+                            label: 'Check-in',
+                            value: _formatDate(booking.checkInDate),
+                          ),
+                          _DetailRow(
+                            icon: Icons.logout_rounded,
+                            label: 'Check-out',
+                            value: _formatDate(booking.checkOutDate),
+                          ),
+                          _DetailRow(
+                            icon: Icons.group_outlined,
+                            label: 'Guests',
+                            value: '${booking.numberOfGuests}',
+                          ),
+                          if (statusUi.description.trim().isNotEmpty)
+                            _DetailNote(text: statusUi.description),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      _DetailSection(
+                        title: 'Payment Summary',
+                        children: [
+                          _AmountRow(
+                            label: 'Base amount',
+                            value: CurrencyFormatter.format(booking.baseAmount),
+                          ),
+                          if (coupon != null && coupon.isNotEmpty)
+                            _AmountRow(label: 'Coupon', value: coupon),
+                          if (hasDiscount)
+                            _AmountRow(
+                              label: 'Discount',
+                              value:
+                                  '-${CurrencyFormatter.format(booking.discountAmount)}',
+                              valueColor: Colors.green.shade700,
+                            ),
+                          const Divider(height: 22, color: AppTheme.border),
+                          _AmountRow(
+                            label: 'Total paid',
+                            value: CurrencyFormatter.format(
+                              booking.totalAmount,
+                              currencyCode: booking.currency,
+                            ),
+                            isTotal: true,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF07142F),
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: Text(
+                      'Close',
+                      style: GoogleFonts.manrope(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  static String _paymentLabel(String? value) {
+    return value == 'advance' ? 'Advance Payment' : 'Full Payment';
+  }
+
+  static String _formatDate(String value) {
+    final parsed = DateTime.tryParse(value);
+    if (parsed == null) return value;
+    return DateFormat('dd MMM yyyy').format(parsed);
+  }
+}
+
+class _DetailSection extends StatelessWidget {
+  final String title;
+  final List<Widget> children;
+
+  const _DetailSection({required this.title, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFAF8F4),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: GoogleFonts.manrope(
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          const SizedBox(height: 10),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailStatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _DetailStatusChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.11),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Text(
+        label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: GoogleFonts.manrope(
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _DetailRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 9),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 17, color: AppTheme.primary),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.charcoalMuted,
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            flex: 2,
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: GoogleFonts.manrope(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.charcoal,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DetailNote extends StatelessWidget {
+  final String text;
+
+  const _DetailNote({required this.text});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 3),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.manrope(
+          fontSize: 12,
+          height: 1.35,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.charcoalMuted,
+        ),
+      ),
+    );
+  }
+}
+
+class _AmountRow extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool isTotal;
+  final Color? valueColor;
+
+  const _AmountRow({
+    required this.label,
+    required this.value,
+    this.isTotal = false,
+    this.valueColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: GoogleFonts.manrope(
+                fontSize: isTotal ? 14 : 12.5,
+                fontWeight: isTotal ? FontWeight.w900 : FontWeight.w700,
+                color: isTotal ? AppTheme.charcoal : AppTheme.charcoalMuted,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerRight,
+              child: Text(
+                value,
+                style: GoogleFonts.manrope(
+                  fontSize: isTotal ? 17 : 13,
+                  fontWeight: FontWeight.w900,
+                  color: valueColor ?? AppTheme.charcoal,
+                ),
+              ),
             ),
           ),
         ],

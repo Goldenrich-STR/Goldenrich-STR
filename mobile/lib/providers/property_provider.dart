@@ -20,9 +20,40 @@ class PropertyProvider with ChangeNotifier {
   PropertyModel? get currentProperty => _currentProperty;
   bool get isLoading => _isLoading;
 
+  Future<List<PropertyModel>> fetchLivePropertiesForBrowse({
+    int limit = 200,
+  }) async {
+    try {
+      return await _fetchSearchList({'limit': limit});
+    } catch (_) {
+      return [];
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchBookingOffers(
+      {int limit = 50}) async {
+    try {
+      final response = await _apiService.dio.get(
+        '/coupons/offers',
+        queryParameters: {'limit': limit},
+      );
+      if (response.statusCode != 200) return [];
+      final List<dynamic> list = response.data['offers'] ?? [];
+      return list
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .where((item) => item['property'] is Map)
+          .toList();
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<List<PropertyModel>> _fetchSearchList(
     Map<String, dynamic> params,
   ) async {
+    final requestedCategory =
+        _canonicalCategory((params['category'] ?? '').toString());
     final response = await _apiService.dio.get(
       '/properties/search',
       queryParameters: params,
@@ -43,9 +74,46 @@ class PropertyProvider with ChangeNotifier {
           continue;
         }
       }
+      if (requestedCategory.isNotEmpty) {
+        return properties
+            .where((property) =>
+                _matchesRequestedCategory(property, requestedCategory))
+            .toList();
+      }
       return properties;
     }
     return [];
+  }
+
+  bool _matchesRequestedCategory(PropertyModel property, String category) {
+    return _canonicalCategory(property.category) == category;
+  }
+
+  String _canonicalCategory(String value) {
+    final normalized = value
+        .trim()
+        .toLowerCase()
+        .replaceAll('&', 'and')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    if (normalized == 'event' ||
+        normalized == 'events' ||
+        normalized == 'event_venue' ||
+        normalized == 'events_venue' ||
+        normalized == 'event_venues') {
+      return 'event_venue';
+    }
+    if (normalized == 'commercial' ||
+        normalized == 'commercial_space' ||
+        normalized == 'commercial_spaces') {
+      return 'commercial';
+    }
+    if (normalized == 'residential' ||
+        normalized == 'residential_stay' ||
+        normalized == 'residential_stays') {
+      return 'residential';
+    }
+    return normalized;
   }
 
   Future<List<PropertyModel>> _fetchLandingCategory(String category) async {
@@ -65,7 +133,9 @@ class PropertyProvider with ChangeNotifier {
     String category,
   ) {
     return properties
-        .where((property) => property.category.toLowerCase().trim() == category)
+        .where(
+          (property) => _canonicalCategory(property.category) == category,
+        )
         .toList();
   }
 

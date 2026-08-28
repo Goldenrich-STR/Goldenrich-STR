@@ -15,8 +15,19 @@ import '../shared/property_image.dart';
 
 class BookingFlowScreen extends StatefulWidget {
   final PropertyModel property;
+  final DateTime? initialCheckInDate;
+  final DateTime? initialCheckOutDate;
+  final int? initialGuestCount;
+  final String? initialCouponCode;
 
-  const BookingFlowScreen({super.key, required this.property});
+  const BookingFlowScreen({
+    super.key,
+    required this.property,
+    this.initialCheckInDate,
+    this.initialCheckOutDate,
+    this.initialGuestCount,
+    this.initialCouponCode,
+  });
 
   @override
   State<BookingFlowScreen> createState() => _BookingFlowScreenState();
@@ -51,6 +62,17 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
   @override
   void initState() {
     super.initState();
+    _checkIn = widget.initialCheckInDate;
+    _checkOut = widget.initialCheckOutDate;
+    final initialGuests = widget.initialGuestCount;
+    if (initialGuests != null && initialGuests > 0) {
+      _adults = initialGuests.clamp(1, _maxGuests);
+      _children = 0;
+    }
+    final initialCoupon = widget.initialCouponCode?.trim().toUpperCase();
+    if (initialCoupon != null && initialCoupon.isNotEmpty) {
+      _couponController.text = initialCoupon;
+    }
     _razorpay = Razorpay();
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
@@ -185,7 +207,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
 
   Future<void> _pay() async {
     if (_preparingPayment || _checkingPayment || _quote == null) return;
-    final payload = _bookingPayload();
+    final payload = _bookingPayload(coupon: _couponController.text);
     if (payload == null) return;
     setState(() {
       _preparingPayment = true;
@@ -196,7 +218,9 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     if (booking == null) {
       booking = await provider.createBooking(payload);
       final coupon = _couponController.text.trim();
-      if (booking != null && coupon.isNotEmpty) {
+      if (booking != null &&
+          coupon.isNotEmpty &&
+          (booking.couponCode == null || booking.couponCode!.isEmpty)) {
         final applied = await provider.applyCoupon(booking.bookingId, coupon);
         if (applied) booking = provider.currentBooking;
       }

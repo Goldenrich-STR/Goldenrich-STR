@@ -57,6 +57,18 @@ PASSWORD_RESET_TTL_SECONDS = 30 * 60
 SSO_STATE_TTL_SECONDS = 10 * 60
 _sso_state_store: dict[str, float] = {}
 
+def _normalize_email(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+def _email_lookup_query(email: str) -> dict:
+    normalized = _normalize_email(email)
+    return {
+        "$or": [
+            {"email": normalized},
+            {"email": {"$regex": f"^{re.escape(normalized)}$", "$options": "i"}},
+        ]
+    }
+
 ACCOUNT_DELETION_RETAINED_DATA = [
     {
         "category": "Booking, purchase, invoice, tax and payment/order records",
@@ -442,8 +454,8 @@ async def verify_otp(request: VerifyOTPRequest):
 async def forgot_password(request: ForgotPasswordRequest, db: AsyncIOMotorDatabase = Depends(get_db)):
     """Send password reset email for host/customer/admin users."""
     try:
-        email = request.email.strip().lower()
-        user = await db.users.find_one({"email": email}, {"_id": 0})
+        email = _normalize_email(request.email)
+        user = await db.users.find_one(_email_lookup_query(email), {"_id": 0})
         if user:
             token = secrets.token_urlsafe(32)
             now = datetime.now(timezone.utc)
@@ -735,7 +747,8 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
             )
 
         # Check if user already exists
-        existing_user = await db.users.find_one({"email": user_data.email})
+        normalized_email = _normalize_email(user_data.email)
+        existing_user = await db.users.find_one(_email_lookup_query(normalized_email))
         if existing_user:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -896,7 +909,7 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         user = User(
             user_id=generated_uid,
             uid=generated_uid,
-            email=user_data.email,
+            email=normalized_email,
             phone=user_data.phone,
             password_hash=hashed_password,
             full_name=user_data.full_name,
@@ -981,8 +994,8 @@ async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_d
     """Login non-admin users and return JWT token."""
     try:
         # Find user by email
-        email = credentials.email.strip().lower()
-        user_dict = await db.users.find_one({"email": email}, {"_id": 0})
+        email = _normalize_email(credentials.email)
+        user_dict = await db.users.find_one(_email_lookup_query(email), {"_id": 0})
         
         if not user_dict:
             raise HTTPException(

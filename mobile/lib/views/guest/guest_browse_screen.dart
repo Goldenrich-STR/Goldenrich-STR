@@ -8,6 +8,7 @@ import '../../utils/currency_formatter.dart';
 import '../../utils/wishlist_action.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../auth/login_screen.dart';
+import '../shared/app_logo.dart';
 import '../shared/notifications_screen.dart';
 import '../shared/property_image.dart';
 import 'property_detail_screen.dart';
@@ -20,6 +21,7 @@ class GuestBrowseScreen extends StatefulWidget {
   final int? initialGuests;
   final String? initialCategory;
   final String? initialPropertyType;
+  final DateTimeRange? initialDateRange;
 
   const GuestBrowseScreen({
     super.key,
@@ -28,6 +30,7 @@ class GuestBrowseScreen extends StatefulWidget {
     this.initialGuests,
     this.initialCategory,
     this.initialPropertyType,
+    this.initialDateRange,
   });
 
   @override
@@ -38,14 +41,8 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
   final _searchController = TextEditingController();
   String _selectedCity = '';
   int _activeCategoryIndex = 0;
-  final Set<String> _knownCities = {
-    'Nashik',
-    'Mumbai',
-    'Pune',
-    'Goa',
-    'Jaipur',
-    'Bangalore',
-  };
+  DateTimeRange? _selectedDateRange;
+  final Set<String> _knownCities = {};
   Map<String, dynamic> _advancedFilters = {
     'category': '',
     'property_type': '',
@@ -56,6 +53,55 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
     'pet_friendly': null,
     'amenities': '',
   };
+
+  String get _activeCategoryValue {
+    if (_activeCategoryIndex == 1) return 'commercial';
+    if (_activeCategoryIndex == 2) return 'event_venue';
+    return 'residential';
+  }
+
+  bool _matchesActiveCategory(PropertyModel property) {
+    return _canonicalCategory(property.category) == _activeCategoryValue;
+  }
+
+  void _syncCategoryIndex(String? category) {
+    final normalized = _canonicalCategory(category ?? '');
+    if (normalized == 'commercial') {
+      _activeCategoryIndex = 1;
+    } else if (normalized == 'event_venue') {
+      _activeCategoryIndex = 2;
+    } else {
+      _activeCategoryIndex = 0;
+    }
+    _advancedFilters['category'] = _activeCategoryValue;
+  }
+
+  String _canonicalCategory(String value) {
+    final normalized = value
+        .trim()
+        .toLowerCase()
+        .replaceAll('&', 'and')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    if (normalized == 'event' ||
+        normalized == 'events' ||
+        normalized == 'event_venue' ||
+        normalized == 'events_venue' ||
+        normalized == 'event_venues') {
+      return 'event_venue';
+    }
+    if (normalized == 'commercial' ||
+        normalized == 'commercial_space' ||
+        normalized == 'commercial_spaces') {
+      return 'commercial';
+    }
+    if (normalized == 'residential' ||
+        normalized == 'residential_stay' ||
+        normalized == 'residential_stays') {
+      return 'residential';
+    }
+    return normalized;
+  }
 
   @override
   void initState() {
@@ -71,35 +117,49 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
     if (widget.initialGuests != null && widget.initialGuests! > 0) {
       _advancedFilters['guests'] = widget.initialGuests;
     }
+    if (widget.initialDateRange != null) {
+      _selectedDateRange = widget.initialDateRange;
+      _advancedFilters['check_in_date'] =
+          _apiDate(widget.initialDateRange!.start);
+      _advancedFilters['check_out_date'] =
+          _apiDate(widget.initialDateRange!.end);
+    }
     if (widget.initialPropertyType != null &&
         widget.initialPropertyType!.isNotEmpty) {
       _advancedFilters['property_type'] = widget.initialPropertyType;
     }
     if (widget.initialCategory != null && widget.initialCategory!.isNotEmpty) {
-      _advancedFilters['category'] = widget.initialCategory;
-      if (widget.initialCategory!.toLowerCase() == 'commercial') {
-        _activeCategoryIndex = 1;
-      } else if (widget.initialCategory!.toLowerCase() == 'event' ||
-          widget.initialCategory!.toLowerCase() == 'event_venue' ||
-          widget.initialCategory!.toLowerCase() == 'events_venue') {
-        _activeCategoryIndex = 2;
-      } else {
-        _activeCategoryIndex = 0;
-      }
+      _syncCategoryIndex(widget.initialCategory);
     } else {
       _advancedFilters['category'] = 'residential';
       _activeCategoryIndex = 0;
     }
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadProperties();
+      _loadKnownCities();
       Provider.of<NotificationProvider>(context, listen: false)
           .loadUnreadCount();
     });
   }
 
+  Future<void> _loadKnownCities() async {
+    final provider = Provider.of<PropertyProvider>(context, listen: false);
+    final liveProperties = await provider.fetchLivePropertiesForBrowse();
+    if (!mounted) return;
+    setState(() {
+      _knownCities
+        ..clear()
+        ..addAll(
+          liveProperties
+              .map((property) => property.city.trim())
+              .where((city) => city.isNotEmpty),
+        );
+    });
+  }
+
   void _loadProperties() {
     final provider = Provider.of<PropertyProvider>(context, listen: false);
-    final Map<String, dynamic> params = {};
+    final Map<String, dynamic> params = {'category': _activeCategoryValue};
     final searchText = _searchController.text.trim();
     if (searchText.isNotEmpty && searchText != _selectedCity) {
       params['search'] = searchText;
@@ -113,6 +173,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
         params[key] = value;
       }
     });
+    params['category'] = _activeCategoryValue;
 
     provider.searchProperties(params);
   }
@@ -128,9 +189,24 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
     if (result != null) {
       setState(() {
         _advancedFilters = result;
+        _syncCategoryIndex(result['category']?.toString());
       });
       _loadProperties();
     }
+  }
+
+  String _apiDate(DateTime date) {
+    final normalized = DateTime(date.year, date.month, date.day);
+    return normalized.toIso8601String().split('T').first;
+  }
+
+  Widget _propertyDetailRoute(PropertyModel property) {
+    return PropertyDetailScreen(
+      propertyId: property.propertyId,
+      initialCheckInDate: _selectedDateRange?.start,
+      initialCheckOutDate: _selectedDateRange?.end,
+      initialGuestCount: widget.initialGuests,
+    );
   }
 
   @override
@@ -139,23 +215,18 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
     final authProvider = Provider.of<AuthProvider>(context);
     final unreadCount = context.watch<NotificationProvider>().unreadCount;
 
-    final properties = propertyProvider.properties;
-    for (final prop in properties) {
+    final rawProperties = propertyProvider.properties;
+    final properties = _uniqueProperties(
+      rawProperties.where(_matchesActiveCategory).toList(),
+    );
+    for (final prop in rawProperties) {
       final city = prop.city.trim();
       if (city.isNotEmpty) {
         _knownCities.add(city);
       }
     }
-
-    // Group properties by city
-    final Map<String, List<PropertyModel>> cityGroups = {};
-    for (var prop in properties) {
-      final city = prop.city.isNotEmpty ? prop.city : 'Other';
-      if (!cityGroups.containsKey(city)) {
-        cityGroups[city] = [];
-      }
-      cityGroups[city]!.add(prop);
-    }
+    final cityOptions = _knownCities.toList()
+      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -167,42 +238,34 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
               padding: const EdgeInsets.fromLTRB(18, 10, 18, 10),
               child: Row(
                 children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(18),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.06),
-                          blurRadius: 16,
-                          offset: const Offset(0, 7),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.location_on_rounded,
-                        color: AppTheme.primary, size: 27),
-                  ),
-                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'X-SPACE360',
-                          style: GoogleFonts.manrope(
-                            fontSize: 23,
-                            height: 1,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF07142F),
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Flexible(
+                              child: ConstrainedBox(
+                                constraints:
+                                    const BoxConstraints(maxWidth: 178),
+                                child: const AppLogo(height: 34),
+                              ),
+                            ),
+                            const SizedBox(width: 3),
+                            const Icon(Icons.keyboard_arrow_down_rounded,
+                                size: 20, color: Color(0xFF07142F)),
+                          ],
                         ),
-                        const SizedBox(height: 4),
+                        const SizedBox(height: 2),
                         Text(
-                          'Find your perfect space',
+                          'Find Your Perfect Space',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.manrope(
-                            fontSize: 13,
+                            fontSize: 12,
+                            height: 1.1,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoalMuted,
                           ),
@@ -354,7 +417,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                     const EdgeInsets.symmetric(horizontal: 18.0, vertical: 9.0),
                 children: [
                   _buildCityChip('', 'All Cities'),
-                  ..._knownCities.map((city) => _buildCityChip(city, city)),
+                  ...cityOptions.map((city) => _buildCityChip(city, city)),
                 ],
               ),
             ),
@@ -371,9 +434,7 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
                           padding: const EdgeInsets.only(bottom: 24.0),
                           children: [
                             const SizedBox(height: 6),
-                            _buildBrowseHostBanner(),
-                            ..._buildPropertySections(cityGroups),
-                            _buildTrustStrip(),
+                            _buildPropertyCardGrid(properties),
                           ],
                         ),
             ),
@@ -483,8 +544,13 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
         selected: isSelected,
         onSelected: (selected) {
           setState(() {
-            _selectedCity = cityCode;
-            _searchController.text = label == 'All Cities' ? '' : label;
+            if (cityCode.isEmpty) {
+              _selectedCity = '';
+              _searchController.clear();
+            } else {
+              _selectedCity = cityCode;
+              _searchController.text = label;
+            }
           });
           _loadProperties();
         },
@@ -503,609 +569,203 @@ class _GuestBrowseScreenState extends State<GuestBrowseScreen> {
     );
   }
 
-  List<Widget> _buildPropertySections(
-      Map<String, List<PropertyModel>> cityGroups) {
-    final sections = <Widget>[];
-    final orderedCities = cityGroups.keys.toList()
-      ..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
-
-    for (final city in orderedCities) {
-      final list = cityGroups[city] ?? [];
-      if (list.isEmpty) continue;
-      final popularList = list.take(6).toList();
-      final weekendList =
-          list.length > 1 ? list.skip(1).take(4).toList() : list;
-
-      sections.add(_buildSectionHeader('Popular homes in $city'));
-      sections.add(_buildHorizontalPropertyGrid(popularList));
-      sections.add(_buildSectionHeader('Available in $city this weekend'));
-      sections.add(_buildWeekendPropertyList(weekendList));
+  List<PropertyModel> _uniqueProperties(List<PropertyModel> properties) {
+    final seen = <String>{};
+    final result = <PropertyModel>[];
+    for (final property in properties) {
+      final key = property.propertyId.trim().isNotEmpty
+          ? property.propertyId.trim()
+          : '${property.title}-${property.city}-${property.pricePerNight}';
+      if (seen.add(key)) {
+        result.add(property);
+      }
     }
-
-    return sections;
+    return result;
   }
 
-  Widget _buildBrowseHostBanner() {
-    return Container(
-      margin: const EdgeInsets.fromLTRB(18, 8, 18, 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFBF1), Color(0xFFFFF1D2)],
-        ),
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: const Color(0xFFF0DFC5)),
+  Widget _buildPropertyCardGrid(List<PropertyModel> properties) {
+    final crossAxisCount = MediaQuery.sizeOf(context).width >= 520 ? 3 : 2;
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
+      itemCount: properties.length,
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: crossAxisCount,
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 18,
+        childAspectRatio: 0.68,
       ),
+      itemBuilder: (context, index) {
+        return _BrowsePropertyGridCard(
+          property: properties[index],
+          detailRoute: _propertyDetailRoute(properties[index]),
+        );
+      },
+    );
+  }
+}
+
+class _BrowsePropertyGridCard extends StatelessWidget {
+  final PropertyModel property;
+  final Widget detailRoute;
+
+  const _BrowsePropertyGridCard({
+    required this.property,
+    required this.detailRoute,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final propertyProvider = context.watch<PropertyProvider>();
+    final wishlisted = propertyProvider.isWishlisted(property.propertyId);
+    final hasRating = property.rating != null && property.rating! > 0;
+
+    return InkWell(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => detailRoute),
+        );
+      },
+      borderRadius: BorderRadius.circular(18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: SizedBox(
-              height: 76,
-              width: double.infinity,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  Image.asset('assets/images/hero_villa.jpg',
-                      fit: BoxFit.cover),
-                  Container(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.centerLeft,
-                        end: Alignment.centerRight,
-                        colors: [
-                          const Color(0xFF07142F).withValues(alpha: 0.76),
-                          const Color(0xFF07142F).withValues(alpha: 0.14),
+          Expanded(
+            child: Stack(
+              children: [
+                PropertyImage(
+                  imageUrl:
+                      property.images.isNotEmpty ? property.images.first : null,
+                  width: double.infinity,
+                  height: double.infinity,
+                  borderRadius: BorderRadius.circular(18),
+                ),
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: GestureDetector(
+                    onTap: () =>
+                        handleWishlistTap(context, property.propertyId),
+                    child: Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.94),
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.10),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
                         ],
                       ),
+                      child: Icon(
+                        wishlisted
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: wishlisted ? Colors.red : AppTheme.charcoalMuted,
+                        size: 21,
+                      ),
                     ),
                   ),
+                ),
+                if (hasRating && property.rating! >= 4.8)
                   Positioned(
-                    left: 12,
-                    top: 12,
-                    bottom: 12,
+                    left: 10,
+                    bottom: 10,
                     child: Container(
-                      width: 52,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 5),
                       decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(14),
+                        color: Colors.white.withValues(alpha: 0.94),
+                        borderRadius: BorderRadius.circular(999),
                       ),
-                      child: const Icon(Icons.home_rounded,
-                          color: Colors.white, size: 24),
-                    ),
-                  ),
-                  Positioned(
-                    left: 76,
-                    top: 15,
-                    right: 12,
-                    child: Text(
-                      'Become a Host',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    left: 76,
-                    top: 42,
-                    right: 12,
-                    child: Text(
-                      'List your space and start earning.',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white.withValues(alpha: 0.86),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.72),
-                  border: Border.all(color: AppTheme.primary),
-                  borderRadius: BorderRadius.circular(999),
-                ),
-                child: Text('EARN MORE',
-                    style: GoogleFonts.manrope(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: AppTheme.primary)),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  'Trusted platform • 24/7 support',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.manrope(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.charcoalMuted,
-                  ),
-                ),
-              ),
-              SizedBox(
-                height: 38,
-                child: ElevatedButton(
-                  onPressed: () {},
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF07142F),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    textStyle: GoogleFonts.manrope(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text('List'),
-                      SizedBox(width: 5),
-                      Icon(Icons.arrow_forward_rounded, size: 16),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(
-          left: 16.0, right: 16.0, top: 20.0, bottom: 12.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Text(
-              title,
-              style: GoogleFonts.manrope(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text('View all',
-                  style: GoogleFonts.manrope(
-                      color: AppTheme.primary,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w800)),
-              const SizedBox(width: 6),
-              const Icon(Icons.arrow_forward_rounded,
-                  size: 18, color: AppTheme.primary),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildWeekendPropertyList(List<PropertyModel> properties) {
-    if (properties.isEmpty) return const SizedBox.shrink();
-    return SizedBox(
-      height: 276,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 18),
-        itemCount: properties.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 14),
-        itemBuilder: (context, index) =>
-            _WeekendPropertyCard(property: properties[index]),
-      ),
-    );
-  }
-
-  Widget _buildTrustStrip() {
-    final items = [
-      (Icons.verified_user_outlined, 'Verified Properties', 'Quality Checked'),
-      (Icons.support_agent_outlined, '24/7 Support', 'We are here'),
-      (Icons.local_offer_outlined, 'Best Price Guarantee', 'Great deals'),
-    ];
-    return Container(
-      margin: const EdgeInsets.fromLTRB(18, 14, 18, 10),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Row(
-        children: [
-          for (int i = 0; i < items.length; i++) ...[
-            Expanded(
-              child: Column(
-                children: [
-                  Icon(items[i].$1, color: AppTheme.primary, size: 22),
-                  const SizedBox(height: 6),
-                  Text(items[i].$2,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF07142F))),
-                  Text(items[i].$3,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
-                          fontSize: 9, color: AppTheme.charcoalMuted)),
-                ],
-              ),
-            ),
-            if (i != items.length - 1)
-              Container(width: 1, height: 44, color: AppTheme.border),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHorizontalPropertyGrid(List<PropertyModel> properties) {
-    final propertyProvider = Provider.of<PropertyProvider>(context);
-    return SizedBox(
-      height: 292,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-        itemCount: properties.length,
-        itemBuilder: (context, index) {
-          final prop = properties[index];
-          final hasRating = prop.rating != null && prop.rating! > 0;
-
-          return Container(
-            width: 230,
-            margin: const EdgeInsets.only(right: 16.0, bottom: 8.0),
-            child: InkWell(
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        PropertyDetailScreen(propertyId: prop.propertyId),
-                  ),
-                );
-              },
-              borderRadius: BorderRadius.circular(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Image stack with "Guest favourite" badge and Wishlist toggle
-                  Stack(
-                    children: [
-                      PropertyImage(
-                        imageUrl:
-                            prop.images.isNotEmpty ? prop.images[0] : null,
-                        height: 180,
-                        width: double.infinity,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      // "Guest favourite" badge (white rounded chip)
-                      if (hasRating && prop.rating! >= 4.8)
-                        Positioned(
-                          top: 12,
-                          left: 12,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              'Guest favourite',
-                              style: GoogleFonts.manrope(
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ),
-                        ),
-                      // Wishlist heart icon
-                      Positioned(
-                        top: 12,
-                        right: 12,
-                        child: GestureDetector(
-                          onTap: () {
-                            handleWishlistTap(context, prop.propertyId);
-                          },
-                          child: Icon(
-                            propertyProvider.isWishlisted(prop.propertyId)
-                                ? Icons.favorite_rounded
-                                : Icons.favorite_border_rounded,
-                            color:
-                                propertyProvider.isWishlisted(prop.propertyId)
-                                    ? Colors.red
-                                    : Colors.white,
-                            size: 24,
-                            shadows: [
-                              Shadow(
-                                color: Colors.black.withValues(alpha: 0.4),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  // Title
-                  Text(
-                    prop.title,
-                    style: GoogleFonts.manrope(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 4),
-                  _BookingModeChip(property: prop),
-                  const SizedBox(height: 4),
-                  // Price and rating row
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
+                          const Icon(Icons.workspace_premium_rounded,
+                              size: 12, color: AppTheme.primary),
+                          const SizedBox(width: 3),
                           Text(
-                            '${CurrencyFormatter.format(prop.customerDisplayPrice)}${prop.pricingUnitSuffix}',
+                            'Guest favourite',
                             style: GoogleFonts.manrope(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w900,
                               color: AppTheme.primary,
                             ),
                           ),
                         ],
                       ),
-                      if (hasRating)
-                        Row(
-                          children: [
-                            const Icon(Icons.star_rounded,
-                                size: 16, color: Colors.black87),
-                            const SizedBox(width: 2),
-                            Text(
-                              prop.rating!.toStringAsFixed(1),
-                              style: GoogleFonts.manrope(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-}
-
-class _WeekendPropertyCard extends StatelessWidget {
-  final PropertyModel property;
-
-  const _WeekendPropertyCard({required this.property});
-
-  @override
-  Widget build(BuildContext context) {
-    final hasRating = property.rating != null && property.rating! > 0;
-    return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) =>
-                PropertyDetailScreen(propertyId: property.propertyId),
-          ),
-        );
-      },
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
-        width: MediaQuery.of(context).size.width - 36,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.07),
-              blurRadius: 18,
-              offset: const Offset(0, 9),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Stack(
-              children: [
-                PropertyImage(
-                  imageUrl:
-                      property.images.isNotEmpty ? property.images[0] : null,
-                  height: 156,
-                  width: double.infinity,
-                ),
-                const Positioned(
-                  top: 12,
-                  left: 12,
-                  child: _GuestFavouriteBadge(showCrown: true),
-                ),
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: IconButton.filled(
-                    onPressed: () =>
-                        handleWishlistTap(context, property.propertyId),
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.92),
                     ),
-                    icon: const Icon(Icons.favorite_border_rounded,
-                        color: Color(0xFF07142F)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            property.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: GoogleFonts.manrope(
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+              color: AppTheme.charcoal,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined,
+                  size: 13, color: AppTheme.charcoalMuted),
+              const SizedBox(width: 3),
+              Expanded(
+                child: Text(
+                  '${property.city}, ${property.state}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.manrope(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.charcoalMuted,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          _BookingModeChip(property: property),
+          const SizedBox(height: 5),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.manrope(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.primary,
+                  ),
+                ),
+              ),
+              if (hasRating) ...[
+                const Icon(Icons.star_rounded,
+                    size: 14, color: AppTheme.primary),
+                const SizedBox(width: 2),
+                Text(
+                  property.rating!.toStringAsFixed(1),
+                  style: GoogleFonts.manrope(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                    color: AppTheme.charcoal,
                   ),
                 ),
               ],
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    property.title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF07142F),
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  Row(
-                    children: [
-                      Text(
-                        '${property.maxGuests} Guests',
-                        style: GoogleFonts.manrope(
-                            fontSize: 12, color: AppTheme.charcoalMuted),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text('•'),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          property.bhkType,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
-                              fontSize: 12, color: AppTheme.charcoalMuted),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 9),
-                  Row(
-                    children: [
-                      _BookingModeChip(property: property),
-                      const Spacer(),
-                      Text(
-                        '${CurrencyFormatter.format(property.customerDisplayPrice)}${property.pricingUnitSuffix}',
-                        style: GoogleFonts.manrope(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                      if (hasRating) ...[
-                        const SizedBox(width: 10),
-                        const Icon(Icons.star_rounded,
-                            size: 17, color: AppTheme.primary),
-                        Text(
-                          property.rating!.toStringAsFixed(1),
-                          style: GoogleFonts.manrope(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF07142F),
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GuestFavouriteBadge extends StatelessWidget {
-  final bool showCrown;
-
-  const _GuestFavouriteBadge({this.showCrown = false});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.94),
-        borderRadius: BorderRadius.circular(999),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (showCrown) ...[
-            const Icon(Icons.workspace_premium_rounded,
-                size: 14, color: AppTheme.primary),
-            const SizedBox(width: 4),
-          ],
-          Text(
-            'Guest favourite',
-            style: GoogleFonts.manrope(
-              fontSize: 11,
-              fontWeight: FontWeight.w900,
-              color: AppTheme.primary,
-            ),
+            ],
           ),
         ],
       ),

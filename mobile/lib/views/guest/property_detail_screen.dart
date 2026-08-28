@@ -22,7 +22,19 @@ import 'booking_flow_screen.dart';
 
 class PropertyDetailScreen extends StatefulWidget {
   final String propertyId;
-  const PropertyDetailScreen({super.key, required this.propertyId});
+  final DateTime? initialCheckInDate;
+  final DateTime? initialCheckOutDate;
+  final int? initialGuestCount;
+  final String? initialCouponCode;
+
+  const PropertyDetailScreen({
+    super.key,
+    required this.propertyId,
+    this.initialCheckInDate,
+    this.initialCheckOutDate,
+    this.initialGuestCount,
+    this.initialCouponCode,
+  });
 
   @override
   State<PropertyDetailScreen> createState() => _PropertyDetailScreenState();
@@ -184,6 +196,12 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _checkInDate = widget.initialCheckInDate;
+    _checkOutDate = widget.initialCheckOutDate;
+    final initialGuests = widget.initialGuestCount;
+    if (initialGuests != null && initialGuests > 0) {
+      _guestCount = initialGuests;
+    }
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final propertyProvider =
           Provider.of<PropertyProvider>(context, listen: false);
@@ -195,7 +213,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       }
       if (prop != null && prop.category.toLowerCase() == 'event_venue') {
         setState(() {
-          _guestCount = 100;
+          _guestCount = widget.initialGuestCount ?? 100;
         });
       }
       _fetchBlockedDatesAndReviews();
@@ -405,7 +423,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (context) => BookingFlowScreen(property: prop)),
+        builder: (context) => BookingFlowScreen(
+          property: prop,
+          initialCheckInDate: _checkInDate,
+          initialCheckOutDate: _checkOutDate,
+          initialGuestCount: _guestCount,
+          initialCouponCode: widget.initialCouponCode,
+        ),
+      ),
     );
   }
 

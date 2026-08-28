@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../models/property_model.dart';
+import '../../config.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/property_provider.dart';
@@ -25,6 +26,7 @@ import '../shared/property_image.dart';
 import '../shared/support_tickets_screen.dart';
 import 'explore_map_screen.dart';
 import 'guest_browse_screen.dart';
+import 'offers_screen.dart';
 import 'property_detail_screen.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -44,50 +46,59 @@ class _LandingScreenState extends State<LandingScreen> {
   late final PageController _heroPageController;
   Timer? _heroTimer;
   int _activeHeroIndex = 0;
+  int? _registeredHostCount;
+  List<_HeroSlide> _cmsHeroSlides = [];
   List<PropertyModel> _recentlyVisitedProperties = [];
   List<_BlogData> _blogCards = [];
   String _activeHolidayGetawayCity = 'All';
 
-  static const List<_HeroSlide> _heroSlides = [
+  static final List<_HeroSlide> _fallbackHeroSlides = [
     _HeroSlide(
-      image: 'assets/images/hero_villa.jpg',
-      tag: 'VILLA ESCAPES',
-      titlePrefix: 'Luxury Private ',
-      titleHighlight: 'Villas',
-      subtitle:
-          'Premium villa stays for family trips, celebrations, and peaceful weekend getaways.',
-      badge: 'Private Pool and Scenic Views',
-      category: 'residential',
-    ),
-    _HeroSlide(
-      image: 'assets/images/destinations/alibaug.png',
-      tag: 'RESIDENTIAL STAYS',
-      titlePrefix: 'Comfortable Premium ',
-      titleHighlight: 'Stays',
-      subtitle:
-          'Elegant homes and apartments designed for smooth short stays and longer city breaks.',
-      badge: 'Verified Homes and Easy Booking',
-      category: 'residential',
-    ),
-    _HeroSlide(
-      image: 'assets/images/hero_commercial_office.jpg',
+      image: AppConfig.resolveWebAssetUrl(
+          '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg'),
       tag: 'COMMERCIAL SPACES',
-      titlePrefix: 'Smart Business ',
-      titleHighlight: 'Spaces',
+      titlePrefix: 'Premium Workspaces in ',
+      titleHighlight: 'Nashik',
       subtitle:
-          'Modern offices and work-ready spaces for meetings, teams, and professional stays.',
+          'Find polished offices, co-working spaces, and business-ready venues.',
       badge: 'Office and Workspace Ready',
       category: 'commercial',
+      isNetworkImage: true,
     ),
     _HeroSlide(
-      image: 'assets/images/destinations/sula-vineyards.png',
-      tag: 'EVENT DESTINATIONS',
-      titlePrefix: 'Celebrate Special ',
-      titleHighlight: 'Events',
+      image: AppConfig.resolveWebAssetUrl(
+          '/videos/hero/hero-villa-mobile-crop.png'),
+      tag: 'RESORT VILLAS',
+      titlePrefix: "Luxury Villas in India's ",
+      titleHighlight: 'Wine Capital',
+      subtitle:
+          'Premium villa stays for family trips and peaceful weekend getaways.',
+      badge: 'Private Pool and Scenic Views',
+      category: 'residential',
+      isNetworkImage: true,
+    ),
+    _HeroSlide(
+      image: AppConfig.resolveWebAssetUrl(
+          '/videos/hero/pexels-thevisionaryvows-33485961.jpg'),
+      tag: 'WEDDING VENUES',
+      titlePrefix: 'Luxury Weddings, ',
+      titleHighlight: 'Beautiful Memories',
       subtitle:
           'Stylish venues for weddings, parties, launches, and memorable gatherings.',
       badge: 'Curated Venue Support Included',
       category: 'event_venue',
+      isNetworkImage: true,
+    ),
+    _HeroSlide(
+      image: AppConfig.resolveWebAssetUrl(
+          '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg'),
+      tag: 'RESIDENTIAL SPACES',
+      titlePrefix: 'Experience the ',
+      titleHighlight: 'Comfort of Home',
+      subtitle: 'Elegant homes and apartments designed for smooth short stays.',
+      badge: 'Verified Homes and Easy Booking',
+      category: 'residential',
+      isNetworkImage: true,
     ),
   ];
 
@@ -103,6 +114,9 @@ class _LandingScreenState extends State<LandingScreen> {
     _DestinationData('Harihar Fort', 'harihar_fort'),
     _DestinationData('Bhandardara', 'bhandardara'),
   ];
+
+  List<_HeroSlide> get _heroSlides =>
+      _cmsHeroSlides.isNotEmpty ? _cmsHeroSlides : _fallbackHeroSlides;
 
   static const List<_TestimonialData> _testimonials = [
     _TestimonialData(
@@ -285,7 +299,7 @@ class _LandingScreenState extends State<LandingScreen> {
     await Future.wait([
       propertyProvider.loadLandingSections(),
       _loadRecentlyVisitedProperties(),
-      _loadCmsBlogs(),
+      _loadLandingCms(),
     ]);
     if (!mounted) return;
     _precacheLandingImages(propertyProvider);
@@ -299,6 +313,8 @@ class _LandingScreenState extends State<LandingScreen> {
       ...propertyProvider.landingEvents.take(4),
     ];
     final urls = <String>{
+      for (final slide in _heroSlides)
+        if (slide.isNetworkImage && slide.image.isNotEmpty) slide.image,
       for (final property in visibleProperties)
         if (property.images.isNotEmpty)
           ...property.images
@@ -312,47 +328,144 @@ class _LandingScreenState extends State<LandingScreen> {
     }
   }
 
-  Future<void> _loadCmsBlogs() async {
+  Future<void> _loadLandingCms() async {
     try {
       final response = await ApiService().dio.get('/cms/landing-page');
+      final heroData = response.data?['hero'];
+      final heroSlides = _parseCmsHeroSlides(heroData);
       final blogPosts = response.data?['blog']?['posts'];
-      if (blogPosts is! List) return;
+      final hostCount = _parseHostCount(response.data?['stats']);
 
-      final nextBlogs = blogPosts
-          .whereType<Map>()
-          .where((post) => post['is_active'] != false)
-          .map((post) {
-            final item = Map<String, dynamic>.from(post);
-            return _BlogData(
-              imageUrl: item['image_url']?.toString().isNotEmpty == true
-                  ? item['image_url'].toString()
-                  : item['img']?.toString().isNotEmpty == true
-                      ? item['img'].toString()
-                      : '',
-              category: (item['category']?.toString().trim().isNotEmpty == true)
-                  ? item['category'].toString()
-                  : 'X-Space360 Journal',
-              title: (item['title']?.toString().trim().isNotEmpty == true)
-                  ? item['title'].toString()
-                  : 'Untitled',
-              excerpt: (item['excerpt']?.toString().trim().isNotEmpty == true)
-                  ? item['excerpt'].toString()
-                  : (item['content']?.toString().trim().isNotEmpty == true)
-                      ? item['content'].toString()
-                      : 'Discover more from X-Space360.',
-              content: (item['content']?.toString().trim().isNotEmpty == true)
-                  ? item['content'].toString()
-                  : (item['excerpt']?.toString().trim().isNotEmpty == true)
+      final nextBlogs = blogPosts is List
+          ? blogPosts
+              .whereType<Map>()
+              .where((post) => post['is_active'] != false)
+              .map((post) {
+                final item = Map<String, dynamic>.from(post);
+                return _BlogData(
+                  imageUrl: item['image_url']?.toString().isNotEmpty == true
+                      ? item['image_url'].toString()
+                      : item['img']?.toString().isNotEmpty == true
+                          ? item['img'].toString()
+                          : '',
+                  category:
+                      (item['category']?.toString().trim().isNotEmpty == true)
+                          ? item['category'].toString()
+                          : 'X-Space360 Journal',
+                  title: (item['title']?.toString().trim().isNotEmpty == true)
+                      ? item['title'].toString()
+                      : 'Untitled',
+                  excerpt: (item['excerpt']?.toString().trim().isNotEmpty ==
+                          true)
                       ? item['excerpt'].toString()
-                      : 'Discover more from X-Space360.',
-            );
-          })
-          .take(6)
-          .toList();
+                      : (item['content']?.toString().trim().isNotEmpty == true)
+                          ? item['content'].toString()
+                          : 'Discover more from X-Space360.',
+                  content: (item['content']?.toString().trim().isNotEmpty ==
+                          true)
+                      ? item['content'].toString()
+                      : (item['excerpt']?.toString().trim().isNotEmpty == true)
+                          ? item['excerpt'].toString()
+                          : 'Discover more from X-Space360.',
+                );
+              })
+              .take(6)
+              .toList()
+          : <_BlogData>[];
 
-      if (!mounted || nextBlogs.isEmpty) return;
-      setState(() => _blogCards = nextBlogs);
+      if (!mounted) return;
+      setState(() {
+        if (heroSlides.isNotEmpty) {
+          _cmsHeroSlides = heroSlides;
+          _activeHeroIndex = 0;
+          if (_heroPageController.hasClients) {
+            _heroPageController.jumpToPage(0);
+          }
+        }
+        if (nextBlogs.isNotEmpty) {
+          _blogCards = nextBlogs;
+        }
+        _registeredHostCount = hostCount;
+      });
+      for (final slide in heroSlides.take(6)) {
+        if (slide.image.isNotEmpty) {
+          precacheImage(CachedNetworkImageProvider(slide.image), context);
+        }
+      }
     } catch (_) {}
+  }
+
+  int? _parseHostCount(dynamic statsData) {
+    if (statsData is! Map) return null;
+    final raw = statsData['host_count'] ??
+        statsData['hosts_count'] ??
+        statsData['total_hosts'] ??
+        statsData['hosts'];
+    if (raw is num) return raw.toInt();
+    return int.tryParse(raw?.toString() ?? '');
+  }
+
+  List<_HeroSlide> _parseCmsHeroSlides(dynamic heroData) {
+    if (heroData is! Map) return const [];
+    final hero = Map<String, dynamic>.from(heroData);
+    final rawSlides = hero['slides'];
+    final slides = rawSlides is List && rawSlides.isNotEmpty
+        ? rawSlides
+        : [
+            if ((hero['image_url'] ?? '').toString().trim().isNotEmpty)
+              {'image_url': hero['image_url']}
+          ];
+
+    return slides
+        .whereType<Map>()
+        .map((rawSlide) {
+          final slide = Map<String, dynamic>.from(rawSlide);
+          final image =
+              (slide['image_url'] ?? slide['src'] ?? slide['image'] ?? '')
+                  .toString()
+                  .trim();
+          if (image.isEmpty) return null;
+          final titlePrefix = (slide['titlePrefix'] ??
+                  slide['title_prefix'] ??
+                  hero['title'] ??
+                  '')
+              .toString()
+              .replaceAll(RegExp(r'<[^>]*>'), ' ')
+              .trim();
+          final badges = slide['badges'];
+          final badge = badges is List && badges.isNotEmpty
+              ? badges.first.toString()
+              : (slide['badge'] ?? hero['trusted_text'] ?? '').toString();
+          return _HeroSlide(
+            image: AppConfig.resolveWebAssetUrl(image),
+            tag: (slide['tag'] ?? hero['sub_tag'] ?? 'X-SPACE360').toString(),
+            titlePrefix:
+                titlePrefix.isNotEmpty ? '$titlePrefix ' : 'Find Your ',
+            titleHighlight:
+                (slide['titleHighlight'] ?? slide['title_highlight'] ?? 'Space')
+                    .toString(),
+            subtitle: (slide['subtitle'] ?? hero['subtitle'] ?? '').toString(),
+            badge: badge,
+            category: _categoryFromHeroTag((slide['tag'] ?? '').toString()),
+            isNetworkImage: true,
+          );
+        })
+        .whereType<_HeroSlide>()
+        .take(6)
+        .toList();
+  }
+
+  String? _categoryFromHeroTag(String tag) {
+    final normalized = tag.toLowerCase();
+    if (normalized.contains('commercial') || normalized.contains('workspace')) {
+      return 'commercial';
+    }
+    if (normalized.contains('wedding') ||
+        normalized.contains('event') ||
+        normalized.contains('venue')) {
+      return 'event_venue';
+    }
+    return 'residential';
   }
 
   @override
@@ -450,6 +563,7 @@ class _LandingScreenState extends State<LandingScreen> {
     String? propertyType,
     int? guests,
     String? searchQuery,
+    DateTimeRange? dateRange,
   }) {
     Navigator.push(
       context,
@@ -460,6 +574,7 @@ class _LandingScreenState extends State<LandingScreen> {
           initialCategory: category,
           initialPropertyType: propertyType,
           initialGuests: guests,
+          initialDateRange: dateRange,
         ),
       ),
     );
@@ -485,52 +600,42 @@ class _LandingScreenState extends State<LandingScreen> {
     final unreadCount = context.watch<NotificationProvider>().unreadCount;
     return Row(
       children: [
-        GestureDetector(
-          onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ExploreMapScreen()),
-          ),
-          child: Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.border),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 14,
-                  offset: const Offset(0, 6),
+        Expanded(
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const ExploreMapScreen()),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 178),
+                        child: const AppLogo(height: 34),
+                      ),
+                    ),
+                    const SizedBox(width: 3),
+                    const Icon(Icons.keyboard_arrow_down_rounded,
+                        size: 20, color: Color(0xFF07142F)),
+                  ],
                 ),
+                const SizedBox(height: 2),
+                Text('Find Your Perfect Space',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.manrope(
+                        fontSize: 12,
+                        height: 1.1,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.charcoalLight)),
               ],
             ),
-            child: const Icon(Icons.location_on, color: AppTheme.primary),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text('X-SPACE360',
-                      style: GoogleFonts.manrope(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF07142F))),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down,
-                      color: Color(0xFF07142F)),
-                ],
-              ),
-              Text('Find Your Perfect Space',
-                  style: GoogleFonts.manrope(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.charcoalLight)),
-            ],
           ),
         ),
         _HeaderNotificationButton(
@@ -578,29 +683,25 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Widget _buildCommercialHero() {
+    final media = MediaQuery.sizeOf(context);
+    final slides = _heroSlides;
+    final heroHeight = (media.width * 0.58).clamp(168.0, 235.0);
+    final activeIndex = _activeHeroIndex.clamp(0, slides.length - 1).toInt();
+    final activeSlide = slides[activeIndex];
     return ClipRRect(
       borderRadius: BorderRadius.circular(22),
       child: SizedBox(
-        height: 235,
+        height: heroHeight,
         child: Stack(
           fit: StackFit.expand,
           children: [
             PageView.builder(
               controller: _heroPageController,
-              itemCount: _heroSlides.length,
+              itemCount: slides.length,
               onPageChanged: (index) =>
                   setState(() => _activeHeroIndex = index),
               itemBuilder: (context, index) {
-                final slide = _heroSlides[index];
-                return Image.asset(
-                  slide.image,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    color: AppTheme.stone,
-                    alignment: Alignment.center,
-                    child: const AppLogo(height: 44),
-                  ),
-                );
+                return _HeroSlideImage(slide: slides[index]);
               },
             ),
             DecoratedBox(
@@ -616,7 +717,8 @@ class _LandingScreenState extends State<LandingScreen> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 16),
+              padding:
+                  EdgeInsets.fromLTRB(20, media.width < 360 ? 14 : 18, 20, 14),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -629,30 +731,36 @@ class _LandingScreenState extends State<LandingScreen> {
                       border: Border.all(
                           color: Colors.white.withValues(alpha: 0.24)),
                     ),
-                    child: Text(_heroSlides[_activeHeroIndex].tag,
+                    child: Text(activeSlide.tag,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.manrope(
                             color: Colors.white,
                             fontSize: 10,
                             fontWeight: FontWeight.w900)),
                   ),
-                  const SizedBox(height: 10),
+                  SizedBox(height: media.width < 360 ? 7 : 10),
                   Text(
-                      '${_heroSlides[_activeHeroIndex].titlePrefix}\n${_heroSlides[_activeHeroIndex].titleHighlight}',
+                      '${activeSlide.titlePrefix}\n${activeSlide.titleHighlight}',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.manrope(
                           color: Colors.white,
-                          fontSize: 25,
-                          height: 1.05,
+                          fontSize: media.width < 360 ? 22 : 25,
+                          height: 1.04,
                           fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 8),
-                  Text(_heroSlides[_activeHeroIndex].badge,
+                  SizedBox(height: media.width < 360 ? 6 : 8),
+                  Text(activeSlide.badge,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.manrope(
                           color: Colors.white.withValues(alpha: 0.92),
-                          fontSize: 12,
+                          fontSize: media.width < 360 ? 11 : 12,
                           fontWeight: FontWeight.w600)),
                   const Spacer(),
                   ElevatedButton.icon(
-                    onPressed: () => _openBrowse(
-                        category: _heroSlides[_activeHeroIndex].category),
+                    onPressed: () =>
+                        _openBrowse(category: activeSlide.category),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.white,
                       foregroundColor: const Color(0xFF07142F),
@@ -676,14 +784,14 @@ class _LandingScreenState extends State<LandingScreen> {
               right: 24,
               child: Row(
                 children: List.generate(
-                  4,
+                  slides.length,
                   (i) => Container(
-                    width: i == _activeHeroIndex ? 10 : 9,
-                    height: i == _activeHeroIndex ? 10 : 9,
+                    width: i == activeIndex ? 10 : 9,
+                    height: i == activeIndex ? 10 : 9,
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
-                      color: Colors.white.withValues(
-                          alpha: i == _activeHeroIndex ? 0.95 : 0.38),
+                      color: Colors.white
+                          .withValues(alpha: i == activeIndex ? 0.95 : 0.38),
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -713,10 +821,10 @@ class _LandingScreenState extends State<LandingScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 24,
-            backgroundColor: const Color(0xFF07142F),
-            child: const Icon(Icons.manage_search, color: Colors.white),
+            backgroundColor: Color(0xFF07142F),
+            child: Icon(Icons.manage_search, color: Colors.white),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -891,7 +999,7 @@ class _LandingScreenState extends State<LandingScreen> {
         children: [
           _HostEarnPill(),
           const SizedBox(height: 9),
-          _HostTitle(fontSize: 24),
+          const _HostTitle(fontSize: 24),
           const SizedBox(height: 7),
           RichText(
             maxLines: 2,
@@ -916,7 +1024,7 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
           const SizedBox(height: 14),
-          const _HostMobileVisual(),
+          _HostMobileVisual(hostCount: _registeredHostCount),
           const SizedBox(height: 12),
           Container(
             width: double.infinity,
@@ -954,79 +1062,176 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Widget _buildPopularLocationsCompact(List<PropertyModel> properties) {
-    final locations = _destinations.take(4).toList();
+    final locations = _buildDynamicPopularLocations(properties);
     return Column(
       children: [
-        _sectionHeader('Popular Locations', () => _openCommercialBrowse()),
+        _sectionHeader('Popular Locations', () => _openBrowse()),
         const SizedBox(height: 12),
-        SizedBox(
-          height: 170,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: locations.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 14),
-            itemBuilder: (_, index) {
-              final d = locations[index];
-              final count = properties
-                  .where((p) =>
-                      p.city.toLowerCase().contains(d.city.toLowerCase()))
-                  .length;
-              return GestureDetector(
-                onTap: () => _openCommercialBrowse(city: d.city),
-                child: Container(
-                  width: 160,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: AppTheme.border),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Image.asset(
-                        _destinationIconAssets[d.type] ??
-                            'assets/images/destinations/nashik.png',
-                        height: 92,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(d.city,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: GoogleFonts.manrope(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w900,
-                                    color: const Color(0xFF07142F))),
-                            const SizedBox(height: 6),
-                            Row(
-                              children: [
-                                const Icon(Icons.location_on_outlined,
-                                    size: 15, color: Color(0xFF07142F)),
-                                const SizedBox(width: 4),
-                                Text('${count > 0 ? count * 20 : 60}+ Spaces',
-                                    style: GoogleFonts.manrope(
-                                        fontSize: 12,
-                                        color: AppTheme.charcoalLight)),
-                              ],
-                            ),
-                          ],
+        if (locations.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFF8F3F1),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Text(
+              'No listed locations available yet.',
+              style: GoogleFonts.manrope(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.charcoalMuted,
+              ),
+            ),
+          )
+        else
+          SizedBox(
+            height: 170,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: locations.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (_, index) {
+                final location = locations[index];
+                return GestureDetector(
+                  onTap: () => _openBrowse(city: location.city),
+                  child: Container(
+                    width: 160,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppTheme.border),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _LocationCardImage(
+                          imagePath: location.imageUrl,
+                          height: 92,
+                          width: double.infinity,
                         ),
-                      ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.all(12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(location.city,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.manrope(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w900,
+                                      color: const Color(0xFF07142F))),
+                              const SizedBox(height: 6),
+                              Row(
+                                children: [
+                                  const Icon(Icons.location_on_outlined,
+                                      size: 15, color: Color(0xFF07142F)),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                      '${location.listingCount}+ ${location.listingCount == 1 ? 'Space' : 'Spaces'}',
+                                      style: GoogleFonts.manrope(
+                                          fontSize: 12,
+                                          color: AppTheme.charcoalLight)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
-        ),
       ],
     );
+  }
+
+  List<_PopularLocationData> _buildDynamicPopularLocations(
+    List<PropertyModel> properties,
+  ) {
+    final uniqueProperties = <String, PropertyModel>{};
+    for (final property in properties) {
+      final id = property.propertyId.trim();
+      if (id.isEmpty) continue;
+      uniqueProperties.putIfAbsent(id, () => property);
+    }
+
+    final grouped = <String, List<PropertyModel>>{};
+    final labels = <String, String>{};
+    for (final property in uniqueProperties.values) {
+      final label = _popularLocationLabel(property);
+      if (label.isEmpty) continue;
+      final key = label.toLowerCase();
+      labels.putIfAbsent(key, () => label);
+      grouped.putIfAbsent(key, () => <PropertyModel>[]).add(property);
+    }
+
+    final liveLocations = grouped.entries.map((entry) {
+      final city = labels[entry.key] ?? entry.key;
+      final cityProperties = entry.value;
+      String? representativeImage;
+      for (final property in cityProperties) {
+        for (final image in property.images) {
+          representativeImage = PropertyImage.validPropertyImageUrl(image);
+          if (representativeImage != null) break;
+        }
+        if (representativeImage != null) break;
+      }
+      final asset = _destinationIconAssets[_destinationAssetKey(city)];
+      return _PopularLocationData(
+        city: city,
+        listingCount: cityProperties.length,
+        imageUrl: representativeImage ?? asset ?? _fallbackDestinationAsset,
+      );
+    }).toList()
+      ..sort((a, b) {
+        final byCount = b.listingCount.compareTo(a.listingCount);
+        if (byCount != 0) return byCount;
+        return a.city.compareTo(b.city);
+      });
+
+    return liveLocations.take(8).toList();
+  }
+
+  String _popularLocationLabel(PropertyModel property) {
+    final city = _cleanLocationName(property.city);
+    if (city.isNotEmpty) return city;
+
+    final addressParts = property.address
+        .split(RegExp(r'[,/]'))
+        .map((part) => _cleanLocationName(part))
+        .where((part) => part.isNotEmpty)
+        .toList();
+    if (addressParts.isNotEmpty) return addressParts.first;
+
+    return _cleanLocationName(property.state);
+  }
+
+  String _cleanLocationName(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return '';
+    return trimmed
+        .split(RegExp(r'[,/]'))
+        .first
+        .trim()
+        .split(RegExp(r'\s+'))
+        .map((part) => part.isEmpty
+            ? part
+            : '${part[0].toUpperCase()}${part.substring(1).toLowerCase()}')
+        .join(' ');
+  }
+
+  String _destinationAssetKey(String city) {
+    return city
+        .toLowerCase()
+        .replaceAll('&', 'and')
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
   }
 
   Widget _buildRecentlyViewedCompact() {
@@ -1043,10 +1248,10 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
             child: Row(
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 28,
-                  backgroundColor: const Color(0xFFF0E3D7),
-                  child: const Icon(Icons.schedule, color: Color(0xFF07142F)),
+                  backgroundColor: Color(0xFFF0E3D7),
+                  child: Icon(Icons.schedule, color: Color(0xFF07142F)),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -1082,6 +1287,8 @@ class _LandingScreenState extends State<LandingScreen> {
                   property: _recentlyVisitedProperties[index],
                   tag: 'Recent',
                   onViewed: _loadRecentlyVisitedProperties,
+                  initialDateRange: _selectedRange,
+                  initialGuestCount: _guestCount,
                 ),
               ),
             ),
@@ -1117,6 +1324,8 @@ class _LandingScreenState extends State<LandingScreen> {
                   property: cards[index],
                   tag: index == 0 ? 'Most Booked' : 'Top Rated',
                   onViewed: _loadRecentlyVisitedProperties,
+                  initialDateRange: _selectedRange,
+                  initialGuestCount: _guestCount,
                 ),
               ),
             ),
@@ -1138,10 +1347,10 @@ class _LandingScreenState extends State<LandingScreen> {
       ),
       child: Row(
         children: [
-          CircleAvatar(
+          const CircleAvatar(
             radius: 28,
-            backgroundColor: const Color(0xFFE8DFFF),
-            child: const Icon(Icons.percent, color: Color(0xFF5B4BE7)),
+            backgroundColor: Color(0xFFE8DFFF),
+            child: Icon(Icons.percent, color: Color(0xFF5B4BE7)),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1161,7 +1370,12 @@ class _LandingScreenState extends State<LandingScreen> {
             ),
           ),
           OutlinedButton(
-            onPressed: () => _openCommercialBrowse(),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const OffersScreen()),
+              );
+            },
             style: OutlinedButton.styleFrom(
               foregroundColor: const Color(0xFF5B4BE7),
               side: const BorderSide(color: Color(0xFF5B4BE7)),
@@ -1734,6 +1948,8 @@ class _LandingScreenState extends State<LandingScreen> {
                 return _PropertyCard(
                   property: property,
                   onViewed: _loadRecentlyVisitedProperties,
+                  initialDateRange: _selectedRange,
+                  initialGuestCount: _guestCount,
                 );
               },
             ),
@@ -1842,6 +2058,8 @@ class _LandingScreenState extends State<LandingScreen> {
                   return _PropertyCard(
                     property: property,
                     onViewed: _loadRecentlyVisitedProperties,
+                    initialDateRange: _selectedRange,
+                    initialGuestCount: _guestCount,
                   );
                 },
               ),
@@ -2515,6 +2733,7 @@ class _LandingScreenState extends State<LandingScreen> {
           initialSearchQuery: _searchQuery.isEmpty ? null : _searchQuery,
           initialGuests: _guestCount,
           initialCategory: _mapCategoryToBrowseValue(_selectedCategory),
+          initialDateRange: _selectedRange,
         ),
       ),
     );
@@ -2622,6 +2841,8 @@ class _LandingScreenState extends State<LandingScreen> {
                   return _RecentlyVisitedCard(
                     property: property,
                     onViewed: _loadRecentlyVisitedProperties,
+                    initialDateRange: _selectedRange,
+                    initialGuestCount: _guestCount,
                   );
                 },
               ),
@@ -2679,11 +2900,15 @@ class _CommercialFeaturedCard extends StatelessWidget {
   final PropertyModel property;
   final String tag;
   final Future<void> Function() onViewed;
+  final DateTimeRange? initialDateRange;
+  final int? initialGuestCount;
 
   const _CommercialFeaturedCard({
     required this.property,
     required this.tag,
     required this.onViewed,
+    this.initialDateRange,
+    this.initialGuestCount,
   });
 
   @override
@@ -2696,8 +2921,13 @@ class _CommercialFeaturedCard extends StatelessWidget {
         await Navigator.push(
           context,
           MaterialPageRoute(
-              builder: (_) =>
-                  PropertyDetailScreen(propertyId: property.propertyId)),
+            builder: (_) => PropertyDetailScreen(
+              propertyId: property.propertyId,
+              initialCheckInDate: initialDateRange?.start,
+              initialCheckOutDate: initialDateRange?.end,
+              initialGuestCount: initialGuestCount,
+            ),
+          ),
         );
         await onViewed();
       },
@@ -2890,8 +3120,15 @@ class _CommercialEmptyCard extends StatelessWidget {
 class _PropertyCard extends StatelessWidget {
   final PropertyModel property;
   final Future<void> Function() onViewed;
+  final DateTimeRange? initialDateRange;
+  final int? initialGuestCount;
 
-  const _PropertyCard({required this.property, required this.onViewed});
+  const _PropertyCard({
+    required this.property,
+    required this.onViewed,
+    this.initialDateRange,
+    this.initialGuestCount,
+  });
 
   bool get _isSignatureSeries {
     final type = property.propertyType.toLowerCase();
@@ -2913,8 +3150,12 @@ class _PropertyCard extends StatelessWidget {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  PropertyDetailScreen(propertyId: property.propertyId),
+              builder: (_) => PropertyDetailScreen(
+                propertyId: property.propertyId,
+                initialCheckInDate: initialDateRange?.start,
+                initialCheckOutDate: initialDateRange?.end,
+                initialGuestCount: initialGuestCount,
+              ),
             ),
           );
           await onViewed();
@@ -3316,10 +3557,14 @@ class _DiscoverCollectionCard extends StatelessWidget {
 class _RecentlyVisitedCard extends StatelessWidget {
   final PropertyModel property;
   final Future<void> Function() onViewed;
+  final DateTimeRange? initialDateRange;
+  final int? initialGuestCount;
 
   const _RecentlyVisitedCard({
     required this.property,
     required this.onViewed,
+    this.initialDateRange,
+    this.initialGuestCount,
   });
 
   @override
@@ -3334,8 +3579,12 @@ class _RecentlyVisitedCard extends StatelessWidget {
           await Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) =>
-                  PropertyDetailScreen(propertyId: property.propertyId),
+              builder: (_) => PropertyDetailScreen(
+                propertyId: property.propertyId,
+                initialCheckInDate: initialDateRange?.start,
+                initialCheckOutDate: initialDateRange?.end,
+                initialGuestCount: initialGuestCount,
+              ),
             ),
           );
           await onViewed();
@@ -4402,6 +4651,7 @@ class _HeroSlide {
   final String subtitle;
   final String badge;
   final String? category;
+  final bool isNetworkImage;
 
   const _HeroSlide({
     required this.image,
@@ -4411,7 +4661,42 @@ class _HeroSlide {
     required this.subtitle,
     required this.badge,
     required this.category,
+    this.isNetworkImage = false,
   });
+}
+
+class _HeroSlideImage extends StatelessWidget {
+  final _HeroSlide slide;
+
+  const _HeroSlideImage({required this.slide});
+
+  @override
+  Widget build(BuildContext context) {
+    Widget fallback() {
+      return Container(
+        color: AppTheme.stone,
+        alignment: Alignment.center,
+        child: const AppLogo(height: 44),
+      );
+    }
+
+    if (slide.isNetworkImage || slide.image.startsWith('http')) {
+      return CachedNetworkImage(
+        imageUrl: slide.image,
+        fit: BoxFit.cover,
+        fadeInDuration: const Duration(milliseconds: 180),
+        memCacheWidth: 900,
+        placeholder: (_, __) => fallback(),
+        errorWidget: (_, __, ___) => fallback(),
+      );
+    }
+
+    return Image.asset(
+      slide.image,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => fallback(),
+    );
+  }
 }
 
 class _DestinationData {
@@ -4420,6 +4705,61 @@ class _DestinationData {
 
   const _DestinationData(this.city, this.type);
 }
+
+class _PopularLocationData {
+  final String city;
+  final int listingCount;
+  final String imageUrl;
+
+  const _PopularLocationData({
+    required this.city,
+    required this.listingCount,
+    required this.imageUrl,
+  });
+}
+
+class _LocationCardImage extends StatelessWidget {
+  final String imagePath;
+  final double width;
+  final double height;
+
+  const _LocationCardImage({
+    required this.imagePath,
+    required this.width,
+    required this.height,
+  });
+
+  bool get _isNetwork =>
+      imagePath.startsWith('http://') || imagePath.startsWith('https://');
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isNetwork) {
+      return PropertyImage(
+        imageUrl: imagePath,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+        semanticLabel: 'Location image',
+      );
+    }
+    return Image.asset(
+      imagePath,
+      width: width,
+      height: height,
+      fit: BoxFit.cover,
+      errorBuilder: (_, __, ___) => Image.asset(
+        _fallbackDestinationAsset,
+        width: width,
+        height: height,
+        fit: BoxFit.cover,
+      ),
+    );
+  }
+}
+
+const String _fallbackDestinationAsset =
+    'assets/images/destinations/nashik.png';
 
 const Map<String, String> _destinationIconAssets = {
   'nashik': 'assets/images/destinations/nashik.png',
@@ -5072,7 +5412,15 @@ class _HostTitle extends StatelessWidget {
 }
 
 class _HostMobileVisual extends StatelessWidget {
-  const _HostMobileVisual();
+  final int? hostCount;
+
+  const _HostMobileVisual({this.hostCount});
+
+  String get _hostCountLabel {
+    final count = hostCount;
+    if (count == null || count <= 0) return 'Join hosts';
+    return 'Join $count ${count == 1 ? 'host' : 'hosts'}';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -5159,7 +5507,7 @@ class _HostMobileVisual extends StatelessWidget {
                   ],
                 ),
                 child: Text(
-                  'Join 1000+ hosts',
+                  _hostCountLabel,
                   style: GoogleFonts.manrope(
                     fontSize: 11,
                     fontWeight: FontWeight.w900,
@@ -5187,8 +5535,8 @@ class _HostListButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: fullWidth ? double.infinity : 168,
-      height: fullWidth ? 48 : 44,
+      width: fullWidth ? double.infinity : 78,
+      height: fullWidth ? 48 : 40,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -5222,14 +5570,14 @@ class _HostListButton extends StatelessWidget {
               const SizedBox(width: 12),
             ],
             Text(
-              'List Your Space',
+              fullWidth ? 'List Your Space' : 'List',
               style: GoogleFonts.manrope(
                 fontSize: fullWidth ? 15 : 13,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(Icons.arrow_forward_rounded, size: fullWidth ? 21 : 19),
+            SizedBox(width: fullWidth ? 8 : 4),
+            Icon(Icons.arrow_forward_rounded, size: fullWidth ? 21 : 17),
           ],
         ),
       ),

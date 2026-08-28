@@ -136,6 +136,22 @@ class AppConfig {
     }
     return '$baseUrl/$cleanPath';
   }
+
+  static String resolveWebAssetUrl(String? path) {
+    if (path == null || path.trim().isEmpty) {
+      return '';
+    }
+    final value = path.trim();
+    if (value.startsWith('http://') || value.startsWith('https://')) {
+      return value;
+    }
+    if (value.startsWith('/api/') || value.startsWith('/uploads/')) {
+      return resolveImageUrl(value);
+    }
+    final base = webBaseUrl.replaceAll(RegExp(r'/$'), '');
+    final cleanPath = value.startsWith('/') ? value : '/$value';
+    return '$base$cleanPath';
+  }
 }
 
 @visibleForTesting

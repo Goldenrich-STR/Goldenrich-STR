@@ -83,6 +83,46 @@ def _target_matches(
         return False
     return _sqft_matches(item.get("sqft_range"), area_sqft)
 
+def _is_live_property(property_doc: dict) -> bool:
+    return (property_doc.get("status") or "").strip().lower() == "live"
+
+def _coupon_discount_label(coupon: dict) -> str:
+    value = float(coupon.get("discount_value") or 0)
+    if coupon.get("discount_type") == "percentage":
+        return f"{value:g}% off"
+    return f"₹{value:g} off"
+
+def _property_offer_item(property_doc: dict, coupon: dict) -> dict:
+    return {
+        "coupon": coupon,
+        "coupon_code": coupon.get("code"),
+        "discount_label": _coupon_discount_label(coupon),
+        "property": {
+            "property_id": property_doc.get("property_id"),
+            "title": property_doc.get("title"),
+            "category": property_doc.get("category"),
+            "property_type": property_doc.get("property_type"),
+            "bhk_type": property_doc.get("bhk_type"),
+            "city": property_doc.get("city"),
+            "state": property_doc.get("state"),
+            "address": property_doc.get("address"),
+            "price_per_night": property_doc.get("price_per_night", 0),
+            "customer_price_per_night": property_doc.get("customer_price_per_night"),
+            "display_price_per_night": property_doc.get("display_price_per_night"),
+            "max_guests": property_doc.get("max_guests"),
+            "images": property_doc.get("images", []),
+            "rating": property_doc.get("rating"),
+            "rating_avg": property_doc.get("rating_avg"),
+            "review_count": property_doc.get("review_count"),
+            "rating_count": property_doc.get("rating_count"),
+            "status": property_doc.get("status"),
+            "area_sqft": property_doc.get("area_sqft"),
+            "latitude": property_doc.get("latitude"),
+            "longitude": property_doc.get("longitude"),
+            "amenities": property_doc.get("amenities", []),
+        },
+    }
+
 @router.post("/", response_model=dict)
 async def create_coupon(
     coupon_data: CouponCreate,
@@ -163,6 +203,67 @@ async def list_coupons(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list coupons"
+        )
+
+@router.get("/offers", response_model=dict)
+async def list_booking_offers(
+    limit: int = 50,
+    db: AsyncIOMotorDatabase = Depends(get_db)
+):
+    """List active booking offers with the live properties they apply to."""
+    try:
+        safe_limit = max(1, min(limit, 100))
+        cursor = db.coupons.find({
+            "is_active": True,
+            "coupon_type": "booking",
+        }, {"_id": 0}).sort("created_at", -1)
+        coupons = await cursor.to_list(length=100)
+        offers = []
+        seen = set()
+
+        for coupon in coupons:
+            property_id = (coupon.get("property_id") or "").strip()
+            if property_id:
+                property_doc = await db.properties.find_one(
+                    {"property_id": property_id},
+                    {"_id": 0},
+                )
+                if property_doc and _is_live_property(property_doc) and (property_id, coupon.get("code")) not in seen:
+                    offers.append(_property_offer_item(property_doc, coupon))
+                    seen.add((property_id, coupon.get("code")))
+                if len(offers) >= safe_limit:
+                    break
+                continue
+
+            property_cursor = db.properties.find({}, {"_id": 0}).sort("created_at", -1)
+            properties = await property_cursor.to_list(length=100)
+            for property_doc in properties:
+                if not _is_live_property(property_doc):
+                    continue
+                if not _target_matches(
+                    coupon,
+                    property_category=property_doc.get("category"),
+                    property_type=property_doc.get("property_type"),
+                    bhk_type=property_doc.get("bhk_type"),
+                    area_sqft=property_doc.get("area_sqft"),
+                ):
+                    continue
+                key = (property_doc.get("property_id"), coupon.get("code"))
+                if key in seen:
+                    continue
+                offers.append(_property_offer_item(property_doc, coupon))
+                seen.add(key)
+                if len(offers) >= safe_limit:
+                    break
+            if len(offers) >= safe_limit:
+                break
+
+        return {"offers": offers[:safe_limit]}
+    except Exception as e:
+        logger.error(f"Error fetching booking offers: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to fetch booking offers"
         )
 
 @router.get("/property/{property_id}", response_model=dict)
