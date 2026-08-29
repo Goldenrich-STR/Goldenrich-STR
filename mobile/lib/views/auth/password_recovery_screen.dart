@@ -23,9 +23,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _error = null;
       _success = null;
     });
-    final message = await context
-        .read<AuthProvider>()
-        .forgotPassword(_email.trim());
+    final message =
+        await context.read<AuthProvider>().forgotPassword(_email.trim());
     if (!mounted) return;
     if (message != null) {
       setState(() => _success = message);
@@ -117,7 +116,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => _error = null);
     if (widget.token.isEmpty) {
       setState(
-        () => _error = 'This reset link is incomplete. Please request a new one.',
+        () =>
+            _error = 'This reset link is incomplete. Please request a new one.',
       );
       return;
     }
@@ -270,7 +270,7 @@ class _RecoveryShell extends StatelessWidget {
                   Text(
                     title,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.charcoal,
@@ -280,7 +280,7 @@ class _RecoveryShell extends StatelessWidget {
                   Text(
                     subtitle,
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       height: 1.65,
                       color: AppTheme.charcoalMuted,
@@ -321,7 +321,7 @@ class _RecoveryStatus extends StatelessWidget {
       ),
       child: Text(
         message,
-        style: GoogleFonts.manrope(
+        style: GoogleFonts.inter(
           fontSize: 13,
           fontWeight: FontWeight.w600,
           color: isError ? const Color(0xFFB42318) : const Color(0xFF067647),
@@ -351,7 +351,7 @@ class _Requirement extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             text,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 12,
               color: ok ? const Color(0xFF067647) : AppTheme.charcoalMuted,
             ),

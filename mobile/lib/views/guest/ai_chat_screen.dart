@@ -671,7 +671,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
               children: [
                 Text(
                   'X-Space360 Helpdesk',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.charcoal,
@@ -690,7 +690,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                     const SizedBox(width: 6),
                     Text(
                       'Guided support bot',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                         color: AppTheme.charcoalMuted,
@@ -737,16 +737,12 @@ class _AIChatScreenState extends State<AIChatScreen> {
                             vertical: 13,
                           ),
                           decoration: BoxDecoration(
-                            color: isUser
-                                ? AppTheme.primary
-                                : Colors.white,
+                            color: isUser ? AppTheme.primary : Colors.white,
                             borderRadius: BorderRadius.only(
                               topLeft: const Radius.circular(20),
                               topRight: const Radius.circular(20),
-                              bottomLeft:
-                                  Radius.circular(isUser ? 20 : 8),
-                              bottomRight:
-                                  Radius.circular(isUser ? 8 : 20),
+                              bottomLeft: Radius.circular(isUser ? 20 : 8),
+                              bottomRight: Radius.circular(isUser ? 8 : 20),
                             ),
                             boxShadow: [
                               BoxShadow(
@@ -758,14 +754,12 @@ class _AIChatScreenState extends State<AIChatScreen> {
                           ),
                           child: Text(
                             message.content,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               fontSize: 13,
                               height: 1.55,
                               fontWeight:
                                   isUser ? FontWeight.w700 : FontWeight.w600,
-                              color: isUser
-                                  ? Colors.white
-                                  : AppTheme.charcoal,
+                              color: isUser ? Colors.white : AppTheme.charcoal,
                             ),
                           ),
                         ),
@@ -805,7 +799,7 @@ class _AIChatScreenState extends State<AIChatScreen> {
                                           Flexible(
                                             child: Text(
                                               option.label,
-                                              style: GoogleFonts.manrope(
+                                              style: GoogleFonts.inter(
                                                 fontSize: 12,
                                                 fontWeight: FontWeight.w700,
                                                 color: AppTheme.charcoal,
@@ -841,10 +835,11 @@ class _AIChatScreenState extends State<AIChatScreen> {
                   child: TextField(
                     controller: _controller,
                     onSubmitted: _handleTextQuery,
-                    style: GoogleFonts.manrope(fontSize: 14),
+                    style: GoogleFonts.inter(fontSize: 14),
                     decoration: InputDecoration(
-                      hintText: 'Ask about booking, listing, refund, or support',
-                      hintStyle: GoogleFonts.manrope(
+                      hintText:
+                          'Ask about booking, listing, refund, or support',
+                      hintStyle: GoogleFonts.inter(
                         fontSize: 13,
                         color: AppTheme.charcoalMuted,
                       ),

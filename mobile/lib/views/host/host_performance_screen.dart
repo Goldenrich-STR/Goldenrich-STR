@@ -47,7 +47,8 @@ class _HostPerformanceScreenState extends State<HostPerformanceScreen> {
     final confirmedOrCompleted = bookings
         .where((b) => ['confirmed', 'completed'].contains(b.bookingStatus))
         .toList();
-    final cancelled = bookings.where((b) => b.bookingStatus == 'cancelled').length;
+    final cancelled =
+        bookings.where((b) => b.bookingStatus == 'cancelled').length;
     final totalEarningsPaise = payouts
         .where((p) => p is Map && p['status'] == 'paid')
         .fold<num>(0, (sum, p) => sum + ((p['net_amount'] as num?) ?? 0));
@@ -57,9 +58,8 @@ class _HostPerformanceScreenState extends State<HostPerformanceScreen> {
             ['eligible', 'processing', 'needs_destination']
                 .contains(p['status']))
         .fold<num>(0, (sum, p) => sum + ((p['net_amount'] as num?) ?? 0));
-    final cancellationRate = bookings.isEmpty
-        ? 0.0
-        : (cancelled / bookings.length) * 100;
+    final cancellationRate =
+        bookings.isEmpty ? 0.0 : (cancelled / bookings.length) * 100;
 
     int totalBookedDays = 0;
     final today = DateTime.now();
@@ -105,7 +105,7 @@ class _HostPerformanceScreenState extends State<HostPerformanceScreen> {
         elevation: 0,
         title: Text(
           'Host Performance',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             color: AppTheme.charcoal,
             fontWeight: FontWeight.w800,
           ),
@@ -120,7 +120,7 @@ class _HostPerformanceScreenState extends State<HostPerformanceScreen> {
                 children: [
                   Text(
                     'Detailed insights into your earnings, occupancy, and guest momentum.',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       height: 1.7,
                       color: AppTheme.charcoalMuted,
@@ -161,7 +161,9 @@ class _HostPerformanceScreenState extends State<HostPerformanceScreen> {
                       ),
                       _MetricCard(
                         title: 'Guest Rating',
-                        value: avgRating == 0 ? '--' : avgRating.toStringAsFixed(1),
+                        value: avgRating == 0
+                            ? '--'
+                            : avgRating.toStringAsFixed(1),
                         subtitle: 'Average property rating',
                         icon: Icons.star_border_rounded,
                       ),
@@ -198,7 +200,7 @@ class _HostPerformanceScreenState extends State<HostPerformanceScreen> {
                         ? [
                             Text(
                               'No recent completed booking activity yet.',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 13,
                                 color: AppTheme.charcoalMuted,
                               ),
@@ -231,7 +233,7 @@ class _HostPerformanceScreenState extends State<HostPerformanceScreen> {
                                         children: [
                                           Text(
                                             review['guest'] ?? '',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontSize: 14,
                                               fontWeight: FontWeight.w800,
                                               color: AppTheme.charcoal,
@@ -240,7 +242,7 @@ class _HostPerformanceScreenState extends State<HostPerformanceScreen> {
                                           const SizedBox(height: 2),
                                           Text(
                                             review['property'] ?? '',
-                                            style: GoogleFonts.manrope(
+                                            style: GoogleFonts.inter(
                                               fontSize: 12,
                                               color: AppTheme.charcoalMuted,
                                             ),
@@ -298,7 +300,7 @@ class _MetricCard extends StatelessWidget {
           const Spacer(),
           Text(
             title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w700,
               color: AppTheme.charcoalMuted,
@@ -307,7 +309,7 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             value,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 20,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -316,7 +318,7 @@ class _MetricCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             subtitle,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 11,
               color: AppTheme.charcoalMuted,
             ),
@@ -347,7 +349,7 @@ class _SummaryBlock extends StatelessWidget {
         children: [
           Text(
             title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 18,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,
@@ -379,7 +381,7 @@ class _SummaryRow extends StatelessWidget {
           Expanded(
             child: Text(
               label,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 13,
                 color: AppTheme.charcoalMuted,
               ),
@@ -387,7 +389,7 @@ class _SummaryRow extends StatelessWidget {
           ),
           Text(
             value,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 14,
               fontWeight: FontWeight.w800,
               color: AppTheme.charcoal,

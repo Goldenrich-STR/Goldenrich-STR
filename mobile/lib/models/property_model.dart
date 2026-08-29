@@ -1,4 +1,3 @@
-
 import '../config.dart';
 
 class PropertyModel {
@@ -120,14 +119,12 @@ class PropertyModel {
 
   bool get isInstantBook => bookingMode.toUpperCase() == 'INSTANT_BOOK';
 
-  String get bookingModeLabel =>
-      isInstantBook ? 'Instant Book' : 'Host Approval Required';
+  String get bookingModeLabel => 'Instant Book';
 
-  String get bookingModeDescription => isInstantBook
-      ? 'Book instantly without waiting for host approval.'
-      : 'The host reviews every booking request. Expected response: within 24 hours.';
+  String get bookingModeDescription =>
+      'Book instantly without waiting for host approval.';
 
-  String get bookingCtaLabel => isInstantBook ? 'Reserve' : 'Request to Book';
+  String get bookingCtaLabel => 'Reserve';
 
   String get bookingDateTitle {
     if (isEventVenue) return 'Select event date';

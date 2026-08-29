@@ -174,7 +174,7 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(label,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.charcoalMuted)),
@@ -182,14 +182,14 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
                 Text(value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.charcoal)),
                 if (sub != null) ...[
                   const SizedBox(height: 3),
                   Text(sub,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 10, color: AppTheme.charcoalLight)),
                 ],
               ],
@@ -282,7 +282,7 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
           _sectionCard(
             title: 'Net Earnings Trend',
             trailing: Text('Last ${rows.isEmpty ? 0 : rows.length} payouts',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontSize: 11, color: AppTheme.charcoalMuted)),
             child: rows.isEmpty
                 ? const _EmptyBox(text: 'No payout trend yet')
@@ -332,12 +332,12 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
               children: [
                 Text(
                   'Platform fee is 10%; TDS 1% is deducted per booking.',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                       fontSize: 11, color: AppTheme.charcoalMuted),
                 ),
                 const SizedBox(height: 10),
                 Text(_destinationLabel(pref),
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.charcoal)),
@@ -490,7 +490,7 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
                   Expanded(
                     child: Text(
                       'Weekly payout after 7 day settlement cycle',
-                      style: GoogleFonts.manrope(fontWeight: FontWeight.w800),
+                      style: GoogleFonts.inter(fontWeight: FontWeight.w800),
                     ),
                   ),
                 ],
@@ -506,7 +506,7 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
               ),
               onPressed: _savePreferences,
               child: Text('Save Preference',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                       color: Colors.white, fontWeight: FontWeight.w900)),
             ),
           ],
@@ -542,13 +542,13 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
                   Expanded(
                     child: Text(
                       'Eligible: ${_date(payout['eligible_at'])}',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 11, color: AppTheme.charcoalMuted),
                     ),
                   ),
                   Text(
                     payout['payout_id']?.toString() ?? '',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 10, color: AppTheme.charcoalMuted),
                   ),
                 ],
@@ -585,7 +585,7 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
                 child: Icon(Icons.check, size: 15, color: AppTheme.primary),
               ),
             Text(label,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w900,
                     color:
@@ -622,7 +622,7 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
             children: [
               Expanded(
                 child: Text(title,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 15,
                         fontWeight: FontWeight.w900,
                         color: AppTheme.charcoal)),
@@ -644,13 +644,13 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
         children: [
           Expanded(
             child: Text(label,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: bold ? FontWeight.w900 : FontWeight.w700,
                     color: AppTheme.charcoalLight)),
           ),
           Text(_moneyFromPaise(paise),
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: bold ? FontWeight.w900 : FontWeight.w800,
                   color: bold ? AppTheme.primary : AppTheme.charcoal)),
@@ -715,7 +715,7 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
       backgroundColor: const Color(0xFFF7F8FA),
       appBar: AppBar(
         title: Text('Payouts',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
                 fontWeight: FontWeight.w900,
                 fontSize: 22,
                 color: AppTheme.charcoal)),
@@ -767,7 +767,7 @@ class _HostPayoutsScreenState extends State<HostPayoutsScreen>
                                     color: AppTheme.charcoalLight)),
                             const SizedBox(height: 4),
                             Text(_moneyFromPaise(summary['paid']),
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                     fontSize: 24,
                                     fontWeight: FontWeight.w900,
                                     color: AppTheme.primary)),
@@ -832,7 +832,7 @@ class _InfoLine extends StatelessWidget {
           const SizedBox(width: 8),
           Expanded(
             child: Text(text,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontSize: 12, color: AppTheme.charcoalLight)),
           ),
         ],
@@ -855,7 +855,7 @@ class _EmptyBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(text,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
               color: AppTheme.charcoalMuted, fontWeight: FontWeight.w700)),
     );
   }

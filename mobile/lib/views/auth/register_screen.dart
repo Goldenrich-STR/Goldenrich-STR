@@ -167,7 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             title,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
             ),
@@ -175,7 +175,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: SingleChildScrollView(
             child: Text(
               content,
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 color: AppTheme.charcoalMuted,
                 fontSize: 14,
                 height: 1.5,
@@ -187,7 +187,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'CLOSE',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   color: AppTheme.primary,
                   fontWeight: FontWeight.bold,
                 ),
@@ -358,7 +358,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(width: 10),
                 RichText(
                   text: TextSpan(
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 21,
                       fontWeight: FontWeight.w900,
                       color: Colors.white,
@@ -399,7 +399,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               children: [
                 Text(
                   'Book a Room.\nEnjoy a Villa',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 33,
                     height: 1.16,
@@ -408,7 +408,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
                 Text(
                   'Getaway',
-                  style: GoogleFonts.pacifico(
+                  style: GoogleFonts.inter(
                     color: const Color(0xFFFFC559),
                     fontSize: 42,
                     height: 1.08,
@@ -417,7 +417,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 18),
                 Text(
                   'Enjoy the luxuries and privacy of\na villa with curated premium stays.',
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     color: Colors.white,
                     fontSize: 15,
                     height: 1.4,
@@ -442,7 +442,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       const SizedBox(width: 10),
                       RichText(
                         text: TextSpan(
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: Colors.white,
                             fontSize: 14,
                             fontWeight: FontWeight.w900,
@@ -675,7 +675,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 14),
                 child: Text('OR',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         color: AppTheme.charcoalMuted,
                         fontWeight: FontWeight.w800,
                         fontSize: 12)),
@@ -687,7 +687,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Center(
             child: RichText(
               text: TextSpan(
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     color: const Color(0xFF0A1D34), fontSize: 14),
                 children: const [
                   TextSpan(text: 'Already have an account? '),
@@ -710,13 +710,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(eyebrow,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
                 color: const Color(0xFF075EBD),
                 fontSize: 15,
                 fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
         Text(title,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
                 color: const Color(0xFF0A2A5A),
                 fontSize: 27,
                 height: 1.15,
@@ -747,7 +747,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           keyboardType: keyboardType,
           obscureText: obscureText,
           validator: validator,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
               color: const Color(0xFF091B38),
               fontSize: 15,
               fontWeight: FontWeight.w700),
@@ -830,7 +830,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     displayText,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       color: selected == null
                           ? AppTheme.charcoalMuted
                           : const Color(0xFF091B38),
@@ -904,7 +904,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Expanded(
                           child: Text(
                             title,
-                            style: GoogleFonts.manrope(
+                            style: GoogleFonts.inter(
                               color: const Color(0xFF0A2A5A),
                               fontSize: 18,
                               fontWeight: FontWeight.w900,
@@ -943,7 +943,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 padding: const EdgeInsets.all(20),
                                 child: Text(
                                   emptyLabel,
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                       color: AppTheme.charcoalMuted,
                                       fontWeight: FontWeight.w700),
                                 ),
@@ -970,7 +970,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                   title: Text(
                                     code,
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                       color: const Color(0xFF091B38),
                                       fontWeight: FontWeight.w900,
                                     ),
@@ -1068,7 +1068,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     : const Color(0xFF075EBD)),
             const SizedBox(width: 10),
             Text(text,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     color: selected ? Colors.white : const Color(0xFF075EBD),
                     fontSize: 14,
                     fontWeight: FontWeight.w900)),
@@ -1098,8 +1098,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Text(text,
-              style: GoogleFonts.manrope(
-                  fontSize: 16, fontWeight: FontWeight.w900)),
+              style:
+                  GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w900)),
           const SizedBox(width: 14),
           const Icon(Icons.arrow_forward_rounded),
         ],
@@ -1122,7 +1122,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
             padding: const EdgeInsets.only(top: 10),
             child: RichText(
               text: TextSpan(
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontSize: 12.5,
                     height: 1.35,
                     color: const Color(0xFF17233C)),
@@ -1166,7 +1166,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         borderRadius: BorderRadius.circular(12),
       ),
       child: Text(_errorMessage!,
-          style: GoogleFonts.manrope(color: Colors.red.shade900, fontSize: 13)),
+          style: GoogleFonts.inter(color: Colors.red.shade900, fontSize: 13)),
     );
   }
 
@@ -1185,7 +1185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
           Expanded(
             child: Text(
               'Demo OTP: $otp',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 color: const Color(0xFF6D4B00),
                 fontSize: 13,
                 fontWeight: FontWeight.w900,
@@ -1198,7 +1198,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   TextStyle _labelStyle() {
-    return GoogleFonts.manrope(
+    return GoogleFonts.inter(
       color: const Color(0xFF111C33),
       fontSize: 13,
       fontWeight: FontWeight.w900,

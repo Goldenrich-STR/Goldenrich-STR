@@ -8,6 +8,7 @@ import '../../theme.dart';
 import '../../config.dart';
 import 'password_recovery_screen.dart';
 import '../shared/app_shell.dart';
+import '../shared/app_logo.dart';
 import '../../services/api_service.dart';
 import 'package:flutter/gestures.dart';
 
@@ -245,16 +246,19 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _AuthHero extends StatelessWidget {
-  final VoidCallback onClose;
   final VoidCallback onLogoTap;
 
   const _AuthHero({
-    required this.onClose,
     required this.onLogoTap,
   });
 
   @override
   Widget build(BuildContext context) {
+    final media = MediaQuery.sizeOf(context);
+    final isCompact = media.width < 430 || media.height < 900;
+    final heroTitleSize = isCompact ? 28.0 : 42.0;
+    final heroSubtitleSize = isCompact ? 13.0 : 19.0;
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -280,7 +284,12 @@ class _AuthHero extends StatelessWidget {
         SafeArea(
           bottom: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(28, 28, 28, 0),
+            padding: EdgeInsets.fromLTRB(
+              isCompact ? 18 : 28,
+              isCompact ? 16 : 26,
+              isCompact ? 18 : 28,
+              0,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -290,117 +299,135 @@ class _AuthHero extends StatelessWidget {
                     Expanded(
                       child: GestureDetector(
                         onTap: onLogoTap,
-                        child: Row(
-                          children: [
-                            const Icon(Icons.location_on_rounded,
-                                color: AppTheme.primary, size: 48),
-                            const SizedBox(width: 10),
-                            Flexible(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'X-SPACE360',
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 27,
-                                      height: 1,
-                                      fontWeight: FontWeight.w900,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'Find. Book. Enjoy.',
-                                    style: GoogleFonts.manrope(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.18),
+                                blurRadius: 18,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              AppLogo(height: isCompact ? 30 : 40),
+                              SizedBox(height: isCompact ? 3 : 5),
+                              Text(
+                                'Find. Book. Enjoy.',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: GoogleFonts.inter(
+                                  fontSize: isCompact ? 11.5 : 18,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white.withValues(alpha: 0.94),
+                                  shadows: [
+                                    Shadow(
                                       color:
-                                          Colors.white.withValues(alpha: 0.92),
+                                          Colors.black.withValues(alpha: 0.35),
+                                      blurRadius: 8,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isCompact ? 22 : 54),
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.topLeft,
+                    child: SizedBox(
+                      width: media.width - (isCompact ? 36 : 56),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Book a Room.',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: heroTitleSize,
+                              height: 1.02,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Enjoy A Villa Getaway',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: heroTitleSize,
+                              height: 1.02,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          SizedBox(height: isCompact ? 7 : 14),
+                          Text(
+                            'Enjoy the luxuries and privacy of a villa\nwith curated premium stays.',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: heroSubtitleSize,
+                              height: 1.32,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
+                          if (!isCompact || media.height > 760) ...[
+                            SizedBox(height: isCompact ? 10 : 18),
+                            Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: isCompact ? 14 : 20,
+                                  vertical: isCompact ? 9 : 14),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(19),
+                                border: Border.all(
+                                  color:
+                                      AppTheme.primary.withValues(alpha: 0.95),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.local_offer_outlined,
+                                      color: AppTheme.primary,
+                                      size: isCompact ? 18 : 24),
+                                  SizedBox(width: isCompact ? 8 : 10),
+                                  Flexible(
+                                    child: Text(
+                                      'Rooms Starting at ₹5,000+',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.inter(
+                                        fontSize: isCompact ? 13 : 16,
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.white,
+                                      ),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
                           ],
-                        ),
+                        ],
                       ),
                     ),
-                    Material(
-                      color: Colors.white,
-                      shape: const CircleBorder(),
-                      elevation: 6,
-                      shadowColor: Colors.black.withValues(alpha: 0.18),
-                      child: IconButton(
-                        onPressed: onClose,
-                        icon: const Icon(Icons.close_rounded,
-                            color: Color(0xFF07142F), size: 30),
-                        constraints: const BoxConstraints.tightFor(
-                            width: 58, height: 58),
-                      ),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                Text(
-                  'Book a Room.',
-                  style: GoogleFonts.manrope(
-                    fontSize: 38,
-                    height: 1.02,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Enjoy A Villa Getaway',
-                  style: GoogleFonts.manrope(
-                    fontSize: 37,
-                    height: 1.02,
-                    fontWeight: FontWeight.w900,
-                    color: AppTheme.primary,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Enjoy the luxuries and privacy of a villa\nwith curated premium stays.',
-                  style: GoogleFonts.manrope(
-                    fontSize: 18,
-                    height: 1.45,
-                    fontWeight: FontWeight.w800,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 18, vertical: 13),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.14),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.55),
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.local_offer_outlined,
-                          color: AppTheme.primary, size: 24),
-                      const SizedBox(width: 10),
-                      Text(
-                        'Rooms Starting at ₹5,000+',
-                        style: GoogleFonts.manrope(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w900,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 54),
               ],
             ),
           ),
@@ -634,17 +661,17 @@ class _LoginScreenState extends State<LoginScreen> {
                             children: [
                               Text(
                                 'X-SPACE360 LEGAL DOCUMENT',
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: 10,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: 2.2,
+                                  letterSpacing: 0,
                                   color: AppTheme.primary,
                                 ),
                               ),
                               const SizedBox(height: 8),
                               Text(
                                 title,
-                                style: GoogleFonts.outfit(
+                                style: GoogleFonts.inter(
                                   fontSize: 24,
                                   height: 1.05,
                                   fontWeight: FontWeight.w900,
@@ -679,7 +706,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                             child: Text(
                               'Please read this document carefully. It explains the agreement and policy terms that apply when you use X-Space360.',
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 13,
                                 height: 1.45,
                                 color: AppTheme.charcoalLight,
@@ -700,9 +727,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         onPressed: () => Navigator.pop(context),
                         child: Text(
                           'CLOSE',
-                          style: GoogleFonts.outfit(
+                          style: GoogleFonts.inter(
                             fontWeight: FontWeight.w900,
-                            letterSpacing: 1.2,
+                            letterSpacing: 0,
                           ),
                         ),
                       ),
@@ -728,7 +755,7 @@ class _LoginScreenState extends State<LoginScreen> {
       return [
         Text(
           'This document is currently being updated by the administrator.',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             height: 1.55,
             color: AppTheme.charcoalLight,
@@ -747,11 +774,11 @@ class _LoginScreenState extends State<LoginScreen> {
           padding: const EdgeInsets.only(top: 2, bottom: 12),
           child: Text(
             cleaned,
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 15,
               height: 1.35,
               fontWeight: FontWeight.w900,
-              letterSpacing: 1.4,
+              letterSpacing: 0,
               color: AppTheme.secondary,
             ),
           ),
@@ -762,7 +789,7 @@ class _LoginScreenState extends State<LoginScreen> {
         padding: const EdgeInsets.only(bottom: 16),
         child: Text(
           cleaned,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             height: 1.6,
             color: AppTheme.charcoalLight,
@@ -799,13 +826,13 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  TextStyle get _inputTextStyle => GoogleFonts.manrope(
+  TextStyle get _inputTextStyle => GoogleFonts.inter(
         fontSize: 15,
         fontWeight: FontWeight.w600,
         color: AppTheme.charcoal,
       );
 
-  TextStyle get _inputHintStyle => GoogleFonts.manrope(
+  TextStyle get _inputHintStyle => GoogleFonts.inter(
         fontSize: 15,
         fontWeight: FontWeight.w500,
         color: AppTheme.charcoalMuted,
@@ -836,11 +863,11 @@ class _LoginScreenState extends State<LoginScreen> {
       children: [
         Text(
           label,
-          style: GoogleFonts.outfit(
+          style: GoogleFonts.inter(
             fontSize: 10,
             fontWeight: FontWeight.bold,
             color: AppTheme.charcoal,
-            letterSpacing: 0.5,
+            letterSpacing: 0,
           ),
         ),
         const SizedBox(height: 6),
@@ -858,7 +885,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Text(
                     '${item['full_name'] ?? 'User'} (${item[codeKey] ?? ''})',
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.charcoal,
@@ -870,13 +897,13 @@ class _LoginScreenState extends State<LoginScreen> {
           onChanged: onChanged,
           hint: Text(
             hint,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 13,
               fontWeight: FontWeight.w700,
               color: AppTheme.charcoalMuted,
             ),
           ),
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 13,
             fontWeight: FontWeight.w700,
             color: AppTheme.charcoal,
@@ -959,7 +986,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           Expanded(
                             child: Text(
                               city,
-                              style: GoogleFonts.manrope(
+                              style: GoogleFonts.inter(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w700,
                                 color: AppTheme.charcoal,
@@ -988,7 +1015,7 @@ class _LoginScreenState extends State<LoginScreen> {
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text(
             'Build Configuration',
-            style: GoogleFonts.outfit(fontWeight: FontWeight.bold),
+            style: GoogleFonts.inter(fontWeight: FontWeight.bold),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
@@ -996,7 +1023,7 @@ class _LoginScreenState extends State<LoginScreen> {
             children: [
               Text(
                 'Environment: ${AppConfig.environmentLabel}',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   color: AppTheme.charcoalMuted,
                 ),
@@ -1004,7 +1031,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 8),
               Text(
                 'API: ${ApiService().baseUrl}',
-                style: GoogleFonts.outfit(
+                style: GoogleFonts.inter(
                   fontSize: 13,
                   color: AppTheme.charcoalMuted,
                 ),
@@ -1012,15 +1039,15 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 12),
               Text(
                 'API environment is selected at build time and cannot be changed from the app.',
-                style: GoogleFonts.outfit(fontSize: 11, color: Colors.grey),
+                style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
               ),
             ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: Text('OK',
-                  style: GoogleFonts.outfit(color: AppTheme.primary)),
+              child:
+                  Text('OK', style: GoogleFonts.inter(color: AppTheme.primary)),
             ),
           ],
         );
@@ -1124,14 +1151,11 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _handleClose() {
-    if (Navigator.canPop(context)) {
-      Navigator.pop(context);
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const AppShell()),
-      );
-    }
+    FocusScope.of(context).unfocus();
+    Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => const AppShell(initialIndex: 0)),
+      (route) => false,
+    );
   }
 
   Future<void> _sendOTP() async {
@@ -1208,7 +1232,8 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       setState(() {
-        _errorMessage = auth.lastError ?? 'Unable to sign in. Please try again.';
+        _errorMessage =
+            auth.lastError ?? 'Unable to sign in. Please try again.';
       });
     }
   }
@@ -1266,6 +1291,22 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    final size = MediaQuery.sizeOf(context);
+    final safeTop = MediaQuery.paddingOf(context).top;
+    final viewInsets = MediaQuery.viewInsetsOf(context);
+    final isCompact = size.width < 430 || size.height < 900;
+    const compactFormOnly = false;
+    final heroHeight = (size.height * (isCompact ? 0.48 : 0.44))
+        .clamp(isCompact ? 330.0 : 330.0, isCompact ? 390.0 : 410.0);
+    final formTop = (heroHeight - (isCompact ? 42 : 20)).clamp(
+      isCompact ? 286.0 : 310.0,
+      isCompact ? 340.0 : 390.0,
+    );
+    final horizontalPadding = size.width < 360 ? 18.0 : 24.0;
+    final popupSideMargin = size.width < 380 ? 8.0 : 12.0;
+    final popupBottomMargin = MediaQuery.paddingOf(context).bottom + 8;
+    final lockAuthSheetScroll =
+        _step == 0 && viewInsets.bottom == 0 && !compactFormOnly;
     final eyebrow = _step == 3
         ? 'Finish Registration'
         : _step == 2
@@ -1280,154 +1321,192 @@ class _LoginScreenState extends State<LoginScreen> {
         key: _formKey,
         child: Stack(
           children: [
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              height: MediaQuery.of(context).size.height * 0.47,
-              child: _AuthHero(
-                onClose: _handleClose,
-                onLogoTap: () {
-                  _logoTapCount++;
-                  if (_logoTapCount >= 5) {
-                    _logoTapCount = 0;
-                    _showBuildConfigurationDialog();
-                  }
-                },
-              ),
-            ),
-            SafeArea(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).size.height * 0.39,
+            if (!compactFormOnly)
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: heroHeight,
+                child: _AuthHero(
+                  onLogoTap: () {
+                    _logoTapCount++;
+                    if (_logoTapCount >= 5) {
+                      _logoTapCount = 0;
+                      _showBuildConfigurationDialog();
+                    }
+                  },
                 ),
-                child: Container(
-                  constraints: BoxConstraints(
-                    minHeight: MediaQuery.of(context).size.height * 0.61,
-                  ),
-                  padding: const EdgeInsets.fromLTRB(28, 30, 28, 32),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(44),
+              ),
+            Positioned(
+              top: formTop,
+              left: popupSideMargin,
+              right: popupSideMargin,
+              bottom: popupBottomMargin,
+              child: Container(
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.all(Radius.circular(30)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x1A000000),
+                      blurRadius: 34,
+                      offset: Offset(0, 14),
                     ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x1A000000),
-                        blurRadius: 32,
-                        offset: Offset(0, -10),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        eyebrow,
-                        style: GoogleFonts.manrope(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                          color: AppTheme.primary,
-                        ),
-                      ),
-                      const SizedBox(height: 14),
-                      RichText(
-                        text: TextSpan(
-                          style: GoogleFonts.manrope(
-                            fontSize: 30,
-                            height: 1.1,
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFF07142F),
-                          ),
-                          children: [
-                            const TextSpan(text: 'Welcome to '),
-                            TextSpan(
-                              text: 'X-Space360',
-                              style: GoogleFonts.manrope(
-                                color: AppTheme.primary,
-                                fontWeight: FontWeight.w900,
-                              ),
+                  ],
+                ),
+                child: SafeArea(
+                  top: false,
+                  bottom: false,
+                  child: SingleChildScrollView(
+                    physics: lockAuthSheetScroll
+                        ? const NeverScrollableScrollPhysics()
+                        : const BouncingScrollPhysics(),
+                    padding: EdgeInsets.fromLTRB(
+                      horizontalPadding,
+                      isCompact ? 9 : 26,
+                      horizontalPadding,
+                      (isCompact ? 10 : 24) + viewInsets.bottom,
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: Container(
+                            width: 58,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFD5D5D5),
+                              borderRadius: BorderRadius.circular(100),
                             ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 26),
-                      if (_step == 0) ...[
-                        _buildAuthTabs(),
-                        const SizedBox(height: 20),
-                      ],
-                      if (_errorMessage != null) ...[
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.red.shade50,
-                            border: Border.all(color: Colors.red.shade200),
-                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Text(
-                            _errorMessage!,
-                            style: GoogleFonts.manrope(
-                              color: Colors.red.shade900,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w700,
+                        ),
+                        SizedBox(height: isCompact ? 8 : 30),
+                        if (_step == 0) ...[
+                          _buildWelcomeHeader(isCompact: isCompact),
+                        ] else ...[
+                          Text(
+                            eyebrow,
+                            style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          _buildWelcomeTitle(size.width),
+                        ],
+                        SizedBox(height: isCompact ? 9 : 22),
+                        if (_step == 0) ...[
+                          _buildAuthTabs(),
+                          SizedBox(height: isCompact ? 9 : 18),
+                        ],
+                        if (_errorMessage != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              border: Border.all(color: Colors.red.shade200),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              _errorMessage!,
+                              style: GoogleFonts.inter(
+                                color: Colors.red.shade900,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          child: _buildFormContent(auth),
+                        ),
+                        ...[
+                          SizedBox(height: isCompact ? 12 : 24),
+                          Row(
+                            children: [
+                              Expanded(
+                                  child: Divider(color: Colors.grey.shade200)),
+                              Text(
+                                'Secure & Trusted',
+                                style: GoogleFonts.inter(
+                                  fontSize: isCompact ? 12 : 15,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.charcoalMuted,
+                                ),
+                              ),
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 12),
+                                child: Icon(Icons.verified_user_outlined,
+                                    color: AppTheme.primary,
+                                    size: isCompact ? 18 : 24),
+                              ),
+                              Expanded(
+                                  child: Divider(color: Colors.grey.shade200)),
+                            ],
+                          ),
+                          SizedBox(height: isCompact ? 8 : 14),
+                          Text.rich(
+                            TextSpan(
+                              text: 'By continuing, you agree to our\n',
+                              children: [
+                                TextSpan(
+                                  text: 'Terms & Conditions',
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF07142F),
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                                const TextSpan(text: ' and '),
+                                TextSpan(
+                                  text: 'Privacy Policy.',
+                                  style: GoogleFonts.inter(
+                                    color: const Color(0xFF07142F),
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ],
                             ),
                             textAlign: TextAlign.center,
+                            style: GoogleFonts.inter(
+                              fontSize: isCompact ? 11 : 14,
+                              height: isCompact ? 1.35 : 1.55,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.charcoalMuted,
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 18),
-                      ],
-                      AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 300),
-                        child: _buildFormContent(auth),
-                      ),
-                      const SizedBox(height: 26),
-                      Row(
-                        children: [
-                          Expanded(child: Divider(color: Colors.grey.shade200)),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 14),
-                            child: Icon(Icons.verified_user_outlined,
-                                color: AppTheme.primary, size: 24),
-                          ),
-                          Expanded(child: Divider(color: Colors.grey.shade200)),
                         ],
-                      ),
-                      const SizedBox(height: 18),
-                      Text.rich(
-                        TextSpan(
-                          text: 'By continuing, you agree to our\n',
-                          children: [
-                            TextSpan(
-                              text: 'Terms & Conditions',
-                              style: GoogleFonts.manrope(
-                                color: const Color(0xFF07142F),
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            const TextSpan(text: ' and '),
-                            TextSpan(
-                              text: 'Privacy Policy.',
-                              style: GoogleFonts.manrope(
-                                color: const Color(0xFF07142F),
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ],
-                        ),
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.manrope(
-                          fontSize: 14,
-                          height: 1.55,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.charcoalMuted,
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
+            if (!compactFormOnly)
+              Positioned(
+                top: safeTop + 22,
+                right: horizontalPadding,
+                child: Material(
+                  color: Colors.white,
+                  shape: const CircleBorder(),
+                  elevation: 8,
+                  shadowColor: Colors.black26,
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _handleClose,
+                    child: const SizedBox(
+                      width: 54,
+                      height: 54,
+                      child: Icon(Icons.close_rounded,
+                          color: Color(0xFF07142F), size: 30),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -1435,11 +1514,12 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildAuthTabs() {
+    final isCompact = MediaQuery.sizeOf(context).width < 430;
     return Container(
-      height: 64,
+      height: isCompact ? 54 : 72,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(25),
         border: Border.all(color: AppTheme.border),
       ),
       child: Row(
@@ -1454,7 +1534,7 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
-                margin: const EdgeInsets.all(5),
+                margin: EdgeInsets.all(isCompact ? 4 : 5),
                 decoration: BoxDecoration(
                   color: !_isSignUpMode
                       ? const Color(0xFF07142F)
@@ -1472,14 +1552,24 @@ class _LoginScreenState extends State<LoginScreen> {
                       : null,
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  'Sign In',
-                  style: GoogleFonts.manrope(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    color:
-                        !_isSignUpMode ? Colors.white : AppTheme.charcoalMuted,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.person_outline_rounded,
+                        color: !_isSignUpMode ? AppTheme.primary : Colors.grey,
+                        size: isCompact ? 18 : 25),
+                    SizedBox(width: isCompact ? 6 : 10),
+                    Text(
+                      'Sign In',
+                      style: GoogleFonts.inter(
+                        fontSize: isCompact ? 14 : 20,
+                        fontWeight: FontWeight.w900,
+                        color: !_isSignUpMode
+                            ? Colors.white
+                            : AppTheme.charcoalMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1494,7 +1584,7 @@ class _LoginScreenState extends State<LoginScreen> {
               },
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 220),
-                margin: const EdgeInsets.all(5),
+                margin: EdgeInsets.all(isCompact ? 4 : 5),
                 decoration: BoxDecoration(
                   color: _isSignUpMode
                       ? const Color(0xFF07142F)
@@ -1512,14 +1602,24 @@ class _LoginScreenState extends State<LoginScreen> {
                       : null,
                 ),
                 alignment: Alignment.center,
-                child: Text(
-                  'Sign Up',
-                  style: GoogleFonts.manrope(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w900,
-                    color:
-                        _isSignUpMode ? Colors.white : AppTheme.charcoalMuted,
-                  ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.group_add_outlined,
+                        color: _isSignUpMode ? AppTheme.primary : Colors.grey,
+                        size: isCompact ? 18 : 25),
+                    SizedBox(width: isCompact ? 6 : 10),
+                    Text(
+                      'Sign Up',
+                      style: GoogleFonts.inter(
+                        fontSize: isCompact ? 14 : 20,
+                        fontWeight: FontWeight.w900,
+                        color: _isSignUpMode
+                            ? Colors.white
+                            : AppTheme.charcoalMuted,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -1529,7 +1629,70 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  Widget _buildWelcomeHeader({required bool isCompact}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Welcome to',
+          style: GoogleFonts.inter(
+            fontSize: isCompact ? 22 : 34,
+            height: 1,
+            fontWeight: FontWeight.w800,
+            color: AppTheme.primary,
+          ),
+        ),
+        SizedBox(height: isCompact ? 2 : 6),
+        _buildWelcomeTitle(MediaQuery.sizeOf(context).width),
+        SizedBox(height: isCompact ? 3 : 8),
+        Text(
+          'Log in or sign up to continue',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: GoogleFonts.inter(
+            fontSize: isCompact ? 11.5 : 18,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.charcoalMuted,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWelcomeTitle(double width) {
+    final isCompact = width < 370;
+    return RichText(
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      text: TextSpan(
+        style: GoogleFonts.inter(
+          fontSize: isCompact ? 25 : 42,
+          height: 1.02,
+          fontWeight: FontWeight.w900,
+          color: const Color(0xFF07142F),
+        ),
+        children: [
+          const TextSpan(text: 'X-'),
+          TextSpan(
+            text: 'Space360',
+            style: GoogleFonts.inter(
+              color: AppTheme.primary,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildFormContent(AuthProvider auth) {
+    final width = MediaQuery.sizeOf(context).width;
+    final isCompact = width < 370;
+    final inputRadius = BorderRadius.circular(isCompact ? 17 : 22);
+    final inputPadding = EdgeInsets.symmetric(
+      horizontal: isCompact ? 14 : 22,
+      vertical: isCompact ? 12 : 24,
+    );
     if (_step == 0) {
       if (!_isSignUpMode) {
         // Sign In Form (Email + Password directly)
@@ -1549,26 +1712,25 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: AppTheme.charcoalMuted),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+                contentPadding: inputPadding,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: inputRadius,
                   borderSide:
                       const BorderSide(color: AppTheme.border, width: 1),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: inputRadius,
                   borderSide:
                       const BorderSide(color: AppTheme.border, width: 1),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: inputRadius,
                   borderSide:
                       const BorderSide(color: AppTheme.primary, width: 1.5),
                 ),
               ),
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: isCompact ? 8 : 18),
             TextFormField(
               controller: _passwordController,
               obscureText: !_showSignInPassword,
@@ -1596,34 +1758,33 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 filled: true,
                 fillColor: Colors.white,
-                contentPadding:
-                    const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
+                contentPadding: inputPadding,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: inputRadius,
                   borderSide:
                       const BorderSide(color: AppTheme.border, width: 1),
                 ),
                 enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: inputRadius,
                   borderSide:
                       const BorderSide(color: AppTheme.border, width: 1),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: inputRadius,
                   borderSide:
                       const BorderSide(color: AppTheme.primary, width: 1.5),
                 ),
               ),
             ),
-            const SizedBox(height: 22),
+            SizedBox(height: isCompact ? 9 : 22),
             Row(
               children: [
                 GestureDetector(
                   onTap: () => setState(() => _rememberMe = !_rememberMe),
                   child: AnimatedContainer(
                     duration: const Duration(milliseconds: 180),
-                    width: 30,
-                    height: 30,
+                    width: isCompact ? 22 : 30,
+                    height: isCompact ? 22 : 30,
                     decoration: BoxDecoration(
                       color: _rememberMe ? AppTheme.primary : Colors.white,
                       borderRadius: BorderRadius.circular(8),
@@ -1634,22 +1795,34 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: AnimatedScale(
                       scale: _rememberMe ? 1 : 0,
                       duration: const Duration(milliseconds: 150),
-                      child: const Icon(Icons.check_rounded,
-                          color: Colors.white, size: 22),
+                      child: Icon(Icons.check_rounded,
+                          color: Colors.white, size: isCompact ? 17 : 22),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  'Remember me',
-                  style: GoogleFonts.manrope(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    color: const Color(0xFF07142F),
+                SizedBox(width: isCompact ? 8 : 12),
+                Flexible(
+                  child: Text(
+                    'Remember me',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: isCompact ? 11.5 : 15,
+                      fontWeight: FontWeight.w800,
+                      color: const Color(0xFF07142F),
+                    ),
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
                 TextButton(
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isCompact ? 4 : 8,
+                      vertical: 6,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
                   onPressed: () {
                     Navigator.push(
                       context,
@@ -1660,8 +1833,8 @@ class _LoginScreenState extends State<LoginScreen> {
                   },
                   child: Text(
                     'Forgot Password?',
-                    style: GoogleFonts.manrope(
-                      fontSize: 15,
+                    style: GoogleFonts.inter(
+                      fontSize: isCompact ? 11.5 : 15,
                       color: AppTheme.primary,
                       fontWeight: FontWeight.w800,
                     ),
@@ -1669,30 +1842,30 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 24),
+            SizedBox(height: isCompact ? 9 : 24),
             auth.isLoading
                 ? const Center(
                     child: CircularProgressIndicator(color: AppTheme.primary))
                 : SizedBox(
                     width: double.infinity,
-                    height: 64,
+                    height: isCompact ? 48 : 72,
                     child: ElevatedButton.icon(
                       onPressed: _handleLogin,
                       iconAlignment: IconAlignment.end,
-                      icon: const Icon(Icons.arrow_forward_rounded,
-                          color: Colors.white, size: 30),
+                      icon: Icon(Icons.arrow_forward_rounded,
+                          color: Colors.white, size: isCompact ? 22 : 30),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(18),
                         ),
-                        elevation: 8,
-                        shadowColor: AppTheme.primary.withValues(alpha: 0.22),
+                        elevation: 12,
+                        shadowColor: AppTheme.primary.withValues(alpha: 0.28),
                       ),
                       label: Text(
                         'Sign In',
-                        style: GoogleFonts.manrope(
-                          fontSize: 20,
+                        style: GoogleFonts.inter(
+                          fontSize: isCompact ? 16 : 20,
                           fontWeight: FontWeight.w900,
                           color: Colors.white,
                         ),
@@ -1756,7 +1929,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       child: Text(
                         'Send OTP',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Colors.white,
@@ -1775,17 +1948,17 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           Text(
             'VERIFICATION CODE SENT TO',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoalMuted,
-              letterSpacing: 1.0,
+              letterSpacing: 0,
             ),
             textAlign: TextAlign.center,
           ),
           Text(
             _phoneController.text,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 15,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
@@ -1804,7 +1977,7 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Text(
                 'Demo OTP: ${auth.lastDemoOtp}',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   color: const Color(0xFF6D4B00),
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
@@ -1827,7 +2000,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center,
                   maxLength: 6,
                   inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 18,
                     fontWeight: FontWeight.w800,
                     color: AppTheme.charcoal,
@@ -1866,7 +2039,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     'OTP valid for $_otpTimerLabel',
                     key: const ValueKey('otpTimer'),
                     textAlign: TextAlign.center,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.charcoalMuted,
@@ -1877,7 +2050,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onPressed: auth.isLoading ? null : _sendOTP,
                     child: Text(
                       'Resend OTP',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.primary,
@@ -1903,7 +2076,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Text(
                       'Verify & Continue',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -1923,7 +2096,7 @@ class _LoginScreenState extends State<LoginScreen> {
             },
             child: Text(
               'Change Phone Number',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: AppTheme.charcoalMuted,
               ),
@@ -1940,11 +2113,11 @@ class _LoginScreenState extends State<LoginScreen> {
           Center(
             child: Text(
               'SELECT ROLE',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.charcoalMuted,
-                letterSpacing: 1.0,
+                letterSpacing: 0,
               ),
             ),
           ),
@@ -1978,13 +2151,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.center,
                     child: Text(
                       'GUEST',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                         color: _selectedRole == 'guest'
                             ? Colors.white
                             : AppTheme.charcoalMuted,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0,
                       ),
                     ),
                   ),
@@ -2016,13 +2189,13 @@ class _LoginScreenState extends State<LoginScreen> {
                     alignment: Alignment.center,
                     child: Text(
                       'HOST',
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w900,
                         color: _selectedRole == 'host'
                             ? Colors.white
                             : AppTheme.charcoalMuted,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0,
                       ),
                     ),
                   ),
@@ -2034,11 +2207,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'FULL NAME',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2090,11 +2263,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'EMAIL ADDRESS',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2121,11 +2294,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'PHONE NUMBER',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2152,11 +2325,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'PASSWORD',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2201,7 +2374,7 @@ class _LoginScreenState extends State<LoginScreen> {
               padding: const EdgeInsets.only(left: 4),
               child: Text(
                 _passwordValidationError(_registrationPassword)!,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: Colors.redAccent,
@@ -2213,11 +2386,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
           Text(
             'CITY',
-            style: GoogleFonts.outfit(
+            style: GoogleFonts.inter(
               fontSize: 10,
               fontWeight: FontWeight.bold,
               color: AppTheme.charcoal,
-              letterSpacing: 0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 6),
@@ -2277,11 +2450,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 Expanded(
                   child: RichText(
                     text: TextSpan(
-                      style: GoogleFonts.outfit(
+                      style: GoogleFonts.inter(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
                         color: AppTheme.charcoalMuted,
-                        letterSpacing: 0.5,
+                        letterSpacing: 0,
                       ),
                       children: [
                         const TextSpan(text: 'I ACCEPT THE '),
@@ -2338,7 +2511,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     child: Text(
                       'Complete Registration',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -2356,7 +2529,7 @@ class _LoginScreenState extends State<LoginScreen> {
             },
             child: Text(
               'Already have an account? Sign In',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: AppTheme.charcoalMuted,
               ),

@@ -1,7 +1,7 @@
 import '../services/api_service.dart';
 
 /// A helper service outlining Razorpay Mobile integration for Flutter.
-/// 
+///
 /// In production:
 /// 1. Add `razorpay_flutter: ^1.3.7` to pubspec.yaml
 /// 2. Import package:razorpay_flutter/razorpay_flutter.dart
@@ -37,7 +37,8 @@ class RazorpayService {
   }) {
     return {
       'key': keyId,
-      'amount': (amount * 100).round(), // Razorpay expects amount in paise (subunits)
+      'amount':
+          (amount * 100).round(), // Razorpay expects amount in paise (subunits)
       'name': 'X-Space360',
       'description': '$propertyTitle - Booking $bookingId',
       'order_id': orderId,

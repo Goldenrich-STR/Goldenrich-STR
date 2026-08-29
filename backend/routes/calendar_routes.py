@@ -20,6 +20,9 @@ from icalendar import Calendar as iCalendar, Event as iCalEvent
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/calendar", tags=["Calendar"])
 
+BOOKING_BLOCKING_STATUSES = ["confirmed", "completed", "awaiting_host_approval"]
+BOOKING_BLOCKING_PAYMENT_STATUSES = ["paid", "partially_paid", "success", "captured", "completed"]
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -45,7 +48,14 @@ async def _build_property_ical(property_id: str, property_data: dict, db: AsyncI
     cal.add("x-wr-timezone", "Asia/Kolkata")
 
     booking_cursor = db.bookings.find(
-        {"property_id": property_id, "booking_status": "confirmed"}, {"_id": 0}
+        {
+            "property_id": property_id,
+            "$or": [
+                {"booking_status": {"$in": BOOKING_BLOCKING_STATUSES}},
+                {"payment_status": {"$in": BOOKING_BLOCKING_PAYMENT_STATUSES}},
+            ],
+        },
+        {"_id": 0},
     )
     bookings = await booking_cursor.to_list(length=500)
 
@@ -115,6 +125,34 @@ async def get_blocked_dates(
 
         cursor = db.blocked_dates.find(query, {"_id": 0})
         blocked_dates = await cursor.to_list(length=1000)
+
+        if property_data and property_data.get("category") != "event_venue":
+            booking_query = {
+                "property_id": property_id,
+                "$or": [
+                    {"booking_status": {"$in": BOOKING_BLOCKING_STATUSES}},
+                    {"payment_status": {"$in": BOOKING_BLOCKING_PAYMENT_STATUSES}},
+                ],
+            }
+            if start_date and end_date:
+                booking_query["check_in_date"] = {"$lte": end_date}
+                booking_query["check_out_date"] = {"$gte": start_date}
+            booking_rows = await db.bookings.find(booking_query, {"_id": 0}).to_list(length=1000)
+            existing_sources = {row.get("source_id") for row in blocked_dates if row.get("source") == "booking"}
+            for booking in booking_rows:
+                booking_id = booking.get("booking_id")
+                if not booking_id or booking_id in existing_sources:
+                    continue
+                blocked_dates.append({
+                    "blocked_date_id": f"booking_{booking_id}",
+                    "property_id": property_id,
+                    "owner_id": booking.get("host_id"),
+                    "start_date": booking.get("check_in_date"),
+                    "end_date": booking.get("check_out_date"),
+                    "source": "booking",
+                    "source_id": booking_id,
+                    "reason": f"Booking {str(booking_id)[:8]}",
+                })
 
         return {"blocked_dates": blocked_dates, "total": len(blocked_dates)}
 
@@ -316,11 +354,14 @@ async def get_unified_calendar(
 
         events = []
 
-        # 1. Confirmed bookings
+        # 1. Paid/confirmed bookings that occupy the calendar
         booking_cursor = db.bookings.find(
             {
                 "property_id": property_id,
-                "booking_status": "confirmed",
+                "$or": [
+                    {"booking_status": {"$in": BOOKING_BLOCKING_STATUSES}},
+                    {"payment_status": {"$in": BOOKING_BLOCKING_PAYMENT_STATUSES}},
+                ],
                 "check_in_date": {"$lte": end_iso},
                 "check_out_date": {"$gte": start_iso},
             },

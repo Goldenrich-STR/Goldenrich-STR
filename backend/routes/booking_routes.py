@@ -36,6 +36,10 @@ router = APIRouter(prefix="/bookings", tags=["Bookings"])
 INSTANT_BOOK_MODE = "INSTANT_BOOK"
 HOST_APPROVAL_MODE = "HOST_APPROVAL"
 HOST_APPROVAL_SLA_MINUTES = 24 * 60
+CALENDAR_BLOCKING_BOOKING_STATUSES = {
+    BookingStatus.CONFIRMED.value,
+    BookingStatus.COMPLETED.value,
+}
 
 
 def _normalize_booking_mode(property_dict: dict) -> str:
@@ -587,7 +591,7 @@ async def create_booking(
                         "amount": int(round(_booking_payable_amount(existing_booking) * 100)),
                         "currency": existing_booking.get("currency") or "INR",
                         "reused_existing_hold": True,
-                        "booking_details": {
+        "booking_details": {
                             "check_in_date": existing_booking.get("check_in_date"),
                             "check_out_date": existing_booking.get("check_out_date"),
                             "base_amount": existing_booking.get("base_amount", 0),
@@ -599,8 +603,8 @@ async def create_booking(
                             "property_title": property_dict["title"],
                             "number_of_guests": existing_booking.get("number_of_guests", booking_data.number_of_guests),
                             "booking_mode": existing_booking.get("booking_mode") or booking_mode,
-                            "host_approval_required": (existing_booking.get("booking_mode") or booking_mode) == HOST_APPROVAL_MODE,
-                            "host_approval_sla_minutes": HOST_APPROVAL_SLA_MINUTES if (existing_booking.get("booking_mode") or booking_mode) == HOST_APPROVAL_MODE else None,
+                            "host_approval_required": False,
+                            "host_approval_sla_minutes": None,
                         },
                     }
             if existing_booking:
@@ -822,8 +826,8 @@ async def create_booking(
                 "payment_type": booking.payment_type,
                 "property_title": property_dict["title"],
                 "booking_mode": booking_mode,
-                "host_approval_required": booking_mode == HOST_APPROVAL_MODE,
-                "host_approval_sla_minutes": HOST_APPROVAL_SLA_MINUTES if booking_mode == HOST_APPROVAL_MODE else None,
+                "host_approval_required": False,
+                "host_approval_sla_minutes": None,
             }
         }
     
@@ -842,6 +846,77 @@ def _booking_payable_amount(booking_dict: dict) -> float:
     if payment_type == "advance" and float(booking_dict.get("advance_amount") or 0) > 0:
         return float(booking_dict.get("advance_amount") or 0)
     return float(booking_dict.get("total_amount") or 0)
+
+
+async def _upsert_booking_calendar_block(db: AsyncIOMotorDatabase, booking_dict: dict) -> None:
+    """Ensure a paid/confirmed booking owns a calendar block for its date range."""
+    booking_id = booking_dict.get("booking_id")
+    if not booking_id:
+        return
+    await db.blocked_dates.update_one(
+        {"source": "booking", "source_id": booking_id},
+        {
+            "$set": {
+                "blocked_date_id": f"booking_{booking_id}",
+                "property_id": booking_dict.get("property_id"),
+                "owner_id": booking_dict.get("host_id"),
+                "start_date": booking_dict.get("check_in_date"),
+                "end_date": booking_dict.get("check_out_date"),
+                "source": "booking",
+                "source_id": booking_id,
+                "reason": f"Booking {booking_id[:8]}",
+                "updated_at": datetime.now(timezone.utc),
+            },
+            "$setOnInsert": {"created_at": datetime.now(timezone.utc)},
+        },
+        upsert=True,
+    )
+
+
+async def _promote_paid_legacy_booking(db: AsyncIOMotorDatabase, booking_dict: dict) -> dict:
+    """Old builds could leave paid bookings awaiting host approval; bookings are now direct-confirm."""
+    raw_status = str(booking_dict.get("booking_status") or "").lower()
+    payment_status = str(booking_dict.get("payment_status") or "").lower()
+    is_paid = payment_status in {"paid", "partially_paid", "captured", "success", "completed"}
+    if is_paid and raw_status in {BookingStatus.CONFIRMED.value, BookingStatus.COMPLETED.value}:
+        try:
+            await _upsert_booking_calendar_block(db, booking_dict)
+        except Exception as block_err:
+            logger.warning("Failed to ensure booking calendar block for %s: %s", booking_dict.get("booking_id"), block_err)
+        return booking_dict
+
+    needs_promotion = raw_status in {
+        BookingStatus.AWAITING_HOST_APPROVAL.value,
+        BookingStatus.PENDING.value,
+    }
+    if not (is_paid and needs_promotion):
+        return booking_dict
+
+    now_utc = datetime.now(timezone.utc)
+    updates = {
+        "booking_status": BookingStatus.CONFIRMED.value,
+        "confirmed_at": booking_dict.get("confirmed_at") or now_utc,
+        "updated_at": now_utc,
+        "approval_requested_at": None,
+        "approval_deadline_at": None,
+    }
+    await db.bookings.update_one(
+        {"booking_id": booking_dict["booking_id"]},
+        {"$set": updates},
+    )
+    booking_dict.update(updates)
+    try:
+        await _upsert_booking_calendar_block(db, booking_dict)
+    except Exception as block_err:
+        logger.warning("Failed to repair booking calendar block for %s: %s", booking_dict.get("booking_id"), block_err)
+    return booking_dict
+
+
+async def _promote_paid_legacy_bookings(db: AsyncIOMotorDatabase, bookings: list) -> list:
+    repaired = []
+    for booking in bookings:
+        repaired.append(await _promote_paid_legacy_booking(db, booking))
+    return repaired
 
 
 async def _booking_payment_status_payload(db: AsyncIOMotorDatabase, booking_dict: dict) -> dict:
@@ -1009,16 +1084,7 @@ async def confirm_payment(
         current_status = booking_dict.get("booking_status")
         existing_payment_id = booking_dict.get("razorpay_payment_id")
         if current_status == BookingStatus.AWAITING_HOST_APPROVAL.value:
-            if existing_payment_id == razorpay_payment_id:
-                return {
-                    "message": "Booking request is already awaiting host approval",
-                    "booking_id": booking_id,
-                    "already_processed": True,
-                }
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Booking request is already awaiting host approval"
-            )
+            current_status = BookingStatus.SOFT_LOCK.value
         if current_status == BookingStatus.CONFIRMED.value:
             if existing_payment_id == razorpay_payment_id:
                 return {
@@ -1151,7 +1217,10 @@ async def confirm_payment(
             {
                 "booking_id": booking_id,
                 "razorpay_order_id": razorpay_order_id,
-                "booking_status": BookingStatus.SOFT_LOCK.value,
+                "booking_status": {"$in": [
+                    BookingStatus.SOFT_LOCK.value,
+                    BookingStatus.AWAITING_HOST_APPROVAL.value,
+                ]},
             },
             {"$set": status_update}
         )
@@ -1170,20 +1239,10 @@ async def confirm_payment(
             }},
         )
         
-        # Create a booking-sourced blocked date entry (for calendar sync/iCal export)
+        # Create/update a booking-sourced blocked date entry immediately after
+        # payment verification. This is the calendar authority for booked dates.
         try:
-            await db.blocked_dates.insert_one({
-                "blocked_date_id": f"booking_{booking_id}",
-                "property_id": booking_dict["property_id"],
-                "owner_id": booking_dict["host_id"],
-                "start_date": booking_dict["check_in_date"],
-                "end_date": booking_dict["check_out_date"],
-                "source": "booking",
-                "source_id": booking_id,
-                "reason": f"Booking {booking_id[:8]}",
-                "created_at": datetime.now(timezone.utc),
-                "updated_at": datetime.now(timezone.utc),
-            })
+            await _upsert_booking_calendar_block(db, booking_dict)
         except Exception as block_err:
             logger.warning(f"Failed to create booking blocked-date entry: {block_err}")
         
@@ -1216,7 +1275,7 @@ async def confirm_payment(
                 logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
 
         return {
-            "message": "Booking confirmed successfully" if next_status == BookingStatus.CONFIRMED.value else "Booking request sent to host for approval",
+            "message": "Booking confirmed successfully",
             "booking_id": booking_id,
             "booking_status": next_status,
             "booking_mode": booking_mode,
@@ -1348,6 +1407,7 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
 
 
 async def _expire_overdue_host_approvals(db: AsyncIOMotorDatabase) -> None:
+    return
     now_iso = datetime.now(timezone.utc).isoformat()
     try:
         await db.bookings.update_many(
@@ -1384,7 +1444,7 @@ def _canonical_booking_lifecycle(booking: dict) -> dict:
     elif raw_booking in {"soft_lock", "pending"}:
         status_code = "PENDING_PAYMENT"
     elif raw_booking == "awaiting_host_approval":
-        status_code = "AWAITING_HOST_APPROVAL"
+        status_code = "PENDING_PAYMENT" if raw_payment not in {"paid", "partially_paid"} else "CONFIRMED"
     elif raw_booking == "completed":
         status_code = "COMPLETED"
     elif raw_booking == "confirmed":
@@ -1397,7 +1457,7 @@ def _canonical_booking_lifecycle(booking: dict) -> dict:
     labels = {
         "PENDING_PAYMENT": ("Pending Payment", "Complete your payment to continue with this booking."),
         "PAYMENT_PROCESSING": ("Payment Processing", "We're securely verifying your payment. Please don't make another payment yet."),
-        "AWAITING_HOST_APPROVAL": ("Awaiting Host Approval", "Your payment is verified and the booking is waiting for host approval."),
+        "AWAITING_HOST_APPROVAL": ("Confirmed", "Your booking is confirmed."),
         "CONFIRMED": ("Confirmed", "Your booking is confirmed."),
         "UPCOMING": ("Upcoming", "Your booking is coming up."),
         "CHECKED_IN": ("Checked-in", "Your booking is currently active."),
@@ -1436,6 +1496,7 @@ async def get_guest_bookings(
             .sort("check_in_date", -1)
         )
         bookings = await cursor.to_list(length=200)
+        bookings = await _promote_paid_legacy_bookings(db, bookings)
         bookings = await _attach_property_info(db, bookings)
         for b in bookings:
             if b.get("booking_status") == "cancelled":
@@ -1483,6 +1544,7 @@ async def get_host_bookings(
             .sort("created_at", -1)
         )
         bookings = await cursor.to_list(length=200)
+        bookings = await _promote_paid_legacy_bookings(db, bookings)
         bookings = await _attach_property_info(db, bookings)
         bookings = await _attach_guest_info(db, bookings)
         bookings = _attach_lifecycle_status(bookings)

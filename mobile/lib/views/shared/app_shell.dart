@@ -307,11 +307,11 @@ class _AppShellState extends State<AppShell> {
           elevation: 0,
           type: BottomNavigationBarType.fixed,
           iconSize: 22,
-          selectedLabelStyle: GoogleFonts.manrope(
+          selectedLabelStyle: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w800,
           ),
-          unselectedLabelStyle: GoogleFonts.manrope(
+          unselectedLabelStyle: GoogleFonts.inter(
             fontSize: 11,
             fontWeight: FontWeight.w600,
           ),
@@ -410,7 +410,7 @@ class _HostProfileDrawer extends StatelessWidget {
                     backgroundColor: AppTheme.primary,
                     child: Text(
                       _initials,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
@@ -426,7 +426,7 @@ class _HostProfileDrawer extends StatelessWidget {
                           user.fullName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: AppTheme.charcoal,
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -437,7 +437,7 @@ class _HostProfileDrawer extends StatelessWidget {
                           user.email,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: AppTheme.charcoalMuted,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -446,7 +446,7 @@ class _HostProfileDrawer extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '$roleLabel Dashboard',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: AppTheme.primary,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -654,7 +654,7 @@ class _BrokerProfileDrawer extends StatelessWidget {
                     backgroundColor: AppTheme.primary,
                     child: Text(
                       _initials,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         color: Colors.white,
                         fontSize: 24,
                         fontWeight: FontWeight.w800,
@@ -670,7 +670,7 @@ class _BrokerProfileDrawer extends StatelessWidget {
                           user.fullName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: AppTheme.charcoal,
                             fontSize: 20,
                             fontWeight: FontWeight.w800,
@@ -681,7 +681,7 @@ class _BrokerProfileDrawer extends StatelessWidget {
                           user.email,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: AppTheme.charcoalMuted,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
@@ -690,7 +690,7 @@ class _BrokerProfileDrawer extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '$roleLabel Dashboard',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             color: AppTheme.primary,
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
@@ -822,7 +822,7 @@ class _HostDrawerItem extends StatelessWidget {
                     label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       color: foreground,
                       fontSize: 17,
                       fontWeight: selected ? FontWeight.w800 : FontWeight.w700,
@@ -840,7 +840,7 @@ class _HostDrawerItem extends StatelessWidget {
                     ),
                     child: Text(
                       badge!,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         color: Colors.redAccent,
                         fontSize: 14,
                         fontWeight: FontWeight.w800,
@@ -1003,7 +1003,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
               const SizedBox(height: 18),
               Text(
                 title,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 22,
                   fontWeight: FontWeight.w800,
                   color: AppTheme.charcoal,
@@ -1014,7 +1014,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
                 child: SingleChildScrollView(
                   child: Text(
                     content,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       height: 1.65,
                       color: AppTheme.charcoalMuted,
@@ -1394,7 +1394,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(15),
                           ),
-                          textStyle: GoogleFonts.manrope(
+                          textStyle: GoogleFonts.inter(
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
                           ),
@@ -1425,7 +1425,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(15),
                         ),
-                        textStyle: GoogleFonts.manrope(
+                        textStyle: GoogleFonts.inter(
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                         ),
@@ -1436,7 +1436,7 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
                   Center(
                     child: Text(
                       'Version 1.0.0',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.charcoalMuted,
@@ -1486,7 +1486,7 @@ class _ProfileHeader extends StatelessWidget {
         Expanded(
           child: Text(
             'Profile',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: compact ? 24 : 30,
               height: 1,
               fontWeight: FontWeight.w900,
@@ -1548,7 +1548,7 @@ class _LoggedOutProfileCard extends StatelessWidget {
         children: [
           Text(
             'Log in and start planning your next trip.',
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: compact ? 12 : 13,
               color: AppTheme.charcoalMuted,
               height: 1.5,
@@ -1574,7 +1574,7 @@ class _LoggedOutProfileCard extends StatelessWidget {
               ),
               child: Text(
                 'Log in or sign up',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 14,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1687,7 +1687,7 @@ class _ProfileHeroCard extends StatelessWidget {
                       user.fullName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: compact ? 18 : 20,
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF11131A),
@@ -1698,7 +1698,7 @@ class _ProfileHeroCard extends StatelessWidget {
                       user.email,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 12,
                         color: AppTheme.charcoalMuted,
                       ),
@@ -1715,7 +1715,7 @@ class _ProfileHeroCard extends StatelessWidget {
                       ),
                       child: Text(
                         'Role: ${user.role.toUpperCase()}',
-                        style: GoogleFonts.manrope(
+                        style: GoogleFonts.inter(
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
                           color: AppTheme.primary,
@@ -1803,7 +1803,7 @@ class _ProfileOptionTile extends StatelessWidget {
                 children: [
                   Text(
                     label,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 15,
                       fontWeight: FontWeight.w900,
                       color: const Color(0xFF11131A),
@@ -1815,7 +1815,7 @@ class _ProfileOptionTile extends StatelessWidget {
                       subtitle!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                         fontSize: 11,
                         fontWeight: FontWeight.w500,
                         color: AppTheme.charcoalMuted,
@@ -1863,7 +1863,7 @@ class _ProfileInfoRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.charcoalMuted,
@@ -1872,7 +1872,7 @@ class _ProfileInfoRow extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   value.isEmpty ? '-' : value,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 15,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.charcoal,
@@ -2045,7 +2045,7 @@ class _UnauthenticatedPlaceholder extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Sign In Required',
-              style: GoogleFonts.outfit(
+              style: GoogleFonts.inter(
                 fontSize: 24,
                 fontWeight: FontWeight.w800,
                 color: AppTheme.charcoal,
@@ -2055,7 +2055,7 @@ class _UnauthenticatedPlaceholder extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               message,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: AppTheme.charcoalMuted,
                 height: 1.5,
@@ -2079,7 +2079,7 @@ class _UnauthenticatedPlaceholder extends StatelessWidget {
               ),
               child: Text(
                 'Sign In Now',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -2114,7 +2114,7 @@ class _WishlistsTab extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Wishlists',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
@@ -2138,7 +2138,7 @@ class _WishlistsTab extends StatelessWidget {
                   const SizedBox(height: 24),
                   Text(
                     'Create your first wishlist',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: Colors.black87,
@@ -2148,7 +2148,7 @@ class _WishlistsTab extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(
                     'As you search, tap the heart icon on any stay to save it to a wishlist.',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 14,
                       color: Colors.grey[600],
                       height: 1.5,
@@ -2222,7 +2222,7 @@ class _WishlistsTab extends StatelessWidget {
                             Expanded(
                               child: Text(
                                 prop.title,
-                                style: GoogleFonts.manrope(
+                                style: GoogleFonts.inter(
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.black87,
@@ -2238,7 +2238,7 @@ class _WishlistsTab extends StatelessWidget {
                                 const SizedBox(width: 2),
                                 Text(
                                   rating.toStringAsFixed(2),
-                                  style: GoogleFonts.manrope(
+                                  style: GoogleFonts.inter(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
                                     color: Colors.black87,
@@ -2251,7 +2251,7 @@ class _WishlistsTab extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${prop.city}, ${prop.state}',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             color: Colors.grey[600],
                           ),
@@ -2259,7 +2259,7 @@ class _WishlistsTab extends StatelessWidget {
                         const SizedBox(height: 4),
                         Text(
                           '${CurrencyFormatter.format(prop.customerDisplayPrice)}${prop.pricingUnitSuffix}',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
@@ -2293,7 +2293,7 @@ class _MessagesTab extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           'Inbox',
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 24,
             fontWeight: FontWeight.bold,
             color: Colors.black87,
@@ -2316,7 +2316,7 @@ class _MessagesTab extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'No new messages',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.black87,
@@ -2326,7 +2326,7 @@ class _MessagesTab extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               'When you contact hosts or book properties, your messages will appear here.',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 color: Colors.grey[600],
                 height: 1.5,

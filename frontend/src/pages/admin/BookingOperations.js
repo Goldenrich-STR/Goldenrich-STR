@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { CalendarCheck, CreditCard, Search, XCircle, Download } from 'lucide-react';
+import { CreditCard, Search, XCircle, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestReason, Pagination } from './shared';
 
@@ -146,7 +146,7 @@ const BookingRow = ({ booking, onOpen, onStatus }) => (
     <td className="px-4 py-3">{formatMoney(booking.total_amount || 0)}</td>
     <td className="px-4 py-3"><StatusBadge value={booking.payment_status} /></td>
     <td className="px-4 py-3"><StatusBadge value={booking.booking_status} /></td>
-    <td className="px-4 py-3"><div className="flex flex-wrap gap-1.5"><button onClick={() => onOpen(booking)} className="rounded-xl bg-[#2f6df6] px-2.5 py-1.5 text-xs font-bold text-white">Review</button><button onClick={() => onStatus(booking, { booking_status: 'confirmed', payment_status: 'paid' })} className="rounded-xl bg-[#eef5ff] px-2.5 py-1.5 text-xs font-bold text-[#2f6df6]">Confirm</button><button onClick={() => onStatus(booking, { booking_status: 'cancelled' })} className="rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-700">Cancel</button></div></td>
+    <td className="px-4 py-3"><div className="flex flex-wrap gap-1.5"><button onClick={() => onOpen(booking)} className="rounded-xl bg-[#2f6df6] px-2.5 py-1.5 text-xs font-bold text-white">Review</button><button onClick={() => onStatus(booking, { booking_status: 'cancelled' })} className="rounded-xl bg-red-50 px-2.5 py-1.5 text-xs font-bold text-red-700">Cancel</button></div></td>
   </tr>
 );
 
@@ -173,7 +173,6 @@ const BookingDetailPanel = ({ selected, onClose, onStatus }) => {
             ['Payment Ref', booking.razorpay_payment_id || booking.razorpay_order_id || '-'],
           ]} />
           <div className="grid grid-cols-2 gap-2">
-            <button onClick={() => onStatus(booking, { booking_status: 'confirmed', payment_status: 'paid' })} className="inline-flex items-center justify-center gap-1 rounded-2xl bg-[#2f6df6] px-3 py-2.5 text-xs font-black text-white"><CalendarCheck className="h-4 w-4" /> Confirm Paid</button>
             <button onClick={() => onStatus(booking, { payment_status: 'refunded' })} className="inline-flex items-center justify-center gap-1 rounded-2xl bg-[#eef5ff] px-3 py-2.5 text-xs font-black text-[#2f6df6]"><CreditCard className="h-4 w-4" /> Mark Refunded</button>
             <button onClick={() => onStatus(booking, { booking_status: 'completed' })} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black">Complete</button>
             <button onClick={() => onStatus(booking, { booking_status: 'cancelled' })} className="inline-flex items-center justify-center gap-1 rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white"><XCircle className="h-4 w-4" /> Cancel</button>

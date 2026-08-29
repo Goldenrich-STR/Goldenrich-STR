@@ -58,8 +58,8 @@ class NearbyPropertyModel {
       propertyType: json['propertyType']?.toString() ?? '',
       category: json['category']?.toString() ?? '',
       price: (json['price'] as num?)?.toDouble() ?? 0,
-      currency: json['currency']?.toString() ??
-          AppCurrencyConfig.defaultCurrencyCode,
+      currency:
+          json['currency']?.toString() ?? AppCurrencyConfig.defaultCurrencyCode,
       pricingCycle: json['pricingCycle']?.toString() ?? 'day',
       rating: (json['rating'] as num?)?.toDouble() ?? 0,
       reviewCount: (json['reviewCount'] as num?)?.toInt() ?? 0,

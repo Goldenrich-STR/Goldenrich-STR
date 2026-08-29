@@ -3041,10 +3041,10 @@ async def booking_operation_detail(booking_id: str, current_user: dict = Depends
 
 @router.patch("/bookings/{booking_id}/status")
 async def update_booking_operation_status(booking_id: str, payload: BookingStatusPayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
-    allowed_booking = {"pending", "soft_lock", "confirmed", "completed", "cancelled"}
+    allowed_booking = {"pending", "soft_lock", "completed", "cancelled"}
     allowed_payment = {"pending", "paid", "partially_paid", "failed", "refunded"}
     if payload.booking_status and payload.booking_status not in allowed_booking:
-        raise HTTPException(status_code=400, detail="Invalid booking status")
+        raise HTTPException(status_code=400, detail="Booking confirmation is controlled by verified payment only")
     if payload.payment_status and payload.payment_status not in allowed_payment:
         raise HTTPException(status_code=400, detail="Invalid payment status")
     if not payload.booking_status and not payload.payment_status:
@@ -3055,8 +3055,6 @@ async def update_booking_operation_status(booking_id: str, payload: BookingStatu
     updates = {"admin_status_reason": payload.reason, "admin_status_updated_by": current_user["user_id"], "updated_at": _now()}
     if payload.booking_status:
         updates["booking_status"] = payload.booking_status
-        if payload.booking_status == "confirmed":
-            updates["confirmed_at"] = booking.get("confirmed_at") or _now()
         if payload.booking_status == "cancelled":
             updates["cancelled_at"] = _now()
     if payload.payment_status:

@@ -419,9 +419,9 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
             SliverToBoxAdapter(
               child: Padding(
                 padding: EdgeInsets.fromLTRB(
-                  20,
+                  16,
                   MediaQuery.of(context).padding.top + 18,
-                  20,
+                  16,
                   24,
                 ),
                 child: Column(
@@ -617,7 +617,7 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
             textAlign: TextAlign.center,
             style: const TextStyle(
                 fontSize: 11,
-                letterSpacing: 0.8,
+                letterSpacing: 0,
                 color: AppTheme.charcoalLight,
                 fontWeight: FontWeight.w600),
           ),
@@ -658,58 +658,85 @@ class _HostDashboardTopBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final compact = constraints.maxWidth < 360;
-        return Row(
+        final compact = constraints.maxWidth < 370;
+        return Wrap(
+          spacing: compact ? 8 : 12,
+          runSpacing: 12,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          alignment: WrapAlignment.spaceBetween,
           children: [
-            _SoftIconButton(icon: Icons.arrow_back_rounded, onTap: onBack),
-            SizedBox(width: compact ? 8 : 14),
-            Icon(Icons.location_on_rounded,
-                color: AppTheme.secondary, size: compact ? 34 : 42),
-            SizedBox(width: compact ? 4 : 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: compact ? constraints.maxWidth - 120 : 240,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'X-SPACE360',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
-                      fontSize: compact ? 17 : 22,
-                      height: 1,
-                      fontWeight: FontWeight.w900,
-                      color: const Color(0xFF07142F),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Host Dashboard',
-                    style: GoogleFonts.manrope(
-                      fontSize: compact ? 11 : 13,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.charcoalMuted,
+                  _SoftIconButton(
+                      icon: Icons.arrow_back_rounded, onTap: onBack),
+                  SizedBox(width: compact ? 8 : 12),
+                  Icon(Icons.location_on_rounded,
+                      color: AppTheme.secondary, size: compact ? 30 : 38),
+                  SizedBox(width: compact ? 4 : 8),
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'X-SPACE360',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: compact ? 15 : 20,
+                            height: 1,
+                            fontWeight: FontWeight.w900,
+                            color: const Color(0xFF07142F),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Host Dashboard',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            fontSize: compact ? 10 : 12,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.charcoalMuted,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            ElevatedButton.icon(
-              onPressed: onListNew,
-              icon: const Icon(Icons.add_rounded, color: Colors.white),
-              label: Text(compact ? 'List New' : 'List New Property'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primary,
-                foregroundColor: Colors.white,
-                elevation: 8,
-                shadowColor: AppTheme.primary.withValues(alpha: 0.25),
-                padding: EdgeInsets.symmetric(
-                    horizontal: compact ? 12 : 16, vertical: compact ? 12 : 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(18),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxWidth: compact ? 124 : 184),
+              child: ElevatedButton.icon(
+                onPressed: onListNew,
+                icon: Icon(Icons.add_rounded,
+                    color: Colors.white, size: compact ? 17 : 20),
+                label: Text(
+                  compact ? 'List New' : 'List New Property',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textStyle: GoogleFonts.manrope(
-                  fontSize: compact ? 12 : 14,
-                  fontWeight: FontWeight.w900,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 8,
+                  shadowColor: AppTheme.primary.withValues(alpha: 0.25),
+                  padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 10 : 16,
+                      vertical: compact ? 11 : 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  textStyle: GoogleFonts.inter(
+                    fontSize: compact ? 11 : 14,
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
             ),
@@ -725,13 +752,14 @@ class _PortfolioHero extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.of(context).size.width < 360;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'Your Portfolio',
-          style: GoogleFonts.manrope(
-            fontSize: 30,
+          style: GoogleFonts.inter(
+            fontSize: compact ? 26 : 30,
             height: 1.05,
             fontWeight: FontWeight.w900,
             color: const Color(0xFF07142F),
@@ -742,7 +770,7 @@ class _PortfolioHero extends StatelessWidget {
           'Manage your properties and track performance',
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 13,
             height: 1.35,
             fontWeight: FontWeight.w700,
@@ -783,7 +811,7 @@ class _DashboardHeroImage extends StatelessWidget {
               bottom: 12,
               child: Text(
                 'Grow your hosting business',
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   color: Colors.white,
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
@@ -826,78 +854,96 @@ class _StatsGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GridView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: items.length,
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        crossAxisSpacing: 14,
-        mainAxisSpacing: 14,
-        childAspectRatio: 1.02,
-      ),
-      itemBuilder: (context, index) {
-        final item = items[index];
-        final active = item.filterValue == activeFilter;
-        return InkWell(
-          onTap: () => onFilter(item.filterValue),
-          borderRadius: BorderRadius.circular(22),
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 180),
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: item.tint.withValues(alpha: active ? 0.10 : 0.045),
-              borderRadius: BorderRadius.circular(22),
-              border: Border.all(
-                color: item.tint.withValues(alpha: active ? 0.45 : 0.16),
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: item.tint.withValues(alpha: 0.12),
-                  child: Icon(item.icon, color: item.tint, size: 24),
-                ),
-                const Spacer(),
-                Text(
-                  item.value,
-                  style: GoogleFonts.manrope(
-                    fontSize: 30,
-                    height: 1,
-                    fontWeight: FontWeight.w900,
-                    color: const Color(0xFF07142F),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compact = constraints.maxWidth < 360;
+        return GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            crossAxisSpacing: compact ? 10 : 14,
+            mainAxisSpacing: compact ? 10 : 14,
+            childAspectRatio: compact ? 0.98 : 1.04,
+          ),
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final active = item.filterValue == activeFilter;
+            return InkWell(
+              onTap: () => onFilter(item.filterValue),
+              borderRadius: BorderRadius.circular(20),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: EdgeInsets.all(compact ? 13 : 16),
+                decoration: BoxDecoration(
+                  color: item.tint.withValues(alpha: active ? 0.10 : 0.045),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: item.tint.withValues(alpha: active ? 0.45 : 0.16),
                   ),
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  item.title,
-                  style: GoogleFonts.manrope(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.charcoal,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'View all',
-                      style: GoogleFonts.manrope(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w900,
-                        color: item.tint,
+                    CircleAvatar(
+                      radius: compact ? 20 : 22,
+                      backgroundColor: item.tint.withValues(alpha: 0.12),
+                      child: Icon(item.icon,
+                          color: item.tint, size: compact ? 20 : 22),
+                    ),
+                    const Spacer(),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        item.value,
+                        style: GoogleFonts.inter(
+                          fontSize: compact ? 26 : 30,
+                          height: 1,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF07142F),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.arrow_forward_rounded,
-                        size: 17, color: item.tint),
+                    const SizedBox(height: 7),
+                    Text(
+                      item.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: compact ? 11 : 13,
+                        height: 1.15,
+                        fontWeight: FontWeight.w800,
+                        color: AppTheme.charcoal,
+                      ),
+                    ),
+                    SizedBox(height: compact ? 8 : 10),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            'View all',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                              fontSize: compact ? 11 : 13,
+                              fontWeight: FontWeight.w900,
+                              color: item.tint,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Icon(Icons.arrow_forward_rounded,
+                            size: compact ? 15 : 17, color: item.tint),
+                      ],
+                    ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );
@@ -911,8 +957,9 @@ class _EarningsBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.of(context).size.width < 360;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
         color: const Color(0xFFF4FBF6),
         borderRadius: BorderRadius.circular(22),
@@ -921,32 +968,37 @@ class _EarningsBanner extends StatelessWidget {
       child: Row(
         children: [
           CircleAvatar(
-            radius: 28,
+            radius: compact ? 23 : 28,
             backgroundColor: Colors.green.withValues(alpha: 0.12),
-            child: const Icon(Icons.account_balance_wallet_rounded,
-                color: Colors.green, size: 28),
+            child: Icon(Icons.account_balance_wallet_rounded,
+                color: Colors.green, size: compact ? 23 : 28),
           ),
-          const SizedBox(width: 16),
+          SizedBox(width: compact ? 10 : 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: compact ? 8 : 16,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Text(
-                      totalEarningsLabel,
-                      style: GoogleFonts.manrope(
-                        fontSize: 26,
-                        height: 1,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF07142F),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        totalEarningsLabel,
+                        style: GoogleFonts.inter(
+                          fontSize: compact ? 22 : 26,
+                          height: 1,
+                          fontWeight: FontWeight.w900,
+                          color: const Color(0xFF07142F),
+                        ),
                       ),
                     ),
-                    const SizedBox(width: 16),
                     Text(
                       'Total Earnings',
-                      style: GoogleFonts.manrope(
-                        fontSize: 15,
+                      style: GoogleFonts.inter(
+                        fontSize: compact ? 12 : 15,
                         fontWeight: FontWeight.w800,
                         color: AppTheme.charcoalMuted,
                       ),
@@ -956,8 +1008,10 @@ class _EarningsBanner extends StatelessWidget {
                 const SizedBox(height: 8),
                 Text(
                   'Lifetime earnings from all bookings',
-                  style: GoogleFonts.manrope(
-                    fontSize: 13,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: compact ? 11 : 13,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.charcoalMuted,
                   ),
@@ -965,10 +1019,11 @@ class _EarningsBanner extends StatelessWidget {
               ],
             ),
           ),
-          const CircleAvatar(
-            radius: 24,
+          CircleAvatar(
+            radius: compact ? 20 : 24,
             backgroundColor: Colors.white,
-            child: Icon(Icons.arrow_forward_rounded, color: Color(0xFF07142F)),
+            child: const Icon(Icons.arrow_forward_rounded,
+                color: Color(0xFF07142F)),
           ),
         ],
       ),
@@ -1016,7 +1071,7 @@ class _HostVerificationBanner extends StatelessWidget {
                   : rejected
                       ? 'Host verification was rejected. Update and re-submit your documents.'
                       : 'Submit host verification documents to activate listing features.',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 12,
                 height: 1.35,
                 fontWeight: FontWeight.w700,
@@ -1060,7 +1115,7 @@ class _SectionHeader extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 23,
                   height: 1.1,
                   fontWeight: FontWeight.w900,
@@ -1071,7 +1126,7 @@ class _SectionHeader extends StatelessWidget {
                 const SizedBox(height: 6),
                 Text(
                   subtitle!,
-                  style: GoogleFonts.manrope(
+                  style: GoogleFonts.inter(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.charcoalMuted,
@@ -1089,7 +1144,7 @@ class _SectionHeader extends StatelessWidget {
             icon: const Icon(Icons.arrow_forward_rounded),
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.primary,
-              textStyle: GoogleFonts.manrope(
+              textStyle: GoogleFonts.inter(
                 fontSize: 14,
                 fontWeight: FontWeight.w900,
               ),
@@ -1197,7 +1252,7 @@ class _FeatureCard extends StatelessWidget {
               title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 14,
                 height: 1.18,
                 fontWeight: FontWeight.w900,
@@ -1209,7 +1264,7 @@ class _FeatureCard extends StatelessWidget {
               subtitle,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                 fontSize: 10,
                 height: 1.2,
                 fontWeight: FontWeight.w600,
@@ -1299,7 +1354,7 @@ class _HostPropertyCard extends StatelessWidget {
                   ),
                   child: Text(
                     property.status.replaceAll('_', ' ').toUpperCase(),
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                       fontSize: 11,
                       fontWeight: FontWeight.w900,
                       color: statusColor,
@@ -1317,7 +1372,7 @@ class _HostPropertyCard extends StatelessWidget {
                 property.title,
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                   fontSize: 18,
                   height: 1.15,
                   fontWeight: FontWeight.w900,
@@ -1387,7 +1442,7 @@ class _HostPropertyCard extends StatelessWidget {
                         minimumSize: const Size(double.infinity, 46),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
-                        textStyle: GoogleFonts.manrope(
+                        textStyle: GoogleFonts.inter(
                             fontWeight: FontWeight.w900, fontSize: 12),
                       ),
                     ),
@@ -1408,7 +1463,7 @@ class _HostPropertyCard extends StatelessWidget {
                         minimumSize: const Size(double.infinity, 46),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14)),
-                        textStyle: GoogleFonts.manrope(
+                        textStyle: GoogleFonts.inter(
                             fontWeight: FontWeight.w900, fontSize: 12),
                       ),
                     ),
@@ -1440,7 +1495,7 @@ class _MetaLine extends StatelessWidget {
             text,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.manrope(
+            style: GoogleFonts.inter(
               fontSize: 12,
               fontWeight: FontWeight.w600,
               color: AppTheme.charcoalMuted,
@@ -1473,7 +1528,7 @@ class _PropertyMetric extends StatelessWidget {
       children: [
         Text(
           label,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 12,
             fontWeight: FontWeight.w700,
             color: AppTheme.charcoalMuted,
@@ -1484,7 +1539,7 @@ class _PropertyMetric extends StatelessWidget {
           value,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             fontSize: 14,
             fontWeight: FontWeight.w900,
             color: valueColor ?? const Color(0xFF07142F),
@@ -1542,7 +1597,7 @@ class _HostTrustStrip extends StatelessWidget {
                           item.$2.replaceAll('\n', ' '),
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 11,
                             height: 1.1,
                             fontWeight: FontWeight.w900,
@@ -1554,7 +1609,7 @@ class _HostTrustStrip extends StatelessWidget {
                           item.$3,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                             fontSize: 9,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.charcoalMuted,
@@ -1812,7 +1867,7 @@ class _DocumentVerificationSheetState
                                     color: AppTheme.charcoalLight,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w900,
-                                    letterSpacing: 0.9,
+                                    letterSpacing: 0,
                                   ),
                                 ),
                               ],
@@ -1884,7 +1939,7 @@ class _DocumentVerificationSheetState
                                       color: AppTheme.charcoal,
                                       fontSize: 11,
                                       fontWeight: FontWeight.w900,
-                                      letterSpacing: 0.7,
+                                      letterSpacing: 0,
                                     ),
                                   ),
                                 ),
@@ -1967,7 +2022,7 @@ class _DocumentVerificationSheetState
                                   color: AppTheme.charcoalLight,
                                   fontSize: 12,
                                   fontWeight: FontWeight.w900,
-                                  letterSpacing: 0.8,
+                                  letterSpacing: 0,
                                 ),
                               ),
                             ),
@@ -2078,7 +2133,7 @@ class _DocumentVerificationSheetState
                   fontSize: 13,
                   height: 1.35,
                   fontWeight: FontWeight.w900,
-                  letterSpacing: 2,
+                  letterSpacing: 0,
                 ),
               ),
               const SizedBox(height: 14),
@@ -2588,7 +2643,7 @@ class _DocumentVerificationSheetState
                                     style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.bold,
-                                        letterSpacing: 0.5),
+                                        letterSpacing: 0),
                                   ),
                                 ],
                               ),

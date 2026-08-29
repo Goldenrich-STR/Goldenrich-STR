@@ -797,6 +797,12 @@ async def get_landing_page_content(
             organized_content[section] = item["content_data"]
         if synced_legal_terms:
             organized_content["legal_terms"] = synced_legal_terms.get("content_data") or organized_content.get("legal_terms", {})
+
+        total_hosts = await db.users.count_documents({"role": "host"})
+        organized_content["stats"] = {
+            **(organized_content.get("stats") or {}),
+            "host_count": total_hosts,
+        }
         
         # Admin cover changes should be visible immediately on the landing page.
         response.headers["Cache-Control"] = "no-store"

@@ -15,10 +15,12 @@ class AppTheme {
   static const Color terracotta = Color(0xFFC56A46);
   static const Color sage = Color(0xFF6F7F66);
   static const Color sand = Color(0xFFF3ECE3);
-  
+
   static ThemeData get lightTheme {
+    final baseTextTheme = GoogleFonts.interTextTheme();
     return ThemeData(
       useMaterial3: true,
+      fontFamily: GoogleFonts.inter().fontFamily,
       colorScheme: const ColorScheme.light(
         primary: primary,
         secondary: secondary,
@@ -29,34 +31,96 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: background,
       dividerColor: border,
-      textTheme: GoogleFonts.manropeTextTheme().copyWith(
-        displayLarge: GoogleFonts.manrope(
-          fontSize: 34,
-          fontWeight: FontWeight.w800,
+      textTheme: baseTextTheme.copyWith(
+        displayLarge: GoogleFonts.inter(
+          fontSize: 28,
+          fontWeight: FontWeight.w700,
           color: charcoal,
-          letterSpacing: -1.0,
+          letterSpacing: 0,
         ),
-        displayMedium: GoogleFonts.manrope(
+        displayMedium: GoogleFonts.inter(
           fontSize: 24,
           fontWeight: FontWeight.w700,
           color: charcoal,
-          letterSpacing: -0.4,
+          letterSpacing: 0,
         ),
-        bodyLarge: GoogleFonts.manrope(
-          fontSize: 16,
-          fontWeight: FontWeight.w500,
+        displaySmall: GoogleFonts.inter(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
           color: charcoal,
+          letterSpacing: 0,
         ),
-        bodyMedium: GoogleFonts.manrope(
+        headlineLarge: GoogleFonts.inter(
+          fontSize: 24,
+          fontWeight: FontWeight.w700,
+          color: charcoal,
+          letterSpacing: 0,
+        ),
+        headlineMedium: GoogleFonts.inter(
+          fontSize: 22,
+          fontWeight: FontWeight.w700,
+          color: charcoal,
+          letterSpacing: 0,
+        ),
+        headlineSmall: GoogleFonts.inter(
+          fontSize: 20,
+          fontWeight: FontWeight.w700,
+          color: charcoal,
+          letterSpacing: 0,
+        ),
+        titleLarge: GoogleFonts.inter(
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+          color: charcoal,
+          letterSpacing: 0,
+        ),
+        titleMedium: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: charcoal,
+          letterSpacing: 0,
+        ),
+        titleSmall: GoogleFonts.inter(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: charcoal,
+          letterSpacing: 0,
+        ),
+        bodyLarge: GoogleFonts.inter(
+          fontSize: 16,
+          fontWeight: FontWeight.w400,
+          color: charcoal,
+          letterSpacing: 0,
+        ),
+        bodyMedium: GoogleFonts.inter(
           fontSize: 14,
           fontWeight: FontWeight.w400,
           color: charcoalLight,
+          letterSpacing: 0,
         ),
-        labelLarge: GoogleFonts.manrope(
+        bodySmall: GoogleFonts.inter(
           fontSize: 12,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w400,
+          color: charcoalMuted,
+          letterSpacing: 0,
+        ),
+        labelLarge: GoogleFonts.inter(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
           color: secondary,
-          letterSpacing: 1.8,
+          letterSpacing: 0,
+        ),
+        labelMedium: GoogleFonts.inter(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: secondary,
+          letterSpacing: 0,
+        ),
+        labelSmall: GoogleFonts.inter(
+          fontSize: 11,
+          fontWeight: FontWeight.w400,
+          color: charcoalMuted,
+          letterSpacing: 0,
         ),
       ),
       cardTheme: CardThemeData(
@@ -82,8 +146,14 @@ class AppTheme {
           borderRadius: BorderRadius.circular(18),
           borderSide: const BorderSide(color: primary, width: 1.5),
         ),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
-        hintStyle: GoogleFonts.manrope(color: charcoalMuted, fontSize: 14),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        hintStyle: GoogleFonts.inter(
+          color: charcoalMuted,
+          fontSize: 14,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0,
+        ),
       ),
       buttonTheme: const ButtonThemeData(
         buttonColor: primary,
@@ -98,10 +168,10 @@ class AppTheme {
             borderRadius: BorderRadius.circular(18),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          textStyle: GoogleFonts.manrope(
+          textStyle: GoogleFonts.inter(
             fontSize: 15,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0.1,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0,
           ),
         ),
       ),
@@ -113,9 +183,19 @@ class AppTheme {
             borderRadius: BorderRadius.circular(18),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          textStyle: GoogleFonts.manrope(
+          textStyle: GoogleFonts.inter(
             fontSize: 15,
-            fontWeight: FontWeight.w700,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          textStyle: GoogleFonts.inter(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0,
           ),
         ),
       ),

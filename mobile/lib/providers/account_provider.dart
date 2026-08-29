@@ -39,7 +39,8 @@ class AccountProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.get('/admin/account/transactions', queryParameters: params);
+      final response = await _apiService.dio
+          .get('/admin/account/transactions', queryParameters: params);
       if (response.statusCode == 200) {
         _transactions = response.data['results'] ?? response.data;
       }
@@ -55,7 +56,8 @@ class AccountProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.get('/admin/account/payouts', queryParameters: params);
+      final response = await _apiService.dio
+          .get('/admin/account/payouts', queryParameters: params);
       if (response.statusCode == 200) {
         _payouts = response.data['results'] ?? response.data;
       }
@@ -71,7 +73,8 @@ class AccountProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/admin/account/payouts/$payoutId/process');
+      final response = await _apiService.dio
+          .post('/admin/account/payouts/$payoutId/process');
       if (response.statusCode == 200) {
         await getPayouts({});
         return true;
@@ -85,7 +88,8 @@ class AccountProvider with ChangeNotifier {
     }
   }
 
-  Future<bool> initiateRefund(String bookingId, double amount, String reason) async {
+  Future<bool> initiateRefund(
+      String bookingId, double amount, String reason) async {
     _isLoading = true;
     notifyListeners();
     try {
@@ -125,7 +129,8 @@ class AccountProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.put('/host/payout-preference', data: data);
+      final response =
+          await _apiService.dio.put('/host/payout-preference', data: data);
       if (response.statusCode == 200) {
         _payoutPreference = response.data['payout_preference'] ?? {};
         return true;

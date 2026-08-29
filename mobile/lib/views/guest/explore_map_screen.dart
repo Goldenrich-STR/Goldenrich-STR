@@ -288,14 +288,14 @@ class _TopMapBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text('Explore nearby',
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 16,
                         fontWeight: FontWeight.w900,
                         color: const Color(0xFF07142F))),
                 Text('Stays, workspaces and venues around you',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.manrope(
+                    style: GoogleFonts.inter(
                         fontSize: 11, color: AppTheme.charcoalLight)),
               ],
             ),
@@ -335,7 +335,7 @@ class _RadiusSelector extends StatelessWidget {
             onSelected: (_) => onChanged(value),
             selectedColor: AppTheme.primary,
             backgroundColor: Colors.white,
-            labelStyle: GoogleFonts.manrope(
+            labelStyle: GoogleFonts.inter(
               color: selected ? Colors.white : const Color(0xFF07142F),
               fontWeight: FontWeight.w900,
               fontSize: 12,
@@ -426,17 +426,17 @@ class _BottomPanel extends StatelessWidget {
                                 Text(property.propertyName,
                                     maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                         fontWeight: FontWeight.w900,
                                         color: const Color(0xFF07142F))),
                                 const SizedBox(height: 4),
                                 Text('${property.distanceKm} KM away',
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                         fontSize: 11,
                                         color: AppTheme.charcoalLight)),
                                 const SizedBox(height: 4),
                                 Text(CurrencyFormatter.format(property.price),
-                                    style: GoogleFonts.manrope(
+                                    style: GoogleFonts.inter(
                                         fontSize: 12,
                                         fontWeight: FontWeight.w900,
                                         color: const Color(0xFF07142F))),
@@ -503,7 +503,7 @@ class _PreviewCard extends StatelessWidget {
                   Text(property.propertyName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF07142F))),
@@ -511,7 +511,7 @@ class _PreviewCard extends StatelessWidget {
                   Text('${property.city}, ${property.state}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 12, color: AppTheme.charcoalLight)),
                   const SizedBox(height: 8),
                   Row(
@@ -521,17 +521,17 @@ class _PreviewCard extends StatelessWidget {
                       const SizedBox(width: 4),
                       Text(property.rating.toStringAsFixed(1),
                           style:
-                              GoogleFonts.manrope(fontWeight: FontWeight.w900)),
+                              GoogleFonts.inter(fontWeight: FontWeight.w900)),
                       const SizedBox(width: 8),
                       Text('${property.distanceKm} KM',
-                          style: GoogleFonts.manrope(
+                          style: GoogleFonts.inter(
                               fontSize: 12, color: AppTheme.charcoalLight)),
                     ],
                   ),
                   const SizedBox(height: 8),
                   Text(
                       '${CurrencyFormatter.format(property.price)} / ${property.pricingUnitLabel}',
-                      style: GoogleFonts.manrope(
+                      style: GoogleFonts.inter(
                           fontSize: 15,
                           fontWeight: FontWeight.w900,
                           color: const Color(0xFF07142F))),
@@ -578,7 +578,7 @@ class _PriceMarker extends StatelessWidget {
         fit: BoxFit.scaleDown,
         child: Text(
           CurrencyFormatter.format(property.price),
-          style: GoogleFonts.manrope(
+          style: GoogleFonts.inter(
             color: selected ? Colors.white : const Color(0xFF07142F),
             fontWeight: FontWeight.w900,
             fontSize: 13,
@@ -659,7 +659,7 @@ class _PermissionOverlay extends StatelessWidget {
             const SizedBox(height: 18),
             Text('Explore places near you',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.manrope(
+                style: GoogleFonts.inter(
                     fontSize: 22,
                     fontWeight: FontWeight.w900,
                     color: const Color(0xFF07142F))),
@@ -668,7 +668,7 @@ class _PermissionOverlay extends StatelessWidget {
               provider.message ??
                   'Enable location to discover stays, workspaces and event venues around you.',
               textAlign: TextAlign.center,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   fontSize: 14, color: AppTheme.charcoalLight, height: 1.5),
             ),
             const SizedBox(height: 20),
@@ -690,7 +690,7 @@ class _PermissionOverlay extends StatelessWidget {
                 deniedForever || serviceDisabled
                     ? 'Open Settings'
                     : 'Enable Location',
-                style: GoogleFonts.manrope(fontWeight: FontWeight.w900),
+                style: GoogleFonts.inter(fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -720,7 +720,7 @@ class _EmptyState extends StatelessWidget {
           Expanded(
             child: Text(
               provider.message ?? 'No properties found nearby.',
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   fontWeight: FontWeight.w700, color: AppTheme.charcoalLight),
             ),
           ),
@@ -766,7 +766,7 @@ class _LoadingBanner extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Text(text,
-              style: GoogleFonts.manrope(
+              style: GoogleFonts.inter(
                   fontWeight: FontWeight.w800, color: const Color(0xFF07142F))),
         ],
       ),

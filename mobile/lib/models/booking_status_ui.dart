@@ -51,8 +51,7 @@ class BookingStatusMapper {
     String? checkOutDate,
   }) {
     final code = _normalize(lifecycleStatus, bookingStatus, paymentStatus);
-    final derivedCode = _deriveDateState(code, checkInDate, checkOutDate);
-    return _metadata[derivedCode] ?? _metadata['UNKNOWN']!;
+    return _metadata[code] ?? _metadata['UNKNOWN']!;
   }
 
   static String _normalize(
@@ -79,30 +78,14 @@ class BookingStatusMapper {
     }
     if (booking == 'confirmed' || booking == 'paid') return 'CONFIRMED';
     if (booking == 'awaiting_host_approval') {
-      return 'AWAITING_HOST_APPROVAL';
+      return payment == 'paid' || payment == 'partially_paid'
+          ? 'CONFIRMED'
+          : 'PENDING_PAYMENT';
     }
     if (booking == 'completed') return 'COMPLETED';
     if (booking == 'cancelled' || booking == 'canceled') return 'CANCELLED';
     if (booking == 'rejected') return 'REJECTED';
     return 'UNKNOWN';
-  }
-
-  static String _deriveDateState(
-    String code,
-    String? checkInDate,
-    String? checkOutDate,
-  ) {
-    if (code != 'CONFIRMED') return code;
-    final now = DateTime.now();
-    try {
-      final checkIn = DateTime.parse(checkInDate ?? '');
-      final checkOut = DateTime.parse(checkOutDate ?? '');
-      if (now.isAfter(checkOut)) return 'COMPLETED';
-      if (!now.isBefore(checkIn)) return 'CHECKED_IN';
-      return 'UPCOMING';
-    } catch (_) {
-      return code;
-    }
   }
 
   static const Map<String, BookingStatusUi> _metadata = {
@@ -127,10 +110,10 @@ class BookingStatusMapper {
     'AWAITING_HOST_APPROVAL': BookingStatusUi(
       status: BookingLifecycleStatus.awaitingHostApproval,
       code: 'AWAITING_HOST_APPROVAL',
-      label: 'Awaiting Host Approval',
-      description: "We're waiting for the host to approve your booking.",
-      color: AppTheme.secondary,
-      icon: Icons.hourglass_top_outlined,
+      label: 'Confirmed',
+      description: 'Your booking is confirmed.',
+      color: Colors.green,
+      icon: Icons.verified_outlined,
     ),
     'CONFIRMED': BookingStatusUi(
       status: BookingLifecycleStatus.confirmed,
