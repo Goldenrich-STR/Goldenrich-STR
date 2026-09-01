@@ -186,6 +186,18 @@ class BookingRejectRequest(BaseModel):
     reason: Optional[str] = None
 
 
+class RemainingPaymentResponse(BaseModel):
+    booking_id: str
+    razorpay_order_id: str
+    razorpay_key_id: Optional[str] = None
+    amount: int
+    currency: str = "INR"
+    total_amount: float
+    paid_amount: float
+    remaining_amount: float
+    payment_percent: float
+
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -848,6 +860,25 @@ def _booking_payable_amount(booking_dict: dict) -> float:
     return float(booking_dict.get("total_amount") or 0)
 
 
+def _booking_payment_progress(booking_dict: dict) -> dict:
+    total = round(float(booking_dict.get("total_amount") or 0), 2)
+    paid = round(float(booking_dict.get("paid_amount") or 0), 2)
+    if paid <= 0:
+        payment_status = str(booking_dict.get("payment_status") or "").lower()
+        if payment_status == "partially_paid":
+            paid = round(float(booking_dict.get("advance_amount") or 0), 2)
+        elif payment_status in {"paid", "captured", "success", "completed"}:
+            paid = total
+    paid = max(0.0, min(total, paid))
+    remaining = round(max(0.0, total - paid), 2)
+    percent = round((paid / total) * 100, 2) if total > 0 else 0.0
+    return {
+        "paid_amount": paid,
+        "remaining_amount": remaining,
+        "payment_percent": percent,
+    }
+
+
 async def _upsert_booking_calendar_block(db: AsyncIOMotorDatabase, booking_dict: dict) -> None:
     """Ensure a paid/confirmed booking owns a calendar block for its date range."""
     booking_id = booking_dict.get("booking_id")
@@ -957,6 +988,7 @@ async def _booking_payment_status_payload(db: AsyncIOMotorDatabase, booking_dict
         "total_amount": booking_dict.get("total_amount"),
         "advance_amount": booking_dict.get("advance_amount"),
         "payment_type": booking_dict.get("payment_type", "full"),
+        **_booking_payment_progress(booking_dict),
     }
 
 
@@ -1045,6 +1077,113 @@ async def retry_booking_payment(
     }
 
 
+@router.post("/{booking_id}/remaining-payment", response_model=RemainingPaymentResponse)
+async def create_remaining_payment_order(
+    booking_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Create or reuse a Razorpay order for the unpaid balance on an advance booking."""
+    booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not booking_dict:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if booking_dict.get("guest_id") != current_user.get("user_id"):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+
+    payment_type = str(booking_dict.get("payment_type") or "full").lower()
+    payment_status = str(booking_dict.get("payment_status") or "").lower()
+    booking_status = str(booking_dict.get("booking_status") or "").lower()
+    if payment_type != "advance":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This booking was not created with advance payment")
+    if booking_status != BookingStatus.CONFIRMED.value:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Remaining payment is available only after booking confirmation")
+    if payment_status == "paid":
+        progress = _booking_payment_progress(booking_dict)
+        return RemainingPaymentResponse(
+            booking_id=booking_id,
+            razorpay_order_id=booking_dict.get("remaining_payment_order_id") or booking_dict.get("razorpay_order_id") or "",
+            razorpay_key_id=razorpay_service.key_id,
+            amount=0,
+            total_amount=float(booking_dict.get("total_amount") or 0),
+            paid_amount=progress["paid_amount"],
+            remaining_amount=0.0,
+            payment_percent=100.0,
+        )
+    if payment_status != "partially_paid":
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Advance payment has not been captured yet")
+
+    progress = _booking_payment_progress(booking_dict)
+    remaining_amount = progress["remaining_amount"]
+    if remaining_amount <= 0:
+        await db.bookings.update_one(
+            {"booking_id": booking_id},
+            {"$set": {"payment_status": "paid", "paid_amount": float(booking_dict.get("total_amount") or 0), "updated_at": datetime.now(timezone.utc)}},
+        )
+        return RemainingPaymentResponse(
+            booking_id=booking_id,
+            razorpay_order_id=booking_dict.get("remaining_payment_order_id") or "",
+            razorpay_key_id=razorpay_service.key_id,
+            amount=0,
+            total_amount=float(booking_dict.get("total_amount") or 0),
+            paid_amount=float(booking_dict.get("total_amount") or 0),
+            remaining_amount=0.0,
+            payment_percent=100.0,
+        )
+
+    order_id = booking_dict.get("remaining_payment_order_id")
+    order_amount = int(round(remaining_amount * 100))
+    if not order_id:
+        razorpay_result = razorpay_service.create_order(
+            amount=order_amount,
+            currency="INR",
+            receipt=f"{booking_id[:30]}_BAL",
+        )
+        if not razorpay_result.get("success"):
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create remaining payment order")
+        order_id = razorpay_result["order"]["id"]
+        await db.bookings.update_one(
+            {"booking_id": booking_id},
+            {"$set": {
+                "remaining_payment_order_id": order_id,
+                "remaining_payment_amount": remaining_amount,
+                "remaining_payment_status": "order_created",
+                "updated_at": datetime.now(timezone.utc),
+            }},
+        )
+
+    await _safe_payment_attempt_update(
+        db,
+        {"booking_id": booking_id, "razorpay_order_id": order_id},
+        {
+            "$set": {
+                "booking_id": booking_id,
+                "razorpay_order_id": order_id,
+                "amount": order_amount,
+                "currency": "INR",
+                "status": "REMAINING_ORDER_CREATED",
+                "updated_at": datetime.now(timezone.utc),
+            },
+            "$setOnInsert": {
+                "payment_attempt_id": f"remaining_pay_attempt_{booking_id}_{int(datetime.now(timezone.utc).timestamp())}",
+                "created_at": datetime.now(timezone.utc),
+            },
+        },
+        upsert=True,
+    )
+
+    return RemainingPaymentResponse(
+        booking_id=booking_id,
+        razorpay_order_id=order_id,
+        razorpay_key_id=razorpay_service.key_id,
+        amount=order_amount,
+        currency=booking_dict.get("currency") or "INR",
+        total_amount=float(booking_dict.get("total_amount") or 0),
+        paid_amount=progress["paid_amount"],
+        remaining_amount=remaining_amount,
+        payment_percent=progress["payment_percent"],
+    )
+
+
 @router.post("/confirm-payment")
 async def confirm_payment(
     payload: ConfirmPaymentRequest,
@@ -1075,7 +1214,9 @@ async def confirm_payment(
             )
 
         stored_order_id = booking_dict.get("razorpay_order_id")
-        if not stored_order_id or stored_order_id != razorpay_order_id:
+        remaining_order_id = booking_dict.get("remaining_payment_order_id")
+        is_remaining_payment = bool(remaining_order_id and remaining_order_id == razorpay_order_id)
+        if not is_remaining_payment and (not stored_order_id or stored_order_id != razorpay_order_id):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Payment order does not match this booking"
@@ -1086,18 +1227,46 @@ async def confirm_payment(
         if current_status == BookingStatus.AWAITING_HOST_APPROVAL.value:
             current_status = BookingStatus.SOFT_LOCK.value
         if current_status == BookingStatus.CONFIRMED.value:
+            if is_remaining_payment:
+                payment_status_current = str(booking_dict.get("payment_status") or "").lower()
+                if payment_status_current == "paid":
+                    return {
+                        "message": "Remaining payment already completed",
+                        "booking_id": booking_id,
+                        "booking_status": BookingStatus.CONFIRMED.value,
+                        "payment_status": "paid",
+                        "already_confirmed": True,
+                    }
+                if payment_status_current != "partially_paid":
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Remaining payment is not available for this booking",
+                    )
+            else:
+                if existing_payment_id == razorpay_payment_id:
+                    return {
+                        "message": "Booking already confirmed",
+                        "booking_id": booking_id,
+                        "already_confirmed": True,
+                    }
+                raise HTTPException(
+                    status_code=status.HTTP_409_CONFLICT,
+                    detail="Booking has already been confirmed with a different payment"
+                )
+
+        if is_remaining_payment and current_status != BookingStatus.CONFIRMED.value:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Remaining payment can only be confirmed for a confirmed advance booking",
+            )
+
+        if not is_remaining_payment and current_status != BookingStatus.SOFT_LOCK.value:
             if existing_payment_id == razorpay_payment_id:
                 return {
                     "message": "Booking already confirmed",
                     "booking_id": booking_id,
                     "already_confirmed": True,
                 }
-            raise HTTPException(
-                status_code=status.HTTP_409_CONFLICT,
-                detail="Booking has already been confirmed with a different payment"
-            )
-
-        if current_status != BookingStatus.SOFT_LOCK.value:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Payment can only be confirmed for an active booking hold"
@@ -1111,7 +1280,7 @@ async def confirm_payment(
                 soft_lock_expires_at = None
         if isinstance(soft_lock_expires_at, datetime) and soft_lock_expires_at.tzinfo is None:
             soft_lock_expires_at = soft_lock_expires_at.replace(tzinfo=timezone.utc)
-        if soft_lock_expires_at and soft_lock_expires_at <= datetime.now(timezone.utc):
+        if not is_remaining_payment and soft_lock_expires_at and soft_lock_expires_at <= datetime.now(timezone.utc):
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
                 detail="Booking payment hold has expired"
@@ -1119,7 +1288,10 @@ async def confirm_payment(
 
         reused_payment = await db.bookings.find_one(
             {
-                "razorpay_payment_id": razorpay_payment_id,
+                "$or": [
+                    {"razorpay_payment_id": razorpay_payment_id},
+                    {"remaining_razorpay_payment_id": razorpay_payment_id},
+                ],
                 "booking_id": {"$ne": booking_id},
             },
             {"_id": 0, "booking_id": 1},
@@ -1167,8 +1339,13 @@ async def confirm_payment(
         
         # Determine paid amount and payment status based on payment type
         payment_type = booking_dict.get("payment_type", "full")
-        paid_amount = booking_dict.get("advance_amount", 0.0) if payment_type == "advance" else booking_dict.get("total_amount", 0.0)
-        payment_status = "partially_paid" if payment_type == "advance" else "paid"
+        progress = _booking_payment_progress(booking_dict)
+        if is_remaining_payment:
+            paid_amount = progress["remaining_amount"]
+            payment_status = "paid"
+        else:
+            paid_amount = booking_dict.get("advance_amount", 0.0) if payment_type == "advance" else booking_dict.get("total_amount", 0.0)
+            payment_status = "partially_paid" if payment_type == "advance" else "paid"
         expected_amount_paise = int(round(float(paid_amount or 0) * 100))
 
         payment_lookup = razorpay_service.fetch_payment(razorpay_payment_id)
@@ -1203,25 +1380,45 @@ async def confirm_payment(
         booking_mode = INSTANT_BOOK_MODE
         now_utc = datetime.now(timezone.utc)
         next_status = BookingStatus.CONFIRMED.value
-        status_update = {
-            "booking_status": next_status,
-            "payment_status": payment_status,
-            "paid_amount": paid_amount,
-            "razorpay_payment_id": razorpay_payment_id,
-            "updated_at": now_utc,
-        }
-        status_update["confirmed_at"] = now_utc
-
-        # Update booking status according to the authoritative booking mode.
-        update_result = await db.bookings.update_one(
-            {
+        if is_remaining_payment:
+            total_amount = float(booking_dict.get("total_amount") or 0)
+            status_update = {
+                "booking_status": next_status,
+                "payment_status": "paid",
+                "paid_amount": total_amount,
+                "remaining_amount": 0.0,
+                "remaining_payment_status": "paid",
+                "remaining_razorpay_payment_id": razorpay_payment_id,
+                "remaining_paid_at": now_utc,
+                "updated_at": now_utc,
+            }
+            update_query = {
+                "booking_id": booking_id,
+                "remaining_payment_order_id": razorpay_order_id,
+                "booking_status": BookingStatus.CONFIRMED.value,
+                "payment_status": "partially_paid",
+            }
+        else:
+            status_update = {
+                "booking_status": next_status,
+                "payment_status": payment_status,
+                "paid_amount": paid_amount,
+                "remaining_amount": round(max(0.0, float(booking_dict.get("total_amount") or 0) - float(paid_amount or 0)), 2),
+                "razorpay_payment_id": razorpay_payment_id,
+                "updated_at": now_utc,
+                "confirmed_at": now_utc,
+            }
+            update_query = {
                 "booking_id": booking_id,
                 "razorpay_order_id": razorpay_order_id,
                 "booking_status": {"$in": [
                     BookingStatus.SOFT_LOCK.value,
                     BookingStatus.AWAITING_HOST_APPROVAL.value,
                 ]},
-            },
+            }
+
+        update_result = await db.bookings.update_one(
+            update_query,
             {"$set": status_update}
         )
         if update_result.modified_count == 0:
@@ -1255,7 +1452,7 @@ async def confirm_payment(
             await record_transaction(
                 db,
                 type=TransactionType.BOOKING_PAYMENT,
-                amount=int(round(paid_amount * 100)),
+                amount=expected_amount_paise,
                 razorpay_order_id=razorpay_order_id,
                 razorpay_payment_id=razorpay_payment_id,
                 user_id=booking_dict["guest_id"],
@@ -1266,7 +1463,7 @@ async def confirm_payment(
         except Exception as txn_err:
             logger.warning(f"Failed to record booking transaction: {txn_err}")
 
-        if next_status == BookingStatus.CONFIRMED.value:
+        if next_status == BookingStatus.CONFIRMED.value and not is_remaining_payment:
             try:
                 confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
                 if confirmed_booking:
@@ -1275,9 +1472,10 @@ async def confirm_payment(
                 logger.warning(f"Failed to schedule confirmed-booking notifications: {notify_err}")
 
         return {
-            "message": "Booking confirmed successfully",
+            "message": "Remaining payment completed successfully" if is_remaining_payment else "Booking confirmed successfully",
             "booking_id": booking_id,
             "booking_status": next_status,
+            "payment_status": status_update.get("payment_status"),
             "booking_mode": booking_mode,
             "approval_deadline_at": status_update.get("approval_deadline_at").isoformat() if status_update.get("approval_deadline_at") else None,
         }
@@ -1479,6 +1677,7 @@ def _canonical_booking_lifecycle(booking: dict) -> dict:
 
 def _attach_lifecycle_status(bookings: list) -> list:
     for booking in bookings:
+        booking.update(_booking_payment_progress(booking))
         booking.update(_canonical_booking_lifecycle(booking))
     return bookings
 
@@ -1692,6 +1891,7 @@ async def get_booking_details(
         if booking_dict.get("booking_status") == "cancelled":
             rfd = await db.refunds.find_one({"booking_id": booking_dict["booking_id"]}, {"_id": 0})
             booking_dict["refund"] = rfd
+        booking_dict.update(_booking_payment_progress(booking_dict))
         booking_dict.update(_canonical_booking_lifecycle(booking_dict))
 
         return booking_dict

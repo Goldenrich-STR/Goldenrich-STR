@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
+import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../models/booking_model.dart';
 import '../../providers/booking_provider.dart';
 import '../../providers/ai_call_provider.dart';
+import '../../providers/auth_provider.dart';
 import '../../theme.dart';
 import '../../utils/currency_formatter.dart';
 import '../shared/property_image.dart';
@@ -19,14 +21,170 @@ class GuestBookingsScreen extends StatefulWidget {
 
 class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
   String _activeTab = 'upcoming';
+  late final Razorpay _razorpay;
+  BookingModel? _remainingPaymentBooking;
+  String? _remainingPaymentOrderId;
+  bool _openingRemainingPayment = false;
 
   @override
   void initState() {
     super.initState();
+    _razorpay = Razorpay();
+    _razorpay.on(
+        Razorpay.EVENT_PAYMENT_SUCCESS, _handleRemainingPaymentSuccess);
+    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handleRemainingPaymentError);
+    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<BookingProvider>(context, listen: false).getGuestBookings();
       Provider.of<AICallProvider>(context, listen: false).getMyCalls();
     });
+  }
+
+  @override
+  void dispose() {
+    _razorpay.clear();
+    super.dispose();
+  }
+
+  bool _hasPendingBalance(BookingModel booking) {
+    return (booking.paymentType ?? '').toLowerCase() == 'advance' &&
+        (booking.paymentStatus ?? '').toLowerCase() == 'partially_paid' &&
+        booking.remainingAmount > 0;
+  }
+
+  double _displayPaidAmount(BookingModel booking) {
+    if (booking.paidAmount > 0) return booking.paidAmount;
+    if ((booking.paymentStatus ?? '').toLowerCase() == 'partially_paid') {
+      return booking.advanceAmount ?? 0;
+    }
+    return booking.totalAmount;
+  }
+
+  double _displayRemainingAmount(BookingModel booking) {
+    if (booking.remainingAmount > 0) return booking.remainingAmount;
+    final remaining = booking.totalAmount - _displayPaidAmount(booking);
+    return remaining > 0 ? remaining : 0;
+  }
+
+  double _displayPaymentPercent(BookingModel booking) {
+    if (booking.paymentPercent > 0) return booking.paymentPercent;
+    if (booking.totalAmount <= 0) return 0;
+    return (_displayPaidAmount(booking) / booking.totalAmount) * 100;
+  }
+
+  Future<void> _payRemaining(BookingModel booking) async {
+    if (_openingRemainingPayment) return;
+    setState(() => _openingRemainingPayment = true);
+    final provider = Provider.of<BookingProvider>(context, listen: false);
+    final order = await provider.createRemainingPaymentOrder(booking.bookingId);
+    if (!mounted) return;
+    setState(() => _openingRemainingPayment = false);
+    if (order == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content:
+              Text(provider.lastError ?? 'Unable to start remaining payment.'),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
+      return;
+    }
+    final amount = (order['amount'] as num?)?.toInt() ?? 0;
+    if (amount <= 0) {
+      await provider.getGuestBookings();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Remaining payment is already complete.')),
+      );
+      return;
+    }
+    final orderId = order['razorpay_order_id']?.toString() ?? '';
+    final keyId = order['razorpay_key_id']?.toString() ?? '';
+    if (orderId.isEmpty || keyId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Payment gateway is temporarily unavailable.')),
+      );
+      return;
+    }
+
+    _remainingPaymentBooking = booking;
+    _remainingPaymentOrderId = orderId;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    try {
+      _razorpay.open({
+        'key': keyId,
+        'amount': amount,
+        'currency': order['currency']?.toString() ?? booking.currency ?? 'INR',
+        'name': 'X-Space360',
+        'description':
+            '${booking.propertyTitle ?? 'Booking'} - Remaining payment',
+        'order_id': orderId,
+        'prefill': {
+          'name': auth.currentUser?.fullName ?? '',
+          'email': auth.currentUser?.email ?? booking.guestEmail ?? '',
+          'contact': auth.currentUser?.phone ?? booking.guestPhone ?? '',
+        },
+        'theme': {'color': '#C05C4F'},
+      });
+    } catch (_) {
+      _remainingPaymentBooking = null;
+      _remainingPaymentOrderId = null;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+            content: Text('Unable to open secure payment. Please try again.')),
+      );
+    }
+  }
+
+  Future<void> _handleRemainingPaymentSuccess(
+      PaymentSuccessResponse response) async {
+    final booking = _remainingPaymentBooking;
+    final orderId = response.orderId ?? _remainingPaymentOrderId;
+    if (booking == null || orderId == null || orderId.isEmpty) return;
+    final provider = Provider.of<BookingProvider>(context, listen: false);
+    final ok = await provider.confirmPayment({
+      'booking_id': booking.bookingId,
+      'razorpay_payment_id': response.paymentId,
+      'razorpay_order_id': orderId,
+      'razorpay_signature': response.signature,
+    });
+    _remainingPaymentBooking = null;
+    _remainingPaymentOrderId = null;
+    await provider.getGuestBookings();
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(ok
+            ? 'Remaining payment completed successfully.'
+            : provider.lastError ?? 'Payment verification is pending.'),
+        backgroundColor: ok ? Colors.green.shade700 : AppTheme.primary,
+      ),
+    );
+  }
+
+  void _handleRemainingPaymentError(PaymentFailureResponse response) {
+    _remainingPaymentBooking = null;
+    _remainingPaymentOrderId = null;
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(response.message?.isNotEmpty == true
+            ? response.message!
+            : 'Remaining payment was not completed.'),
+        backgroundColor: Colors.red.shade700,
+      ),
+    );
+  }
+
+  void _handleExternalWallet(ExternalWalletResponse response) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+            'External wallet selected: ${response.walletName ?? 'wallet'}'),
+      ),
+    );
   }
 
   Widget _buildTabButton(
@@ -418,6 +576,18 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                               ),
                             ],
 
+                            if (_hasPendingBalance(bk)) ...[
+                              const SizedBox(height: 12),
+                              _AdvancePaymentPanel(
+                                paidAmount: _displayPaidAmount(bk),
+                                remainingAmount: _displayRemainingAmount(bk),
+                                totalAmount: bk.totalAmount,
+                                paymentPercent: _displayPaymentPercent(bk),
+                                onPayRemaining: () => _payRemaining(bk),
+                                isLoading: _openingRemainingPayment,
+                              ),
+                            ],
+
                             const SizedBox(height: 12),
                             const Divider(color: AppTheme.border, height: 1),
                             const SizedBox(height: 12),
@@ -440,7 +610,8 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                     ),
                                     const SizedBox(height: 2),
                                     Text(
-                                      CurrencyFormatter.format(bk.totalAmount),
+                                      CurrencyFormatter.format(
+                                          _displayPaidAmount(bk)),
                                       style: GoogleFonts.inter(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w800,
@@ -587,6 +758,17 @@ class _BookingDetailsDialog extends StatelessWidget {
     final coupon = booking.couponCode?.trim();
     final hasDiscount = booking.discountAmount > 0;
     final screen = MediaQuery.sizeOf(context);
+    final paidAmount = booking.paidAmount > 0
+        ? booking.paidAmount
+        : ((booking.paymentStatus ?? '').toLowerCase() == 'partially_paid'
+            ? booking.advanceAmount ?? 0
+            : booking.totalAmount);
+    final remainingAmount = booking.remainingAmount > 0
+        ? booking.remainingAmount
+        : (booking.totalAmount - paidAmount).clamp(0, booking.totalAmount);
+    final paymentPercent = booking.totalAmount > 0
+        ? ((paidAmount / booking.totalAmount) * 100)
+        : 0;
 
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 24),
@@ -723,8 +905,29 @@ class _BookingDetailsDialog extends StatelessWidget {
                               valueColor: Colors.green.shade700,
                             ),
                           const Divider(height: 22, color: AppTheme.border),
+                          if ((booking.paymentType ?? '').toLowerCase() ==
+                              'advance') ...[
+                            _AmountRow(
+                              label: 'Paid (${paymentPercent.round()}%)',
+                              value: CurrencyFormatter.format(
+                                paidAmount,
+                                currencyCode: booking.currency,
+                              ),
+                            ),
+                            _AmountRow(
+                              label: 'Remaining',
+                              value: CurrencyFormatter.format(
+                                remainingAmount,
+                                currencyCode: booking.currency,
+                              ),
+                              valueColor: remainingAmount > 0
+                                  ? AppTheme.primary
+                                  : Colors.green.shade700,
+                            ),
+                            const Divider(height: 22, color: AppTheme.border),
+                          ],
                           _AmountRow(
-                            label: 'Total paid',
+                            label: 'Total booking cost',
                             value: CurrencyFormatter.format(
                               booking.totalAmount,
                               currencyCode: booking.currency,
@@ -776,6 +979,141 @@ class _BookingDetailsDialog extends StatelessWidget {
     final parsed = DateTime.tryParse(value);
     if (parsed == null) return value;
     return DateFormat('dd MMM yyyy').format(parsed);
+  }
+}
+
+class _AdvancePaymentPanel extends StatelessWidget {
+  final double paidAmount;
+  final double remainingAmount;
+  final double totalAmount;
+  final double paymentPercent;
+  final VoidCallback onPayRemaining;
+  final bool isLoading;
+
+  const _AdvancePaymentPanel({
+    required this.paidAmount,
+    required this.remainingAmount,
+    required this.totalAmount,
+    required this.paymentPercent,
+    required this.onPayRemaining,
+    required this.isLoading,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final percent = paymentPercent.clamp(0, 100).round();
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFAEF),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.13),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.payments_outlined,
+                    color: AppTheme.primary, size: 18),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      '$percent% advance paid',
+                      style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
+                        color: AppTheme.charcoal,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${CurrencyFormatter.format(paidAmount)} paid of ${CurrencyFormatter.format(totalAmount)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.charcoalMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              minHeight: 7,
+              value: percent / 100,
+              color: AppTheme.primary,
+              backgroundColor: AppTheme.primary.withValues(alpha: 0.12),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  'Remaining ${CurrencyFormatter.format(remainingAmount)}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inter(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.charcoal,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                height: 36,
+                child: ElevatedButton(
+                  onPressed: isLoading ? null : onPayRemaining,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF07142F),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Text(
+                          'Pay Remaining',
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

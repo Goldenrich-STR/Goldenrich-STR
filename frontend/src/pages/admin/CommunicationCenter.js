@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Bell, Headphones, Mail, MessageSquare, Search, Send, ShieldAlert, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { cmsAPI } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
+import { ErrorState, LoadingState, PageHeader, Pagination, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Communication Overview', 'completed'],

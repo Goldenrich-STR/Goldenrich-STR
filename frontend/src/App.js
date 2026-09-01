@@ -35,6 +35,7 @@ const FinanceSettlementsAdmin = lazy(() => import("./pages/admin/FinanceSettleme
 const SalesCrmAdmin = lazy(() => import("./pages/admin/SalesCrm"));
 const MarketingCmsAdmin = lazy(() => import("./pages/admin/MarketingCms"));
 const CommunicationCenterAdmin = lazy(() => import("./pages/admin/CommunicationCenter"));
+const ChannelManagerAdmin = lazy(() => import("./pages/admin/ChannelManager"));
 const SupportTicketManagementAdmin = lazy(() => import("./pages/admin/SupportTicketManagement"));
 const PlatformSettingsAdmin = lazy(() => import("./pages/admin/PlatformSettings"));
 const ReportsAnalyticsAdmin = lazy(() => import("./pages/admin/ReportsAnalytics"));
@@ -372,6 +373,7 @@ function AppRoutes() {
           <Route path="crm" element={<SalesCrmAdmin />} />
           <Route path="cms" element={<MarketingCmsAdmin />} />
           <Route path="communication" element={<CommunicationCenterAdmin />} />
+          <Route path="channel-manager" element={<ChannelManagerAdmin />} />
           <Route path="support" element={<SupportTicketManagementAdmin />} />
           <Route path="settings" element={<PlatformSettingsAdmin />} />
           <Route path="approvals" element={<ApprovalCenterAdmin />} />
