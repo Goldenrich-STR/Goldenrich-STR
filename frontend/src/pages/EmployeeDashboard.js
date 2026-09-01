@@ -68,7 +68,7 @@ const EmployeeDashboard = () => {
     }
   };
 
-  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const isBranchManager = (stats?.scope?.type === 'branch_manager')
     || (user?.admin_role_key === 'branch_manager')
     || String(user?.designation || '').toLowerCase().includes('branch manager');
@@ -1285,7 +1285,7 @@ const BrokersSection = () => {
   const [loadingProperties, setLoadingProperties] = useState(false);
   const [brokerPortfolioSummary, setBrokerPortfolioSummary] = useState({});
 
-  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const formatDateTime = (value) => value ? new Date(value).toLocaleString('en-IN', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
   }) : 'No activity';
@@ -1880,7 +1880,7 @@ const RMHostsSection = () => {
     }
   };
 
-  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
 
   const openHostDetails = async (host, focus = 'properties') => {
@@ -2213,7 +2213,7 @@ const RMPropertiesSection = () => {
     }
   };
 
-  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
 
   const openPropertyDetails = async (property) => {
@@ -2564,7 +2564,7 @@ const RMBookingsSection = () => {
     }
   };
 
-  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
 
   const openBookingDetails = async (booking) => {
@@ -3156,8 +3156,8 @@ const ReportsSection = () => {
                     ['Hosts', reportData.summary.hosts || 0],
                     ['Live Properties', reportData.summary.live_properties || 0],
                     ['Bookings', reportData.summary.bookings || 0],
-                    ['Revenue', `Rs. ${Number(reportData.summary.revenue || 0).toLocaleString('en-IN')}`],
-                    ['Commission', `Rs. ${Number(reportData.summary.commission || 0).toLocaleString('en-IN')}`],
+                    ['Revenue', `Rs. ${Math.round(Number(reportData.summary.revenue || 0)).toLocaleString('en-IN')}`],
+                    ['Commission', `Rs. ${Math.round(Number(reportData.summary.commission || 0)).toLocaleString('en-IN')}`],
                     ['SLA Breaches', reportData.summary.sla_breaches || 0],
                   ].map(([label, value]) => (
                     <div key={label} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 shadow-sm">
@@ -3214,8 +3214,8 @@ const ReportsSection = () => {
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.properties}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-sage-dark">{row.live_properties}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.bookings}</td>
-                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
-                                <td className="px-5 py-4 text-sm font-bold text-charcoal">Rs. {Number(row.commission || 0).toLocaleString('en-IN')}</td>
+                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Math.round(Number(row.revenue || 0)).toLocaleString('en-IN')}</td>
+                                <td className="px-5 py-4 text-sm font-bold text-charcoal">Rs. {Math.round(Number(row.commission || 0)).toLocaleString('en-IN')}</td>
                               </>
                             )}
                             {activeTable === 'hosts' && (
@@ -3225,7 +3225,7 @@ const ReportsSection = () => {
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.properties}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-sage-dark">{row.live_properties}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.bookings}</td>
-                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
+                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Math.round(Number(row.revenue || 0)).toLocaleString('en-IN')}</td>
                               </>
                             )}
                             {activeTable === 'properties' && (
@@ -3236,7 +3236,7 @@ const ReportsSection = () => {
                                 <td className="px-5 py-4 text-xs font-bold text-charcoal-muted">{row.broker_id || 'N/A'}</td>
                                 <td className="px-5 py-4 text-xs font-bold text-charcoal-muted">{row.host_id || 'N/A'}</td>
                                 <td className="px-5 py-4 text-sm font-bold text-charcoal">{row.bookings}</td>
-                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Number(row.revenue || 0).toLocaleString('en-IN')}</td>
+                                <td className="px-5 py-4 text-sm font-bold text-slate-800">Rs. {Math.round(Number(row.revenue || 0)).toLocaleString('en-IN')}</td>
                               </>
                             )}
                           </tr>

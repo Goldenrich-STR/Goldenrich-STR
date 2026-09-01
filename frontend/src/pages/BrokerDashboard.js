@@ -45,15 +45,19 @@ const applySettlementDecisions = (rows = [], role = 'broker') => {
   });
 };
 const commissionSummaryFromRows = (rows = []) => rows.reduce((acc, row) => {
+  const gross = Number(row.commission_amount || row.gross_amount || 0);
+  const tds = Number(row.tds_amount || 0);
   const net = Number(row.net_amount || row.commission_amount || 0);
   const status = String(row.payment_status || row.status || 'pending').toLowerCase();
-  acc.total_earned += net;
+  acc.gross_commission += gross;
+  acc.tds_total += tds;
   acc.net_total += net;
   if (['approved', 'processing'].includes(status)) acc.approved += net;
   if (['paid', 'processed', 'success', 'completed'].includes(status)) acc.paid += net;
   if (!['approved', 'processing', 'paid', 'processed', 'success', 'completed', 'rejected', 'failed', 'hold', 'cancelled'].includes(status)) acc.pending += net;
+  acc.total_earned = acc.net_total;
   return acc;
-}, { total_earned: 0, net_total: 0, approved: 0, paid: 0, pending: 0 });
+}, { gross_commission: 0, tds_total: 0, total_earned: 0, net_total: 0, approved: 0, paid: 0, pending: 0 });
 
 const BrokerModulePlaceholder = ({ title, description, checkpoints }) => (
   <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium animate-slide-up">
@@ -141,11 +145,11 @@ const BrokerDashboard = () => {
     },
     { 
       label: 'Total Commission', 
-      value: `₹${(stats.commission.total / 100).toLocaleString('en-IN')}`, 
+      value: `₹${Math.round(Number(stats.commission.total || 0) / 100).toLocaleString('en-IN')}`, 
       icon: IndianRupee, 
       iconClassName: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200',
       subtextClassName: 'border border-slate-200 bg-slate-100 text-slate-700',
-      subtext: `₹${(stats.commission.paid / 100).toLocaleString('en-IN')} Paid`
+      subtext: `₹${Math.round(Number(stats.commission.paid || 0) / 100).toLocaleString('en-IN')} Paid`
     },
   ] : [];
 
@@ -475,7 +479,7 @@ const MyOwnersSection = () => {
   const [selectedOwnerKyc, setSelectedOwnerKyc] = useState(null);
   const [selectedOwnerDetails, setSelectedOwnerDetails] = useState(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 
   useEffect(() => {
     fetchOwners();
@@ -2072,7 +2076,7 @@ const ReviewVerificationModal = ({ task, onClose, onReviewed }) => {
               <div>
                 <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Price</p>
                 <p className="font-bold text-charcoal">
-                  {propertyDetails.price_per_night !== undefined ? `Rs. ${Number(propertyDetails.price_per_night || 0).toLocaleString('en-IN')}` : 'N/A'}
+                  {propertyDetails.price_per_night !== undefined ? `Rs. ${Math.round(Number(propertyDetails.price_per_night || 0)).toLocaleString('en-IN')}` : 'N/A'}
                 </p>
               </div>
               <div>
@@ -2854,7 +2858,7 @@ const BookingsReportsSection = () => {
     }
   };
 
-  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
 
   return (
@@ -3101,7 +3105,7 @@ const BrokerAnalyticsSection = ({ mode }) => {
   const metrics = data?.metrics || {};
   const trends = data?.trends || {};
   const audit = data?.audit || {};
-  const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+  const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
 
   if (loading) {
@@ -3553,6 +3557,37 @@ const CommissionsSection = () => {
   };
 
   const money = (value) => `Rs. ${Math.round(Number(value || 0) / 100).toLocaleString('en-IN')}`;
+  const canOpenCommissionInvoice = (commission) => (
+    ['approved', 'paid', 'processed', 'success', 'completed'].includes(String(commission?.payment_status || '').toLowerCase())
+  );
+  const openCommissionInvoice = (commission) => {
+    openBrokerSettlementInvoice({
+      ...commission,
+      broker: commission.broker || user || {},
+      settlement_id: commission.commission_id,
+      name: commission.broker_name || commission.name || user?.full_name || 'Broker',
+      code: commission.broker_code || commission.employee_code || commission.broker_id || user?.employee_code || user?.lg_code || '',
+      broker_pan_number: commission.broker_pan_number || commission.pan_number || commission.pan || commission.broker?.pan_number || commission.broker?.pan || user?.pan_number || user?.pan,
+      gstin: commission.broker_gstin || commission.gstin || commission.gst_number || commission.broker?.gstin || commission.broker?.gst_number || user?.gstin || user?.gst_number || '',
+      email: commission.broker_email || commission.email || commission.broker?.email || user?.email || '',
+      phone: commission.broker_phone || commission.phone || commission.broker?.phone || commission.broker?.mobile || user?.phone || user?.mobile || '',
+      address: commission.broker_address || commission.address || commission.broker?.address || user?.address || '',
+      city: commission.broker_city || commission.city || commission.broker?.city || user?.city || '',
+      state: commission.broker_state || commission.state || commission.broker?.state || user?.state || 'Maharashtra',
+      pin_code: commission.broker_pin_code || commission.pin_code || commission.broker?.pin_code || commission.broker?.pincode || user?.pin_code || user?.pincode || '',
+      platform_fee_amount: Number(commission.platform_fee_amount || commission.commission_base_amount || commission.booking_amount || commission.base_amount || 0) / 100,
+      commission_percent: commission.commission_percentage || commission.commission_percent,
+      tds_rate_percent: commission.tds_rate_percent || commission.tds_percent || commission.tds_percentage || commission.tds_breakdown?.rate_percent,
+      commission_amount: Number(commission.commission_amount || 0) / 100,
+      gross_amount: Number(commission.commission_amount || 0) / 100,
+      commission_cgst: Number(commission.commission_cgst || commission.cgst || 0) / 100,
+      commission_sgst: Number(commission.commission_sgst || commission.sgst || 0) / 100,
+      commission_igst: Number(commission.commission_igst || commission.igst || 0) / 100,
+      tds_amount: Number(commission.tds_amount || 0) / 100,
+      net_amount: Number(commission.net_amount || commission.commission_amount || 0) / 100,
+      latest_at: commission.paid_at || commission.approved_at || commission.created_at,
+    });
+  };
   const itemsPerPage = 10;
   const totalPages = Math.max(1, Math.ceil(commissions.length / itemsPerPage));
   const visibleCommissions = commissions.slice((page - 1) * itemsPerPage, page * itemsPerPage);
@@ -3580,31 +3615,44 @@ const CommissionsSection = () => {
       </div>
 
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-5 mb-12">
+          <div className="bg-white rounded-3xl p-7 border border-gray-100 shadow-premium">
             <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6">
                <IndianRupee className="w-6 h-6 text-slate-700" />
             </div>
-            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">₹{(summary.total_earned / 100).toLocaleString('en-IN')}</p>
-            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Total Revenue</p>
+            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{money(summary.gross_commission)}</p>
+            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Gross Commission</p>
           </div>
-          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium">
+          <div className="bg-white rounded-3xl p-7 border border-gray-100 shadow-premium">
+            <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center mb-6">
+               <FileText className="w-6 h-6 text-red-600" />
+            </div>
+            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{money(summary.tds_total)}</p>
+            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Taxes / TDS</p>
+          </div>
+          <div className="bg-white rounded-3xl p-7 border border-gray-100 shadow-premium">
+            <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6">
+               <IndianRupee className="w-6 h-6 text-emerald-700" />
+            </div>
+            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{money(summary.net_total)}</p>
+            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Net Revenue</p>
+          </div>
+          <div className="bg-white rounded-3xl p-7 border border-gray-100 shadow-premium">
             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center mb-6">
                <CheckCircle className="w-6 h-6 text-blue-600" />
             </div>
-            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">₹{(summary.paid / 100).toLocaleString('en-IN')}</p>
-            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Settled</p>
+            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{money(summary.paid || 0)}</p>
+            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Settled Revenue</p>
           </div>
-          <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium">
+          <div className="bg-white rounded-3xl p-7 border border-gray-100 shadow-premium">
             <div className="w-12 h-12 bg-slate-100 rounded-2xl flex items-center justify-center mb-6">
                <Clock className="w-6 h-6 text-slate-700" />
             </div>
-            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">₹{(summary.pending / 100).toLocaleString('en-IN')}</p>
-            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Pending Settlement</p>
+            <p className="text-3xl font-bold tracking-tight text-charcoal tracking-tighter mb-1">{money(summary.pending || 0)}</p>
+            <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em]">Pending Revenue</p>
           </div>
         </div>
       )}
-
       <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-6 mb-8">
         <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4 mb-5">
           <div>
@@ -3686,13 +3734,13 @@ const CommissionsSection = () => {
                           <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Source: {commission.booking_source || 'Booking'}</p>
                        </td>
                        <td className="hidden">
-                          <p className="text-sm font-bold tracking-tight text-terracotta mb-0.5">₹{(commission.commission_amount / 100).toFixed(2)}</p>
-                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{commission.commission_percentage}% of ₹{(commission.booking_amount / 100).toFixed(2)}</p>
+                          <p className="text-sm font-bold tracking-tight text-terracotta mb-0.5">{money(commission.commission_amount)}</p>
+                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{commission.commission_percentage}% of {money(commission.booking_amount)}</p>
                        </td>
                        <td className="px-6 py-6 text-sm font-black text-charcoal">{commission.commission_percentage || commission.commission_percent || 0}%</td>
                        <td className="px-6 py-6">
                           <p className="text-sm font-black tracking-tight text-terracotta mb-0.5">{money(commission.commission_amount)}</p>
-                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">Base {money(commission.booking_amount || commission.base_amount)}</p>
+                          <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-widest">{isRm ? 'Platform Fee' : 'Base'} {money(isRm ? (commission.platform_fee_amount || commission.commission_base_amount || 0) : (commission.booking_amount || commission.base_amount))}</p>
                        </td>
                        <td className="px-6 py-6 text-sm font-black text-charcoal">{commission.tds_rate_percent || commission.tds_percent || commission.tds_percentage || 0}%</td>
                        <td className="px-6 py-6 text-sm font-bold text-red-700">{money(commission.tds_amount)}</td>
@@ -3703,29 +3751,22 @@ const CommissionsSection = () => {
                           }`}>
                              {commission.payment_status || 'pending'}
                           </span>
+                          {canOpenCommissionInvoice(commission) && (
+                            <button
+                              type="button"
+                              onClick={() => openCommissionInvoice(commission)}
+                              className="mt-2 inline-flex items-center gap-1 rounded-xl bg-slate-900 px-3 py-1.5 text-[9px] font-black uppercase tracking-widest text-white hover:bg-terracotta transition-colors"
+                            >
+                              <FileText className="h-3 w-3" />
+                              Invoice
+                            </button>
+                          )}
                        </td>
                        <td className="px-8 py-6">
                           <button
                             type="button"
-                            disabled={!['approved', 'paid', 'processed', 'success', 'completed'].includes(String(commission.payment_status || '').toLowerCase())}
-                            onClick={() => openBrokerSettlementInvoice({
-                              ...commission,
-                              settlement_id: commission.commission_id,
-                              name: commission.broker_name || commission.name || 'Broker',
-                              code: commission.broker_code || commission.employee_code || commission.broker_id || '',
-                              broker_pan_number: commission.broker_pan_number || commission.pan_number || commission.pan || commission.broker?.pan_number || commission.broker?.pan,
-                              platform_fee_amount: Number(commission.booking_amount || 0) / 100,
-                              commission_percent: commission.commission_percentage,
-                              tds_rate_percent: commission.tds_rate_percent || commission.tds_percent || commission.tds_percentage || commission.tds_breakdown?.rate_percent,
-                              commission_amount: Number(commission.commission_amount || 0) / 100,
-                              gross_amount: Number(commission.commission_amount || 0) / 100,
-                              commission_cgst: Number(commission.commission_cgst || commission.cgst || 0) / 100,
-                              commission_sgst: Number(commission.commission_sgst || commission.sgst || 0) / 100,
-                              commission_igst: Number(commission.commission_igst || commission.igst || 0) / 100,
-                              tds_amount: Number(commission.tds_amount || 0) / 100,
-                              net_amount: Number(commission.net_amount || commission.commission_amount || 0) / 100,
-                              latest_at: commission.paid_at || commission.created_at,
-                            })}
+                            disabled={!canOpenCommissionInvoice(commission)}
+                            onClick={() => openCommissionInvoice(commission)}
                             className="rounded-xl bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
                           >
                             Invoice
@@ -4011,7 +4052,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                   <div className="mt-4 space-y-4">
                     <div>
                       <p className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-white/60">Venue Rent</p>
-                      <p className="text-3xl font-bold tracking-tight text-terracotta tracking-tight">₹{property.price_per_night?.toLocaleString('en-IN')} <span className="text-xs text-white/60">/day</span></p>
+                      <p className="text-3xl font-bold tracking-tight text-terracotta tracking-tight">₹{Math.round(Number(property.price_per_night || 0)).toLocaleString('en-IN')} <span className="text-xs text-white/60">/day</span></p>
                     </div>
                     <div className="grid grid-cols-2 gap-4 pt-3 border-t border-white/10">
                       <div>
@@ -4028,7 +4069,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                   <div className="mt-4">
                     <p className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-white/60">Base Price</p>
                     <p className="text-3xl font-bold tracking-tight text-terracotta tracking-tight">
-                      ₹{property.price_per_night?.toLocaleString('en-IN')}{' '}
+                      ₹{Math.round(Number(property.price_per_night || 0)).toLocaleString('en-IN')}{' '}
                       <span className="text-xs text-white/60">
                         /{formatDisplayLabel(property.pricing_cycle || 'night')}
                       </span>

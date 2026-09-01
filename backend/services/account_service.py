@@ -91,7 +91,20 @@ def is_paid_booking(booking: dict) -> bool:
 
 
 def is_cancelled_booking(booking: dict) -> bool:
-    return str(booking.get("booking_status") or "").strip().lower() in CANCELLED_BOOKING_STATUSES
+    status_text = " ".join(str(value or "").strip().lower() for value in (
+        booking.get("status"),
+        booking.get("booking_status"),
+        booking.get("payment_status"),
+        booking.get("refund_status"),
+    ))
+    cancelled_at = _first_present(
+        booking.get("cancelled_at"),
+        booking.get("canceled_at"),
+        booking.get("cancellation_date"),
+        booking.get("refund_initiated_at"),
+        booking.get("refunded_at"),
+    )
+    return bool(cancelled_at) or any(word in status_text for word in ("cancelled", "canceled", "refund_initiated", "refunded"))
 
 
 def _parse_datetime(value) -> Optional[datetime]:
@@ -1029,6 +1042,13 @@ async def _payout_due_for_booking(
     return PayoutStatus.PENDING, due_at
 
 
+def _is_check_in_due_for_payout_ledger(booking: dict, today: date) -> bool:
+    check_in_date = _parse_booking_date(
+        booking.get("check_in_date") or booking.get("checkin_date") or booking.get("start_date")
+    )
+    return bool(check_in_date and check_in_date <= today)
+
+
 async def process_payout(
     db: AsyncIOMotorDatabase, payout_id: str, admin_id: str
 ) -> Payout:
@@ -1041,6 +1061,16 @@ async def process_payout(
     if payout.status == PayoutStatus.PAID:
         return payout
     if payout.status == PayoutStatus.PROCESSING:
+        return payout
+
+    booking = await db.bookings.find_one({"booking_id": payout.booking_id}, {"_id": 0})
+    if booking and is_cancelled_booking(booking):
+        payout.status = PayoutStatus.FAILED
+        payout.failure_reason = "Booking is cancelled/refunded; payout is not payable"
+        payout.updated_at = datetime.now(timezone.utc)
+        await db.payouts.update_one(
+            {"payout_id": payout_id}, {"$set": payout.model_dump()}
+        )
         return payout
 
     # Pull fresh host preference (in case host updated UPI/bank after eligibility)
@@ -1135,9 +1165,8 @@ async def process_payout(
 async def sweep_payout_eligibility(db: AsyncIOMotorDatabase) -> int:
     """Create/update booking payout ledger rows.
 
-    Paid bookings are visible immediately as PENDING. Rows become ELIGIBLE only
-    after checkout + the host payout cycle. This makes finance/TDS exposure
-    visible before the payout can actually be processed.
+    Paid bookings enter the ledger on check-in date if they have not been
+    cancelled. Rows become ELIGIBLE only after checkout + the host payout cycle.
     """
     today = date.today()
     count = 0
@@ -1147,6 +1176,16 @@ async def sweep_payout_eligibility(db: AsyncIOMotorDatabase) -> int:
         try:
             booking = await db.bookings.find_one({"booking_id": payout.get("booking_id")}, {"_id": 0})
             if not booking:
+                continue
+            if is_cancelled_booking(booking):
+                await db.payouts.update_one(
+                    {"payout_id": payout.get("payout_id")},
+                    {"$set": {
+                        "status": PayoutStatus.FAILED.value,
+                        "failure_reason": "Booking is cancelled/refunded; payout is not payable",
+                        "updated_at": datetime.now(timezone.utc),
+                    }},
+                )
                 continue
             status, eligible_at = await _payout_due_for_booking(db, booking, today)
             if status != PayoutStatus.ELIGIBLE:
@@ -1211,15 +1250,14 @@ async def sweep_payout_eligibility(db: AsyncIOMotorDatabase) -> int:
 
     cursor = db.bookings.find({
         "booking_id": {"$nin": existing_payout_ids},
-        "$or": [
-            {"booking_status": {"$in": ["confirmed", "completed"]}},
-            {"status": {"$in": ["confirmed", "completed"]}},
-        ],
+        "booking_status": "confirmed",
         "payment_status": {"$in": ["paid", "success", "captured", "completed"]},
     }, {"_id": 0})
 
     async for booking in cursor:
         try:
+            if is_cancelled_booking(booking) or not _is_check_in_due_for_payout_ledger(booking, today):
+                continue
             status, eligible_at = await _payout_due_for_booking(db, booking, today)
             await mark_booking_payout_eligible(db, booking, status=status, eligible_at=eligible_at)
             count += 1
