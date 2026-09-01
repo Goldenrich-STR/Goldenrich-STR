@@ -226,6 +226,7 @@ BOOKING_TRANSACTION_PROJECTION = {
     "paid_amount": 1,
     "platform_fee": 1,
     "service_fee": 1,
+    "customer_charge_breakdown": 1,
     "payment_gateway_charge": 1,
     "gateway_charge": 1,
     "convenience_fee": 1,
@@ -1626,6 +1627,54 @@ async def _lookup_finance_user_ref(db: AsyncIOMotorDatabase, reference):
     return {"user_id": reference, "uid": reference, "full_name": str(reference)}
 
 
+async def _lookup_broker_for_finance(db: AsyncIOMotorDatabase, reference):
+    reference = _first_present(reference)
+    if not reference:
+        return None
+    projection = {
+        "_id": 0,
+        "user_id": 1,
+        "uid": 1,
+        "full_name": 1,
+        "email": 1,
+        "phone": 1,
+        "mobile": 1,
+        "contact": 1,
+        "contact_number": 1,
+        "address": 1,
+        "city": 1,
+        "state": 1,
+        "pin_code": 1,
+        "pincode": 1,
+        "gstin": 1,
+        "gst_number": 1,
+        "gst_no": 1,
+        "gstin_number": 1,
+        "pan_number": 1,
+        "pan": 1,
+        "kyc": 1,
+        "role": 1,
+        "lg_code": 1,
+        "employee_code": 1,
+        "rm_id": 1,
+    }
+    broker = await db.users.find_one(
+        {
+            "role": "broker",
+            "$or": [
+                {"user_id": reference},
+                {"uid": reference},
+                {"lg_code": reference},
+                {"employee_code": reference},
+            ],
+        },
+        projection,
+    )
+    if broker:
+        return broker
+    return None
+
+
 def _finance_user_role(user: Optional[dict]) -> str:
     if not user:
         return ""
@@ -1661,6 +1710,21 @@ async def _lookup_finance_user_ref_for_role(db: AsyncIOMotorDatabase, reference,
         "full_name": 1,
         "email": 1,
         "phone": 1,
+        "mobile": 1,
+        "contact": 1,
+        "contact_number": 1,
+        "address": 1,
+        "city": 1,
+        "state": 1,
+        "pin_code": 1,
+        "pincode": 1,
+        "gstin": 1,
+        "gst_number": 1,
+        "gst_no": 1,
+        "gstin_number": 1,
+        "pan_number": 1,
+        "pan": 1,
+        "kyc": 1,
         "role": 1,
         "admin_role_key": 1,
         "lg_code": 1,
@@ -1681,6 +1745,11 @@ async def list_payouts(
     current_user: dict = Depends(require_admin),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
+    try:
+        await sweep_payout_eligibility(db)
+    except Exception as sweep_err:
+        logger.warning("Could not sweep payout eligibility before listing payouts: %s", sweep_err)
+
     query: dict = {}
     if status:
         query["status"] = status
@@ -1693,6 +1762,7 @@ async def list_payouts(
     )
     items = await cursor.to_list(length=limit)
     # enrich settlement ledger rows for finance review without changing payouts
+    visible_items = []
     for p in items:
         host = await db.users.find_one(
             {"user_id": p["host_id"]},
@@ -1704,7 +1774,9 @@ async def list_payouts(
                 "payout_preference": 1,
                 "broker_id": 1,
                 "assigned_broker_id": 1,
+                "managed_by_broker_id": 1,
                 "broker_code": 1,
+                "managed_by_broker_code": 1,
                 "lg_code": 1,
                 "rm_id": 1,
                 "employee_id": 1,
@@ -1720,12 +1792,18 @@ async def list_payouts(
                 "city": 1,
                 "broker_id": 1,
                 "assigned_broker_id": 1,
+                "managed_by_broker_id": 1,
                 "broker_code": 1,
+                "managed_by_broker_code": 1,
                 "lg_code": 1,
                 "rm_id": 1,
                 "employee_id": 1,
                 "assigned_employee_id": 1,
                 "employee_code": 1,
+                "platform_fee_context": 1,
+                "first_verification_role": 1,
+                "primary_verification_role": 1,
+                "verification_role": 1,
             },
         )
         booking = await db.bookings.find_one(
@@ -1733,6 +1811,25 @@ async def list_payouts(
             {
                 "_id": 0,
                 "booking_id": 1,
+                "booking_status": 1,
+                "status": 1,
+                "payment_status": 1,
+                "refund_status": 1,
+                "broker_id": 1,
+                "assigned_broker_id": 1,
+                "managed_by_broker_id": 1,
+                "broker_code": 1,
+                "broker_lg_code": 1,
+                "managed_by_broker_code": 1,
+                "rm_id": 1,
+                "employee_id": 1,
+                "employee_code": 1,
+                "rm_code": 1,
+                "cancelled_at": 1,
+                "canceled_at": 1,
+                "cancellation_date": 1,
+                "refund_initiated_at": 1,
+                "refunded_at": 1,
                 "check_in_date": 1,
                 "check_out_date": 1,
                 "created_at": 1,
@@ -1779,13 +1876,47 @@ async def list_payouts(
                 "extra_guest_fee_amount": 1,
                 "company_charge_amount": 1,
                 "service_fee_amount": 1,
+                "platform_fee_context": 1,
+                "first_verification_role": 1,
+                "primary_verification_role": 1,
+                "verification_role": 1,
             },
         )
+        booking_status_text = " ".join(str(value or "").strip().lower() for value in (
+            (booking or {}).get("status"),
+            (booking or {}).get("booking_status"),
+            (booking or {}).get("payment_status"),
+            (booking or {}).get("refund_status"),
+            p.get("status"),
+            p.get("booking_status"),
+            p.get("payment_status"),
+            p.get("refund_status"),
+        ))
+        cancelled_at = _first_present(
+            (booking or {}).get("cancelled_at"),
+            (booking or {}).get("canceled_at"),
+            (booking or {}).get("cancellation_date"),
+            (booking or {}).get("refund_initiated_at"),
+            (booking or {}).get("refunded_at"),
+            p.get("cancelled_at"),
+            p.get("canceled_at"),
+            p.get("cancellation_date"),
+            p.get("refund_initiated_at"),
+            p.get("refunded_at"),
+        )
+        if cancelled_at or any(word in booking_status_text for word in ("cancelled", "canceled", "refund_initiated", "refunded")):
+            continue
+
         p["host"] = host
         p["property"] = prop
         p["booking"] = booking
 
-        broker_ref = _first_present(
+        platform_fee_context = str(_first_present(
+            (booking or {}).get("platform_fee_context"),
+            (prop or {}).get("platform_fee_context"),
+            p.get("platform_fee_context"),
+        ) or "").strip().lower()
+        broker_like_ref = _first_present(
             (prop or {}).get("broker_id"),
             (prop or {}).get("assigned_broker_id"),
             (prop or {}).get("broker_code"),
@@ -1805,7 +1936,13 @@ async def list_payouts(
             (host or {}).get("assigned_employee_id"),
             (host or {}).get("employee_code"),
         )
-        p["broker"] = await _lookup_finance_user_ref(db, broker_ref)
+        if "rm" in platform_fee_context:
+            employee_ref = _first_present(employee_ref, broker_like_ref)
+            broker_ref = None
+        else:
+            broker_ref = broker_like_ref
+        p["platform_fee_context"] = platform_fee_context or p.get("platform_fee_context")
+        p["broker"] = await _lookup_broker_for_finance(db, broker_ref)
         p["employee"] = await _lookup_finance_user_ref(db, employee_ref)
         p["settlement_due_at"] = _first_present(p.get("eligible_at"), p.get("created_at"))
 
@@ -1931,8 +2068,10 @@ async def list_payouts(
             p["tds_fy_gross_after"] = _rupees_to_paise(tds_breakdown.get("projected_fy_gross"))
         p["tds_threshold_crossed"] = bool(p.get("tds_threshold_crossed") or tds_breakdown.get("threshold_crossed"))
         p["tds_financial_year"] = p.get("tds_financial_year") or tds_breakdown.get("financial_year")
+        visible_items.append(p)
 
-    total = await db.payouts.count_documents(query)
+    items = visible_items
+    total = len(items)
     return {"payouts": items, "total": total}
 
 
@@ -1964,6 +2103,27 @@ async def save_partner_settlement_decision(
         {"$set": doc, "$setOnInsert": {"created_at": now}},
         upsert=True,
     )
+    booking_id = str(payload.booking_id or "").strip()
+    if not booking_id:
+        suffix = settlement_id.rsplit("-", 1)[-1]
+        if suffix:
+            booking = await db.bookings.find_one(
+                {"booking_id": {"$regex": f"{re.escape(suffix)}$", "$options": "i"}},
+                {"_id": 0, "booking_id": 1},
+            )
+            booking_id = (booking or {}).get("booking_id") or ""
+    role = doc["role"]
+    if booking_id and role in {"broker", "employee", "branch_manager"}:
+        status_field = f"{role}_commission_status"
+        update_doc = {
+            status_field: status_value,
+            "updated_at": now,
+        }
+        await db.payouts.update_many({"booking_id": booking_id}, {"$set": update_doc})
+        await db.commissions.update_many(
+            {"booking_id": booking_id, "$or": [{"broker_id": payload.partner_id}, {"broker_code": payload.partner_code}]},
+            {"$set": {"payment_status": status_value, "updated_at": now}},
+        )
     return {"message": "Settlement decision saved", "decision": {**doc, "updated_at": now.isoformat()}}
 
 

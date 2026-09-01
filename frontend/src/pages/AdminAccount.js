@@ -1717,11 +1717,23 @@ const TransactionsTab = ({ hideFilters = false, limit = 10 }) => {
     const total = Number(breakdown.total_amount ?? ((txn.amount || 0) / 100));
     const sourceCharges = {
       ...(txn.booking?.extra_charges || {}),
+      ...(txn.booking?.customer_charge_breakdown || {}),
       ...(breakdown.extra_charges || {}),
     };
-    const chargeAmount = (...keys) => keys.reduce((sum, key) => (
-      sum + Number(sourceCharges[key] ?? breakdown[key] ?? txn.booking?.[key] ?? 0)
-    ), 0);
+    const firstAmount = (...values) => {
+      for (const value of values) {
+        const n = Number(value ?? 0);
+        if (Number.isFinite(n) && n > 0) return n;
+      }
+      return 0;
+    };
+    const chargeAmount = (...keys) => {
+      for (const key of keys) {
+        const amount = firstAmount(breakdown[key], sourceCharges[key], txn.booking?.[key]);
+        if (amount > 0) return amount;
+      }
+      return 0;
+    };
     const platformFee = chargeAmount('platform_fee', 'platform_charge', 'service_fee');
     const gatewayFee = chargeAmount('payment_gateway_charge', 'gateway_charge', 'payment_gateway_fee', 'gateway_fee');
     const convenienceFee = chargeAmount('convenience_fee', 'convenience_charge');

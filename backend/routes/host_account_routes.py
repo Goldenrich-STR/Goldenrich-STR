@@ -11,6 +11,7 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 from middleware.auth_middleware import get_current_user
 from models.transaction import HostPayoutPreferenceUpdate, PayoutDestinationType
 from models.user import UserRole
+from services.account_service import sweep_payout_eligibility
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/host", tags=["Host Payouts"])
@@ -38,6 +39,40 @@ def _sanitise(pref: dict) -> dict:
             f"{'*' * max(0, len(bn) - 4)}{bn[-4:]}" if len(bn) >= 4 else bn
         )
     return out
+
+
+def _first_present(*values):
+    for value in values:
+        if value not in (None, ""):
+            return value
+    return None
+
+
+def _is_cancelled_settlement(booking: Optional[dict], payout: dict) -> bool:
+    booking = booking or {}
+    status_text = " ".join(str(value or "").strip().lower() for value in (
+        booking.get("status"),
+        booking.get("booking_status"),
+        booking.get("payment_status"),
+        booking.get("refund_status"),
+        payout.get("status"),
+        payout.get("booking_status"),
+        payout.get("payment_status"),
+        payout.get("refund_status"),
+    ))
+    cancelled_at = _first_present(
+        booking.get("cancelled_at"),
+        booking.get("canceled_at"),
+        booking.get("cancellation_date"),
+        booking.get("refund_initiated_at"),
+        booking.get("refunded_at"),
+        payout.get("cancelled_at"),
+        payout.get("canceled_at"),
+        payout.get("cancellation_date"),
+        payout.get("refund_initiated_at"),
+        payout.get("refunded_at"),
+    )
+    return bool(cancelled_at) or any(word in status_text for word in ("cancelled", "canceled", "refund_initiated", "refunded"))
 
 
 @router.get("/payout-preference")
@@ -111,11 +146,17 @@ async def list_my_payouts(
     current_user: dict = Depends(require_host),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
+    try:
+        await sweep_payout_eligibility(db)
+    except Exception as sweep_err:
+        logger.warning("Could not sweep payout eligibility before listing host payouts: %s", sweep_err)
+
     query: dict = {"host_id": current_user["user_id"]}
     if payout_status:
         query["status"] = payout_status
     cursor = db.payouts.find(query, {"_id": 0}).sort("eligible_at", -1)
     items = await cursor.to_list(length=200)
+    visible_items = []
     for p in items:
         prop = await db.properties.find_one(
             {"property_id": p["property_id"]},
@@ -123,10 +164,28 @@ async def list_my_payouts(
         )
         booking = await db.bookings.find_one(
             {"booking_id": p["booking_id"]},
-            {"_id": 0, "check_in_date": 1, "check_out_date": 1, "total_amount": 1},
+            {
+                "_id": 0,
+                "check_in_date": 1,
+                "check_out_date": 1,
+                "total_amount": 1,
+                "booking_status": 1,
+                "status": 1,
+                "payment_status": 1,
+                "refund_status": 1,
+                "cancelled_at": 1,
+                "canceled_at": 1,
+                "cancellation_date": 1,
+                "refund_initiated_at": 1,
+                "refunded_at": 1,
+            },
         )
+        if _is_cancelled_settlement(booking, p):
+            continue
         p["property"] = prop
         p["booking"] = booking
+        visible_items.append(p)
+    items = visible_items
     return {"payouts": items, "total": len(items)}
 
 

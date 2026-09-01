@@ -140,6 +140,24 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
 
     def charge_amount(key: str, *aliases: str) -> Decimal:
         names = (key, *aliases)
+        nested_lists = (
+            pricing.get("charges"),
+            pricing.get("applied_charge_rows"),
+            booking.get("charges"),
+            booking.get("applied_charge_rows"),
+        )
+        for charge_list in nested_lists:
+            if not isinstance(charge_list, list):
+                continue
+            for charge in charge_list:
+                if not isinstance(charge, dict):
+                    continue
+                charge_key = str(_nested_first(charge, "key", "code", "name", "slug") or "").strip()
+                if charge_key in names:
+                    amount = _charge_map_amount(charge)
+                    if amount != Decimal("0.00"):
+                        return amount
+
         nested_maps = (
             pricing.get("extra_charges"),
             pricing.get("customer_charge_breakdown"),

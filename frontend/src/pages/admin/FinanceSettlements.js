@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards, Download, Users, CalendarCheck, IndianRupee, ReceiptText, Hourglass, ShieldCheck, Wallet, Ban } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice, Pagination } from './shared';
@@ -25,6 +26,7 @@ const workspaceTabs = [
 ];
 
 const paiseToMoney = (value) => formatMoney(Number(value || 0) / 100);
+const paiseToRoundedMoney = (value) => formatMoney(Math.round(Number(value || 0) / 100));
 const formatRoundedMoney = (value) => formatMoney(Math.round(Number(value || 0)));
 const entityName = (entity, fallback = 'NA') => entity?.full_name || entity?.name || entity?.user_id || entity?.uid || fallback;
 const entityCode = (entity) => entity?.employee_code || entity?.lg_code || entity?.uid || entity?.user_id || 'NA';
@@ -664,13 +666,19 @@ const settleStatus = (status) => {
 };
 
 const FinanceSettlements = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialTab = workspaceTabs.some(([id]) => id === searchParams.get('tab')) ? searchParams.get('tab') : 'overview';
   const [state, setState] = useState({ loading: true, error: '', overview: null, transactions: [], payouts: [], refunds: [], autoStatus: null, taxCommission: null, paymentConfig: null, tdsConfig: null });
   const [search, setSearch] = useState('');
-  const [active, setActive] = useState('overview');
+  const [active, setActive] = useState(initialTab);
   const [payoutStatus, setPayoutStatus] = useState('');
   const [refundStatus, setRefundStatus] = useState('');
   const [busy, setBusy] = useState('');
   const [policyPreview, setPolicyPreview] = useState(null);
+  const setActiveTab = (id) => {
+    setActive(id);
+    setSearchParams(id === 'overview' ? {} : { tab: id });
+  };
 
   const load = useCallback(async () => {
     try {
@@ -684,7 +692,10 @@ const FinanceSettlements = () => {
       const [overview, transactions, payouts, refunds, autoStatus, taxCommission, paymentConfig, tdsConfig] = await Promise.all([
         adminPhase1API.financeOverview(),
         adminPhase1API.financeTransactions(transactionParams),
-        adminPhase1API.financePayouts({ status: payoutStatus, limit: ['settlements', 'broker_employee_settlements'].includes(active) ? 500 : 8 }),
+        adminPhase1API.financePayouts({
+          status: active === 'broker_employee_settlements' ? '' : payoutStatus,
+          limit: ['settlements', 'broker_employee_settlements'].includes(active) ? 500 : 8,
+        }),
         adminPhase1API.financeRefunds({ status: refundStatus, limit: active === 'refunds' ? 100 : 8 }),
         adminPhase1API.financePayoutAutoStatus(),
         adminPhase1API.financeTaxCommission(),
@@ -934,7 +945,7 @@ const FinanceSettlements = () => {
         r.status || '',
       ]);
     } else if (active === 'broker_employee_settlements') {
-      const partnerRows = buildPartnerSettlementRows(state.taxCommission, state.transactions, state.tdsConfig, state.paymentConfig);
+      const partnerRows = buildPartnerSettlementRows(state.taxCommission, state.transactions, state.tdsConfig, state.paymentConfig, state.payouts);
       headers = ['Settlement ID', 'Role', 'Name', 'Code', 'Booking ID', 'Property ID', 'Property Name', 'Platform Fee', 'Commission %', 'Commission Amount', 'CGST', 'SGST', 'IGST', 'TDS Rate', 'TDS Amount', 'Net Payable', 'Status'];
       rows = partnerRows.map(r => [
         r.settlement_id,
@@ -1062,7 +1073,7 @@ const FinanceSettlements = () => {
       />
       <Panel className="mb-4 p-3">
         <div className="mb-3 flex gap-2 overflow-x-auto">
-          {workspaceTabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${active === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
+          {workspaceTabs.map(([id, label]) => <button key={id} onClick={() => setActiveTab(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${active === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
         </div>
         {active !== 'overview' && <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-inner">
           <Search className="h-4 w-4 text-slate-400" />
@@ -2066,10 +2077,11 @@ const payoutToPartnerTransaction = (payout = {}) => {
     status: payout.transaction_status || 'success',
     booking_status: booking.booking_status || payout.booking_status || 'confirmed',
     payment_status: booking.payment_status || payout.payment_status || 'paid',
+    platform_fee_context: booking.platform_fee_context || property.platform_fee_context || payout.platform_fee_context,
     booking_id: payout.booking_id || booking.booking_id,
     property_id: payout.property_id || property.property_id || booking.property_id,
     host_id: payout.host_id || host.user_id || booking.host_id,
-    created_at: payout.created_at || payout.eligible_at || payout.settlement_due_at || booking.created_at,
+    created_at: booking.check_in_date || payout.created_at || payout.eligible_at || payout.settlement_due_at || booking.created_at,
     broker: payout.broker || booking.broker || property.broker,
     employee: payout.employee || payout.rm || booking.employee || booking.rm || property.employee || property.rm,
     branch_manager: payout.branch_manager || booking.branch_manager || property.branch_manager,
@@ -2105,6 +2117,35 @@ const payoutToPartnerTransaction = (payout = {}) => {
       gross: hostActualPaise / 100,
     },
   };
+};
+
+const isCancelledSettlementSource = (source = {}) => {
+  const values = [
+    source.status,
+    source.booking_status,
+    source.payment_status,
+    source.refund_status,
+    source.booking?.status,
+    source.booking?.booking_status,
+    source.booking?.payment_status,
+    source.booking?.refund_status,
+    source.transaction?.status,
+    source.payout?.status,
+  ];
+  const statusText = values.map((value) => String(value || '').toLowerCase()).join(' ');
+  const cancelledAt = firstPresent(
+    source.cancelled_at,
+    source.canceled_at,
+    source.cancellation_date,
+    source.refund_initiated_at,
+    source.refunded_at,
+    source.booking?.cancelled_at,
+    source.booking?.canceled_at,
+    source.booking?.cancellation_date,
+    source.booking?.refund_initiated_at,
+    source.booking?.refunded_at
+  );
+  return Boolean(cancelledAt) || ['cancelled', 'canceled', 'refund_initiated', 'refunded'].some((status) => statusText.includes(status));
 };
 
 const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentConfig = {}, payouts = []) => {
@@ -2164,6 +2205,8 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
     return { id, code, name, object };
   };
   const settlementContext = (txn = {}) => {
+    const explicitContext = platformFeeContextFromTransaction(txn);
+    if (explicitContext) return explicitContext;
     const brokerInfo = partnerIdentity(txn, 'broker');
     const employeeInfo = partnerIdentity(txn, 'employee');
     const brokerId = String(brokerInfo.id || '').trim();
@@ -2240,9 +2283,15 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
     });
   };
 
+  const seenPartnerRows = new Set();
+
   (data?.commissions || []).forEach((row) => {
+    if (isCancelledSettlementSource(row)) return;
     const broker = row.broker || {};
     const grossAmount = rupeesToPaise(row.commission_amount);
+    const bookingId = row.booking_id;
+    const brokerSeenKey = bookingId ? `broker:${bookingId}` : '';
+    if (brokerSeenKey && seenPartnerRows.has(brokerSeenKey)) return;
     addRow({
       role: 'broker',
       id: row.broker_id || broker.user_id || broker.uid,
@@ -2264,13 +2313,43 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
       gstin: gstinFromPartner(row, broker),
       partner: broker,
     });
+    if (brokerSeenKey) seenPartnerRows.add(brokerSeenKey);
   });
 
-  const seenPartnerBookings = new Set(
-    (data?.commissions || [])
-      .map((row) => row.booking_id)
-      .filter(Boolean)
-  );
+  (data?.employee_commissions || []).forEach((row) => {
+    if (isCancelledSettlementSource(row)) return;
+    const employee = row.employee || row.rm || {};
+    const platformFeePaise = rupeesToPaise(row.platform_fee_amount || row.platform_fee || 0);
+    const employeeRate = row.commission_percent || commissionRuleRate(paymentConfig, 'employee');
+    if (platformFeePaise <= 0) return;
+    const grossAmount = platformFeePaise > 0
+      ? partnerCommissionFromBaseAmount(platformFeePaise, employeeRate)
+      : rupeesToPaise(row.commission_amount);
+    const bookingId = row.booking_id;
+    const employeeSeenKey = bookingId ? `employee:${bookingId}` : '';
+    if (employeeSeenKey && seenPartnerRows.has(employeeSeenKey)) return;
+    addRow({
+      role: 'employee',
+      id: row.employee_id || row.rm_id || employee.user_id || employee.uid,
+      name: employee.full_name || row.employee_name || row.rm_name || row.employee_id || row.rm_id,
+      code: row.employee_code || row.rm_code || employee.employee_code || employee.uid || row.employee_id || row.rm_id,
+      bookingId,
+      propertyId: row.property_id,
+      propertyName: row.property?.title || row.property_name || row.property_id,
+      baseAmount: platformFeePaise,
+      grossAmount,
+      platformFeeAmount: platformFeePaise,
+      commissionPercent: employeeRate,
+      commissionGst: { cgst: 0, sgst: 0, igst: 0, total: 0 },
+      status: row.payment_status || row.status,
+      source: 'Commission ledger',
+      createdAt: row.created_at,
+      employeeName: `${employee.full_name || row.employee_name || ''} ${row.employee_code || employee.employee_code || ''}`,
+      partner: employee,
+    });
+    if (employeeSeenKey) seenPartnerRows.add(employeeSeenKey);
+  });
+
   const partnerSourceRows = [
     ...(payouts || []).map(payoutToPartnerTransaction),
     ...(transactions || []),
@@ -2278,17 +2357,7 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
 
   partnerSourceRows.forEach((txn) => {
     if (txn.type && txn.type !== 'booking_payment') return;
-
-    const bookingStatusText = String(firstPresent(
-      txn.booking?.status,
-      txn.booking_status,
-      txn.status,
-      txn.booking?.payment_status,
-      txn.payment_status
-    ) || '').toLowerCase();
-    const cancelledAt = firstPresent(txn.booking?.cancelled_at, txn.cancelled_at, txn.booking?.cancellation_date, txn.cancellation_date);
-    const isCancelledBooking = Boolean(cancelledAt) || ['cancelled', 'canceled', 'refund_initiated', 'refunded'].some((status) => bookingStatusText.includes(status));
-    if (isCancelledBooking) return;
+    if (isCancelledSettlementSource(txn)) return;
 
     const checkInStr = txn.booking?.check_in_date || txn.check_in_date;
     if (!checkInStr) return;
@@ -2298,8 +2367,6 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
     if (Number.isNaN(checkInDate.getTime()) || checkInDate > today) return;
 
     const bookingId = txn.booking_id || txn.booking?.booking_id;
-    if (bookingId && seenPartnerBookings.has(bookingId)) return;
-    if (bookingId) seenPartnerBookings.add(bookingId);
 
     const breakdown = txn.booking_invoice_breakdown || txn.invoice_breakdown || {};
     const basePaise = toPaiseAmount(firstPresent(
@@ -2341,7 +2408,9 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
     const brokerAmountPaise = brokerConfigured
       ? partnerCommissionFromBaseAmount(basePaise, brokerRate)
       : moneyFromMixed(brokerAmount, platformFeePaise);
-    if (hasBrokerSettlement && isBrokerFirst && brokerConfigured && brokerAmountPaise > 0) {
+    const brokerSeenKey = bookingId ? `broker:${bookingId}` : '';
+    if (hasBrokerSettlement && isBrokerFirst && brokerConfigured && brokerAmountPaise > 0 && (!brokerSeenKey || !seenPartnerRows.has(brokerSeenKey))) {
+      if (brokerSeenKey) seenPartnerRows.add(brokerSeenKey);
       addRow({
         role: 'broker',
         id: brokerInfo.id,
@@ -2377,11 +2446,13 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
     );
     const employeeRate = commissionRuleRate(paymentConfig, 'employee');
     const employeeConfigured = commissionRuleEnabled(paymentConfig, 'employee');
-    const isEmployeeFirst = platformFeeContext === 'rm_mapped' && Boolean(employeeInfo.id);
+    const isEmployeeFirst = platformFeeContext === 'rm_mapped' || !hasBrokerSettlement;
     const employeeAmountPaise = employeeConfigured
-      ? partnerCommissionFromBaseAmount(basePaise, employeeRate)
+      ? partnerCommissionFromBaseAmount(platformFeePaise, employeeRate)
       : moneyFromMixed(employeeAmount, platformFeePaise);
-    if (isEmployeeFirst && employeeInfo.id && employeeConfigured && employeeAmountPaise > 0) {
+    const employeeSeenKey = bookingId ? `employee:${bookingId}` : '';
+    if (isEmployeeFirst && employeeInfo.id && employeeConfigured && employeeAmountPaise > 0 && (!employeeSeenKey || !seenPartnerRows.has(employeeSeenKey))) {
+      if (employeeSeenKey) seenPartnerRows.add(employeeSeenKey);
       addRow({
         role: 'employee',
         id: employeeInfo.id,
@@ -2390,7 +2461,7 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
         bookingId,
         propertyId,
         propertyName,
-        baseAmount: basePaise,
+        baseAmount: platformFeePaise,
         grossAmount: employeeAmountPaise,
         platformFeeAmount: platformFeePaise,
         commissionPercent: employeeRate,
@@ -2416,7 +2487,9 @@ const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentC
       ? partnerCommissionFromBaseAmount(basePaise, branchManagerRate)
       : moneyFromMixed(branchManagerAmount, platformFeePaise);
     const isBranchManagerOnly = platformFeeContext === 'branch_manager_mapped' || (!brokerInfo.id && !employeeInfo.id && branchManagerInfo.id);
-    if (isBranchManagerOnly && branchManagerInfo.id && branchManagerConfigured && branchManagerAmountPaise > 0) {
+    const branchManagerSeenKey = bookingId ? `branch_manager:${bookingId}` : '';
+    if (isBranchManagerOnly && branchManagerInfo.id && branchManagerConfigured && branchManagerAmountPaise > 0 && (!branchManagerSeenKey || !seenPartnerRows.has(branchManagerSeenKey))) {
+      if (branchManagerSeenKey) seenPartnerRows.add(branchManagerSeenKey);
       addRow({
         role: 'branch_manager',
         id: branchManagerInfo.id,
@@ -2547,15 +2620,20 @@ const buildPartnerSummaryRows = (rows = []) => {
     ...row,
     booking_count: row.bookings.size,
     property_count: row.properties.size,
-  })).sort((a, b) => Number(b.net_amount || 0) - Number(a.net_amount || 0));
+  })).sort((a, b) => {
+    const dateDiff = new Date(b.latest_at || 0) - new Date(a.latest_at || 0);
+    return dateDiff || Number(b.net_amount || 0) - Number(a.net_amount || 0);
+  });
 };
 
 const PartnerSettlementTable = ({ title, rows, emptyText, codeLabel, compactPayout = false, hideSource = false, showInvoice = false, rcmLabel = 'NA' }) => {
   const [page, setPage] = useState(1);
-  useEffect(() => { setPage(1); }, [rows.length]);
+  const money = paiseToRoundedMoney;
+  const firstRowKey = `${rows[0]?.settlement_id || ''}:${rows[0]?.latest_at || ''}`;
+  useEffect(() => { setPage(1); }, [rows.length, firstRowKey]);
   const pageRows = rows.slice((page - 1) * 10, page * 10);
   const headers = compactPayout
-    ? ['Settlement ID', 'Name', codeLabel, 'Booking ID', 'Property', 'Host Actual Base Value', 'Comm. %', 'Comm. Amount', 'Net Payable', 'Status']
+    ? ['Settlement ID', 'Name', codeLabel, 'Booking ID', 'Property', 'Platform Fee', 'Comm. %', 'Comm. Amount', 'Net Payable', 'Status']
     : ['Settlement ID', 'Name', codeLabel, 'Booking ID', 'Property', 'GSTIN Number', 'RCM Applicable', 'Host Actual Base Value', 'Comm. %', 'Comm. Amount', 'CGST', 'SGST', 'IGST', 'TDS Rate', 'TDS', 'Net Payable (With GST)', 'Net Payable', ...(hideSource ? [] : ['Source']), 'Status', ...(showInvoice ? ['Invoice'] : [])];
   return (
     <Panel className="overflow-hidden">
@@ -2563,7 +2641,7 @@ const PartnerSettlementTable = ({ title, rows, emptyText, codeLabel, compactPayo
         <h2 className="font-black">{title}</h2>
       </div>
       <div className="overflow-x-auto">
-        <table className={`w-full ${compactPayout ? 'min-w-[1180px]' : 'min-w-[1920px]'} text-left text-sm`}>
+        <table className={`w-full ${compactPayout ? 'min-w-[1120px]' : 'min-w-[1920px]'} text-left text-sm`}>
           <thead className="bg-slate-50 text-xs uppercase text-slate-500">
             <tr>{headers.map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
           </thead>
@@ -2577,16 +2655,18 @@ const PartnerSettlementTable = ({ title, rows, emptyText, codeLabel, compactPayo
                 <td className="px-4 py-3"><p className="font-bold">{row.property_name}</p><p className="font-mono text-xs text-slate-500">{row.property_id}</p></td>
                 {!compactPayout && <td className="px-4 py-3 font-mono text-xs">{row.gstin || 'NA'}</td>}
                 {!compactPayout && <td className="px-4 py-3 font-bold">{row.role === 'broker' ? (typeof rcmLabel === 'function' ? rcmLabel(row) : rcmLabel) : 'NA'}</td>}
-                <td className="px-4 py-3">{paiseToMoney(row.base_amount || 0)}</td>
+                {compactPayout
+                  ? <td className="px-4 py-3 font-black">{money(row.platform_fee_amount || row.commission_base_amount || 0)}</td>
+                  : <td className="px-4 py-3">{money(row.base_amount || 0)}</td>}
                 <td className="px-4 py-3 font-bold">{row.commission_percent ? `${row.commission_percent}%` : '-'}</td>
-                <td className="px-4 py-3 font-black">{paiseToMoney(row.commission_amount || row.gross_amount || 0)}</td>
-                {!compactPayout && <td className="px-4 py-3">{row.rcm_is_yes ? paiseToMoney(row.rcm_display_cgst || 0) : paiseToMoney(0)}</td>}
-                {!compactPayout && <td className="px-4 py-3">{row.rcm_is_yes ? paiseToMoney(row.rcm_display_sgst || 0) : paiseToMoney(0)}</td>}
-                {!compactPayout && <td className="px-4 py-3">{row.rcm_is_yes ? paiseToMoney(row.rcm_display_igst || 0) : paiseToMoney(0)}</td>}
+                <td className="px-4 py-3 font-black">{money(row.commission_amount || row.gross_amount || 0)}</td>
+                {!compactPayout && <td className="px-4 py-3">{row.rcm_is_yes ? money(row.rcm_display_cgst || 0) : money(0)}</td>}
+                {!compactPayout && <td className="px-4 py-3">{row.rcm_is_yes ? money(row.rcm_display_sgst || 0) : money(0)}</td>}
+                {!compactPayout && <td className="px-4 py-3">{row.rcm_is_yes ? money(row.rcm_display_igst || 0) : money(0)}</td>}
                 {!compactPayout && <td className="px-4 py-3">{row.tds_rate_percent || 0}%</td>}
-                {!compactPayout && <td className="px-4 py-3 text-red-700"><p>{paiseToMoney(row.tds_amount || 0)}</p><p className="text-xs text-slate-500">FY: {paiseToMoney(row.tds_fy_gross_after || 0)}</p></td>}
-                {!compactPayout && <td className="px-4 py-3 font-black">{row.net_payable_with_gst === null || row.net_payable_with_gst === undefined ? 'NA' : paiseToMoney(row.net_payable_with_gst)}</td>}
-                <td className="px-4 py-3 font-black">{paiseToMoney(row.net_amount || 0)}</td>
+                {!compactPayout && <td className="px-4 py-3 text-red-700"><p>{money(row.tds_amount || 0)}</p><p className="text-xs text-slate-500">FY: {money(row.tds_fy_gross_after || 0)}</p></td>}
+                {!compactPayout && <td className="px-4 py-3 font-black">{row.net_payable_with_gst === null || row.net_payable_with_gst === undefined ? 'NA' : money(row.net_payable_with_gst)}</td>}
+                <td className="px-4 py-3 font-black">{money(row.net_amount || 0)}</td>
                 {!compactPayout && !hideSource && <td className="px-4 py-3 text-xs font-semibold text-slate-500">{row.source}</td>}
                 <td className="px-4 py-3"><StatusBadge value={row.status} /></td>
                 {showInvoice && (
@@ -2599,9 +2679,11 @@ const PartnerSettlementTable = ({ title, rows, emptyText, codeLabel, compactPayo
                         broker_pan_number: panFromPartner(row, row.broker),
                         gstin: row.gstin || gstinFromPartner(row, row.broker),
                         email: row.broker?.email || row.email || '',
-                        phone: row.broker?.phone || row.phone || '',
+                        phone: row.broker?.phone || row.broker?.mobile || row.broker?.contact_number || row.phone || '',
                         address: row.broker?.address || row.address || '',
+                        city: row.broker?.city || row.city || '',
                         state: row.broker?.state || row.state || 'Maharashtra',
+                        pin_code: row.broker?.pin_code || row.broker?.pincode || row.pin_code || row.pincode || '',
                         platform_fee_amount: Number(row.base_amount || row.booking_amount || 0) / 100,
                         commission_amount: Number(row.commission_amount || row.gross_amount || 0) / 100,
                         gross_amount: Number(row.gross_amount || row.commission_amount || 0) / 100,
@@ -2652,6 +2734,29 @@ const BrokerEmployeeSettlementWorkspace = ({ data, transactions, payouts, tdsCon
   const brokerSummaryRows = useMemo(() => buildPartnerSummaryRows(brokerRows), [brokerRows]);
   const employeeSummaryRows = useMemo(() => buildPartnerSummaryRows(employeeRows), [employeeRows]);
   const branchManagerSummaryRows = useMemo(() => buildPartnerSummaryRows(branchManagerRows), [branchManagerRows]);
+  useEffect(() => {
+    const entries = Object.entries(partnerDecisions || {}).filter(([, status]) => ['approved', 'rejected', 'pending'].includes(String(status || '').toLowerCase()));
+    if (!entries.length || !rows.length) return;
+    const knownRows = new Map(rows.map((row) => [partnerDecisionKey(row), row]));
+    entries.forEach(([key, status]) => {
+      const row = knownRows.get(key);
+      if (!row) return;
+      const syncKey = `xspace360.syncedPartnerDecision.${key}.${status}`;
+      if (window.sessionStorage.getItem(syncKey)) return;
+      window.sessionStorage.setItem(syncKey, '1');
+      adminPhase1API.savePartnerSettlementDecision({
+        settlement_id: String(key || '').replace(`${row.role}:`, ''),
+        role: row.role,
+        status,
+        booking_id: row.booking_id,
+        partner_id: row.id,
+        partner_code: row.code,
+      }).catch((error) => {
+        window.sessionStorage.removeItem(syncKey);
+        console.error('Error syncing partner settlement decision:', error);
+      });
+    });
+  }, [partnerDecisions, rows]);
   const totals = filteredRows.reduce((acc, row) => {
     const grossAmount = Number(row.gross_amount || 0);
     const netAmount = Number(row.net_amount || 0);
@@ -2700,6 +2805,115 @@ const BrokerEmployeeSettlementWorkspace = ({ data, transactions, payouts, tdsCon
   }), [rows]);
   const updateFilter = (key, value) => setFilters((current) => ({ ...current, [key]: value }));
   const clearFilters = () => setFilters({ from: '', to: '', host: '', broker: '', employee: '', branchManager: '' });
+  const exportWorkbookFile = (filename, sheets) => {
+    if (!sheets.some((sheet) => sheet.rows.length)) {
+      showNotice({ title: 'Export Empty', description: 'No settlement rows found for current filters.', eyebrow: 'Action Aborted' });
+      return;
+    }
+    const escapeXml = (value) => String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    const worksheetXml = (sheet) => {
+      const safeName = escapeXml(sheet.name.slice(0, 31));
+      const rows = [sheet.headers, ...sheet.rows].map((row) => (
+        `<Row>${row.map((cell) => `<Cell><Data ss:Type="String">${escapeXml(cell)}</Data></Cell>`).join('')}</Row>`
+      )).join('');
+      return `<Worksheet ss:Name="${safeName}"><Table>${rows}</Table></Worksheet>`;
+    };
+    const workbook = `<?xml version="1.0"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+  xmlns:o="urn:schemas-microsoft-com:office:office"
+  xmlns:x="urn:schemas-microsoft-com:office:excel"
+  xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+  ${sheets.map(worksheetXml).join('')}
+</Workbook>`;
+    const blob = new Blob([workbook], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  };
+  const exportPartnerSettlementWorkbook = (role) => {
+    const isBroker = role === 'broker';
+    const summaryRows = isBroker ? brokerSummaryRows : employeeSummaryRows;
+    const detailRows = isBroker ? brokerRows : employeeRows;
+    const summaryHeaders = [
+      'Name',
+      isBroker ? 'Broker Code' : 'Employee / RM Code',
+      'Bookings',
+      'Properties',
+      'Comm Amount',
+      ...(isBroker ? ['TDS'] : []),
+      'Net Payable',
+      'Pending',
+      'Approved',
+      'Action',
+    ];
+    const detailHeaders = [
+      'Settlement ID',
+      'Name',
+      isBroker ? 'Broker Code' : 'Employee / RM Code',
+      'Booking ID',
+      'Property',
+      'Property ID',
+      ...(isBroker ? ['GSTIN Number', 'RCM Applicable', 'Host Actual Base Value', 'CGST', 'SGST', 'IGST', 'TDS Rate', 'TDS', 'Net Payable With GST'] : ['Platform Fee']),
+      'Comm %',
+      'Comm Amount',
+      'Net Payable',
+      'Status',
+    ];
+    const summarySheetRows = summaryRows.map((row) => [
+      row.name,
+      row.code,
+      row.booking_count ?? row.bookings_count ?? 0,
+      row.property_count ?? row.properties_count ?? 0,
+      paiseToRoundedMoney(row.gross_amount || 0),
+      ...(isBroker ? [paiseToRoundedMoney(row.tds_amount || 0)] : []),
+      paiseToRoundedMoney(row.net_amount || 0),
+      paiseToRoundedMoney(row.pending_amount || 0),
+      paiseToRoundedMoney(row.approved_amount || 0),
+      row.status,
+    ]);
+    const detailSheetRows = detailRows.map((row) => [
+      row.settlement_id,
+      row.name,
+      row.code,
+      row.booking_id,
+      row.property_name,
+      row.property_id,
+      ...(isBroker
+        ? [
+            row.gstin || 'NA',
+            typeof rcmRuleLabel(paymentConfig, 'broker', row.latest_at) === 'string' ? rcmRuleLabel(paymentConfig, 'broker', row.latest_at) : 'NA',
+            paiseToRoundedMoney(row.base_amount || 0),
+            row.rcm_is_yes ? paiseToRoundedMoney(row.rcm_display_cgst || 0) : paiseToRoundedMoney(0),
+            row.rcm_is_yes ? paiseToRoundedMoney(row.rcm_display_sgst || 0) : paiseToRoundedMoney(0),
+            row.rcm_is_yes ? paiseToRoundedMoney(row.rcm_display_igst || 0) : paiseToRoundedMoney(0),
+            `${row.tds_rate_percent || 0}%`,
+            paiseToRoundedMoney(row.tds_amount || 0),
+            row.net_payable_with_gst === null || row.net_payable_with_gst === undefined ? 'NA' : paiseToRoundedMoney(row.net_payable_with_gst),
+          ]
+        : [paiseToRoundedMoney(row.platform_fee_amount || row.commission_base_amount || 0)]),
+      row.commission_percent ? `${row.commission_percent}%` : '',
+      paiseToRoundedMoney(row.commission_amount || row.gross_amount || 0),
+      paiseToRoundedMoney(row.net_amount || 0),
+      row.status,
+    ]);
+    exportWorkbookFile(
+      `xspace360-${isBroker ? 'broker-settlement' : 'employee-rm-settlement'}-${new Date().toISOString().slice(0, 10)}.xls`,
+      [
+        { name: isBroker ? 'Broker Wise Settlement' : 'Employee RM Wise Settlement', headers: summaryHeaders, rows: summarySheetRows },
+        { name: isBroker ? 'Broker Booking Details' : 'Employee RM Booking Details', headers: detailHeaders, rows: detailSheetRows },
+      ],
+    );
+  };
   const updatePartnerDecision = async (row, status) => {
     setPartnerDecisions((current) => {
       const next = { ...current };
@@ -2749,7 +2963,11 @@ const BrokerEmployeeSettlementWorkspace = ({ data, transactions, payouts, tdsCon
             <h2 className="font-black">Search & Filter Broker / Employee Settlements</h2>
             <p className="text-xs text-slate-500">Filter partner payouts by date, host, broker, RM and branch manager.</p>
           </div>
-          <button onClick={clearFilters} className="rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 hover:bg-slate-50">Clear Filters</button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => exportPartnerSettlementWorkbook('broker')} className="rounded-2xl bg-slate-900 px-4 py-2 text-xs font-black text-white hover:bg-slate-700">Export Broker Excel</button>
+            <button onClick={() => exportPartnerSettlementWorkbook('employee')} className="rounded-2xl bg-emerald-700 px-4 py-2 text-xs font-black text-white hover:bg-emerald-600">Export Employee/RM Excel</button>
+            <button onClick={clearFilters} className="rounded-2xl border border-slate-200 px-4 py-2 text-xs font-black text-slate-600 hover:bg-slate-50">Clear Filters</button>
+          </div>
         </div>
         <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-6">
           <label className="text-xs font-black uppercase tracking-[0.12em] text-slate-500">From Date<input type="date" value={filters.from} onChange={(event) => updateFilter('from', event.target.value)} className="mt-1 h-11 w-full rounded-2xl border border-slate-200 px-3 text-sm font-semibold normal-case tracking-normal outline-none" /></label>
@@ -2767,9 +2985,9 @@ const BrokerEmployeeSettlementWorkspace = ({ data, transactions, payouts, tdsCon
         codeLabel="Broker Code"
         baseLabel="Comm. Amount"
         amountLabel="Net Payable"
-        baseMoney={paiseToMoney}
-        amountMoney={paiseToMoney}
-        taxMoney={paiseToMoney}
+        baseMoney={paiseToRoundedMoney}
+        amountMoney={paiseToRoundedMoney}
+        taxMoney={paiseToRoundedMoney}
         showPaid={false}
         showLatestDate={false}
         showActions
@@ -2784,9 +3002,9 @@ const BrokerEmployeeSettlementWorkspace = ({ data, transactions, payouts, tdsCon
         codeLabel="Employee / RM Code"
         baseLabel="Comm. Amount"
         amountLabel="Net Payable"
-        baseMoney={paiseToMoney}
-        amountMoney={paiseToMoney}
-        taxMoney={paiseToMoney}
+        baseMoney={paiseToRoundedMoney}
+        amountMoney={paiseToRoundedMoney}
+        taxMoney={paiseToRoundedMoney}
         showTds={false}
         showPaid={false}
         showLatestDate={false}
@@ -2802,9 +3020,9 @@ const BrokerEmployeeSettlementWorkspace = ({ data, transactions, payouts, tdsCon
         codeLabel="Branch Manager Code"
         baseLabel="Comm. Amount"
         amountLabel="Net Payable"
-        baseMoney={paiseToMoney}
-        amountMoney={paiseToMoney}
-        taxMoney={paiseToMoney}
+        baseMoney={paiseToRoundedMoney}
+        amountMoney={paiseToRoundedMoney}
+        taxMoney={paiseToRoundedMoney}
         showTds={false}
         showPaid={false}
         showLatestDate={false}
@@ -2908,7 +3126,7 @@ const CommissionWorkspace = ({ data, payouts, busy, onProcessHost }) => {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1000px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Commission', 'Broker', 'Booking', 'Property', 'Booking Amount', 'Rate', 'Commission', 'Payment Ref', 'Status'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
+            <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Commission', 'Broker', 'Booking', 'Property', 'Booking Amount', 'Rate', 'Gross', 'TDS', 'Net Payable', 'Payment Ref', 'Status'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">
               {rowsBroker.map((row) => (
                 <tr key={row.commission_id}>
@@ -2917,8 +3135,10 @@ const CommissionWorkspace = ({ data, payouts, busy, onProcessHost }) => {
                   <td className="px-4 py-3 font-mono text-xs">{row.booking_id}</td>
                   <td className="px-4 py-3">{row.property_id}</td>
                   <td className="px-4 py-3">{formatRoundedMoney(row.booking_amount || 0)}</td>
-                  <td className="px-4 py-3">{row.commission_percentage || 0}%</td>
-                  <td className="px-4 py-3 font-black">{formatRoundedMoney(row.commission_amount || 0)}</td>
+                  <td className="px-4 py-3">{row.commission_percentage ?? row.commission_percent ?? 0}%</td>
+                  <td className="px-4 py-3">{formatRoundedMoney(row.gross_amount ?? row.commission_amount ?? 0)}</td>
+                  <td className="px-4 py-3">{formatRoundedMoney(row.tds_amount || 0)}</td>
+                  <td className="px-4 py-3 font-black">{formatRoundedMoney(row.net_amount ?? row.commission_amount ?? 0)}</td>
                   <td className="px-4 py-3 font-mono text-xs">{row.payment_reference || '-'}</td>
                   <td className="px-4 py-3"><StatusBadge value={row.payment_status} /></td>
                 </tr>
