@@ -20,6 +20,25 @@ async def get_db():
     return db_instance
 
 
+def _booking_payment_progress(booking: dict) -> dict:
+    total = round(float(booking.get("total_amount") or 0), 2)
+    paid = round(float(booking.get("paid_amount") or 0), 2)
+    if paid <= 0:
+        payment_status = str(booking.get("payment_status") or "").lower()
+        if payment_status == "partially_paid":
+            paid = round(float(booking.get("advance_amount") or 0), 2)
+        elif payment_status in {"paid", "captured", "success", "completed"}:
+            paid = total
+    paid = max(0.0, min(total, paid))
+    remaining = round(max(0.0, total - paid), 2)
+    percent = round((paid / total) * 100, 2) if total > 0 else 0.0
+    return {
+        "paid_amount": paid,
+        "remaining_amount": remaining,
+        "payment_percent": percent,
+    }
+
+
 @router.post("/razorpay")
 async def razorpay_webhook(
     request: Request,
@@ -98,8 +117,12 @@ async def razorpay_webhook(
     
     # ---------------- 3A. Booking payment check ----------------
     booking = None
+    is_remaining_booking_payment = False
     if order_id:
         booking = await db.bookings.find_one({"razorpay_order_id": order_id}, {"_id": 0})
+        if not booking:
+            booking = await db.bookings.find_one({"remaining_payment_order_id": order_id}, {"_id": 0})
+            is_remaining_booking_payment = bool(booking)
     if not booking and receipt:
         booking = await db.bookings.find_one({"booking_id": receipt}, {"_id": 0})
 
@@ -107,7 +130,8 @@ async def razorpay_webhook(
         booking_id = booking["booking_id"]
         logger.info(f"Resolved payment to Booking ID: {booking_id}")
 
-        expected_amount = (
+        progress = _booking_payment_progress(booking)
+        expected_amount = progress["remaining_amount"] if is_remaining_booking_payment else (
             booking.get("advance_amount", 0)
             if booking.get("payment_type") == "advance"
             else booking.get("total_amount", 0)
@@ -121,14 +145,67 @@ async def razorpay_webhook(
                 amount_paise,
             )
             return {"status": "rejected", "error": "amount_mismatch", "resolved_entity": "booking", "id": booking_id}
+
+        if is_remaining_booking_payment:
+            payment_status = str(booking.get("payment_status") or "").lower()
+            if payment_status == "paid" or progress["remaining_amount"] <= 0:
+                logger.info("Remaining payment webhook for %s was already settled. No-op.", booking_id)
+                return {"status": "already_processed", "resolved_entity": "booking", "id": booking_id}
+            if booking.get("booking_status") != BookingStatus.CONFIRMED.value or payment_status != "partially_paid":
+                logger.warning("Remaining payment webhook rejected for %s due to invalid booking/payment status.", booking_id)
+                return {"status": "rejected", "error": "remaining_not_payable", "resolved_entity": "booking", "id": booking_id}
+
+            await db.bookings.update_one(
+                {
+                    "booking_id": booking_id,
+                    "remaining_payment_order_id": order_id,
+                    "booking_status": BookingStatus.CONFIRMED.value,
+                    "payment_status": "partially_paid",
+                },
+                {"$set": {
+                    "payment_status": "paid",
+                    "paid_amount": float(booking.get("total_amount") or 0),
+                    "remaining_amount": 0.0,
+                    "payment_percent": 100.0,
+                    "remaining_payment_status": "paid",
+                    "remaining_razorpay_payment_id": payment_id,
+                    "remaining_paid_at": datetime.now(timezone.utc),
+                    "updated_at": datetime.now(timezone.utc),
+                }},
+            )
+
+            try:
+                from models.transaction import TransactionType
+                from services.account_service import record_transaction
+                await record_transaction(
+                    db,
+                    type=TransactionType.BOOKING_PAYMENT,
+                    amount=int(amount_paise or expected_amount_paise),
+                    razorpay_order_id=order_id,
+                    razorpay_payment_id=payment_id,
+                    user_id=booking["guest_id"],
+                    host_id=booking["host_id"],
+                    booking_id=booking_id,
+                    is_mock=razorpay_service.is_mock,
+                )
+            except Exception as txn_err:
+                logger.warning(f"Webhook failed to record remaining payment transaction: {txn_err}")
+
+            logger.info("Booking %s remaining payment completed via webhook.", booking_id)
+            return {"status": "processed", "resolved_entity": "booking", "id": booking_id, "payment": "remaining"}
         
         if booking.get("booking_status") != BookingStatus.CONFIRMED.value:
             # Update booking status to confirmed
+            payment_type = str(booking.get("payment_type") or "full").lower()
+            paid_amount = float(booking.get("advance_amount") or 0) if payment_type == "advance" else float(booking.get("total_amount") or 0)
+            payment_status = "partially_paid" if payment_type == "advance" else "paid"
             await db.bookings.update_one(
                 {"booking_id": booking_id},
                 {"$set": {
                     "booking_status": BookingStatus.CONFIRMED.value,
-                    "payment_status": "paid",
+                    "payment_status": payment_status,
+                    "paid_amount": paid_amount,
+                    "remaining_amount": round(max(0.0, float(booking.get("total_amount") or 0) - paid_amount), 2),
                     "razorpay_payment_id": payment_id,
                     "confirmed_at": datetime.now(timezone.utc),
                     "updated_at": datetime.now(timezone.utc)

@@ -59,6 +59,14 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   List<Map<String, dynamic>> _reviewsList = [];
   Map<String, dynamic>? _reviewsSummary;
   bool _loadingReviews = false;
+  int _eventGuestBucketFor(int guests) {
+    if (guests <= 100) return 100;
+    if (guests <= 200) return 200;
+    if (guests <= 300) return 300;
+    if (guests <= 400) return 400;
+    if (guests <= 500) return 500;
+    return 600;
+  }
 
   bool _isSignatureSeriesProperty(PropertyModel prop) {
     final type = prop.propertyType.toLowerCase();
@@ -213,7 +221,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       }
       if (prop != null && prop.category.toLowerCase() == 'event_venue') {
         setState(() {
-          _guestCount = widget.initialGuestCount ?? 100;
+          _guestCount = _eventGuestBucketFor(widget.initialGuestCount ?? 100);
         });
       }
       _fetchBlockedDatesAndReviews();
@@ -2153,7 +2161,9 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
                                                   const SizedBox(height: 4),
                                                   if (isEvent)
                                                     DropdownButton<int>(
-                                                      value: _guestCount,
+                                                      value:
+                                                          _eventGuestBucketFor(
+                                                              _guestCount),
                                                       underline:
                                                           const SizedBox(),
                                                       icon: const Icon(

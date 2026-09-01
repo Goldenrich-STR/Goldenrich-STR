@@ -128,6 +128,27 @@ class BookingProvider with ChangeNotifier {
     }
   }
 
+  Future<Map<String, dynamic>?> createRemainingPaymentOrder(
+      String bookingId) async {
+    _isLoading = true;
+    _lastError = null;
+    notifyListeners();
+    try {
+      final response =
+          await _apiService.dio.post('/bookings/$bookingId/remaining-payment');
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(response.data);
+      }
+      return null;
+    } catch (e) {
+      _lastError = _extractError(e);
+      return null;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<bool> applyCoupon(String bookingId, String couponCode) async {
     _isLoading = true;
     _lastError = null;
@@ -150,6 +171,9 @@ class BookingProvider with ChangeNotifier {
             totalAmount: (data['new_total'] as num?)?.toDouble() ??
                 _currentBooking!.totalAmount,
             baseAmount: _currentBooking!.baseAmount,
+            paidAmount: _currentBooking!.paidAmount,
+            remainingAmount: _currentBooking!.remainingAmount,
+            paymentPercent: _currentBooking!.paymentPercent,
             platformFee: _currentBooking!.platformFee,
             kycVerificationFee: _currentBooking!.kycVerificationFee,
             discountAmount: (data['discount_amount'] as num?)?.toDouble() ??

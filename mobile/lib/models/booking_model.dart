@@ -9,6 +9,9 @@ class BookingModel {
   final String checkOutDate;
   final double totalAmount;
   final double baseAmount;
+  final double paidAmount;
+  final double remainingAmount;
+  final double paymentPercent;
   final double platformFee;
   final double kycVerificationFee;
   final double discountAmount;
@@ -45,6 +48,9 @@ class BookingModel {
     required this.checkOutDate,
     required this.totalAmount,
     required this.baseAmount,
+    this.paidAmount = 0.0,
+    this.remainingAmount = 0.0,
+    this.paymentPercent = 0.0,
     required this.platformFee,
     required this.kycVerificationFee,
     required this.discountAmount,
@@ -103,6 +109,18 @@ class BookingModel {
       baseAmount: (json['base_amount'] as num?)?.toDouble() ??
           (details != null
               ? (details['base_amount'] as num?)?.toDouble() ?? 0.0
+              : 0.0),
+      paidAmount: (json['paid_amount'] as num?)?.toDouble() ??
+          (details != null
+              ? (details['paid_amount'] as num?)?.toDouble() ?? 0.0
+              : 0.0),
+      remainingAmount: (json['remaining_amount'] as num?)?.toDouble() ??
+          (details != null
+              ? (details['remaining_amount'] as num?)?.toDouble() ?? 0.0
+              : 0.0),
+      paymentPercent: (json['payment_percent'] as num?)?.toDouble() ??
+          (details != null
+              ? (details['payment_percent'] as num?)?.toDouble() ?? 0.0
               : 0.0),
       platformFee: (json['platform_fee'] as num?)?.toDouble() ??
           (json['service_fee'] as num?)?.toDouble() ??
@@ -164,6 +182,9 @@ class BookingModel {
       'check_out_date': checkOutDate,
       'total_amount': totalAmount,
       'base_amount': baseAmount,
+      'paid_amount': paidAmount,
+      'remaining_amount': remainingAmount,
+      'payment_percent': paymentPercent,
       'platform_fee': platformFee,
       'kyc_verification_fee': kycVerificationFee,
       'discount_amount': discountAmount,

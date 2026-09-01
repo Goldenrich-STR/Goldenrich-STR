@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
 import '../services/api_service.dart';
+import '../services/session_storage.dart';
 
 class NotificationProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
@@ -31,6 +32,13 @@ class NotificationProvider with ChangeNotifier {
   }
 
   Future<void> loadNotifications({bool unreadOnly = false}) async {
+    final token = await SessionStorage.readToken();
+    if (token == null || token.isEmpty) {
+      _notifications = [];
+      _unreadCount = 0;
+      notifyListeners();
+      return;
+    }
     _isLoading = true;
     notifyListeners();
     try {
@@ -52,6 +60,14 @@ class NotificationProvider with ChangeNotifier {
 
   Future<void> loadUnreadCount() async {
     try {
+      final token = await SessionStorage.readToken();
+      if (token == null || token.isEmpty) {
+        if (_unreadCount != 0) {
+          _unreadCount = 0;
+          notifyListeners();
+        }
+        return;
+      }
       final response = await _apiService.dio.get('/notifications/unread-count');
       if (response.statusCode == 200) {
         _unreadCount = response.data['unread_count'] ?? 0;
