@@ -258,7 +258,10 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   const invoiceDate = formatDate(booking.created_at || new Date());
   const bookedOnDateTime = formatDateTime(booking.created_at || new Date());
 
-  const propObj = booking.property || property || {};
+  const propObj = {
+    ...(property || {}),
+    ...(booking.property || {}),
+  };
   const propertyName = propObj.title || propObj.property_name || propObj.name || booking.property_name || propObj.property_id || booking.property_id || 'NA';
   const propertyAddress = [propObj.address, propObj.city, propObj.state, propObj.pin_code].filter(Boolean).join(', ') || booking.property_address || 'NA';
   
@@ -269,9 +272,53 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   const customerGst = userObj.gst_number || userObj.gst_no || booking.guest_gst_number || booking.customer_gst_number || booking.gst_number || '';
   const roomType = propObj.room_type || propObj.bhk_type || propObj.property_type || booking.room_type || booking.property_type || 'Standard';
 
-  const hostObj = propObj.host || property.host || booking.host || {};
+  const firstPresent = (...values) => values.find((value) => {
+    const text = String(value ?? '').trim();
+    return text && !['na', 'n/a', '-', 'null', 'undefined'].includes(text.toLowerCase());
+  });
+  const hostObj = {
+    ...((property || {}).owner || {}),
+    ...((property || {}).host || {}),
+    ...(booking.owner || {}),
+    ...(booking.host || {}),
+    ...((booking.property || {}).owner || {}),
+    ...((booking.property || {}).host || {}),
+    ...(propObj.owner || {}),
+    ...(propObj.host || {}),
+  };
   const ownerName = hostObj.full_name || hostObj.name || propObj.owner_name || booking.host_name || booking.owner_name || 'Property Owner';
-  const ownerPhone = hostObj.phone || propObj.contact_phone || propObj.phone || booking.host_phone || 'NA';
+  const ownerPhone = firstPresent(
+    hostObj.phone,
+    hostObj.mobile,
+    hostObj.contact,
+    hostObj.contact_number,
+    hostObj.mobile_number,
+    hostObj.alternate_phone,
+    hostObj.whatsapp,
+    hostObj.profile?.phone,
+    hostObj.profile?.mobile,
+    hostObj.profile?.contact_number,
+    hostObj.kyc?.phone,
+    hostObj.kyc?.mobile,
+    hostObj.kyc?.contact_number,
+    propObj.owner_phone,
+    propObj.owner_contact_phone,
+    propObj.owner_contact,
+    propObj.owner_mobile,
+    propObj.contact_phone,
+    propObj.contact_number,
+    propObj.contact_no,
+    propObj.mobile,
+    propObj.phone,
+    booking.host_phone,
+    booking.host_contact,
+    booking.host_contact_number,
+    booking.host_mobile,
+    booking.owner_phone,
+    booking.owner_contact,
+    booking.owner_contact_number,
+    booking.owner_mobile
+  ) || 'NA';
 
   const checkIn = booking.check_in_date || booking.check_in || booking.start_date;
   const checkOut = booking.check_out_date || booking.check_out || booking.end_date;

@@ -1,4 +1,4 @@
-const money = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+const money = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 
 const numberToIndianWords = (value) => {
   const n = Math.round(Number(value || 0));
@@ -70,6 +70,18 @@ const stateLine = (...values) => {
   const code = codeMatch?.[1] || (String(state).toLowerCase().includes('maharashtra') ? '27' : 'NA');
   const cleanState = String(state).replace(/,\s*Code\s*:?\s*\d{1,2}/i, '').trim() || 'Maharashtra';
   return `${cleanState}, Code : ${code}`;
+};
+
+const addressLine = (...objects) => {
+  for (const source of objects.filter(Boolean)) {
+    const direct = firstText(source.address, source.full_address, source.billing_address, source.location);
+    const city = firstText(source.city, source.district);
+    const state = firstText(source.state_name, source.state);
+    const pin = firstText(source.pin_code, source.pincode, source.postal_code, source.zip);
+    const combined = [direct, city, state, pin].filter(Boolean).join(', ');
+    if (combined) return combined;
+  }
+  return 'NA';
 };
 
 const invoiceDate = (value) => {
@@ -145,12 +157,31 @@ const invoiceHtml = (row = {}, mode = 'broker', options = {}) => {
   const brokerName = text(firstText(row.name, row.broker_name, row.host_name, row.full_name, broker.full_name, broker.name), isHost ? 'Host' : 'Broker');
   const brokerCode = text(firstText(row.code, row.broker_code, row.host_code, row.employee_code, row.broker_id, row.host_id, broker.lg_code, broker.employee_code, broker.user_id), 'NA');
   const brokerPan = text(firstText(row.broker_pan_number, row.broker_pan, row.host_pan_number, row.host_pan, row.pan_number, row.pan, broker.pan_number, broker.pan), 'NA');
-  const partyAddress = text(firstText(row.address, row.broker_address, row.host_address, broker.address, broker.location, broker.city), 'NA');
-  const partyGstin = text(firstText(row.gstin, row.gst_number, row.gst_no, row.gstin_number, broker.gstin, broker.gst_number, broker.gst_no, broker.gstin_number, broker.kyc?.gstin, broker.kyc?.gst_number), 'NA');
+  const partyAddress = text(addressLine(row, broker), 'NA');
+  const partyGstin = text(firstText(
+    row.gstin,
+    row.gst_number,
+    row.gst_no,
+    row.gstin_number,
+    row.gstinNumber,
+    row.broker_gstin,
+    row.host_gstin,
+    broker.gstin,
+    broker.gst_number,
+    broker.gst_no,
+    broker.gstin_number,
+    broker.gstinNumber,
+    broker.gst?.gstin,
+    broker.gst?.gst_number,
+    broker.kyc?.gstin,
+    broker.kyc?.gst_number,
+    broker.documents?.gstin,
+    broker.documents?.gst_number
+  ), 'NA');
   const isGstRegistered = partyGstin !== 'NA';
   const partyState = stateLine(row.state_name, row.state, broker.state_name, broker.state);
-  const partyContact = text(firstText(row.contact_number, row.contact, row.phone, row.mobile, broker.contact_number, broker.contact, broker.phone, broker.mobile), 'NA');
-  const partyEmail = text(firstText(row.email, row.broker_email, row.host_email, broker.email), 'NA');
+  const partyContact = text(firstText(row.contact_number, row.contact, row.phone, row.mobile, row.broker_phone, row.host_phone, broker.contact_number, broker.contact, broker.phone, broker.mobile), 'NA');
+  const partyEmail = text(firstText(row.email, row.broker_email, row.host_email, broker.email, broker.email_address), 'NA');
   const propertyName = text(firstText(row.property_name, property.title, property.property_name, property.name), 'Property Details');
   const propertyId = text(firstText(row.property_id, property.property_id, property.id), '');
   const bookingId = text(row.booking_id, 'NA');

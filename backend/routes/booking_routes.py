@@ -24,7 +24,7 @@ from services.booking_calculation_service import (
     get_booking_payment_config,
     normalize_booking_payment_config,
 )
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 import asyncio
 import json
 import logging
@@ -60,6 +60,21 @@ def _parse_utc(value):
         except ValueError:
             return None
     return None
+
+
+async def _ensure_booking_payout_row(db: AsyncIOMotorDatabase, booking_id: str) -> None:
+    try:
+        from services.account_service import _is_check_in_due_for_payout_ledger, _payout_due_for_booking, is_cancelled_booking, mark_booking_payout_eligible
+        booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+        if not booking or booking.get("booking_status") != BookingStatus.CONFIRMED.value:
+            return
+        today = date.today()
+        if is_cancelled_booking(booking) or not _is_check_in_due_for_payout_ledger(booking, today):
+            return
+        status_value, eligible_at = await _payout_due_for_booking(db, booking, today)
+        await mark_booking_payout_eligible(db, booking, status=status_value, eligible_at=eligible_at)
+    except Exception as payout_err:
+        logger.warning("Failed to create payout ledger row for booking %s: %s", booking_id, payout_err)
 
 
 async def _safe_payment_attempt_update(db: AsyncIOMotorDatabase, query: dict, update: dict, *, upsert: bool = False) -> None:
@@ -704,13 +719,19 @@ async def create_booking(
         # browser then parses unambiguously (rather than as local time).
         soft_lock_window_minutes = 5
         now_utc = datetime.now(timezone.utc)
+        raw_broker_id = property_dict.get("broker_id") or property_dict.get("managed_by_broker_id") or (owner or {}).get("broker_id")
+        raw_rm_id = property_dict.get("rm_id") or (owner or {}).get("rm_id")
+        booking_broker_id = raw_broker_id
+        if raw_broker_id and raw_rm_id and str(raw_broker_id).strip() == str(raw_rm_id).strip():
+            booking_broker_id = (owner or {}).get("broker_id") or property_dict.get("managed_by_broker_id")
+        booking_broker_lg_code = property_dict.get("broker_lg_code") or (owner or {}).get("broker_lg_code") or (owner or {}).get("broker_code")
         booking = Booking(
             property_id=booking_data.property_id,
             guest_id=current_user["user_id"],
             host_id=property_dict["owner_id"],
-            broker_id=property_dict.get("broker_id") or (owner or {}).get("broker_id"),
-            broker_lg_code=property_dict.get("broker_lg_code") or (owner or {}).get("lg_code"),
-            rm_id=property_dict.get("rm_id") or (owner or {}).get("rm_id"),
+            broker_id=booking_broker_id,
+            broker_lg_code=booking_broker_lg_code,
+            rm_id=raw_rm_id,
             employee_id=property_dict.get("employee_id") or property_dict.get("assigned_employee_id") or (owner or {}).get("employee_id") or (owner or {}).get("assigned_employee_id"),
             check_in_date=check_in,
             check_out_date=check_out,
@@ -976,7 +997,7 @@ async def _booking_payment_status_payload(db: AsyncIOMotorDatabase, booking_dict
     else:
         recovery_status = "NOT_STARTED"
 
-    return {
+    payload = {
         "booking_id": booking_dict.get("booking_id"),
         "payment_status": recovery_status,
         "booking_status": status_value,
@@ -990,6 +1011,10 @@ async def _booking_payment_status_payload(db: AsyncIOMotorDatabase, booking_dict
         "payment_type": booking_dict.get("payment_type", "full"),
         **_booking_payment_progress(booking_dict),
     }
+    enriched = await _attach_property_info(db, [dict(booking_dict)])
+    if enriched and enriched[0].get("property"):
+        payload["property"] = enriched[0]["property"]
+    return payload
 
 
 @router.get("/{booking_id}/payment-status", response_model=dict)
@@ -1463,6 +1488,9 @@ async def confirm_payment(
         except Exception as txn_err:
             logger.warning(f"Failed to record booking transaction: {txn_err}")
 
+        if next_status == BookingStatus.CONFIRMED.value:
+            await _ensure_booking_payout_row(db, booking_id)
+
         if next_status == BookingStatus.CONFIRMED.value and not is_remaining_payment:
             try:
                 confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
@@ -1575,6 +1603,7 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
         {
             "_id": 0,
             "property_id": 1,
+            "owner_id": 1,
             "title": 1,
             "property_name": 1,
             "name": 1,
@@ -1595,6 +1624,35 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
         },
     )
     props = await cursor.to_list(length=len(property_ids))
+    owner_ids = list({p.get("owner_id") for p in props if p.get("owner_id")})
+    owners = await db.users.find(
+        {"user_id": {"$in": owner_ids}},
+        {
+            "_id": 0,
+            "user_id": 1,
+            "full_name": 1,
+            "name": 1,
+            "email": 1,
+            "phone": 1,
+            "mobile": 1,
+            "mobile_number": 1,
+            "contact": 1,
+            "contact_number": 1,
+            "alternate_phone": 1,
+            "whatsapp": 1,
+            "address": 1,
+            "city": 1,
+            "state": 1,
+            "pin_code": 1,
+            "pincode": 1,
+        },
+    ).to_list(length=len(owner_ids) or 1)
+    owner_map = {owner.get("user_id"): owner for owner in owners}
+    for prop in props:
+        owner = owner_map.get(prop.get("owner_id"))
+        if owner:
+            prop["host"] = owner
+            prop["owner"] = owner
     by_id = {p["property_id"]: p for p in props}
     for b in bookings:
         prop = by_id.get(b.get("property_id"))
@@ -1800,6 +1858,7 @@ async def approve_host_approval_booking(
 
     confirmed_booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if confirmed_booking:
+        await _ensure_booking_payout_row(db, booking_id)
         try:
             asyncio.create_task(notify_host_booking_confirmed(db, confirmed_booking))
         except Exception as notify_err:
@@ -1892,6 +1951,10 @@ async def get_booking_details(
             rfd = await db.refunds.find_one({"booking_id": booking_dict["booking_id"]}, {"_id": 0})
             booking_dict["refund"] = rfd
         booking_dict.update(_booking_payment_progress(booking_dict))
+        enriched = await _attach_property_info(db, [booking_dict])
+        if enriched:
+            booking_dict = enriched[0]
+            booking_dict.update(_booking_payment_progress(booking_dict))
         booking_dict.update(_canonical_booking_lifecycle(booking_dict))
 
         return booking_dict

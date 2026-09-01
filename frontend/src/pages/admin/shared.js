@@ -53,7 +53,7 @@ export const ErrorState = ({ message, action }) => (
   </div>
 );
 
-export const formatMoney = (value) => `Rs. ${Number(value || 0).toLocaleString('en-IN')}`;
+export const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 
 const ReasonDialog = ({ title, description, defaultValue = '', minLength = 1, placeholder = 'Enter reason', confirmLabel = 'Submit', onResolve }) => {
   const [value, setValue] = React.useState(defaultValue);

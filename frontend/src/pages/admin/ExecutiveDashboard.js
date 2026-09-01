@@ -14,7 +14,7 @@ const toneClasses = {
   blue: 'bg-[#ecf3ff] text-[#2f6df6]',
 };
 
-const Kpi = ({ label, value, icon: Icon, tone = 'gold', path, onNavigate }) => (
+const Kpi = ({ label, value, subtext, icon: Icon, tone = 'gold', path, onNavigate }) => (
   <Panel className={`p-5 transition duration-300 ${path ? 'cursor-pointer hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-[0_22px_55px_rgba(37,99,235,0.08)]' : ''}`}>
     <button
       className="w-full text-left"
@@ -26,7 +26,7 @@ const Kpi = ({ label, value, icon: Icon, tone = 'gold', path, onNavigate }) => (
       <div>
         <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</p>
         <p className="mt-3 text-[34px] font-black leading-none tracking-[-0.04em] text-slate-950">{value}</p>
-        {path && <p className="mt-3 text-xs font-semibold text-slate-400">Open full module insights</p>}
+        {subtext && <p className="mt-3 text-xs font-semibold text-slate-500">{subtext}</p>}
       </div>
       <span className={`rounded-2xl p-3 ${toneClasses[tone] || toneClasses.gold}`}><Icon className="h-5 w-5" /></span>
     </div>
@@ -108,15 +108,13 @@ const ExecutiveDashboard = () => {
     ['Cancelled Bookings', kpis.bookings.cancelled, AlertTriangle, '/admin/bookings'],
   ];
   const financeKpis = [
-    ['Gross Booking Value', formatMoney(kpis.finance.gross_booking_value), IndianRupee, '/admin/finance'],
-    ['Net Collections', formatMoney(kpis.finance.net_collections), IndianRupee, '/admin/finance'],
-    ['Platform Revenue', formatMoney(kpis.finance.platform_revenue), TrendingUp, '/admin/finance'],
-    ['Host Payable', formatMoney(kpis.finance.host_payable), IndianRupee, '/admin/finance'],
-    ['Host Paid', formatMoney(kpis.finance.host_paid), CheckCircle2, '/admin/finance'],
-    ['Pending Payout', formatMoney(kpis.finance.pending_payout), AlertTriangle, '/admin/finance'],
-    ['Tax Liability', formatMoney(kpis.finance.tax_liability), IndianRupee, '/admin/finance'],
-    ['Refund Amount', formatMoney(kpis.finance.refund_amount), IndianRupee, '/admin/finance'],
-    ['Broker Commission', formatMoney(kpis.finance.broker_commission), IndianRupee, '/admin/finance'],
+    { label: 'Gross Booking Value', value: formatMoney(kpis.finance.gross_booking_value), subtext: 'Confirmed bookings total amount', icon: IndianRupee, path: '/admin/bookings' },
+    { label: 'Platform Revenue', value: formatMoney(kpis.finance.platform_revenue), subtext: 'Booking platform fees + host subscriptions without tax', icon: TrendingUp, path: '/admin/finance?tab=transactions_ledger' },
+    { label: 'Tax Liability', value: formatMoney(kpis.finance.tax_liability), subtext: 'Subscription GST + TDS', icon: IndianRupee, path: '/admin/finance?tab=tax_commission' },
+    { label: 'Host Payable', value: formatMoney(kpis.finance.host_payable), subtext: `${formatMoney(kpis.finance.host_paid)} paid`, icon: IndianRupee, path: '/admin/finance?tab=settlements' },
+    { label: 'Broker Payable', value: formatMoney(kpis.finance.broker_payable), subtext: `${formatMoney(kpis.finance.broker_paid)} paid`, icon: IndianRupee, path: '/admin/finance?tab=broker_employee_settlements' },
+    { label: 'Employee/RM Payable', value: formatMoney(kpis.finance.employee_payable), subtext: `${formatMoney(kpis.finance.employee_paid)} paid`, icon: Users, path: '/admin/finance?tab=broker_employee_settlements' },
+    { label: 'Refund Amount', value: formatMoney(kpis.finance.refund_pending), subtext: `${formatMoney(kpis.finance.refund_paid)} paid`, icon: RefreshCw, path: '/admin/finance?tab=refunds' },
   ];
 
   return (
@@ -154,7 +152,7 @@ const ExecutiveDashboard = () => {
       </section>
       <section className="mt-6 space-y-3">
         <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400">Finance</h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{financeKpis.map(([label, value, Icon, path]) => <Kpi key={label} label={label} value={value} icon={Icon} path={path} onNavigate={navigate} />)}</div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{financeKpis.map((item) => <Kpi key={item.label} label={item.label} value={item.value} subtext={item.subtext} icon={item.icon} path={item.path} onNavigate={navigate} />)}</div>
       </section>
 
       <section className="mt-6">

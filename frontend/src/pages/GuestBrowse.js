@@ -806,44 +806,11 @@ const GuestBrowse = () => {
 
         <div className="w-full max-w-5xl mx-auto lg:relative z-50">
           {/* Capsule Search Bar */}
-          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px] p-[1px]">
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 rounded-[34px] lg:rounded-[44px] opacity-100"
-              style={{
-                background:
-                  'linear-gradient(90deg, rgba(249,115,22,0.24) 0%, rgba(251,191,36,0.16) 12%, rgba(255,255,255,0.94) 28%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 72%, rgba(244,63,94,0.14) 88%, rgba(219,39,119,0.2) 100%)',
-              }}
-            />
+          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px]">
             <form
               onSubmit={handleSearch}
               className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white z-50"
             >
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 rounded-[30px] lg:rounded-full"
-                style={{
-                  background:
-                    'linear-gradient(90deg, rgba(249,115,22,0.18) 0%, rgba(254,243,199,0.86) 14%, rgba(255,255,255,0.98) 32%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.98) 68%, rgba(253,244,245,0.86) 86%, rgba(219,39,119,0.15) 100%)',
-                }}
-              />
-
-              {/* Raksha Bandhan Festive Rakhi Icon */}
-              <div className="flex items-center shrink-0 pl-3 pr-1 text-pink-600 select-none animate-pulse z-10 justify-center mb-2 lg:mb-0" title="Raksha Bandhan Special">
-                <svg className="w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
-                  <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
-                </svg>
-                <div className="relative w-5 h-5 flex items-center justify-center mx-1">
-                  <div className="absolute inset-0 rounded-full border border-dashed border-red-500 bg-amber-400 animate-spin" style={{ animationDuration: '10s' }} />
-                  <div className="absolute w-3.5 h-3.5 rounded-full bg-red-600 flex items-center justify-center shadow-inner">
-                    <div className="w-1.5 h-1.5 rounded-full bg-amber-300" />
-                  </div>
-                </div>
-                <svg className="w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
-                  <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
-                </svg>
-              </div>
-
               {/* Search Input */}
               <div className="relative flex-1 w-full z-10">
                 <div 

@@ -153,6 +153,12 @@ const PlatformSettings = () => {
     try {
       await adminPhase1API.updatePaymentConfig({ ...current, ...updates, reason });
       await load();
+    } catch (error) {
+      await showNotice({
+        title: 'Configuration Save Failed',
+        description: getApiErrorMessage(error, 'Unable to save payment, tax and commission configuration. Please check the values and try again.'),
+        eyebrow: 'Action Failed',
+      });
     } finally {
       setSavingPayment(false);
     }
@@ -176,6 +182,14 @@ const PlatformSettings = () => {
         await adminPhase1API.createBookingTaxSlab(body);
       }
       await load();
+      return true;
+    } catch (error) {
+      await showNotice({
+        title: 'Tax Slab Save Failed',
+        description: getApiErrorMessage(error, 'Unable to save booking tax slab. Please check the slab range and try again.'),
+        eyebrow: 'Action Failed',
+      });
+      return false;
     } finally {
       setSavingPayment(false);
     }
@@ -227,6 +241,12 @@ const PlatformSettings = () => {
     try {
       await adminPhase1API.updateBookingTaxSlabStatus(slab.slab_id, { is_active: nextState, reason });
       await load();
+    } catch (error) {
+      await showNotice({
+        title: 'Tax Slab Status Failed',
+        description: getApiErrorMessage(error, 'Unable to update booking tax slab status. Please try again.'),
+        eyebrow: 'Action Failed',
+      });
     } finally {
       setSavingPayment(false);
     }
@@ -252,6 +272,12 @@ const PlatformSettings = () => {
     try {
       await adminPhase1API.deleteBookingTaxSlab(slab.slab_id, { reason });
       await load();
+    } catch (error) {
+      await showNotice({
+        title: 'Tax Slab Delete Failed',
+        description: getApiErrorMessage(error, 'Unable to delete booking tax slab. Please try again.'),
+        eyebrow: 'Action Failed',
+      });
     } finally {
       setSavingPayment(false);
     }
@@ -1017,8 +1043,8 @@ const PaymentTaxCommission = ({
           saving={saving}
           onClose={() => setEditingSlab(null)}
           onSave={async (payload, slabId) => {
-            await onSaveTaxSlab(payload, slabId);
-            setEditingSlab(null);
+            const saved = await onSaveTaxSlab(payload, slabId);
+            if (saved) setEditingSlab(null);
           }}
         />
       )}

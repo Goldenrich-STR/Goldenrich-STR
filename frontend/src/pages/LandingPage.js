@@ -59,7 +59,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Nashik',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Raksha Bandhan Special: 10% OFF on Family Stays*']
+    badges: ['Corporate rates & flexible leasing available*']
   },
   {
     src: '/videos/hero/hero-villa-mobile-crop.png',
@@ -70,7 +70,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Wine Capital',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Gift Your Sibling A Luxury Getaway: Flat 15% OFF*']
+    badges: ['Curated luxury stays with private pools*']
   },
   {
     src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
@@ -81,7 +81,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Beautiful Memories',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Rakhi Special Offer: Flat 20% OFF on Venue Bookings*']
+    badges: ['Plan your dream celebration with custom setups*']
   },
   {
     src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
@@ -92,7 +92,7 @@ const DEFAULT_HERO_SLIDES = [
     titleHighlight: 'Comfort of Home',
     highlightColor: 'text-white',
     titleSuffix: '',
-    badges: ['Celebrate The Bond: Special Sibling Getaways at 25% OFF*']
+    badges: ['Fully serviced spaces with premium amenities*']
   }
 ];
 
@@ -1864,155 +1864,7 @@ const CollectionsSection = ({
         }}
       />
       
-      {/* Floating background Rakhi shapes */}
-      <style>{`
-        @keyframes float-rakhi-1 {
-          0% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(30px, -45px) rotate(180deg); }
-          100% { transform: translate(0, 0) rotate(360deg); }
-        }
-        @keyframes float-rakhi-2 {
-          0% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(-45px, -30px) rotate(-180deg); }
-          100% { transform: translate(0, 0) rotate(-360deg); }
-        }
-        @keyframes float-rakhi-3 {
-          0% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(25px, 35px) rotate(120deg); }
-          100% { transform: translate(0, 0) rotate(360deg); }
-        }
-        .animate-float-1 { animation: float-rakhi-1 25s infinite ease-in-out; }
-        .animate-float-2 { animation: float-rakhi-2 30s infinite ease-in-out; }
-        .animate-float-3 { animation: float-rakhi-3 28s infinite ease-in-out; }
-      `}</style>
       
-      <div className="absolute inset-0 overflow-hidden pointer-events-none select-none z-0 opacity-[0.09] blur-[0.5px]">
-        {/* Floating Rakhi 1 */}
-        <div className="absolute top-[8%] left-[3%] w-52 h-52 animate-float-1 text-pink-600">
-          <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            <defs>
-              <radialGradient id="gemGrad1" cx="35%" cy="35%" r="65%">
-                <stop offset="0%" stopColor="#FFA07A" />
-                <stop offset="40%" stopColor="#DC2626" />
-                <stop offset="100%" stopColor="#7F1D1D" />
-              </radialGradient>
-              <radialGradient id="goldGrad1" cx="35%" cy="35%" r="65%">
-                <stop offset="0%" stopColor="#FDE68A" />
-                <stop offset="70%" stopColor="#D4AF37" />
-                <stop offset="100%" stopColor="#92400E" />
-              </radialGradient>
-            </defs>
-            {/* Diagonal thread (Dora) */}
-            <line x1="5" y1="95" x2="95" y2="5" stroke="#DC2626" strokeWidth="2.5" />
-            <line x1="5" y1="95" x2="95" y2="5" stroke="#F59E0B" strokeWidth="1" strokeDasharray="3,2" />
-            
-            {/* Thread Beads (diagonal) */}
-            <circle cx="34" cy="66" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="26" cy="74" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="66" cy="34" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="74" cy="26" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
-
-            {/* Central Scalloped Base */}
-            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
-              <g key={idx} transform={`rotate(${angle} 50 50)`}>
-                <circle cx="50" cy="34" r="6" fill="#D4AF37" />
-                <circle cx="50" cy="34" r="4.5" fill="#7F1D1D" />
-              </g>
-            ))}
-            
-            {/* Concentric layered rings */}
-            <circle cx="50" cy="50" r="19" fill="url(#goldGrad1)" stroke="#8B0000" strokeWidth="0.8" />
-            <circle cx="50" cy="50" r="16" fill="#7F1D1D" />
-            
-            {/* Pearls inside circle */}
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
-              <circle key={idx} cx="50" cy="37" r="1.5" fill="#FFFFFF" transform={`rotate(${angle} 50 50)`} />
-            ))}
-
-            {/* Inner Star */}
-            <polygon points="50,38 53,46 62,46 55,51 58,59 50,54 42,59 45,51 38,46 47,46" fill="url(#goldGrad1)" stroke="#B45309" strokeWidth="0.5" />
-            
-            {/* Center Gemstone */}
-            <circle cx="50" cy="50" r="7" fill="url(#gemGrad1)" stroke="#FFFFFF" strokeWidth="0.5" />
-          </svg>
-        </div>
-
-        {/* Floating Rakhi 2 */}
-        <div className="absolute top-[40%] right-[5%] w-60 h-60 animate-float-2 text-amber-500">
-          <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            {/* Diagonal thread (Dora) */}
-            <line x1="5" y1="5" x2="95" y2="95" stroke="#B91C1C" strokeWidth="2.5" />
-            <line x1="5" y1="5" x2="95" y2="95" stroke="#FBBF24" strokeWidth="1" strokeDasharray="3,2" />
-            
-            {/* Thread Beads (diagonal) */}
-            <circle cx="34" cy="34" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="26" cy="26" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="66" cy="66" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="74" cy="74" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
-
-            {/* Central Scalloped Base */}
-            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
-              <g key={idx} transform={`rotate(${angle} 50 50)`}>
-                <circle cx="50" cy="34" r="6" fill="#D4AF37" />
-                <circle cx="50" cy="34" r="4.5" fill="#7F1D1D" />
-              </g>
-            ))}
-            
-            {/* Concentric layered rings */}
-            <circle cx="50" cy="50" r="19" fill="url(#goldGrad1)" stroke="#8B0000" strokeWidth="0.8" />
-            <circle cx="50" cy="50" r="16" fill="#7F1D1D" />
-            
-            {/* Pearls inside circle */}
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
-              <circle key={idx} cx="50" cy="37" r="1.5" fill="#FFFFFF" transform={`rotate(${angle} 50 50)`} />
-            ))}
-
-            {/* Inner Star */}
-            <polygon points="50,38 53,46 62,46 55,51 58,59 50,54 42,59 45,51 38,46 47,46" fill="url(#goldGrad1)" stroke="#B45309" strokeWidth="0.5" />
-            
-            {/* Center Gemstone */}
-            <circle cx="50" cy="50" r="7" fill="url(#gemGrad1)" stroke="#FFFFFF" strokeWidth="0.5" />
-          </svg>
-        </div>
-
-        {/* Floating Rakhi 3 */}
-        <div className="absolute bottom-[8%] left-[15%] w-56 h-56 animate-float-3 text-red-500">
-          <svg className="w-full h-full fill-current" viewBox="0 0 100 100">
-            {/* Diagonal thread (Dora) */}
-            <line x1="5" y1="95" x2="95" y2="5" stroke="#DC2626" strokeWidth="2.5" />
-            <line x1="5" y1="95" x2="95" y2="5" stroke="#F59E0B" strokeWidth="1" strokeDasharray="3,2" />
-            
-            {/* Thread Beads (diagonal) */}
-            <circle cx="34" cy="66" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="26" cy="74" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="66" cy="34" r="3.2" fill="#7F1D1D" stroke="#D4AF37" strokeWidth="0.5" />
-            <circle cx="74" cy="26" r="3" fill="#FEF3C7" stroke="#D4AF37" strokeWidth="0.5" />
-
-            {/* Central Scalloped Base */}
-            {[0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((angle, idx) => (
-              <g key={idx} transform={`rotate(${angle} 50 50)`}>
-                <circle cx="50" cy="34" r="6" fill="#D4AF37" />
-                <circle cx="50" cy="34" r="4.5" fill="#7F1D1D" />
-              </g>
-            ))}
-            
-            {/* Concentric layered rings */}
-            <circle cx="50" cy="50" r="19" fill="url(#goldGrad1)" stroke="#8B0000" strokeWidth="0.8" />
-            <circle cx="50" cy="50" r="16" fill="#7F1D1D" />
-            
-            {/* Pearls inside circle */}
-            {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, idx) => (
-              <circle key={idx} cx="50" cy="37" r="1.5" fill="#FFFFFF" transform={`rotate(${angle} 50 50)`} />
-            ))}
-
-            {/* Inner Star */}
-            <polygon points="50,38 53,46 62,46 55,51 58,59 50,54 42,59 45,51 38,46 47,46" fill="url(#goldGrad1)" stroke="#B45309" strokeWidth="0.5" />
-            
-            {/* Center Gemstone */}
-            <circle cx="50" cy="50" r="7" fill="url(#gemGrad1)" stroke="#FFFFFF" strokeWidth="0.5" />
-          </svg>
-        </div>
-      </div>
       <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-8 z-10">
         <ScrollReveal duration="duration-[800ms]">
           <div className="mb-14">
@@ -3325,40 +3177,8 @@ const LandingPage = () => {
                     )}
 
                     {/* Capsule Search Bar */}
-                    <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px] p-[1px]">
-                      <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 rounded-[34px] lg:rounded-[44px] opacity-100"
-                        style={{
-                          background:
-                            'linear-gradient(90deg, rgba(249,115,22,0.24) 0%, rgba(251,191,36,0.16) 12%, rgba(255,255,255,0.94) 28%, rgba(255,255,255,0.98) 50%, rgba(255,255,255,0.94) 72%, rgba(244,63,94,0.14) 88%, rgba(219,39,119,0.2) 100%)',
-                        }}
-                      />
+                    <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px]">
                       <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white">
-                        <div
-                        aria-hidden="true"
-                        className="pointer-events-none absolute inset-0 rounded-[30px] lg:rounded-full"
-                        style={{
-                          background:
-                            'linear-gradient(90deg, rgba(249,115,22,0.18) 0%, rgba(254,243,199,0.86) 14%, rgba(255,255,255,0.98) 32%, rgba(255,255,255,1) 50%, rgba(255,255,255,0.98) 68%, rgba(253,244,245,0.86) 86%, rgba(219,39,119,0.15) 100%)',
-                        }}
-                      />
-                        
-                        {/* Raksha Bandhan Festive Rakhi Icon */}
-                        <div className="flex items-center shrink-0 pl-3 pr-1 text-pink-600 select-none animate-pulse" title="Raksha Bandhan Special">
-                          <svg className="w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
-                            <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
-                          </svg>
-                          <div className="relative w-5 h-5 flex items-center justify-center mx-1">
-                            <div className="absolute inset-0 rounded-full border border-dashed border-red-500 bg-amber-400 animate-spin" style={{ animationDuration: '10s' }} />
-                            <div className="absolute w-3.5 h-3.5 rounded-full bg-red-600 flex items-center justify-center shadow-inner">
-                              <div className="w-1.5 h-1.5 rounded-full bg-amber-300" />
-                            </div>
-                          </div>
-                          <svg className="w-4 h-2 text-amber-500 fill-current opacity-80" viewBox="0 0 40 10">
-                            <path d="M0,5 Q10,0 20,5 T40,5" stroke="currentColor" strokeWidth="2.5" fill="none" />
-                          </svg>
-                        </div>
                         
                         {/* Search Input */}
                         <div className="relative flex-1 w-full min-w-0 z-10">
