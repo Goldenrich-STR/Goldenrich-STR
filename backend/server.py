@@ -338,16 +338,16 @@ async def startup_sequence():
         tables = [
             "users", "properties", "bookings", "blocked_dates", 
             "external_calendars", "property_verifications", 
-            "transactions", "payouts", "refunds", "reviews", 
+            "transactions", "payouts", "host_payouts", "refunds", "reviews", 
             "notifications", "subscription_plans", "subscriptions", "cms_content", "leads", "coupons",
             "deleted_properties", "search_logs", "ai_calls", "ai_agents", "calendar_sync_logs",
-            "contact_messages", "support_tickets", "account_deletion_requests", "commissions", "password_reset_tokens", "platform_settings",
+            "contact_messages", "support_tickets", "account_deletion_requests", "commissions", "payment_attempts", "password_reset_tokens", "platform_settings",
             "booking_tax_slabs", "tds_configurations", "host_tax_profiles",
-            "host_financial_year_summaries", "host_payout_ledger",
-            "payout_job_runs", "roles", "permissions", "role_permissions", "user_permissions", "departments",
+            "host_financial_year_summaries", "host_payout_ledger", "partner_settlement_decisions",
+            "payout_job_runs", "admin_roles", "roles", "permissions", "role_permissions", "user_permissions", "departments",
             "business_divisions", "branches", "franchises", "teams", "reporting_relations",
             "reporting_history", "escalation_rules", "sla_policies", "escalation_instances", "notification_rules",
-            "property_status_history", "audit_logs", "pricing_rules", "price_history"
+            "property_status_history", "audit_logs", "crm_leads", "pricing_rules", "price_history"
         ]
         for table in tables:
             await db_instance.ensure_table(table)
