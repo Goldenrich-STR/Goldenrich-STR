@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 HTTP_TIMEOUT_SECONDS = 20
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 ICAL_REQUIRED_MARKERS = (b"BEGIN:VCALENDAR", b"BEGIN:VEVENT")
+XSPACE_HOST_SUFFIX = "x-space360.in"
 
 
 def _utcnow() -> datetime:
@@ -41,12 +42,30 @@ def _looks_like_airbnb_page(url: str) -> bool:
     )
 
 
+def _looks_like_own_calendar_feed(url: str) -> bool:
+    parsed = urlparse((url or "").strip())
+    host = parsed.netloc.lower()
+    path = parsed.path.lower()
+    return (
+        bool(host)
+        and (host.endswith(XSPACE_HOST_SUFFIX) or host in {"localhost:8000", "localhost:8001"})
+        and "/calendar/properties/" in path
+        and "/ical-feed/" in path
+    )
+
+
 def _validate_ical_response(url: str, content: bytes, content_type: str = "") -> None:
     preview = (content or b"")[:300].lstrip().lower()
     normalized_type = (content_type or "").lower()
 
     if not content:
         raise ValueError("Calendar feed returned an empty response.")
+
+    if _looks_like_own_calendar_feed(url):
+        raise ValueError(
+            "This is the X-Space360 export iCal link. Paste it on Airbnb/Vrbo. "
+            "In External Calendars, add the Airbnb/Vrbo export calendar URL instead."
+        )
 
     if _looks_like_airbnb_page(url):
         raise ValueError(
@@ -211,6 +230,12 @@ async def sync_single_calendar(
         return {"status": "skipped", "created_or_updated": 0, "removed": 0}
 
     try:
+        if _looks_like_own_calendar_feed(sync_record.get("ical_url")):
+            raise ValueError(
+                "This is the X-Space360 export iCal link. Paste it on Airbnb/Vrbo. "
+                "In External Calendars, add the Airbnb/Vrbo export calendar URL instead."
+            )
+
         response = requests.get(
             _normalize_ical_url(sync_record["ical_url"]),
             timeout=HTTP_TIMEOUT_SECONDS,

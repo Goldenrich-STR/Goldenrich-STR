@@ -15,6 +15,7 @@ from datetime import datetime, date, timedelta, timezone
 import logging
 import os
 import secrets
+from urllib.parse import urlparse
 from icalendar import Calendar as iCalendar, Event as iCalEvent
 
 logger = logging.getLogger(__name__)
@@ -36,6 +37,19 @@ class ExternalCalendarRequest(BaseModel):
 
 def _public_backend_url() -> str:
     return os.environ.get("PUBLIC_BACKEND_URL", "https://api.x-space360.in").rstrip("/")
+
+
+def _is_own_ical_feed_url(url: str) -> bool:
+    parsed = urlparse((url or "").strip())
+    public_host = urlparse(_public_backend_url()).netloc.lower()
+    host = parsed.netloc.lower()
+    path = parsed.path.lower()
+    return (
+        bool(host)
+        and (host == public_host or host.endswith(".x-space360.in") or host in {"localhost:8001", "localhost:8000"})
+        and "/calendar/properties/" in path
+        and "/ical-feed/" in path
+    )
 
 
 async def _build_property_ical(property_id: str, property_data: dict, db: AsyncIOMotorDatabase) -> bytes:
@@ -533,6 +547,14 @@ async def add_external_calendar(
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="iCal URL must start with http://, https://, or webcal://",
+            )
+        if _is_own_ical_feed_url(payload.ical_url):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=(
+                    "This is the X-Space360 export iCal link. Paste it on Airbnb/Vrbo. "
+                    "In External Calendars, add the Airbnb/Vrbo export calendar URL instead."
+                ),
             )
 
         external_cal = ExternalCalendar(

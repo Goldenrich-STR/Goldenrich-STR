@@ -240,6 +240,21 @@ const HostCalendar = () => {
     }
   };
 
+  const looksLikeOwnCalendarFeedUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      const path = parsed.pathname.toLowerCase();
+      return (
+        (host === 'localhost' || host.endsWith('x-space360.in')) &&
+        path.includes('/calendar/properties/') &&
+        path.includes('/ical-feed/')
+      );
+    } catch {
+      return false;
+    }
+  };
+
   const handleAddExternal = async (e) => {
     e.preventDefault();
     if (!extName || !extUrl) return;
@@ -249,6 +264,10 @@ const HostCalendar = () => {
     }
     if (looksLikeAirbnbPageUrl(url)) {
       setError('This is an Airbnb page URL. Please paste the Airbnb export calendar iCal link that contains calendar/ical or ends with .ics.');
+      return;
+    }
+    if (looksLikeOwnCalendarFeedUrl(url)) {
+      setError('This X-Space360 iCal link is for pasting on Airbnb/Vrbo. In External Calendars, paste the Airbnb/Vrbo export calendar URL.');
       return;
     }
     setSubmitting(true);
@@ -633,8 +652,8 @@ const HostCalendar = () => {
               <div className="bg-white rounded-3xl p-6 border border-gray-100/80 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold tracking-tight text-charcoal">X-Space360 iCal Link</h3>
-                    <p className="text-xs text-charcoal-light">Paste this link on Airbnb, Vrbo, etc.</p>
+                    <h3 className="text-lg font-bold tracking-tight text-charcoal">Export to Airbnb / Vrbo</h3>
+                    <p className="text-xs text-charcoal-light">Copy this X-Space360 link and paste it inside Airbnb/Vrbo calendar sync.</p>
                   </div>
                   <div className="p-2.5 rounded-xl bg-green-50 text-green-700">
                     <CalendarIcon className="w-5 h-5" />
@@ -675,7 +694,7 @@ const HostCalendar = () => {
                     </button>
                   </div>
                   <p className="text-[11px] leading-relaxed text-charcoal-light">
-                    This feed includes confirmed X-Space360 bookings and manual blocks. External calendar blocks are not re-exported to avoid sync loops.
+                    Outbound feed: X-Space360 bookings and manual blocks go to Airbnb/Vrbo. Do not paste this link back into External Calendars.
                   </p>
                 </div>
               </div>
@@ -684,8 +703,8 @@ const HostCalendar = () => {
               <div className="bg-white rounded-3xl p-6 border border-gray-100/80 shadow-sm">
                 <div className="flex items-center justify-between mb-4">
                   <div>
-                    <h3 className="text-lg font-bold tracking-tight text-charcoal">External Calendars (iCal)</h3>
-                    <p className="text-xs text-charcoal-light">Sync with Airbnb, Vrbo, etc.</p>
+                    <h3 className="text-lg font-bold tracking-tight text-charcoal">Import from Airbnb / Vrbo</h3>
+                    <p className="text-xs text-charcoal-light">Paste the Airbnb/Vrbo export iCal URL here to block those dates in X-Space360.</p>
                   </div>
                   <button
                     onClick={() => setShowExternalForm((v) => !v)}
@@ -716,11 +735,14 @@ const HostCalendar = () => {
                       type="text"
                       value={extUrl}
                       onChange={(e) => setExtUrl(e.target.value)}
-                      placeholder="https://… .ics URL"
+                      placeholder="Paste Airbnb/Vrbo export calendar .ics URL"
                       required
                       className="w-full border border-gray-100 rounded-xl px-3.5 py-2 text-sm text-charcoal bg-white outline-none focus:border-terracotta focus:ring-2 focus:ring-terracotta/10 transition-all"
                       data-testid="ext-url-input"
                     />
+                    <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] leading-relaxed text-blue-900">
+                      For two-way sync: paste this property's X-Space360 export link on Airbnb/Vrbo, then paste Airbnb/Vrbo's export iCal link here.
+                    </div>
                     <div>
                       <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-1">Calendar Color</label>
                       <input
