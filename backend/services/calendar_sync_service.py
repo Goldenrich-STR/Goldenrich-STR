@@ -4,6 +4,7 @@ import logging
 import uuid
 from datetime import date, datetime, timezone
 from typing import Any, Iterable
+from urllib.parse import urlparse
 
 import requests
 from icalendar import Calendar as ICalendar
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 HTTP_TIMEOUT_SECONDS = 20
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+ICAL_REQUIRED_MARKERS = (b"BEGIN:VCALENDAR", b"BEGIN:VEVENT")
 
 
 def _utcnow() -> datetime:
@@ -22,9 +24,51 @@ def _utcnow() -> datetime:
 
 
 def _normalize_ical_url(url: str) -> str:
+    url = (url or "").strip()
     if url.startswith("webcal://"):
         return "https://" + url[len("webcal://") :]
     return url
+
+
+def _looks_like_airbnb_page(url: str) -> bool:
+    parsed = urlparse((url or "").strip())
+    host = parsed.netloc.lower()
+    path = parsed.path.lower()
+    return "airbnb." in host and not (
+        "calendar/ical" in path
+        or path.endswith(".ics")
+        or "ical" in path
+    )
+
+
+def _validate_ical_response(url: str, content: bytes, content_type: str = "") -> None:
+    preview = (content or b"")[:300].lstrip().lower()
+    normalized_type = (content_type or "").lower()
+
+    if not content:
+        raise ValueError("Calendar feed returned an empty response.")
+
+    if _looks_like_airbnb_page(url):
+        raise ValueError(
+            "This looks like an Airbnb listing/share page, not an Airbnb iCal export URL. "
+            "Open Airbnb Host calendar export settings and paste the URL that contains calendar/ical or ends with .ics."
+        )
+
+    if preview.startswith((b"<!doctype html", b"<html", b"{")):
+        raise ValueError(
+            "Calendar URL did not return an iCal feed. It returned a web page or API error instead. "
+            "Please paste the public calendar export URL, not the listing page URL."
+        )
+
+    if "text/html" in normalized_type and b"BEGIN:VCALENDAR" not in content[:2000]:
+        raise ValueError(
+            "Calendar URL returned HTML instead of iCal. Please use the channel's export calendar/.ics URL."
+        )
+
+    if not any(marker in content[:5000] for marker in ICAL_REQUIRED_MARKERS):
+        raise ValueError(
+            "Calendar content is not valid iCal. It must include BEGIN:VCALENDAR and VEVENT entries."
+        )
 
 
 def _to_date(value: Any) -> date | None:
@@ -48,7 +92,12 @@ def _event_uid(component: Any) -> str | None:
 
 
 def _parse_ical_events(content: bytes) -> list[dict[str, str]]:
-    calendar = ICalendar.from_ical(content)
+    try:
+        calendar = ICalendar.from_ical(content)
+    except Exception as exc:
+        raise ValueError(
+            "Calendar content could not be parsed as iCal. Please verify the external calendar export URL."
+        ) from exc
     events: list[dict[str, str]] = []
 
     for component in calendar.walk("VEVENT"):
@@ -169,6 +218,11 @@ async def sync_single_calendar(
         )
         response.raise_for_status()
 
+        _validate_ical_response(
+            sync_record["ical_url"],
+            response.content,
+            response.headers.get("Content-Type", ""),
+        )
         events = _parse_ical_events(response.content)
         for event in events:
             await _upsert_external_event(db, sync_record, event)

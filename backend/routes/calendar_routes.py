@@ -597,9 +597,12 @@ async def trigger_external_sync(
         raise
     except Exception as e:
         logger.error(f"Error triggering sync: {str(e)}")
+        latest = await db.external_calendars.find_one(
+            {"calendar_id": calendar_id}, {"_id": 0}
+        )
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to sync external calendar",
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=(latest or {}).get("sync_error") or "Failed to sync external calendar",
         )
 
 

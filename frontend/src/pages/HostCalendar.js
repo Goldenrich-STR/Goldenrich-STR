@@ -229,12 +229,27 @@ const HostCalendar = () => {
     }
   };
 
+  const looksLikeAirbnbPageUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      const host = parsed.hostname.toLowerCase();
+      const path = parsed.pathname.toLowerCase();
+      return host.includes('airbnb.') && !path.includes('calendar/ical') && !path.includes('ical') && !path.endsWith('.ics');
+    } catch {
+      return false;
+    }
+  };
+
   const handleAddExternal = async (e) => {
     e.preventDefault();
     if (!extName || !extUrl) return;
     let url = extUrl.trim();
-    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('webcal://')) {
       url = 'https://' + url;
+    }
+    if (looksLikeAirbnbPageUrl(url)) {
+      setError('This is an Airbnb page URL. Please paste the Airbnb export calendar iCal link that contains calendar/ical or ends with .ics.');
+      return;
     }
     setSubmitting(true);
     setError('');
