@@ -14,7 +14,7 @@ import 'providers/support_ticket_provider.dart';
 import 'providers/nearby_map_provider.dart';
 import 'services/localization_service.dart';
 import 'services/api_service.dart';
-import 'views/shared/animated_intro_screen.dart';
+import 'views/shared/app_shell.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,7 +51,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       builder: (context, child) => const _ResponsiveAppShell()
           .wrap(context, child ?? const SizedBox.shrink()),
-      home: const AnimatedIntroScreen(),
+      home: const AppShell(),
     );
   }
 }

@@ -12,8 +12,10 @@ from models.calendar import (
 )
 from middleware.auth_middleware import get_current_user
 from datetime import datetime, date, timedelta, timezone
+import html
 import logging
 import os
+import re
 import secrets
 from urllib.parse import urlparse
 from icalendar import Calendar as iCalendar, Event as iCalEvent
@@ -35,12 +37,23 @@ class ExternalCalendarRequest(BaseModel):
     color: str = "#3B82F6"
 
 
+ICAL_URL_PATTERN = re.compile(r"(webcal://\S+|https?://\S+)", re.IGNORECASE)
+
+
+def _clean_ical_url(value: str) -> str:
+    cleaned = html.unescape((value or "").strip()).strip("\"'<>")
+    match = ICAL_URL_PATTERN.search(cleaned)
+    if match:
+        cleaned = match.group(0)
+    return cleaned.strip().strip("\"'<>.,);]")
+
+
 def _public_backend_url() -> str:
     return os.environ.get("PUBLIC_BACKEND_URL", "https://api.x-space360.in").rstrip("/")
 
 
 def _is_own_ical_feed_url(url: str) -> bool:
-    parsed = urlparse((url or "").strip())
+    parsed = urlparse(_clean_ical_url(url))
     public_host = urlparse(_public_backend_url()).netloc.lower()
     host = parsed.netloc.lower()
     path = parsed.path.lower()
@@ -543,12 +556,14 @@ async def add_external_calendar(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
 
-        if not payload.ical_url.startswith(("http://", "https://", "webcal://")):
+        ical_url = _clean_ical_url(payload.ical_url)
+
+        if not ical_url.startswith(("http://", "https://", "webcal://")):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="iCal URL must start with http://, https://, or webcal://",
             )
-        if _is_own_ical_feed_url(payload.ical_url):
+        if _is_own_ical_feed_url(ical_url):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
@@ -561,7 +576,7 @@ async def add_external_calendar(
             property_id=property_id,
             owner_id=current_user["user_id"],
             name=payload.name,
-            ical_url=payload.ical_url,
+            ical_url=ical_url,
             color=payload.color,
         )
 

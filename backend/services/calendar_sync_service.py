@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+import html
+import re
 import uuid
 from datetime import date, datetime, timezone
 from typing import Any, Iterable
@@ -18,21 +20,30 @@ HTTP_TIMEOUT_SECONDS = 20
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 ICAL_REQUIRED_MARKERS = (b"BEGIN:VCALENDAR", b"BEGIN:VEVENT")
 XSPACE_HOST_SUFFIX = "x-space360.in"
+ICAL_URL_PATTERN = re.compile(r"(webcal://\S+|https?://\S+)", re.IGNORECASE)
 
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _clean_ical_url(url: str) -> str:
+    cleaned = html.unescape((url or "").strip()).strip("\"'<>")
+    match = ICAL_URL_PATTERN.search(cleaned)
+    if match:
+        cleaned = match.group(0)
+    return cleaned.strip().strip("\"'<>.,);]")
+
+
 def _normalize_ical_url(url: str) -> str:
-    url = (url or "").strip()
+    url = _clean_ical_url(url)
     if url.startswith("webcal://"):
         return "https://" + url[len("webcal://") :]
     return url
 
 
 def _looks_like_airbnb_page(url: str) -> bool:
-    parsed = urlparse((url or "").strip())
+    parsed = urlparse(_clean_ical_url(url))
     host = parsed.netloc.lower()
     path = parsed.path.lower()
     return "airbnb." in host and not (
@@ -43,7 +54,7 @@ def _looks_like_airbnb_page(url: str) -> bool:
 
 
 def _looks_like_own_calendar_feed(url: str) -> bool:
-    parsed = urlparse((url or "").strip())
+    parsed = urlparse(_clean_ical_url(url))
     host = parsed.netloc.lower()
     path = parsed.path.lower()
     return (
