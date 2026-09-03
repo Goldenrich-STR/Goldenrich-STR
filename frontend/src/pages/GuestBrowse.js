@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useAuth } from '../contexts/AuthContext';
@@ -9,6 +9,7 @@ import SEO from '../components/SEO';
 import ShareDropdown from '../components/ShareDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import { getPropertyPath } from '../lib/propertyRouting';
 import {
   Crown,
   Building2,
@@ -44,6 +45,31 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 });
+
+const PROPERTY_CATEGORIES = [
+  { value: '', label: 'Any Category' },
+  { value: 'residential', label: 'Residential' },
+  { value: 'commercial', label: 'Commercial' },
+  { value: 'event_venue', label: 'Event Venue' },
+];
+
+const PROPERTY_TYPE_CATEGORY_MAP = {
+  apartment: 'residential',
+  villa: 'residential',
+  bungalow: 'residential',
+  studio: 'residential',
+  independent_house: 'residential',
+  farmhouse: 'residential',
+  resort: 'residential',
+  private_office: 'commercial',
+  co_working: 'commercial',
+  meeting_room: 'commercial',
+  conference_room: 'commercial',
+  banquet_hall: 'event_venue',
+  wedding_venue: 'event_venue',
+  hotel_ballroom: 'event_venue',
+  rooftop: 'event_venue',
+};
 
 const PROPERTY_TYPES = [
   { value: '', label: 'Any type' },
@@ -392,7 +418,7 @@ const GuestBrowse = () => {
   };
 
   const handleShareWhatsApp = (property) => {
-    const url = `${window.location.origin}/property/${property.property_id}`;
+    const url = `${window.location.origin}${getPropertyPath(property)}`;
     const text = `Check out this amazing property *${property.title}* in *${property.city}* on X-Space360:\n${url}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -544,6 +570,7 @@ const GuestBrowse = () => {
     
     if (filters.max_price) params.max_price = Number(filters.max_price);
     if (filters.bhk_type) params.bhk_type = filters.bhk_type;
+    if (filters.guests) params.guests = Number(filters.guests);
     if (filters.instant_booking) params.instant_booking = true;
     if (filters.pet_friendly) params.pet_friendly = true;
     if (filters.check_in) params.check_in = filters.check_in;
@@ -570,6 +597,35 @@ const GuestBrowse = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePropertyTypeChange = (newType) => {
+    const impliedCategory = PROPERTY_TYPE_CATEGORY_MAP[newType];
+    setFilters((prev) => {
+      let newCategory = prev.category;
+      if (impliedCategory && prev.category && prev.category !== impliedCategory) {
+        newCategory = impliedCategory;
+      } else if (!newCategory && impliedCategory) {
+        newCategory = impliedCategory;
+      }
+      return {
+        ...prev,
+        property_type: newType,
+        category: newCategory,
+      };
+    });
+  };
+
+  const handleCategoryChange = (newCat) => {
+    setFilters((prev) => {
+      const impliedCat = PROPERTY_TYPE_CATEGORY_MAP[prev.property_type];
+      const keepType = !newCat || !impliedCat || impliedCat === newCat;
+      return {
+        ...prev,
+        category: newCat,
+        property_type: keepType ? prev.property_type : '',
+      };
+    });
   };
 
   const toggleAmenity = (a) => {
@@ -609,7 +665,8 @@ const GuestBrowse = () => {
   const navigateToProperty = (propertyId) => {
     const params = new URLSearchParams(window.location.search);
     const urlGuests = params.get('guests') || '1';
-    navigate(`/property/${propertyId}?checkIn=${filters.check_in || ''}&checkOut=${filters.check_out || ''}&guests=${urlGuests}`);
+    const targetProperty = properties.find((item) => item.property_id === propertyId) || displayedProperties.find((item) => item.property_id === propertyId);
+    navigate(`${getPropertyPath(targetProperty || { property_id: propertyId })}?checkIn=${filters.check_in || ''}&checkOut=${filters.check_out || ''}&guests=${urlGuests}`);
   };
 
   const displayedProperties = useMemo(() => {
@@ -654,13 +711,17 @@ const GuestBrowse = () => {
       {/* Header */}
       <header className="relative z-40 glass px-4 md:px-8 py-4 border-b border-gray-100" data-testid="guest-header">
         <div className="w-full flex justify-between items-center gap-2">
-          <div 
-            className="flex items-center cursor-pointer shrink-0" 
-            onClick={() => navigate('/')}
-          >
+          <Link to="/" className="flex items-center shrink-0">
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
-          </div>
+          </Link>
           <div className="hidden md:flex items-center space-x-4 md:space-x-6">
+            <nav className="hidden lg:flex items-center gap-5 text-[11px] font-bold uppercase tracking-widest text-charcoal-muted">
+              <Link to="/guest/browse" className="hover:text-terracotta transition-colors">Discover</Link>
+              <Link to="/about-us" className="hover:text-terracotta transition-colors">About</Link>
+              <Link to="/support" className="hover:text-terracotta transition-colors">Support</Link>
+              <Link to={user ? '/host/list-property' : '/register?role=host'} className="hover:text-terracotta transition-colors">List your Property</Link>
+            </nav>
+
             {/* Language Selector */}
             <div className="relative flex items-center">
               <LanguageSelector
@@ -822,7 +883,7 @@ const GuestBrowse = () => {
                 >
                   <Search className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                   <div className="w-full text-left">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Search</p>
+                    <label htmlFor="browse-search-query" className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider leading-none">Search</label>
                     <input
                       id="browse-search-query"
                       name="search"
@@ -832,6 +893,7 @@ const GuestBrowse = () => {
                         setFilters({ ...filters, search: e.target.value });
                       }}
                       placeholder="Search properties..."
+                      aria-label="Search destinations or properties"
                       className="bg-transparent border-none outline-none text-charcoal w-full placeholder-slate-400 font-bold text-[15px] focus:ring-0 focus:outline-none p-0 mt-0.5"
                     />
                   </div>
@@ -850,7 +912,7 @@ const GuestBrowse = () => {
                   }}
                   className="w-full text-left outline-none border-none bg-transparent"
                 >
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">When</p>
+                  <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider leading-none">Check-in</p>
                   <p className={`font-bold text-[15px] mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-slate-400'}`}>
                     {filters.check_in || 'Check-in'}
                   </p>
@@ -886,7 +948,7 @@ const GuestBrowse = () => {
                   }}
                   className="w-full text-left outline-none border-none bg-transparent"
                 >
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">When</p>
+                  <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider leading-none">Check-out</p>
                   <p className={`font-bold text-[15px] mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-slate-400'}`}>
                     {filters.check_out || 'Check-out'}
                   </p>
@@ -919,7 +981,7 @@ const GuestBrowse = () => {
                 >
                   <User className="w-4.5 h-4.5 text-gray-400 mr-3 shrink-0" />
                   <div className="text-left">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Who</p>
+                    <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider leading-none">Guests</p>
                     <p className="text-charcoal font-bold text-[15px] mt-0.5 whitespace-nowrap">
                       {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                     </p>
@@ -1020,10 +1082,23 @@ const GuestBrowse = () => {
         <div className="bg-stone border-b border-gray-100 px-4 md:px-8 py-8 animate-slide-up" data-testid="advanced-filters">
           <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-2">
+              <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('type') || 'Category'}</label>
+              <select
+                value={filters.category}
+                onChange={(e) => handleCategoryChange(e.target.value)}
+                disabled={new URLSearchParams(window.location.search).get('signature') === 'true'}
+                className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none disabled:bg-gray-100 disabled:text-gray-400"
+              >
+                {PROPERTY_CATEGORIES.map((cOpt) => (
+                  <option key={cOpt.value} value={cOpt.value}>{cOpt.label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
               <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('propertyType')}</label>
               <select
                 value={filters.property_type}
-                onChange={(e) => setFilters({ ...filters, property_type: e.target.value })}
+                onChange={(e) => handlePropertyTypeChange(e.target.value)}
                 disabled={new URLSearchParams(window.location.search).get('signature') === 'true'}
                 className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none disabled:bg-gray-100 disabled:text-gray-400"
               >
@@ -1149,7 +1224,7 @@ const GuestBrowse = () => {
       {/* Results header */}
       <div className="px-4 md:px-8 py-8 w-full flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
+          <h1 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
              {new URLSearchParams(window.location.search).get('signature') === 'true' ? (
                 "Signature Series"
              ) : loading ? t('searching') : (
@@ -1157,7 +1232,7 @@ const GuestBrowse = () => {
                    {showWishlistOnly ? displayedProperties.length : totalProperties} {(showWishlistOnly ? displayedProperties.length : totalProperties) === 1 ? t('spaceFound') : t('spacesFound')}
                 </>
              )}
-          </h2>
+          </h1>
           <p className="text-charcoal-muted font-medium mt-1">
              {new URLSearchParams(window.location.search).get('signature') === 'true'
                 ? "Indulge in India's most ultra-luxury private villas and premium villa stays."
@@ -1362,6 +1437,16 @@ const GuestBrowse = () => {
             {/* Interactive Map */}
             {(viewMode === VIEW_MODES.SPLIT || viewMode === VIEW_MODES.MAP) && (
               <div className="rounded-3xl overflow-hidden border border-gray-100 h-full shadow-premium relative group">
+                {propsWithCoords.length < displayedProperties.length && (
+                  <div className="absolute left-4 right-4 top-4 z-[1001] rounded-2xl border border-amber-200 bg-white/95 px-4 py-3 shadow-sm">
+                    <p className="text-xs font-bold text-charcoal">
+                      Map pins are available for {propsWithCoords.length} of {displayedProperties.length} spaces.
+                    </p>
+                    <p className="mt-1 text-xs text-charcoal-muted">
+                      The remaining spaces are still in the results list but do not have map coordinates yet.
+                    </p>
+                  </div>
+                )}
                 <MapContainer
                   center={indiaCenter}
                   zoom={5}
@@ -1422,10 +1507,6 @@ const GuestBrowse = () => {
                     </Marker>
                   ))}
                 </MapContainer>
-                {/* Map Control Floating Card */}
-                <div className="absolute top-4 right-4 z-[1000] glass px-4 py-2 rounded-xl border border-white/50 shadow-premium pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                   <p className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Interactive Region</p>
-                </div>
               </div>
             )}
           </div>
@@ -1438,12 +1519,17 @@ const GuestBrowse = () => {
 const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlisted, onWishlistToggle, onShare, user }) => (
   <div
     className={`card-premium group cursor-pointer shrink-0 snap-start ${compact ? 'w-full sm:w-auto flex flex-col sm:flex-row min-h-[240px]' : 'w-[280px] sm:w-auto flex flex-col'} transition-all duration-500`}
-    onClick={onClick}
     onMouseEnter={() => onHover && onHover(property.property_id)}
     onMouseLeave={() => onHover && onHover(null)}
     style={style}
   >
     <div className={`relative overflow-hidden ${compact ? 'w-full sm:w-1/3 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto' : 'h-48 sm:h-72 rounded-t-2xl'}`}>
+      <Link
+        to={getPropertyPath(property)}
+        onClick={onClick}
+        className="absolute inset-0 z-10"
+        aria-label={`View ${property.title}`}
+      />
       <img
         src={getImageUrl(property.images?.[0]) || PROPERTY_IMAGE_PLACEHOLDER}
         alt={property.title}

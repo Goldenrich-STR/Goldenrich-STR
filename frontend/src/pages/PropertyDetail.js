@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
@@ -7,6 +7,7 @@ import SEO from '../components/SEO';
 import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
+import { getPropertyIdFromRouteParam, getPropertyPath } from '../lib/propertyRouting';
 import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import ShareDropdown from '../components/ShareDropdown';
 import {
@@ -491,6 +492,7 @@ const PropertyDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { id } = useParams();
+  const resolvedPropertyId = getPropertyIdFromRouteParam(id) || id;
   const { user, logout } = useAuth();
   const [lang, setLang] = useState(() => localStorage.getItem('preferredLanguage') || 'en');
   const t = (key) => {
@@ -640,7 +642,7 @@ const PropertyDetail = () => {
 
   const saveBookingIntent = () => {
     sessionStorage.setItem(BOOKING_INTENT_KEY, JSON.stringify({
-      property_id: id,
+      property_id: resolvedPropertyId,
       path: location.pathname,
       next: `${location.pathname}${location.search || ''}`,
       checkIn,
@@ -676,14 +678,14 @@ const PropertyDetail = () => {
       }))
       .catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [resolvedPropertyId]);
 
   useEffect(() => {
     try {
       const rawIntent = sessionStorage.getItem(BOOKING_INTENT_KEY);
       if (!rawIntent) return;
       const intent = JSON.parse(rawIntent);
-      if (intent?.property_id !== id) return;
+      if (intent?.property_id !== resolvedPropertyId) return;
 
       if (intent.checkIn) setCheckIn(intent.checkIn);
       if (intent.checkOut) setCheckOut(intent.checkOut);
@@ -697,7 +699,28 @@ const PropertyDetail = () => {
     } catch (err) {
       sessionStorage.removeItem(BOOKING_INTENT_KEY);
     }
-  }, [id]);
+  }, [resolvedPropertyId]);
+
+  useEffect(() => {
+    if (!property?.property_id) return;
+    const canonicalPath = getPropertyPath(property);
+    if (location.pathname !== canonicalPath) {
+      navigate(`${canonicalPath}${location.search || ''}`, { replace: true });
+    }
+  }, [property, location.pathname, location.search, navigate]);
+
+  useEffect(() => {
+    if (!showGallery) return undefined;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setShowGallery(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showGallery]);
 
   const images = useMemo(() => {
     const raw = property?.images?.length ? property.images : [];
@@ -797,7 +820,7 @@ const PropertyDetail = () => {
 
   const fetchReviews = async () => {
     try {
-      const res = await reviewAPI.listForProperty(id, { limit: 12 });
+      const res = await reviewAPI.listForProperty(resolvedPropertyId, { limit: 12 });
       setReviews(res.data.reviews || []);
       setReviewSummary(res.data.summary || { rating_avg: 0, rating_count: 0, sub_avgs: {} });
     } catch {
@@ -808,7 +831,7 @@ const PropertyDetail = () => {
   const fetchProperty = async () => {
     setLoading(true);
     try {
-      const res = await propertyAPI.getProperty(id);
+      const res = await propertyAPI.getProperty(resolvedPropertyId);
       setProperty(res.data);
       if (res.data) {
         saveRecentlyVisitedProperty(res.data);
@@ -836,7 +859,7 @@ const PropertyDetail = () => {
 
   const fetchCoupons = async () => {
     try {
-      const res = await couponAPI.getPropertyCoupons(id);
+      const res = await couponAPI.getPropertyCoupons(resolvedPropertyId);
       setAvailableCoupons(res.data.coupons || []);
     } catch (e) {
       // non-blocking
@@ -848,7 +871,7 @@ const PropertyDetail = () => {
       // Fetch a wide window so calendar widget shows blocks for any nav month
       const start = toISO(new Date());
       const end = `${new Date().getFullYear() + 2}-12-31`;
-      const res = await calendarAPI.getBlockedDates(id, { start_date: start, end_date: end });
+      const res = await calendarAPI.getBlockedDates(resolvedPropertyId, { start_date: start, end_date: end });
       setBlockedDates(res.data.blocked_dates || []);
     } catch (e) {
       console.error('blocked dates load failed', e);
@@ -1018,7 +1041,7 @@ const PropertyDetail = () => {
     }
 
     bookingAPI.getPricingQuote({
-      property_id: property?.property_id || id,
+      property_id: property?.property_id || resolvedPropertyId,
       host_amount: hostAmount,
       tax_slab_base_amount: Number(taxSlabBaseAmount) || hostAmount,
       pricing_units: Math.max(1, Number(nights) || 1),
@@ -1046,7 +1069,7 @@ const PropertyDetail = () => {
           });
       });
     return () => { cancelled = true; };
-  }, [baseAmount, taxSlabBaseAmount, nights, extraGuestTotal]);
+  }, [baseAmount, taxSlabBaseAmount, nights, extraGuestTotal, property?.property_id, resolvedPropertyId]);
 
   const quoteNumber = (value, fallback = 0) => {
     const parsed = Number(value);
@@ -1184,7 +1207,7 @@ const PropertyDetail = () => {
     setBookingError('');
     try {
       const res = await bookingAPI.createBooking({
-        property_id: id,
+        property_id: resolvedPropertyId,
         check_in_date: checkIn,
         check_out_date: checkOut,
         number_of_guests: property?.category === 'event_venue' ? Number(guests) : chargeableGuests,
@@ -1356,8 +1379,7 @@ const PropertyDetail = () => {
   }
 
 
-  const propertySlug = property.slug || property.property_slug || property.property_id;
-  const propertyPath = `/property/${propertySlug}`;
+  const propertyPath = getPropertyPath(property);
   const propertyName = property.name || property.title || 'Property';
   const propertyType = formatPropertyTypeLabel(property.property_type || property.propertyType || property.category || 'property');
   const propertyCity = property.city || 'India';
@@ -1492,13 +1514,16 @@ const PropertyDetail = () => {
       />
       <header className="glass px-4 md:px-8 py-4 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto flex justify-between items-center w-full gap-2">
-          <div 
-            className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
-            onClick={() => navigate('/')}
-          >
+          <Link to="/" className="flex items-center space-x-2 sm:space-x-3 group shrink-0">
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
-          </div>
+          </Link>
           <div className="flex items-center space-x-4 md:space-x-6">
+            <nav className="hidden lg:flex items-center gap-5 text-[11px] font-bold uppercase tracking-widest text-charcoal-muted">
+              <Link to="/guest/browse" className="hover:text-terracotta transition-colors">Discover</Link>
+              <Link to="/about-us" className="hover:text-terracotta transition-colors">About</Link>
+              <Link to="/support" className="hover:text-terracotta transition-colors">Support</Link>
+              <Link to={user ? '/host/list-property' : '/register?role=host'} className="hover:text-terracotta transition-colors">List your Property</Link>
+            </nav>
             <LanguageSelector
               currentLang={lang}
               onLanguageChange={(newLang) => {
@@ -1688,14 +1713,20 @@ const PropertyDetail = () => {
                     {property.host.phone}
                   </a>
                 ) : (
-                  <button
-                    disabled
-                    className="inline-flex shrink-0 items-center justify-center px-5 py-3 border-2 border-gray-200 text-charcoal-muted rounded-2xl text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center gap-1.5 cursor-not-allowed bg-gray-50/80"
-                    title="Host contact details will be unlocked after booking confirmation"
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    {t('contactHost')}
-                  </button>
+                  <div className="shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/support')}
+                      className="inline-flex w-full items-center justify-center px-5 py-3 border-2 border-charcoal text-charcoal rounded-2xl text-[10px] font-bold tracking-tight uppercase tracking-widest gap-1.5 hover:bg-charcoal hover:text-white transition-all"
+                      title="Support can help with pre-booking questions for this property"
+                    >
+                      <Lock className="w-3.5 h-3.5" />
+                      {t('contactHost')}
+                    </button>
+                    <p className="mt-2 max-w-[16rem] text-[11px] font-medium leading-relaxed text-charcoal-muted">
+                      Host contact details unlock after a confirmed booking. For pre-booking questions, use Support.
+                    </p>
+                  </div>
                 )}
               </div>
             )}
@@ -2281,7 +2312,7 @@ const PropertyDetail = () => {
                </div>
 
                {/* Add Review Form */}
-               <ReviewForm user={user} propertyId={id} t={t} setProperty={setProperty} onSuccess={fetchReviews} />
+              <ReviewForm user={user} propertyId={resolvedPropertyId} t={t} setProperty={setProperty} onSuccess={fetchReviews} />
 
                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {reviews.length === 0 ? (
@@ -2732,9 +2763,15 @@ const PropertyDetail = () => {
                 ) : (
                    canShowBookingAmount
                      ? `${property.instant_booking ? t('reserveNow') : t('requestBooking')} - Rs.${amountDueNow.toLocaleString('en-IN')}`
-                     : `${property.instant_booking ? t('reserveNow') : t('requestBooking')}`
+                     : 'Select dates to continue'
                 )}
               </button>
+
+              {!checkIn || !checkOut || nights === 0 ? (
+                <p className="mt-3 text-center text-xs font-semibold text-charcoal-muted">
+                  Select your check-in and check-out dates to continue with booking.
+                </p>
+              ) : null}
 
               <p className="mt-3 text-[11px] text-charcoal-muted font-semibold leading-relaxed text-center">
                 By continuing, you agree to the <LegalLinks className="inline" context="booking" />.
@@ -2791,13 +2828,15 @@ const PropertyDetail = () => {
                 return (
                   <div 
                     key={prop.property_id} 
-                    onClick={() => {
-                      navigate(`/property/${prop.property_id}`);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
                     className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
                   >
                     <div className="relative aspect-[4/3] w-full overflow-hidden">
+                      <Link
+                        to={getPropertyPath(prop)}
+                        onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                        className="absolute inset-0 z-10"
+                        aria-label={`View ${prop.title}`}
+                      />
                       <img 
                         src={propImg} 
                         alt={prop.title} 

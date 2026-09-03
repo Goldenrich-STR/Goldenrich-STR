@@ -5,6 +5,7 @@ from urllib.parse import quote
 from xml.sax.saxutils import escape
 from fastapi import APIRouter, Depends, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
+from utils.property_urls import build_property_path
 
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SEO"])
@@ -53,6 +54,10 @@ async def get_live_properties(db: AsyncIOMotorDatabase):
         {
             "_id": 0,
             "property_id": 1,
+            "title": 1,
+            "city": 1,
+            "slug": 1,
+            "property_slug": 1,
             "updated_at": 1,
             "created_at": 1,
             "subscription_id": 1,
@@ -118,7 +123,7 @@ async def build_sitemap_entries(db: AsyncIOMotorDatabase):
             if not prop_id:
                 continue
             entries.append(url_entry(
-                f"/property/{quote(str(prop_id))}",
+                quote(build_property_path(prop), safe="/:?=&-"),
                 prop.get("updated_at") or prop.get("created_at"),
                 "daily",
                 "0.9",
@@ -220,7 +225,7 @@ async def get_properties_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
             prop_id = prop.get("property_id")
             if prop_id:
                 xml_entries.append(url_entry(
-                    f"/property/{quote(str(prop_id))}",
+                    quote(build_property_path(prop), safe="/:?=&-"),
                     prop.get("updated_at") or prop.get("created_at"),
                     "daily",
                     "0.9",

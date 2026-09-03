@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { Crown, Building2, MapPin, Calendar, Star, Zap, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
@@ -14,6 +14,7 @@ import { organizationSchema, websiteSchema } from '../lib/seoSchemas';
 import LegalDocument from '../components/LegalDocument';
 import ScrollReveal from '../components/ui/ScrollReveal';
 import DateRangePicker from '../components/ui/DateRangePicker';
+import { getPropertyPath } from '../lib/propertyRouting';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
 
@@ -51,7 +52,7 @@ const homeSchema = {
 
 const DEFAULT_HERO_SLIDES = [
   {
-    src: '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg',
+    src: '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.webp',
     mobilePosition: '58% center',
     tag: 'COMMERCIAL SPACES',
     tagColor: 'text-white',
@@ -62,7 +63,7 @@ const DEFAULT_HERO_SLIDES = [
     badges: ['Corporate rates & flexible leasing available*']
   },
   {
-    src: '/videos/hero/hero-villa-mobile-crop.png',
+    src: '/videos/hero/hero-villa-mobile-crop.webp',
     mobilePosition: 'center 58%',
     tag: 'RESORT VILLAS',
     tagColor: 'text-white',
@@ -73,7 +74,7 @@ const DEFAULT_HERO_SLIDES = [
     badges: ['Curated luxury stays with private pools*']
   },
   {
-    src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
+    src: '/videos/hero/pexels-thevisionaryvows-33485961.webp',
     mobilePosition: '58% center',
     tag: 'WEDDING VENUES',
     tagColor: 'text-white',
@@ -84,7 +85,7 @@ const DEFAULT_HERO_SLIDES = [
     badges: ['Plan your dream celebration with custom setups*']
   },
   {
-    src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
+    src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.webp',
     mobilePosition: 'left center',
     tag: 'RESIDENTIAL SPACES',
     tagColor: 'text-white',
@@ -1845,7 +1846,7 @@ const CollectionsSection = ({
       navigate('/guest/browse');
       return;
     }
-    navigate(`/property/${col.property_id}`);
+    navigate(getPropertyPath(col));
   };
 
   const scroll = (dir) => {
@@ -2314,7 +2315,7 @@ const LandingPage = () => {
   };
 
   const handleShareWhatsApp = (property) => {
-    const url = `${window.location.origin}/property/${property.property_id}`;
+    const url = `${window.location.origin}${getPropertyPath(property)}`;
     const text = `Check out this amazing property *${property.title}* in *${property.city}* on X-Space360:\n${url}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -2670,12 +2671,16 @@ const LandingPage = () => {
             className="flex overflow-x-auto pb-4 gap-6 no-scrollbar snap-x scroll-smooth"
           >
             {displayItems.map((item, index) => (
-              <div 
-                key={item.property_id || index} 
-                onClick={() => navigate(`/property/${item.property_id}`)}
-                className="bg-transparent cursor-pointer transition-all duration-300 min-w-[240px] md:min-w-[280px] w-[240px] md:w-[280px] snap-start flex flex-col group/card flex-shrink-0"
+              <div
+                key={item.property_id || index}
+                className="bg-transparent transition-all duration-300 min-w-[240px] md:min-w-[280px] w-[240px] md:w-[280px] snap-start flex flex-col group/card flex-shrink-0"
               >
                 <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3">
+                  <Link
+                    to={getPropertyPath(item)}
+                    className="absolute inset-0 z-10"
+                    aria-label={`View ${item.title}`}
+                  />
                   <img 
                     src={getPropertyCardImage(item)}
                     alt={item.title} 
@@ -2788,23 +2793,19 @@ const LandingPage = () => {
       >
         <div className="max-w-[1440px] mx-auto w-full h-full flex justify-between items-center px-4 md:px-8">
           {/* Left Logo */}
-          <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+          <Link to="/" className="flex items-center">
             <img
               src={isNavScrolled ? "/logo.png" : "/logo-white-text.png"}
               alt="X-Space360 Logo"
               className="h-8 md:h-10 w-auto object-contain transition-all duration-300"
             />
-          </div>
+          </Link>
 
           {/* Center Menu Links (Flat Style) */}
           <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[17px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
-              className="hover:text-terracotta transition-colors duration-200"
-            >
+            <Link to="/guest/browse" className="hover:text-terracotta transition-colors duration-200">
               Discover
-            </a>
+            </Link>
 
             <button
               onClick={() => setShowHowItWorksModal(true)}
@@ -2812,13 +2813,9 @@ const LandingPage = () => {
             >
               How It Works
             </button>
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); navigate(user ? '/host/list-property' : '/register?role=host'); }}
-              className="hover:text-terracotta transition-colors duration-200"
-            >
+            <Link to={user ? '/host/list-property' : '/register?role=host'} className="hover:text-terracotta transition-colors duration-200">
               List your Property
-            </a>
+            </Link>
             <div
               className="relative"
               onMouseEnter={openExploreMenu}
@@ -3147,9 +3144,9 @@ const LandingPage = () => {
                      <ChevronLeft className="w-5 h-5" />
                    </button>
 
-                   <h2 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[58px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-[250px] sm:max-w-none">
+                   <h1 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[58px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-[250px] sm:max-w-none">
                      {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
-                   </h2>
+                   </h1>
 
                    <button
                      type="button"
@@ -3191,7 +3188,7 @@ const LandingPage = () => {
                           >
                             <Search className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Search</p>
+                              <label htmlFor="landing-search-query" className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider leading-none">Search</label>
                               <input
                                 id="landing-search-query"
                                 name="search"
@@ -3201,6 +3198,7 @@ const LandingPage = () => {
                                   setLocationQuery(e.target.value);
                                 }}
                                 placeholder="Search properties..."
+                                aria-label="Search destinations or properties"
                                 className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-extrabold text-sm focus:ring-0 focus:outline-none p-0 mt-1"
                               />
                             </div>
@@ -3220,7 +3218,7 @@ const LandingPage = () => {
                               }}
                               className="w-full text-left"
                             >
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-in</p>
+                              <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider leading-none">Check-in</p>
                               <p className={`font-extrabold text-xs lg:text-sm mt-1 leading-none ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
                                 {dates.checkIn || 'Select Date'}
                               </p>
@@ -3253,7 +3251,7 @@ const LandingPage = () => {
                               }}
                               className="w-full text-left"
                             >
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-out</p>
+                              <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider leading-none">Check-out</p>
                               <p className={`font-extrabold text-xs lg:text-sm mt-1 leading-none ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
                                 {dates.checkOut || 'Select Date'}
                               </p>
@@ -3281,7 +3279,7 @@ const LandingPage = () => {
                           >
                             <User className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Guests</p>
+                              <p className="text-[10px] text-charcoal-muted font-bold uppercase tracking-wider leading-none">Guests</p>
                               <p className="text-charcoal font-extrabold text-sm mt-1 leading-none whitespace-nowrap">
                                 {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                               </p>
@@ -3448,11 +3446,10 @@ const LandingPage = () => {
               className="flex overflow-x-auto gap-4 md:gap-6 pb-4 no-scrollbar snap-x scroll-smooth"
             >
               {recentlyVisitedProperties.map((item, index) => (
-                <button
+                <Link
                   key={item.property_id || index}
-                  type="button"
-                  onClick={() => navigate(`/property/${item.property_id}`)}
-                  className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start flex-shrink-0"
+                  to={getPropertyPath(item)}
+                  className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start flex-shrink-0 block"
                 >
                   <div className="relative aspect-[16/10] bg-stone overflow-hidden">
                     <img
@@ -3503,7 +3500,7 @@ const LandingPage = () => {
                       {item.bathrooms || item.baths || 1} Bath{(item.bathrooms || item.baths || 1) > 1 ? 's' : ''}
                     </div>
                   </div>
-                </button>
+                </Link>
               ))}
             </div>
           </div>
@@ -4024,10 +4021,14 @@ const LandingPage = () => {
                         signatureProperties.map((item) => (
                           <div
                             key={item.property_id}
-                            onClick={() => navigate(`/property/${item.property_id}`)}
                             className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-white rounded-3xl overflow-hidden border border-gray-150 shadow-subtle flex-shrink-0 group cursor-pointer"
                           >
                             <div className="relative h-48 md:h-52 overflow-hidden">
+                              <Link
+                                to={getPropertyPath(item)}
+                                className="absolute inset-0 z-10"
+                                aria-label={`View ${item.title}`}
+                              />
                               <img
                                 src={getPropertyCardImage(item)}
                                 alt={item.title}
@@ -4361,13 +4362,22 @@ const LandingPage = () => {
                 <ul className="space-y-4">
                   {section.items.map((item) => (
                     <li key={`${section.heading}-${item.label}`}>
-                      <button
-                        type="button"
-                        onClick={() => handleFooterSectionClick(section, item)}
-                        className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
-                      >
-                        {item.label}
-                      </button>
+                      {item.action_type === 'link' && item.link ? (
+                        <Link
+                          to={item.link === '/host/list-property' && !user ? '/register?role=host' : item.link}
+                          className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
+                        >
+                          {item.label}
+                        </Link>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleFooterSectionClick(section, item)}
+                          className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
+                        >
+                          {item.label}
+                        </button>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -4401,14 +4411,24 @@ const LandingPage = () => {
               <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
               <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
                 {footerLegalItems.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                    className="transition hover:text-[#E0A51B]"
-                  >
-                    {item.label}
-                  </button>
+                  item.action_type === 'link' && item.link ? (
+                    <Link
+                      key={item.label}
+                      to={item.link === '/host/list-property' && !user ? '/register?role=host' : item.link}
+                      className="transition hover:text-[#E0A51B]"
+                    >
+                      {item.label}
+                    </Link>
+                  ) : (
+                    <button
+                      key={item.label}
+                      type="button"
+                      onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
+                      className="transition hover:text-[#E0A51B]"
+                    >
+                      {item.label}
+                    </button>
+                  )
                 ))}
               </div>
             </div>

@@ -22,6 +22,7 @@ from services.nearby_property_service import (
     DEFAULT_RADIUS_METERS,
     find_nearby_properties,
 )
+from utils.property_urls import build_property_path, build_property_slug, extract_property_id
 from datetime import datetime, timezone
 import asyncio
 import logging
@@ -418,6 +419,33 @@ async def search_properties(
         query = {
             "status": PropertyStatus.LIVE.value,
         }
+
+        PROPERTY_TYPE_CATEGORY_MAP = {
+            "apartment": "residential",
+            "villa": "residential",
+            "bungalow": "residential",
+            "studio": "residential",
+            "independent_house": "residential",
+            "co_living": "residential",
+            "resort": "residential",
+            "private_office": "commercial",
+            "co_working": "commercial",
+            "meeting_room": "commercial",
+            "conference_room": "commercial",
+            "banquet_hall": "event_venue",
+            "wedding_venue": "event_venue",
+            "hotel_ballroom": "event_venue",
+            "rooftop": "event_venue",
+        }
+
+        if property_type and not property_type.startswith("not:"):
+            clean_types = [t.strip() for t in property_type.split(",") if t.strip()]
+            if len(clean_types) == 1:
+                single_type = clean_types[0]
+                implied_cat = PROPERTY_TYPE_CATEGORY_MAP.get(single_type)
+                if implied_cat and category and category.value != implied_cat:
+                    logger.info(f"Auto-adjusting category filter from {category.value} to {implied_cat} due to property_type={single_type}")
+                    category = None
 
         if category:
             query["category"] = category.value
@@ -904,7 +932,8 @@ async def get_property(
 ):
     """Get property details by ID (public endpoint). Includes safe host info."""
     try:
-        property_dict = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+        resolved_property_id = extract_property_id(property_id) or property_id
+        property_dict = await db.properties.find_one({"property_id": resolved_property_id}, {"_id": 0})
         
         if not property_dict:
             raise HTTPException(
@@ -933,7 +962,7 @@ async def get_property(
         if current_user:
             user_id = current_user.get("user_id")
             existing_booking = await db.bookings.find_one({
-                "property_id": property_id,
+                "property_id": resolved_property_id,
                 "guest_id": user_id,
                 "booking_status": "confirmed"
             })
@@ -959,7 +988,7 @@ async def get_property(
         else:
             sub = await db.subscriptions.find_one(
                 {
-                    "property_id": property_id,
+                    "property_id": resolved_property_id,
                     "status": SubscriptionStatus.ACTIVE.value,
                 },
                 {"_id": 0},
@@ -1015,7 +1044,9 @@ async def get_property(
         title = property_dict.get("meta_title") or f"{property_dict.get('title')} in {property_dict.get('city')} | X-Space360"
         description = property_dict.get("meta_description") or f"Book {property_dict.get('title')} in {property_dict.get('city')} with instant confirmation on X-Space360. Best short-term rental."
         keywords = property_dict.get("meta_keywords") or f"{property_dict.get('property_type')}, {property_dict.get('city')}, holiday home, short term rental"
-        canonical = property_dict.get("canonical_url") or f"https://x-space360.in/property/{property_dict.get('property_id')}"
+        property_dict["slug"] = build_property_slug(property_dict)
+        property_dict["property_path"] = build_property_path(property_dict)
+        canonical = property_dict.get("canonical_url") or f"https://x-space360.in{property_dict['property_path']}"
         
         images = property_dict.get("images") or []
         first_image = images[0] if images else "favicon_rich.jpg"
