@@ -1,6 +1,6 @@
 import React, { Suspense, lazy } from "react";
 import "@/App.css";
-import { Routes, Route, Navigate, useLocation, Link } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import SEO from "./components/SEO";
 
@@ -392,34 +392,13 @@ function AppRoutes() {
         <Route
           path="*"
           element={
-            <div className="min-h-screen bg-stone flex flex-col">
-              <header className="glass px-4 md:px-8 py-4 border-b border-gray-100">
-                <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
-                  <Link to="/" className="flex items-center">
-                    <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
-                  </Link>
-                  <nav className="flex items-center gap-4 text-[11px] font-bold uppercase tracking-widest text-charcoal-muted">
-                    <Link to="/guest/browse" className="hover:text-terracotta transition-colors">Discover</Link>
-                    <Link to="/support" className="hover:text-terracotta transition-colors">Support</Link>
-                  </nav>
-                </div>
-              </header>
-              <div className="flex-1 flex items-center justify-center px-4">
-                <div className="text-center max-w-md">
-                  <h1 className="text-6xl font-semibold tracking-tight text-terracotta mb-4">404</h1>
-                  <p className="text-charcoal-light mb-3">Page not found</p>
-                  <p className="text-sm text-charcoal-muted mb-6">
-                    The page may have moved, the link may be incorrect, or the property is no longer available.
-                  </p>
-                  <div className="flex flex-wrap items-center justify-center gap-3">
-                    <Link to="/" className="btn-primary">
-                      Go Home
-                    </Link>
-                    <Link to="/guest/browse" className="px-5 py-3 rounded-2xl border border-gray-200 text-sm font-bold text-charcoal hover:bg-white transition">
-                      Browse Spaces
-                    </Link>
-                  </div>
-                </div>
+            <div className="min-h-screen bg-stone flex items-center justify-center">
+              <div className="text-center">
+                <h1 className="text-6xl font-semibold tracking-tight text-terracotta mb-4">404</h1>
+                <p className="text-charcoal-light mb-6">Page not found</p>
+                <a href="/" className="btn-primary">
+                  Go Home
+                </a>
               </div>
             </div>
           }

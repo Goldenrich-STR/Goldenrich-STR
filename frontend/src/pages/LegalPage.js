@@ -157,17 +157,9 @@ const LegalPage = () => {
           <Link to="/" className="inline-flex items-center">
             <img src="/logo.png" alt="X-Space360" className="h-9 w-auto object-contain" />
           </Link>
-          <div className="flex items-center gap-5">
-            <nav className="hidden lg:flex items-center gap-5 text-[11px] font-bold uppercase tracking-widest text-charcoal-muted">
-              <Link to="/guest/browse" className="hover:text-terracotta transition-colors">Discover</Link>
-              <Link to="/about-us" className="hover:text-terracotta transition-colors">About</Link>
-              <Link to="/support" className="hover:text-terracotta transition-colors">Support</Link>
-              <Link to="/register?role=host" className="hover:text-terracotta transition-colors">List your Property</Link>
-            </nav>
-            <Link to="/" className="px-5 py-2.5 rounded-xl bg-charcoal text-white text-sm font-bold hover:bg-black transition">
-              Back to Website
-            </Link>
-          </div>
+          <Link to="/" className="px-5 py-2.5 rounded-xl bg-charcoal text-white text-sm font-bold hover:bg-black transition">
+            Back to Website
+          </Link>
         </div>
       </header>
 

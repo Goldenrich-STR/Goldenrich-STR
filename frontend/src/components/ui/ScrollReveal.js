@@ -17,10 +17,6 @@ export default function ScrollReveal({
   const elementRef = useRef(null);
 
   useEffect(() => {
-    const fallbackTimer = window.setTimeout(() => {
-      setIsVisible(true);
-    }, 1200);
-
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
@@ -43,7 +39,6 @@ export default function ScrollReveal({
     }
 
     return () => {
-      window.clearTimeout(fallbackTimer);
       if (currentRef) {
         observer.unobserve(currentRef);
       }
