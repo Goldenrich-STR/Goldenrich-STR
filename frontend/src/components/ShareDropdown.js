@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Share2, Link, Check, Share } from 'lucide-react';
-import { getPropertyPath } from '../lib/propertyRouting';
 
 const ShareDropdown = ({ property, className = "", align = "right" }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,7 +17,7 @@ const ShareDropdown = ({ property, className = "", align = "right" }) => {
   }, []);
 
   const getPropertyUrl = () => {
-    return `${window.location.origin}${getPropertyPath(property)}`;
+    return `${window.location.origin}/property/${property.property_id}`;
   };
 
   const getPrice = () => {

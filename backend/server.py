@@ -13,7 +13,6 @@ from pathlib import Path
 from create_missing_users import create_missing_users
 from collections import defaultdict, deque
 import time
-from utils.property_urls import extract_property_id
 
 # Reload triggered for environment development configurations
 # Load environment variables
@@ -535,61 +534,6 @@ async def root():
     }
 
 
-def _frontend_shell_response(status_code: int = 200):
-    response = FileResponse(str(_frontend_index_file), status_code=status_code)
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    response.headers["Pragma"] = "no-cache"
-    response.headers["Expires"] = "0"
-    return response
-
-
-def _is_known_frontend_route(full_path: str) -> bool:
-    normalized = full_path.strip("/")
-    if not normalized:
-        return True
-
-    requested_file = _frontend_build_dir / normalized
-    if requested_file.is_file():
-        return True
-
-    exact_routes = {
-        "login",
-        "register",
-        "forgot-password",
-        "reset-password",
-        "support",
-        "about-us",
-        "blog",
-        "legal",
-        "terms",
-        "privacy",
-        "refund-policy",
-        "account-deletion",
-        "sso/goldenrich/callback",
-        "guest/browse",
-        "guest/bookings",
-        "guest/booking-confirmation",
-        "dashboard",
-        "host/dashboard",
-        "host/calendar",
-        "host/bookings",
-        "host/payouts",
-        "host/performance",
-        "host/list-property",
-        "employee/dashboard",
-        "broker/dashboard",
-        "admin",
-        "admin/account",
-        "admin/login",
-        "md/login",
-        "md/dashboard",
-    }
-    if normalized in exact_routes:
-        return True
-
-    return normalized.startswith(("property/", "places/", "blog/", "legal/", "admin/"))
-
-
 # Serve the production React build from the same localhost as the API.
 _frontend_build_dir = ROOT_DIR.parent / "frontend" / "build"
 _frontend_static_dir = _frontend_build_dir / "static"
@@ -600,22 +544,6 @@ if _frontend_static_dir.is_dir():
         DynamicCacheStaticFiles(directory=str(_frontend_static_dir)),
         name="frontend-static",
     )
-
-
-@app.get("/property/{property_path:path}", include_in_schema=False)
-async def serve_property_page(property_path: str):
-    if not _frontend_index_file.is_file():
-        raise HTTPException(status_code=404, detail="Frontend build not found")
-
-    property_id = extract_property_id(property_path) or property_path
-    property_doc = await db_instance.properties.find_one(
-        {"property_id": property_id},
-        {"_id": 0, "property_id": 1, "status": 1},
-    )
-    if property_doc and property_doc.get("status") == "live":
-        return _frontend_shell_response(200)
-
-    return _frontend_shell_response(404)
 
 
 @app.get("/{full_path:path}", include_in_schema=False)
@@ -639,4 +567,8 @@ async def serve_frontend(full_path: str):
             response.headers["Cache-Control"] = "public, max-age=2592000"
         return response
 
-    return _frontend_shell_response(200 if _is_known_frontend_route(full_path) else 404)
+    index_response = FileResponse(str(_frontend_index_file))
+    index_response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    index_response.headers["Pragma"] = "no-cache"
+    index_response.headers["Expires"] = "0"
+    return index_response

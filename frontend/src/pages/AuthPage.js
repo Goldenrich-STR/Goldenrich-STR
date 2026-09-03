@@ -686,10 +686,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                     <div className="flex justify-between items-center bg-gray-50 p-1.5 rounded-xl border border-gray-150 max-w-[240px] mx-auto mb-4">
                       <button
                         type="button"
-                        onClick={() => {
-                          setRegisterData({ ...registerData, role: 'guest' });
-                          navigate('/register?role=guest', { replace: true });
-                        }}
+                        onClick={() => setRegisterData({ ...registerData, role: 'guest' })}
                         className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
                           registerData.role === 'guest' ? 'bg-[#1b1924] text-white shadow-sm' : 'text-gray-400'
                         }`}
@@ -698,10 +695,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          setRegisterData({ ...registerData, role: 'host' });
-                          navigate('/register?role=host', { replace: true });
-                        }}
+                        onClick={() => setRegisterData({ ...registerData, role: 'host' })}
                         className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
                           registerData.role === 'host' ? 'bg-[#1b1924] text-white shadow-sm' : 'text-gray-400'
                         }`}

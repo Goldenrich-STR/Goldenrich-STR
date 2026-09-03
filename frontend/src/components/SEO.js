@@ -1,7 +1,6 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 import { organizationSchema, websiteSchema } from "../lib/seoSchemas";
-import { getPropertyPath } from "../lib/propertyRouting";
 
 const SITE_NAME = "X-Space360";
 const SITE_URL = "https://x-space360.in";
@@ -110,7 +109,7 @@ const SEO = ({
     const accommodationSchema = {
       "@context": "https://schema.org",
       "@type": p.category === "commercial" ? "CommercialProperties" : "Accommodation",
-      "@id": `https://x-space360.in${getPropertyPath(p)}#accommodation`,
+      "@id": `https://x-space360.in/property/${p.property_id}#accommodation`,
       "name": p.title,
       "description": p.description,
       "image": cleanImages,
@@ -132,7 +131,7 @@ const SEO = ({
         "price": basePrice,
         "priceCurrency": p.currency || "INR",
         "availability": p.status === "live" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-        "url": `https://x-space360.in${getPropertyPath(p)}`
+        "url": `https://x-space360.in/property/${p.property_id}`
       },
       "amenityFeature": Array.isArray(p.amenities) ? p.amenities.map(amenity => ({
         "@type": "LocationFeatureSpecification",
@@ -180,7 +179,7 @@ const SEO = ({
     const listItems = data.properties.map((p, idx) => ({
       "@type": "ListItem",
       "position": idx + 1,
-      "url": `https://x-space360.in${getPropertyPath(p)}`,
+      "url": `https://x-space360.in/property/${p.property_id}`,
       "name": p.title,
       "image": p.images && p.images[0] ? (p.images[0].startsWith("http") ? p.images[0] : `https://x-space360.in/api/uploads/${p.images[0]}`) : undefined
     }));
