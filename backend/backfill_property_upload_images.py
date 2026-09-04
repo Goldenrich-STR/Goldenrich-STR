@@ -31,7 +31,6 @@ BLOCKED_MEDIA_MARKERS = (
     "0.0.0.0",
 )
 
-
 def is_valid_property_image(value: object) -> bool:
     raw = str(value or "").strip()
     if not raw:
@@ -50,7 +49,6 @@ def uploaded_image_paths() -> list[str]:
     ]
     files.sort(key=lambda item: item.stat().st_mtime, reverse=True)
     return [f"/uploads/{item.name}" for item in files]
-
 
 async def get_database():
     load_dotenv(ROOT / ".env")

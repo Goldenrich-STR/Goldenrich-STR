@@ -1,10 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, ChevronDown, ChevronRight, HelpCircle, LogOut, Mail, Menu, PanelLeftClose, PanelLeftOpen, Phone, Search, ShieldCheck, User, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { adminNavigation } from './adminNavigation';
 
-const NavItem = ({ item, onNavigate, collapsed, openGroups, onToggleGroup }) => {
+const isNavPathActive = (targetPath, location) => {
+  if (!targetPath) return false;
+  const [pathname, search = ''] = targetPath.split('?');
+  if (location.pathname !== pathname) return false;
+  if (!search) return true;
+  return location.search === `?${search}`;
+};
+
+const NavItem = ({ item, onNavigate, collapsed, openGroups, onToggleGroup, location }) => {
   const Icon = item.icon;
   if (item.children) {
     const isOpen = !!openGroups[item.label];
@@ -36,6 +44,7 @@ const NavItem = ({ item, onNavigate, collapsed, openGroups, onToggleGroup }) => 
               collapsed={collapsed}
               openGroups={openGroups}
               onToggleGroup={onToggleGroup}
+              location={location}
             />
           ))}
         </div>
@@ -47,11 +56,11 @@ const NavItem = ({ item, onNavigate, collapsed, openGroups, onToggleGroup }) => 
     <NavLink
       to={item.path}
       onClick={onNavigate}
-      className={({ isActive }) =>
+      className={() =>
         `flex items-center rounded-2xl px-3 py-3 text-sm font-semibold transition ${
           collapsed ? 'justify-center' : 'gap-3'
         } ${
-          isActive ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'text-slate-700 hover:bg-slate-100'
+          isNavPathActive(item.path, location) ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'text-slate-700 hover:bg-slate-100'
         }`
       }
       title={collapsed ? item.label : undefined}
@@ -65,6 +74,7 @@ const NavItem = ({ item, onNavigate, collapsed, openGroups, onToggleGroup }) => 
 const AdminLayout = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [moduleSearch, setModuleSearch] = useState('');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
@@ -72,7 +82,7 @@ const AdminLayout = () => {
   const [openGroups, setOpenGroups] = useState(() =>
     adminNavigation.reduce((acc, item) => {
       if (item.children) {
-        acc[item.label] = item.children.some((child) => child.path === window.location.pathname);
+        acc[item.label] = item.children.some((child) => isNavPathActive(child.path, window.location));
       }
       return acc;
     }, {})
@@ -171,6 +181,7 @@ const AdminLayout = () => {
             collapsed={effectiveCollapsed}
             openGroups={visibleOpenGroups}
             onToggleGroup={toggleGroup}
+            location={location}
           />
         ))}
         {!filteredNavigation.length && (

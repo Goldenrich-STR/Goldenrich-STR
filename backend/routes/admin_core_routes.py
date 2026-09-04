@@ -1149,6 +1149,40 @@ async def executive_dashboard(
     recent_activity = await db.audit_logs.find({}, {"_id": 0}).sort("created_at", -1).limit(10).to_list(length=10)
     properties = await db.properties.find(visible_property_query, {"_id": 0}).to_list(length=5000)
     bookings = await db.bookings.find(booking_query, {"_id": 0}).to_list(length=5000)
+    active_subscriptions = await _count(db, "subscriptions", {"status": {"$in": ["active", "trial"]}})
+    trial_subscriptions = await _count(db, "subscriptions", {"status": "trial"})
+    expired_subscriptions = await _count(db, "subscriptions", {"status": "expired"})
+    cancelled_subscriptions = await _count(db, "subscriptions", {"status": {"$in": ["cancelled", "canceled"]}})
+    expiring_cutoff = _now() + timedelta(days=7)
+    expiring_subscriptions = await _count(db, "subscriptions", {
+        "status": {"$in": ["active", "trial"]},
+        "$or": [
+            {"end_date": {"$lte": expiring_cutoff}},
+            {"expires_at": {"$lte": expiring_cutoff}},
+        ],
+    })
+    property_booking_rollup = {}
+    for booking in bookings:
+        property_id = str(booking.get("property_id") or "").strip()
+        if not property_id:
+            continue
+        row = property_booking_rollup.setdefault(property_id, {"bookings": 0, "revenue": 0.0})
+        row["bookings"] += 1
+        if str(booking.get("payment_status") or "").lower() in {"paid", "success", "captured", "completed"}:
+            row["revenue"] += _money_rupees(booking.get("total_amount"))
+    top_properties = []
+    for prop in properties:
+        property_id = str(prop.get("property_id") or "").strip()
+        rollup = property_booking_rollup.get(property_id, {"bookings": 0, "revenue": 0.0})
+        top_properties.append({
+            "property_id": property_id,
+            "name": prop.get("title") or prop.get("property_name") or prop.get("name") or property_id or "Unnamed Property",
+            "city": prop.get("city") or prop.get("location") or "-",
+            "bookings": rollup["bookings"],
+            "revenue": round(rollup["revenue"], 2),
+            "occupancy": round(float(prop.get("occupancy_rate") or prop.get("occupancy") or 0), 2),
+        })
+    top_properties = sorted(top_properties, key=lambda row: (row["revenue"], row["bookings"]), reverse=True)[:5]
     total_tds_liability = sum(_money_rupees(p.get("tds_amount"), stored_as_paise=True) for p in payouts) + broker_tds + employee_tds
     tax_liability = subscription_gst + total_tds_liability
 
@@ -1166,11 +1200,41 @@ async def executive_dashboard(
             sums[label] = sums.get(label, 0) + float(item.get(amount_key, 0) or 0)
         return [{"label": label, "value": round(value, 2)} for label, value in sorted(sums.items(), key=lambda row: row[1], reverse=True)[:10]]
 
+    def time_series_count(items, date_key="created_at"):
+        counts = {}
+        for item in items:
+            parsed = _parse_date_like(item.get(date_key) or item.get("confirmed_at") or item.get("check_in_date"))
+            if not parsed:
+                continue
+            label = parsed.strftime("%d %b")
+            row = counts.setdefault(label, {"date": parsed, "value": 0})
+            row["value"] += 1
+        return [{"label": label, "value": row["value"]} for label, row in sorted(counts.items(), key=lambda item: item[1]["date"])]
+
+    def time_series_sum(items, date_key="created_at", amount_key="amount"):
+        sums = {}
+        for item in items:
+            parsed = _parse_date_like(item.get(date_key))
+            if not parsed:
+                continue
+            label = parsed.strftime("%d %b")
+            row = sums.setdefault(label, {"date": parsed, "value": 0.0})
+            row["value"] += _money_rupees(item.get(amount_key), stored_as_paise=True)
+        return [{"label": label, "value": round(row["value"], 2)} for label, row in sorted(sums.items(), key=lambda item: item[1]["date"])]
+
     data = {
         "kpis": {
             "users": {"total": users_total, "hosts": hosts, "guests": guests, "employees": employees, "brokers": brokers},
             "properties": {"total": properties_total, "live": live_properties, "pending_verification": pending_properties, "rejected": rejected_properties, "inactive": inactive_properties, "draft": draft_properties},
             "bookings": {"total": bookings_total, "upcoming": upcoming_bookings, "active_stays": active_bookings, "completed": completed_bookings, "cancelled": cancelled_bookings},
+            "subscriptions": {
+                "active": active_subscriptions,
+                "trial": trial_subscriptions,
+                "expired": expired_subscriptions,
+                "cancelled": cancelled_subscriptions,
+                "expiring_soon": expiring_subscriptions,
+                "mrr": round(subscription_revenue, 2),
+            },
             "finance": {
                 "gross_booking_value": round(gross, 2),
                 "platform_revenue": round(platform_revenue, 2),
@@ -1197,8 +1261,8 @@ async def executive_dashboard(
             {"key": "failed_transactions", "label": "Failed Transactions", "count": failed_transactions, "sla": "4h", "trend": "down", "path": "/admin/finance"},
         ],
         "charts": {
-            "booking_trend": group_count(bookings, "booking_status"),
-            "revenue_trend": group_sum(transactions, "status"),
+            "booking_trend": time_series_count(bookings),
+            "revenue_trend": time_series_sum(transactions),
             "property_growth": group_count(properties, "status"),
             "host_registration_trend": group_count(await db.users.find({"role": "host"}, {"_id": 0}).to_list(length=5000), "city"),
             "category_bookings": group_count(properties, "category"),
@@ -1209,6 +1273,7 @@ async def executive_dashboard(
             "support_ticket_trend": group_count(await db.support_tickets.find({}, {"_id": 0}).to_list(length=5000), "status"),
         },
         "recent_activity": recent_activity,
+        "top_properties": top_properties,
         "quick_actions": [
             {"label": "Create User", "path": "/admin/users"},
             {"label": "Review Host KYC", "path": "/admin/users"},
