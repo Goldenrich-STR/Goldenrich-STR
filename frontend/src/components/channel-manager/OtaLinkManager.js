@@ -29,6 +29,7 @@ export default function OtaLinkManager({ properties, propertyId, setPropertyId, 
   const [allIntegrations, setAllIntegrations] = useState([]);
   const [feedUrls, setFeedUrls] = useState({});
   const [feedsLoading, setFeedsLoading] = useState(true);
+  const [retryingFeedId, setRetryingFeedId] = useState('');
   const [busy, setBusy] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(() => emptyForm(propertyId));
@@ -143,17 +144,14 @@ export default function OtaLinkManager({ properties, propertyId, setPropertyId, 
       return;
     }
     setFeedsLoading(true);
-    const results = await Promise.allSettled(
-      visibleExportProperties.map((property) => channelManagerApi.exportFeed(property.id))
-    );
-    const nextFeeds = {};
-    results.forEach((result, index) => {
-      if (result.status === 'fulfilled') nextFeeds[visibleExportProperties[index].id] = result.value;
-    });
-    setFeedUrls((current) => ({ ...current, ...nextFeeds }));
-    setFeedsLoading(false);
-    if (results.some((result) => result.status === 'rejected')) {
-      notify('Some property export links could not be loaded.', 'error');
+    try {
+      const result = await channelManagerApi.exportFeeds(visibleExportProperties.map((property) => property.id));
+      setFeedUrls((current) => ({ ...current, ...(result.feed_urls || {}) }));
+      if (result.unavailable_property_ids?.length) notify('Some property export links could not be loaded.', 'error');
+    } catch (error) {
+      notify(error?.response?.data?.detail || 'Property export links could not be loaded.', 'error');
+    } finally {
+      setFeedsLoading(false);
     }
   }, [notify, visibleExportProperties]);
 
@@ -240,6 +238,18 @@ export default function OtaLinkManager({ properties, propertyId, setPropertyId, 
     window.setTimeout(() => setCopiedPropertyId(''), 1500);
   };
 
+  const retryFeed = async (targetPropertyId) => {
+    setRetryingFeedId(targetPropertyId);
+    try {
+      const feedUrl = await channelManagerApi.exportFeed(targetPropertyId);
+      setFeedUrls((current) => ({ ...current, [targetPropertyId]: feedUrl }));
+    } catch (error) {
+      notify(error?.response?.data?.detail || 'Export link could not be loaded.', 'error');
+    } finally {
+      setRetryingFeedId('');
+    }
+  };
+
   return (
     <div className="space-y-5">
       <section className="flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-4 lg:flex-row lg:items-end lg:justify-between">
@@ -302,7 +312,7 @@ export default function OtaLinkManager({ properties, propertyId, setPropertyId, 
               {!filteredExportProperties.length && <tr><td className="px-4 py-10 text-center text-slate-500" colSpan="3">No properties match these filters.</td></tr>}
               {visibleExportProperties.map((property) => {
                 const propertyFeed = feedUrls[property.id] || '';
-                return <tr className={property.id === propertyId ? 'bg-blue-50/50' : ''} key={property.id}><td className="px-4 py-3"><p className="font-bold text-slate-900">{property.name}</p><p className="text-xs text-slate-500">{property.location || property.id}</p><div className="mt-1.5 flex flex-wrap gap-1"><span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{cleanLabel(property.category || 'Uncategorized')}</span><span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">{cleanLabel(property.property_type || property.bhk_type || 'Other')}</span></div></td><td className="min-w-72 px-4 py-3"><input className="h-9 w-full min-w-72 rounded-md border border-slate-300 bg-white px-3 text-xs" placeholder={feedsLoading ? 'Generating property link...' : 'Link unavailable'} readOnly value={propertyFeed} /></td><td className="px-4 py-3 text-right"><button aria-label={`Copy export link for ${property.name}`} className="inline-grid h-9 w-9 place-items-center rounded-md border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40" disabled={!propertyFeed} onClick={() => copyFeed(property.id)} title={`Copy ${property.name} export link`} type="button">{copiedPropertyId === property.id ? <Check size={17} className="text-emerald-600" /> : <Copy size={17} />}</button></td></tr>;
+                return <tr className={property.id === propertyId ? 'bg-blue-50/50' : ''} key={property.id}><td className="px-4 py-3"><p className="font-bold text-slate-900">{property.name}</p><p className="text-xs text-slate-500">{property.location || property.id}</p><div className="mt-1.5 flex flex-wrap gap-1"><span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-600">{cleanLabel(property.category || 'Uncategorized')}</span><span className="rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-bold text-blue-700">{cleanLabel(property.property_type || property.bhk_type || 'Other')}</span></div></td><td className="min-w-72 px-4 py-3"><input className="h-9 w-full min-w-72 rounded-md border border-slate-300 bg-white px-3 text-xs" placeholder={feedsLoading ? 'Generating property link...' : 'Link unavailable - retry'} readOnly value={propertyFeed} /></td><td className="px-4 py-3 text-right"><button aria-label={`${propertyFeed ? 'Copy' : 'Retry'} export link for ${property.name}`} className="inline-grid h-9 w-9 place-items-center rounded-md border border-slate-300 bg-white hover:bg-slate-100 disabled:opacity-40" disabled={feedsLoading || retryingFeedId === property.id} onClick={() => propertyFeed ? copyFeed(property.id) : retryFeed(property.id)} title={propertyFeed ? `Copy ${property.name} export link` : `Retry ${property.name} export link` } type="button">{retryingFeedId === property.id ? <RefreshCw className="animate-spin" size={17} /> : copiedPropertyId === property.id ? <Check size={17} className="text-emerald-600" /> : propertyFeed ? <Copy size={17} /> : <RefreshCw size={17} />}</button></td></tr>;
               })}
             </tbody>
           </table>
