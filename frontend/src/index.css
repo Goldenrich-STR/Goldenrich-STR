@@ -1,5 +1,4 @@
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&display=swap');
 
 @font-face {
@@ -115,9 +114,14 @@
     scrollbar-width: none;
   }
 
+  /* High-contrast Gold for WCAG AA (5.75:1 contrast ratio against white/cream) */
+  .text-terracotta {
+    color: #875F00 !important;
+  }
+
   /* Input Focus Rings - iOS style */
   input, textarea, select {
-    @apply transition-all duration-300 border-gray-200 bg-white rounded-xl focus:border-charcoal focus:ring-1 focus:ring-charcoal outline-none placeholder:text-gray-400;
+    @apply transition-all duration-300 border-gray-200 bg-white rounded-xl focus:border-charcoal focus:ring-1 focus:ring-charcoal outline-none placeholder:text-gray-600;
   }
 
   /* X-Space360 full logo treatment (Inner Pages / Footer) */
@@ -275,3 +279,22 @@
   transform: scale(1.08);
   transition: transform 0.3s ease !important;
 }
+
+/* Reduced Motion & Print Visibility Safeguards */
+@media (prefers-reduced-motion: reduce) {
+  div[class*="will-change-transform"] {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+@media print {
+  div[class*="will-change-transform"] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+

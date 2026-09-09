@@ -1,14 +1,15 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
-import { formatCategoryLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
+import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText, formatPropertyDescription, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import ShareDropdown from '../components/ShareDropdown';
+import { getPropertySlug, extractPropertyId, getPropertyUrl } from '../lib/propertySlug';
 import {
   ArrowLeft,
   Building2,
@@ -46,65 +47,18 @@ import {
   Minus,
   Plus,
   Heart,
-  Share2
+  Share2,
+  Phone,
 } from 'lucide-react';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
 
-const AMENITY_ICONS = {
-  wifi: Wifi,
-  ac: Wind,
-  parking: Car,
-  kitchen: Utensils,
-  pool: Waves,
-  gym: Dumbbell,
-  tv: Tv,
-  fireplace: Flame,
-  coffee: Coffee,
-  printer: Printer,
-  rooftop: Building2,
-  av_system: Tv,
-  stage: Building2,
-  catering: Utensils,
-  bar: Coffee,
-  changing_rooms: Shield,
-  security: ShieldCheck,
-  projector: Tv,
-  whiteboard: CheckCircle2,
-  power_backup: Flame,
-};
 
-const AMENITY_LABELS = {
-  wifi: 'WiFi',
-  ac: 'Air Conditioning',
-  parking: 'Parking Space',
-  kitchen: 'Fully-Equipped Kitchen',
-  pool: 'Swimming Pool',
-  gym: 'Fitness Center/Gym',
-  tv: 'Smart TV',
-  washer: 'Washing Machine',
-  heating: 'Heating System',
-  fireplace: 'Indoor Fireplace',
-  printer: 'High-speed Printer & Scanner',
-  coffee: 'Coffee & Tea Station',
-  restrooms: 'Executive Restrooms',
-  workspace: 'Dedicated Workstations',
-  projector: 'HD Projector & Screen',
-  whiteboard: 'Collaboration Whiteboards',
-  power_backup: '24/7 Power Generator Backup',
-  av_system: 'Sound & AV System',
-  stage: 'Performance Stage / Podium',
-  catering: 'Catering Prep Kitchen',
-  bar: 'Premium Bar Lounge Setup',
-  rooftop: 'Scenic Rooftop Access',
-  changing_rooms: 'VIP/Green Changing Rooms',
-  security: 'Professional Event Security',
-};
 
 const SITE_URL = 'https://x-space360.in';
 
 const formatListingTime = (value) => {
-  if (!value) return 'Not specified';
+  if (!value) return null;
   const raw = String(value).trim();
   const match = raw.match(/^(\d{1,2}):(\d{2})/);
   if (!match) return raw;
@@ -117,7 +71,7 @@ const formatListingTime = (value) => {
 
 const formatExtraPersonPrice = (value) => {
   const amount = Number(value || 0);
-  if (!amount) return 'Not specified';
+  if (!amount) return null;
   const displayAmount = amount >= 500 ? Math.round(amount / 100) * 100 : Math.round(amount);
   return `Rs ${displayAmount.toLocaleString('en-IN')}`;
 };
@@ -144,7 +98,7 @@ const toAbsoluteSiteUrl = (value) => {
 };
 
 const getBhkTypeLabel = (category, bhkType, maxGuests) => {
-  if (!bhkType) return 'N/A';
+  if (!bhkType) return null;
   if (category === 'commercial') {
     switch (bhkType.toLowerCase()) {
       case 'small': return 'Small (under 500 sqft)';
@@ -152,7 +106,7 @@ const getBhkTypeLabel = (category, bhkType, maxGuests) => {
       case 'large': return 'Large (2000-5000 sqft)';
       case 'extra_large': return 'Extra Large (5000+ sqft)';
       case 'custom': return 'Custom Size';
-      default: return bhkType.toUpperCase();
+      default: return formatDisplayLabel(bhkType);
     }
   }
   if (category === 'event_venue') {
@@ -163,10 +117,10 @@ const getBhkTypeLabel = (category, bhkType, maxGuests) => {
       case 'medium_event': return `Standard (${guestsText || '50-200 guests'})`;
       case 'large_event': return `Grand (${guestsText || '200-500 guests'})`;
       case 'mega_event': return `Mega (${guestsText || '500+ guests'})`;
-      default: return bhkType.toUpperCase();
+      default: return formatDisplayLabel(bhkType);
     }
   }
-  return bhkType.toUpperCase();
+  return formatDisplayLabel(bhkType);
 };
 
 const MONTH_NAMES_LOCALIZED = {
@@ -247,7 +201,8 @@ const TRANSLATIONS = {
     month: 'month',
     day: 'day',
     night: 'night',
-    rapidBook: 'Rapid Book',
+    rapidBook: 'Instant Booking',
+    instant: 'Instant Booking',
     checkIn: 'Check-in',
     checkOut: 'Check-out',
     totalGuests: 'Total Guests',
@@ -256,7 +211,7 @@ const TRANSLATIONS = {
     reserveNow: 'BOOK NOW',
     requestBooking: 'REQUEST BOOKING',
     totalAmount: 'TOTAL AMOUNT',
-    securedByProtection: 'Secured by Golden-X Protection. You won\'t be charged until the host accepts your request.',
+    securedByProtection: 'Secured booking. You won\'t be charged until the host accepts your request.',
     photoTour: 'Photo Tour',
     inLabel: 'In',
     outLabel: 'Out',
@@ -301,7 +256,8 @@ const TRANSLATIONS = {
     month: 'महीना',
     day: 'दिन',
     night: 'रात',
-    rapidBook: 'त्वरित बुक',
+    rapidBook: 'तत्काळ बुकिंग',
+    instant: 'तत्काळ बुकिंग',
     checkIn: 'चेक-इन',
     checkOut: 'चेक-out',
     totalGuests: 'कुल अतिथि',
@@ -310,7 +266,7 @@ const TRANSLATIONS = {
     reserveNow: 'अभी बुक करें',
     requestBooking: 'बुकिंग का अनुरोध करें',
     totalAmount: 'कुल राशि',
-    securedByProtection: 'गोल्डन-एक्स सुरक्षा द्वारा सुरक्षित। होस्ट द्वारा आपका अनुरोध स्वीकार करने तक आपसे कोई शुल्क नहीं लिया जाएगा।',
+    securedByProtection: 'सुरक्षित बुकिंग। होस्ट द्वारा आपका अनुरोध स्वीकार करने तक आपसे कोई शुल्क नहीं लिया जाएगा।',
     photoTour: 'फोटो टूर',
     inLabel: 'चेक इन',
     outLabel: 'चेक आउट',
@@ -355,7 +311,8 @@ const TRANSLATIONS = {
     month: 'महिना',
     day: 'दिवस',
     night: 'रात्र',
-    rapidBook: 'झटपट बुक',
+    rapidBook: 'झटपट बुकिंग',
+    instant: 'झटपट बुकिंग',
     checkIn: 'चेक-इन',
     checkOut: 'चेक-out',
     totalGuests: 'एकूण अतिथी',
@@ -364,7 +321,7 @@ const TRANSLATIONS = {
     reserveNow: 'आताच बुक करा',
     requestBooking: 'बुकिंगसाठी विनंती करा',
     totalAmount: 'एकूण रक्कम',
-    securedByProtection: 'गोल्डन-एक्स संरक्षणाद्वारे सुरक्षित. होस्टने तुमची विनंती स्वीकारेपर्यंत तुमच्याकडून कोणतेही शुल्क आकारले जाणार नाही.',
+    securedByProtection: 'सुरक्षित बुकिंग. होस्टने तुमची विनंती स्वीकारेपर्यंत तुमच्याकडून कोणतेही शुल्क आकारले जाणार नाही.',
     photoTour: 'फोटो टूर',
     inLabel: 'चेक इन',
     outLabel: 'चेक आउट',
@@ -490,7 +447,8 @@ const BOOKING_INTENT_KEY = 'xspace360_booking_intent';
 const PropertyDetail = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { id } = useParams();
+  const { id: rawId } = useParams();
+  const id = useMemo(() => extractPropertyId(rawId), [rawId]);
   const { user, logout } = useAuth();
   const [lang, setLang] = useState(() => localStorage.getItem('preferredLanguage') || 'en');
   const t = (key) => {
@@ -700,34 +658,116 @@ const PropertyDetail = () => {
   }, [id]);
 
   const images = useMemo(() => {
-    const raw = property?.images?.length ? property.images : [];
+    const raw = Array.isArray(property?.images) && property.images.length > 0 
+      ? property.images 
+      : (Array.isArray(property?.photos) && property.photos.length > 0 ? property.photos : []);
     
     // Deduplicate by pure URL
     const seen = new Set();
     const unique = [];
-    raw.forEach(img => {
-      const pureUrl = img.split('#')[0];
-      if (!seen.has(pureUrl)) {
+    raw.forEach((img) => {
+      let pureUrl = '';
+      if (typeof img === 'string') {
+        pureUrl = img.split('#')[0].split('?')[0].trim();
+      } else if (img && typeof img === 'object') {
+        const rawUrl = img.url || img.src || img.image || img.photo_url || '';
+        pureUrl = typeof rawUrl === 'string' ? rawUrl.split('#')[0].split('?')[0].trim() : '';
+      }
+      if (pureUrl && !seen.has(pureUrl)) {
         seen.add(pureUrl);
         unique.push(img);
       }
     });
     return unique;
-  }, [property?.images]);
+  }, [property?.images, property?.photos]);
 
   const resolvedImages = useMemo(() => {
+    const STANDARD_CATEGORIES = {
+      'living area': 'Living area',
+      'living_area': 'Living area',
+      'living-area': 'Living area',
+      'living': 'Living area',
+      'bedroom': 'Bedroom',
+      'bedrooms': 'Bedroom',
+      'kitchen': 'Kitchen',
+      'bathroom': 'Bathroom',
+      'bathrooms': 'Bathroom',
+      'balcony': 'Balcony',
+      'exterior': 'Exterior',
+      'exteriors': 'Exterior',
+      'dining': 'Dining area',
+      'dining_area': 'Dining area',
+      'dining area': 'Dining area',
+      'pool': 'Pool',
+      'garden': 'Garden',
+      'view': 'View',
+      'other': 'Other',
+    };
+
+    const getCategoryFromStr = (str) => {
+      if (!str || typeof str !== 'string') return '';
+      let cleaned = str.trim();
+      try {
+        cleaned = decodeURIComponent(cleaned);
+      } catch (e) {}
+      cleaned = cleaned.trim();
+      if (!cleaned) return '';
+      const lower = cleaned.toLowerCase();
+      if (STANDARD_CATEGORIES[lower]) {
+        return STANDARD_CATEGORIES[lower];
+      }
+      return cleaned
+        .replace(/[_-]+/g, ' ')
+        .replace(/\b\w/g, (char) => char.toUpperCase());
+    };
+
+    const photoCategoriesMap = property?.photo_categories || property?.image_categories || {};
+
     return images
-      .map((img) => {
-        const [url, cat] = img.split('#');
+      .map((img, idx) => {
+        let url = '';
+        let cat = '';
+
+        if (typeof img === 'string') {
+          const hashSplit = img.split('#');
+          url = hashSplit[0];
+          if (hashSplit.length > 1 && hashSplit[1].trim()) {
+            cat = hashSplit[1].trim();
+          }
+
+          if (!cat) {
+            try {
+              const urlObj = new URL(url.startsWith('http') ? url : `https://dummy.com/${url}`);
+              cat = urlObj.searchParams.get('category') || urlObj.searchParams.get('type') || urlObj.searchParams.get('photo_category') || '';
+            } catch (e) {}
+          }
+        } else if (img && typeof img === 'object') {
+          url = img.url || img.src || img.image || img.photo_url || '';
+          cat = img.category || img.type || img.photo_category || img.tag || img.label || '';
+
+          if (!cat && typeof url === 'string' && url.includes('#')) {
+            const hashSplit = url.split('#');
+            url = hashSplit[0];
+            cat = hashSplit[1] || '';
+          }
+        }
+
+        if (!cat && photoCategoriesMap) {
+          const pureUrl = typeof url === 'string' ? url.split('#')[0].split('?')[0].trim() : '';
+          cat = photoCategoriesMap[pureUrl] || photoCategoriesMap[url] || photoCategoriesMap[idx] || '';
+        }
+
+        const resolvedCat = getCategoryFromStr(cat) || 'Other';
+
         return {
           raw: img,
           url,
-          category: cat || 'Other',
+          category: resolvedCat,
           src: getImageUrl(url) || PROPERTY_IMAGE_FALLBACK,
         };
       })
       .filter((img) => Boolean(img.src));
-  }, [images]);
+  }, [images, property?.photo_categories, property?.image_categories]);
 
   const mainImage = resolvedImages[imgIdx] || resolvedImages[0] || {
     src: PROPERTY_IMAGE_FALLBACK,
@@ -812,6 +852,10 @@ const PropertyDetail = () => {
       setProperty(res.data);
       if (res.data) {
         saveRecentlyVisitedProperty(res.data);
+        const canonicalPath = `/property/${getPropertySlug(res.data)}`;
+        if (typeof window !== 'undefined' && window.history && location.pathname !== canonicalPath) {
+          window.history.replaceState(null, '', `${canonicalPath}${location.search || ''}`);
+        }
         if (res.data.food_type === 'non_veg') {
           setFoodPreference('non_veg');
         } else if (res.data.food_type === 'veg') {
@@ -1252,7 +1296,7 @@ const PropertyDetail = () => {
             <div>
               <div class="details-title">Venue Details</div>
               <div class="details-value">${property.title}</div>
-              <div class="details-sub">${property.address}, ${property.city}</div>
+              <div class="details-sub">${formatAddress(property.address, property.city)}</div>
             </div>
             <div style="text-align: right;">
               <div class="details-title">Guest Details</div>
@@ -1358,7 +1402,7 @@ const PropertyDetail = () => {
 
   const propertySlug = property.slug || property.property_slug || property.property_id;
   const propertyPath = `/property/${propertySlug}`;
-  const propertyName = property.name || property.title || 'Property';
+  const propertyName = property.title || property.name || 'Property';
   const propertyType = formatPropertyTypeLabel(property.property_type || property.propertyType || property.category || 'property');
   const propertyCity = property.city || 'India';
   const bedroomLabel = getBhkTypeLabel(property.category, property.bhk_type || property.bedrooms, property.max_guests);
@@ -1370,7 +1414,7 @@ const PropertyDetail = () => {
     .filter(Boolean);
   const coverImage = toAbsoluteSiteUrl(property.coverImage || property.cover_image) || seoImages[0];
   const amenitiesForSeo = Array.isArray(property.amenities) ? property.amenities : [];
-  const propertySeoDescription = `Book ${propertyName}, a ${propertyType} in ${propertyCity} with ${bedroomLabel} bedrooms, ${guestCapacity || 'flexible'} guest capacity and selected amenities.`;
+  const propertySeoDescription = `Book ${propertyName}, a ${propertyType} in ${propertyCity}${bedroomLabel ? ` with ${bedroomLabel}` : ''}, ${guestCapacity ? `${guestCapacity} guest capacity` : 'flexible capacity'} and selected amenities.`;
   const propertyKeywords = [
     `${propertyType} in ${propertyCity}`,
     `${propertyCity} property booking`,
@@ -1392,14 +1436,14 @@ const PropertyDetail = () => {
     },
     {
       question: `Where is ${propertyName} located?`,
-      answer: `${propertyName} is located in ${property.address ? `${property.address}, ` : ''}${propertyCity}${property.state ? `, ${property.state}` : ''}.`
+      answer: `${propertyName} is located in ${formatAddress(property.address, propertyCity, property.state)}.`
     }
   ];
   const propertyEntitySchema = {
     "@type": property.category === "commercial" ? "Place" : "Accommodation",
     "@id": `${SITE_URL}${propertyPath}#property`,
     "name": propertyName,
-    "description": property.description || propertySeoDescription,
+    "description": formatPropertyDescription(property.description, property) || propertySeoDescription,
     "url": `${SITE_URL}${propertyPath}`,
     "image": seoImages.length ? seoImages : [coverImage].filter(Boolean),
     "address": {
@@ -1478,7 +1522,7 @@ const PropertyDetail = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white pb-24 lg:pb-0">
+    <div className="min-h-screen bg-stone selection:bg-terracotta selection:text-white pb-36 lg:pb-0">
       <SEO
         title={`${propertyName} in ${propertyCity}`}
         description={propertySeoDescription}
@@ -1490,15 +1534,33 @@ const PropertyDetail = () => {
         breadcrumbs={seoBreadcrumbs}
         seo={property?.seo}
       />
+      {/* Header */}
       <header className="glass px-4 md:px-8 py-4 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto flex justify-between items-center w-full gap-2">
+        <div className="w-full flex justify-between items-center gap-2">
+          {/* Left Logo */}
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
             onClick={() => navigate('/')}
           >
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
-          <div className="flex items-center space-x-4 md:space-x-6">
+
+          {/* Right Side Options (including Navigation Links) */}
+          <div className="hidden lg:flex items-center space-x-6">
+            <Link
+              to="/guest/browse"
+              className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
+            >
+              Discover
+            </Link>
+
+            <Link
+              to={user ? '/host/list-property' : '/register?role=host'}
+              className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
+            >
+              List your Property
+            </Link>
+
             <LanguageSelector
               currentLang={lang}
               onLanguageChange={(newLang) => {
@@ -1506,6 +1568,17 @@ const PropertyDetail = () => {
                 localStorage.setItem('preferredLanguage', newLang);
               }}
             />
+
+            {/* Get in Touch Button */}
+            <button 
+              onClick={() => navigate('/support')}
+              className="flex items-center gap-2 rounded-full px-5 py-2 transition font-sans font-semibold text-[15px] tracking-tight shadow-sm border border-gray-200 text-charcoal hover:bg-gray-50"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>Get in Touch</span>
+            </button>
+
+            {/* Back Button */}
             <button
               onClick={() => navigate(-1)}
               className="text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-2"
@@ -1514,11 +1587,28 @@ const PropertyDetail = () => {
               <ArrowLeft className="w-4 h-4" />
               <span>{t('back')}</span>
             </button>
-            {user && (
-              <button onClick={logout} className="px-4 py-2 bg-charcoal text-white text-xs font-bold tracking-tight uppercase tracking-widest rounded-lg hover:bg-terracotta transition-all">
+
+            {user ? (
+              <button onClick={logout} className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-5 py-2 rounded-full transition shadow-premium">
                 {t('signOut')}
               </button>
+            ) : (
+              <button onClick={() => navigate('/login')} className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-6 py-2 rounded-full transition shadow-premium">
+                Sign In
+              </button>
             )}
+          </div>
+
+          {/* Mobile Back Button */}
+          <div className="lg:hidden flex items-center space-x-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-1"
+              data-testid="back-btn"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>{t('back')}</span>
+            </button>
           </div>
         </div>
       </header>
@@ -1536,50 +1626,64 @@ const PropertyDetail = () => {
                 </span>
               )}
               {property.instant_booking && (
-                <span className="flex items-center text-amber-500 text-[10px] font-bold tracking-tight uppercase tracking-widest bg-amber-50 px-3 py-1 rounded-full border border-amber-100">
-                  <Zap className="w-3 h-3 mr-1 fill-current" /> {t('instant')}
+                <span className="flex items-center text-amber-700 text-[10px] font-bold tracking-tight uppercase tracking-wider bg-amber-50 px-3 py-1 rounded-full border border-amber-200" title="Instant Booking: Confirmed instantly upon payment without waiting for host approval">
+                  <Zap className="w-3 h-3 mr-1 fill-current text-amber-500" /> Instant Booking
                 </span>
               )}
            </div>
            <div className="relative z-30 flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
              <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight" data-testid="property-title">
-               {property.title}
+               {propertyName}
              </h1>
              <div className="flex items-center gap-3 shrink-0 mt-2 md:mt-0">
                {/* Share Option */}
-               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm">
-                 <ShareDropdown property={property} align="right" className="!w-5 !h-5 !bg-transparent !shadow-none hover:!scale-100" />
-                 <span className="text-xs font-bold text-charcoal">Share</span>
-               </div>
+               <ShareDropdown
+                 property={property}
+                 align="right"
+                 trigger={
+                   <button className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm text-charcoal hover:text-terracotta text-xs font-bold cursor-pointer">
+                     <Share2 className="w-4 h-4" />
+                     <span>Share</span>
+                   </button>
+                 }
+               />
                
                {/* Save (Wishlist) Option */}
                <button
                  onClick={() => handleWishlistToggle(property.property_id)}
-                 className="flex items-center gap-2 px-3 py-1.5 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm text-charcoal hover:text-red-500"
+                 className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm text-charcoal hover:text-red-500 text-xs font-bold cursor-pointer"
                >
                  <Heart className={`w-4 h-4 ${wishlist.includes(property.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
-                 <span className="text-xs font-bold">{wishlist.includes(property.property_id) ? 'Saved' : 'Save'}</span>
+                 <span>{wishlist.includes(property.property_id) ? 'Saved' : 'Save'}</span>
                </button>
              </div>
            </div>
            <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
-             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{property.address ? `${property.address}, ` : ''}{property.city}</span>
-             <div className="flex items-center space-x-1">
-                <Star className="w-4 h-4 text-amber-500 fill-current" />
-                <span className="text-charcoal font-bold tracking-tight">{property.rating ? property.rating.toFixed(1) : 'New'}</span>
-                <span className="text-charcoal-muted ml-1 underline cursor-pointer">{property.review_count || 0} Reviews</span>
-             </div>
+             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{formatAddress(property.address, property.city)}</span>
+             {property.rating > 0 && property.review_count > 0 ? (
+               <div className="flex items-center space-x-1">
+                  <Star className="w-4 h-4 text-amber-500 fill-current" />
+                  <span className="text-charcoal font-bold tracking-tight">{property.rating.toFixed(1)}</span>
+                  <span className="text-charcoal-muted ml-1 underline cursor-pointer">({property.review_count} {property.review_count === 1 ? 'Review' : 'Reviews'})</span>
+               </div>
+             ) : (
+               <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold uppercase tracking-wider">New</span>
+             )}
            </div>
         </div>
 
         {/* Premium Gallery */}
         <div className="relative group mb-12 animate-slide-up" data-testid="gallery">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 rounded-3xl overflow-hidden shadow-elevated bg-white p-2">
-            <div className="lg:col-span-2 lg:row-span-2 relative overflow-hidden group/main">
+            <div className="lg:col-span-2 lg:row-span-2 relative overflow-hidden group/main bg-stone-200 aspect-[4/3] lg:aspect-auto">
+              {/* Skeleton / Placeholder state while image is loading */}
+              <div className="absolute inset-0 bg-stone-200 animate-pulse flex items-center justify-center pointer-events-none z-0">
+                <Camera className="w-10 h-10 text-stone-400 opacity-40" />
+              </div>
               <img
                 src={mainImage.src}
                 alt={property.title}
-                className="w-full h-80 lg:h-[32rem] object-cover transition-transform duration-1000 group-hover/main:scale-105"
+                className="relative z-10 w-full h-80 lg:h-[32rem] object-cover transition-transform duration-1000 group-hover/main:scale-105"
                 data-testid="gallery-main-image"
                 loading="eager"
                 decoding="async"
@@ -1590,10 +1694,10 @@ const PropertyDetail = () => {
                   event.currentTarget.src = PROPERTY_IMAGE_FALLBACK;
                 }}
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/main:opacity-100 transition-opacity duration-500"></div>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/main:opacity-100 transition-opacity duration-500 z-10"></div>
               
               {resolvedImages.length > 1 && (
-                <div className="absolute inset-0 flex items-center justify-between px-6 opacity-0 group-hover/main:opacity-100 transition-opacity duration-300">
+                <div className="absolute inset-0 flex items-center justify-between px-6 opacity-0 group-hover/main:opacity-100 transition-opacity duration-300 z-20">
                   <button
                     onClick={() => setImgIdx((i) => (i - 1 + resolvedImages.length) % resolvedImages.length)}
                     className="w-12 h-12 glass flex items-center justify-center rounded-full hover:bg-white transition-all shadow-premium"
@@ -1611,7 +1715,7 @@ const PropertyDetail = () => {
                 </div>
               )}
               
-              <div className="absolute bottom-6 right-6 glass px-4 py-2 rounded-full border border-white/30 shadow-premium">
+              <div className="absolute bottom-6 right-6 glass px-4 py-2 rounded-full border border-white/30 shadow-premium z-20">
                  <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">
                     {imgIdx + 1} / {resolvedImages.length || 1} {t('photos')}
                  </span>
@@ -1621,12 +1725,15 @@ const PropertyDetail = () => {
               <button
                 key={img.src + i}
                 onClick={() => setImgIdx(i + 1)}
-                className="hidden lg:block relative overflow-hidden group/thumb"
+                className="hidden lg:block relative overflow-hidden group/thumb bg-stone-200"
               >
+                <div className="absolute inset-0 bg-stone-200 animate-pulse flex items-center justify-center pointer-events-none z-0">
+                  <Camera className="w-6 h-6 text-stone-400 opacity-40" />
+                </div>
                 <img
                   src={img.src}
                   alt=""
-                  className="w-full h-[15.7rem] object-cover transition-transform duration-700 group-hover/thumb:scale-110"
+                  className="relative z-10 w-full h-[15.7rem] object-cover transition-transform duration-700 group-hover/thumb:scale-110"
                   loading="lazy"
                   decoding="async"
                   sizes="25vw"
@@ -1635,12 +1742,12 @@ const PropertyDetail = () => {
                     event.currentTarget.src = PROPERTY_IMAGE_FALLBACK;
                   }}
                 />
-                <div className="absolute inset-0 bg-charcoal/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity"></div>
+                <div className="absolute inset-0 bg-charcoal/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity z-10"></div>
               </button>
             ))}
             <button 
               onClick={() => setShowGallery(true)}
-              className="absolute bottom-6 right-6 glass px-6 py-3 rounded-2xl border border-white/40 shadow-premium flex items-center space-x-2 hover:bg-white transition-all group/btn"
+              className="absolute bottom-6 right-6 glass px-6 py-3 rounded-2xl border border-white/40 shadow-premium flex items-center space-x-2 hover:bg-white transition-all group/btn z-20"
             >
                <Grid className="w-4 h-4 text-terracotta group-hover/btn:rotate-90 transition-transform" />
                <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">{t('showAllPhotos')}</span>
@@ -1671,8 +1778,12 @@ const PropertyDetail = () => {
                   <div className="min-w-0">
                     <h3 className="text-lg font-bold tracking-tight text-charcoal leading-tight break-words">{t('hostedBy').replace('{name}', property.host.full_name)}</h3>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
-                       <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">{t('superhost')}</span>
-                       <span className="w-1 h-1 rounded-full bg-sand-300"></span>
+                       {(property.host.is_superhost || property.host.superhost) && (
+                         <>
+                           <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">{t('superhost')}</span>
+                           <span className="w-1 h-1 rounded-full bg-sand-300"></span>
+                         </>
+                       )}
                        <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">
                           {t('joined').replace('{year}', property.host.created_at ? new Date(property.host.created_at).getFullYear() : '2024')}
                        </span>
@@ -1701,19 +1812,29 @@ const PropertyDetail = () => {
             )}
 
             {/* Overview Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-               {[
-                 { label: t('type'), value: `${formatCategoryLabel(property.category || 'residential')} · ${formatPropertyTypeLabel(property.property_type)}` },
-                 { label: t('area'), value: `${property.area_sqft} SQFT` },
-                 { label: t('config'), value: getBhkTypeLabel(property.category, property.bhk_type, property.max_guests) },
-                 { label: t('status'), value: t('verified').toUpperCase() }
-               ].map((stat) => (
-                 <div key={stat.label} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
-                    <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-                    <p className="text-sm font-bold tracking-tight text-charcoal">{stat.value}</p>
-                 </div>
-               ))}
-            </div>
+            {(() => {
+              const typeVal = `${formatCategoryLabel(property.category || 'residential')} · ${formatPropertyTypeLabel(property.property_type)}`;
+              const areaVal = property.area_sqft && Number(property.area_sqft) > 0 ? `${property.area_sqft} SQFT` : null;
+              const configVal = getBhkTypeLabel(property.category, property.bhk_type, property.max_guests);
+              const statsList = [
+                { label: t('type'), value: typeVal },
+                areaVal ? { label: t('area'), value: areaVal } : null,
+                configVal ? { label: t('config'), value: configVal } : null,
+              ].filter(Boolean);
+
+              if (statsList.length === 0) return null;
+
+              return (
+                <div className={`grid grid-cols-2 md:grid-cols-${statsList.length} gap-4`}>
+                   {statsList.map((stat) => (
+                     <div key={stat.label} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
+                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">{stat.label}</p>
+                        <p className="text-sm font-bold tracking-tight text-charcoal">{stat.value}</p>
+                     </div>
+                   ))}
+                </div>
+              );
+            })()}
 
             {/* AEO Quick Facts */}
             <section className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium" aria-labelledby="property-quick-facts">
@@ -1725,15 +1846,15 @@ const PropertyDetail = () => {
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {[
-                  { icon: MapPin, label: 'Location', value: `${propertyCity}${property.state ? `, ${property.state}` : ''}` },
+                  { icon: MapPin, label: 'Location', value: propertyCity ? `${propertyCity}${property.state ? `, ${property.state}` : ''}` : null },
                   { icon: Building2, label: 'Property type', value: propertyType },
-                  { icon: Users, label: property.category === 'commercial' ? 'Staff capacity' : 'Guest capacity', value: guestCapacity ? `${guestCapacity} ${property.category === 'commercial' ? 'staff' : 'guests'}` : 'Flexible capacity' },
-                  { icon: CalendarIcon, label: 'Minimum stay', value: `${property.minimum_stay_days || 1} ${property.category === 'commercial' || property.category === 'event_venue' ? (Number(property.minimum_stay_days || 1) === 1 ? 'day' : 'days') : (Number(property.minimum_stay_days || 1) === 1 ? 'night' : 'nights')}` },
-                  { icon: Clock, label: 'Check-in time', value: formatListingTime(property.check_in_time || '12:00') },
-                  { icon: Clock, label: 'Check-out time', value: formatListingTime(property.check_out_time || '11:00') },
-                  { icon: CreditCard, label: 'Starting price', value: `Rs ${roundedDisplayPricePerNight.toLocaleString('en-IN')}` },
+                  { icon: Users, label: property.category === 'commercial' ? 'Staff capacity' : 'Guest capacity', value: guestCapacity ? `${guestCapacity} ${property.category === 'commercial' ? 'staff' : 'guests'}` : null },
+                  { icon: CalendarIcon, label: 'Minimum stay', value: property.minimum_stay_days ? `${property.minimum_stay_days} ${property.category === 'commercial' || property.category === 'event_venue' ? (Number(property.minimum_stay_days) === 1 ? 'day' : 'days') : (Number(property.minimum_stay_days) === 1 ? 'night' : 'nights')}` : null },
+                  { icon: Clock, label: 'Check-in time', value: formatListingTime(property.check_in_time) },
+                  { icon: Clock, label: 'Check-out time', value: formatListingTime(property.check_out_time) },
+                  { icon: CreditCard, label: 'Starting price', value: roundedDisplayPricePerNight > 0 ? `Rs ${roundedDisplayPricePerNight.toLocaleString('en-IN')}` : null },
                   { icon: CheckCircle2, label: 'Extra person price', value: formatExtraPersonPrice(property.extra_guest_price) },
-                ].map((fact) => {
+                ].filter(fact => fact.value && fact.value !== 'Not specified').map((fact) => {
                   const Icon = fact.icon;
                   return (
                     <div key={fact.label} className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
@@ -1757,7 +1878,7 @@ const PropertyDetail = () => {
                  <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
               </h2>
               <p className="text-charcoal-muted font-medium text-lg leading-relaxed whitespace-pre-line">
-                {formatReadableText(property.description)}
+                {formatPropertyDescription(property.description, property)}
               </p>
             </div>
 
@@ -2079,7 +2200,7 @@ const PropertyDetail = () => {
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {(property.amenities || []).map((a) => {
-                  const Icon = AMENITY_ICONS[a] || CheckCircle2;
+                  const Icon = getAmenityIcon(a);
                   return (
                     <div
                       key={a}
@@ -2089,7 +2210,7 @@ const PropertyDetail = () => {
                          <Icon className="w-5 h-5 text-terracotta" />
                       </div>
                       <span className="text-sm font-bold text-charcoal tracking-tight">
-                         {AMENITY_LABELS[a] || a.replace('_', ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                         {formatAmenityLabel(a)}
                       </span>
                     </div>
                   );
@@ -2266,7 +2387,7 @@ const PropertyDetail = () => {
                   </div>
                   
                   <div className="md:col-span-2 grid grid-cols-2 gap-x-8 gap-y-4">
-                     {Object.entries(reviewSummary.sub_avgs || { cleanliness: 4.9, communication: 4.8, value: 4.7, accuracy: 4.8 }).map(([k, v]) => (
+                     {reviewSummary?.sub_avgs && Object.entries(reviewSummary.sub_avgs).map(([k, v]) => (
                         <div key={k} className="space-y-1">
                            <div className="flex justify-between items-center text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">
                               <span>{t(k)}</span>
@@ -2349,9 +2470,9 @@ const PropertyDetail = () => {
                   )}
                 </div>
                 {property.instant_booking && (
-                   <div className="flex items-center space-x-1 text-amber-500">
-                      <Zap className="w-3.5 h-3.5 fill-current" />
-                      <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest">{t('rapidBook')}</span>
+                   <div className="flex items-center space-x-1.5 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/80">
+                      <Zap className="w-3.5 h-3.5 fill-current text-amber-500" />
+                      <span className="text-[10px] font-bold tracking-tight uppercase tracking-wider">Instant Booking</span>
                    </div>
                 )}
               </div>
@@ -2722,7 +2843,7 @@ const PropertyDetail = () => {
               <button
                 onClick={() => handleBookNow(null, bookingPaymentType)}
                 disabled={booking || !checkIn || !checkOut || nights === 0}
-                className="btn-premium w-full py-4 text-sm shadow-premium disabled:opacity-50 disabled:translate-y-0 transition-all"
+                className="hidden lg:block btn-premium w-full py-4 text-sm shadow-premium disabled:opacity-50 disabled:translate-y-0 transition-all"
               >
                 {booking ? (
                    <div className="flex items-center justify-center space-x-2">
@@ -2739,6 +2860,16 @@ const PropertyDetail = () => {
               <p className="mt-3 text-[11px] text-charcoal-muted font-semibold leading-relaxed text-center">
                 By continuing, you agree to the <LegalLinks className="inline" context="booking" />.
               </p>
+
+              {property.instant_booking && (
+                <div className="mt-3 p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-900 flex items-start gap-2.5 text-left">
+                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-xs leading-relaxed font-semibold">
+                    <strong className="font-extrabold block text-amber-950">Instant Booking Enabled</strong>
+                    Confirmed instantly upon payment without waiting for host approval.
+                  </p>
+                </div>
+              )}
 
               {property.category === 'event_venue' && (
                 <button
@@ -2764,6 +2895,7 @@ const PropertyDetail = () => {
                 checkIn={checkIn}
                 checkOut={checkOut}
                 minDate={todayISO}
+                blockedDates={blockedDates}
                 desktopPosition={bookingCalendarPosition}
                 onChange={({ checkIn: nextCheckIn, checkOut: nextCheckOut }) => {
                   setCheckIn(nextCheckIn);
@@ -2797,7 +2929,7 @@ const PropertyDetail = () => {
                     }}
                     className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
                   >
-                    <div className="relative aspect-[4/3] w-full overflow-hidden">
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-sand-200">
                       <img 
                         src={propImg} 
                         alt={prop.title} 
@@ -2816,7 +2948,7 @@ const PropertyDetail = () => {
                         </div>
                         <p className="text-xs font-bold text-charcoal-muted mb-4 flex items-center">
                           <MapPin className="w-3.5 h-3.5 mr-1 text-terracotta" />
-                          {prop.address ? `${prop.address}, ` : ''}{prop.city}
+                          {formatAddress(prop.address, prop.city, prop.state)}
                         </p>
                       </div>
                       <div className="pt-4 border-t border-sand-100 flex justify-between items-center mt-auto">
@@ -2957,7 +3089,7 @@ const PropertyDetail = () => {
                 <div>
                   <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Venue Details</p>
                   <p className="font-bold tracking-tight text-charcoal">{property.title}</p>
-                  <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{property.address ? `${property.address}, ` : ''}{property.city}</p>
+                  <p className="text-xs text-charcoal-muted font-semibold mt-0.5">{formatAddress(property.address, property.city, property.state)}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1">Guest Details</p>
@@ -3074,18 +3206,20 @@ const PropertyDetail = () => {
               {canShowBookingAmount ? ` / ${property.category === 'event_venue' && bookingPaymentType === 'advance' ? 'advance' : 'total'}` : (property.category === 'event_venue' ? '/ day' : '/ night')}
             </span>
           </div>
-          <div 
-            onClick={() => {
-              const widget = document.getElementById('cal-trigger');
-              if (widget) {
-                widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                widget.focus();
-              }
-            }} 
-            className="text-[10px] font-bold text-terracotta underline cursor-pointer mt-0.5"
-          >
-            {checkIn && checkOut ? `${new Date(checkIn).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})} - ${new Date(checkOut).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})}` : 'Select dates'}
-          </div>
+          {checkIn && checkOut && (
+            <div 
+              onClick={() => {
+                const widget = document.getElementById('cal-trigger');
+                if (widget) {
+                  widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                  widget.focus();
+                }
+              }} 
+              className="text-[10px] font-bold text-terracotta underline cursor-pointer mt-0.5"
+            >
+              {`${new Date(checkIn).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})} - ${new Date(checkOut).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})}`}
+            </div>
+          )}
         </div>
         <button
           onClick={() => {

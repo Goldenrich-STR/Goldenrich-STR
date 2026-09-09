@@ -567,7 +567,46 @@ async def serve_frontend(full_path: str):
             response.headers["Cache-Control"] = "public, max-age=2592000"
         return response
 
-    index_response = FileResponse(str(_frontend_index_file))
+    # Determine if path is a valid SPA route or valid property
+    clean_path = full_path.strip("/").split("?")[0].split("#")[0]
+
+    VALID_STATIC_ROUTES = {
+        "", "login", "register", "forgot-password", "reset-password",
+        "admin", "admin/login", "admin/account", "md/login", "md/dashboard",
+        "dashboard", "guest/browse", "guest/booking-confirmation", "guest/bookings",
+        "host/dashboard", "host/calendar", "host/bookings", "host/payouts",
+        "host/performance", "host/list-property", "employee/dashboard",
+        "broker/dashboard", "support", "about-us", "blog", "legal", "terms",
+        "privacy", "refund-policy", "account-deletion", "sso/goldenrich/callback"
+    }
+
+    VALID_PREFIXES = (
+        "admin/", "md/", "host/", "broker/", "employee/",
+        "legal/", "blog/", "places/", "sso/"
+    )
+
+    is_valid_route = clean_path in VALID_STATIC_ROUTES or clean_path.startswith(VALID_PREFIXES)
+
+    if not is_valid_route and clean_path.startswith("property/"):
+        prop_parts = clean_path.split("property/", 1)
+        prop_id = prop_parts[1].strip("/") if len(prop_parts) > 1 else ""
+        if prop_id:
+            try:
+                prop = await db_instance.properties.find_one({
+                    "$or": [
+                        {"property_id": prop_id},
+                        {"slug": prop_id},
+                        {"property_slug": prop_id}
+                    ]
+                })
+                if prop:
+                    is_valid_route = True
+            except Exception as e:
+                logger.warning(f"Error checking property validity for route {clean_path}: {e}")
+
+    status_code = 200 if is_valid_route else 404
+
+    index_response = FileResponse(str(_frontend_index_file), status_code=status_code)
     index_response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     index_response.headers["Pragma"] = "no-cache"
     index_response.headers["Expires"] = "0"

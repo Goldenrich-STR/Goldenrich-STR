@@ -35,6 +35,17 @@ class ExternalCalendarRequest(BaseModel):
     name: str
     ical_url: str
     color: str = "#3B82F6"
+    provider: str = "Custom iCal"
+    sync_frequency: str = "Every 30 minutes"
+
+
+def _is_admin(user: dict) -> bool:
+    role = getattr(user.get("role"), "value", user.get("role"))
+    return str(role or "").lower() == "admin"
+
+
+def _can_manage_property(user: dict, property_data: dict) -> bool:
+    return _is_admin(user) or property_data.get("owner_id") == user.get("user_id")
 
 
 ICAL_URL_PATTERN = re.compile(r"(webcal://\S+|https?://\S+)", re.IGNORECASE)
@@ -209,7 +220,7 @@ async def block_dates(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
             )
 
-        if property_data["owner_id"] != current_user["user_id"]:
+        if not _can_manage_property(current_user, property_data):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
@@ -261,11 +272,12 @@ async def block_dates(
 
         blocked_date = BlockedDate(
             property_id=property_id,
-            owner_id=current_user["user_id"],
+            owner_id=property_data.get("owner_id") or current_user["user_id"],
             start_date=block_request.start_date,
             end_date=block_request.end_date,
             source=BlockedDateSource.MANUAL,
             reason=block_request.reason,
+            block_type=block_request.block_type,
         )
 
         blocked_dict = blocked_date.model_dump()
@@ -312,7 +324,7 @@ async def unblock_dates(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Blocked date not found"
             )
 
-        if blocked["owner_id"] != current_user["user_id"]:
+        if not (_is_admin(current_user) or blocked["owner_id"] == current_user["user_id"]):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
@@ -360,7 +372,7 @@ async def get_unified_calendar(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
             )
 
-        if property_data["owner_id"] != current_user["user_id"]:
+        if not _can_manage_property(current_user, property_data):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
@@ -512,13 +524,16 @@ async def list_external_calendars(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
             )
-        if property_data["owner_id"] != current_user["user_id"]:
+        if not _can_manage_property(current_user, property_data):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
 
+        query = {"property_id": property_id}
+        if not _is_admin(current_user):
+            query["owner_id"] = current_user["user_id"]
         cursor = db.external_calendars.find(
-            {"property_id": property_id, "owner_id": current_user["user_id"]},
+            query,
             {"_id": 0},
         )
         calendars = await cursor.to_list(length=100)
@@ -551,7 +566,7 @@ async def add_external_calendar(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
             )
-        if property_data["owner_id"] != current_user["user_id"]:
+        if not _can_manage_property(current_user, property_data):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
@@ -574,10 +589,12 @@ async def add_external_calendar(
 
         external_cal = ExternalCalendar(
             property_id=property_id,
-            owner_id=current_user["user_id"],
+            owner_id=property_data.get("owner_id") or current_user["user_id"],
             name=payload.name,
             ical_url=ical_url,
             color=payload.color,
+            provider=payload.provider,
+            sync_frequency=payload.sync_frequency,
         )
 
         cal_dict = external_cal.model_dump()
@@ -607,6 +624,19 @@ async def add_external_calendar(
         )
 
 
+@router.get("/external-calendars/all")
+async def list_all_external_calendars(
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """List calendar integrations for OTA summary and filtering."""
+    query = {}
+    if not _is_admin(current_user):
+        query["owner_id"] = current_user["user_id"]
+    calendars = await db.external_calendars.find(query, {"_id": 0}).to_list(length=2000)
+    return {"calendars": calendars, "total": len(calendars)}
+
+
 @router.post("/external-calendars/{calendar_id}/sync")
 async def trigger_external_sync(
     calendar_id: str,
@@ -620,7 +650,7 @@ async def trigger_external_sync(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="External calendar not found"
             )
-        if cal["owner_id"] != current_user["user_id"]:
+        if not (_is_admin(current_user) or cal["owner_id"] == current_user["user_id"]):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
@@ -685,7 +715,7 @@ async def remove_external_calendar(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="External calendar not found"
             )
-        if cal["owner_id"] != current_user["user_id"]:
+        if not (_is_admin(current_user) or cal["owner_id"] == current_user["user_id"]):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
@@ -725,7 +755,7 @@ async def export_ical(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
             )
-        if property_data["owner_id"] != current_user["user_id"]:
+        if not _can_manage_property(current_user, property_data):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
@@ -764,7 +794,7 @@ async def get_ical_feed_url(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
             )
-        if property_data["owner_id"] != current_user["user_id"]:
+        if not _can_manage_property(current_user, property_data):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
@@ -810,7 +840,7 @@ async def rotate_ical_feed_url(
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND, detail="Property not found"
             )
-        if property_data["owner_id"] != current_user["user_id"]:
+        if not _can_manage_property(current_user, property_data):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )

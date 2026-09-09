@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   FileText, MessageSquare, Mail, Phone, Search, ChevronRight, Send, Lock, HelpCircle, 
   ArrowRight, Menu, X, Heart, LogOut, CheckCircle, ChevronDown, ChevronUp 
@@ -327,6 +327,12 @@ const SupportPage = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] font-sans text-charcoal overflow-x-hidden selection:bg-terracotta/20">
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-amber-600 focus:text-white font-bold rounded-md"
+      >
+        Skip to main content
+      </a>
       <SEO
         title="Help and Support Center"
         description="Get help with X-Space360 bookings, cancellations, refunds, payments, host accounts and property listings."
@@ -349,21 +355,19 @@ const SupportPage = () => {
 
         {/* Center Pill Links */}
         <div className="hidden lg:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal-muted bg-sand-50 border border-sand-200 rounded-none shadow-sm self-center">
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
+          <Link
+            to="/guest/browse"
             className="hover:text-terracotta transition"
           >
             Discover
-          </a>
+          </Link>
 
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); navigate('/'); }}
+          <Link
+            to="/"
             className="hover:text-terracotta transition"
           >
             Home
-          </a>
+          </Link>
           <div className="w-[1px] h-4 bg-sand-200" />
           <LanguageSelector
             currentLang={lang}
@@ -448,7 +452,7 @@ const SupportPage = () => {
       )}
 
       {/* Hero Section */}
-      <section className="relative bg-[#0C121D] text-white py-24 px-6 md:px-12 lg:px-20 overflow-hidden border-b border-[#E0A51B]/20">
+      <main id="main-content" className="relative bg-[#0C121D] text-white py-24 px-6 md:px-12 lg:px-20 overflow-hidden border-b border-[#E0A51B]/20">
         {/* Subtle mesh background grid */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-20" />
         <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/90 to-[#1E293B]/70" />
@@ -480,12 +484,15 @@ const SupportPage = () => {
               <div className="flex items-center pl-4 text-gray-400">
                 <Search className="w-5 h-5" />
               </div>
+              <label htmlFor="support-search-input" className="sr-only">Search help articles</label>
               <input
+                id="support-search-input"
                 type="text"
+                aria-label="Search help articles"
                 placeholder={supportData.search_placeholder}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-3 pr-4 py-3.5 text-charcoal placeholder-gray-400 outline-none font-semibold text-sm rounded-l-2xl border-none focus:ring-0"
+                className="w-full pl-3 pr-4 py-3.5 text-charcoal placeholder-gray-600 outline-none font-semibold text-sm rounded-l-2xl border-none focus:ring-0"
               />
               <button
                 type="button"
@@ -497,7 +504,7 @@ const SupportPage = () => {
             </div>
           </div>
         </div>
-      </section>
+      </main>
 
       {/* Grid: 4 Support Channel Cards */}
       <section className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 -mt-10 relative z-20">

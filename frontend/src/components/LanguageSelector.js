@@ -176,7 +176,7 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
 
       {isOpen && (
         <div
-          className="absolute right-[-5.5rem] md:-right-32 mt-3 w-[calc(100vw-2rem)] max-w-[95vw] md:w-[620px] max-h-[80vh] md:max-h-[none] overflow-y-auto md:overflow-y-visible rounded-[28px] bg-white border border-gray-200 shadow-elevated px-6 py-5 z-[999] origin-top-right animate-scale-up ring-1 ring-black/5 text-gray-900"
+          className="absolute right-[-5.5rem] md:-right-32 mt-3 w-[calc(100vw-2rem)] max-w-[95vw] md:w-[680px] max-h-[80vh] md:max-h-[none] overflow-y-auto md:overflow-y-visible rounded-[28px] bg-white border border-gray-200 shadow-elevated px-6 py-5 z-[999] origin-top-right animate-scale-up ring-1 ring-black/5 text-gray-900"
           onMouseEnter={openDropdown}
           onMouseLeave={closeDropdownWithDelay}
         >
@@ -185,23 +185,23 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
               return (
                 <div
                   key={cat.key}
-                  className="flex flex-col px-4 md:px-5 py-2 first:pl-2 last:pr-2 md:border-r border-gray-200 last:border-r-0"
+                  className="flex flex-col px-4 md:px-5 py-1 first:pl-2 last:pr-2 md:border-r border-gray-100 last:border-r-0"
                 >
                   <div 
                     onClick={() => handleCategoryClick(cat.key)}
                     className="text-left cursor-pointer group/item transition-all duration-200 text-gray-900 mb-3"
                   >
-                    <h4 className="text-[13px] md:text-[15px] font-semibold text-gray-900 group-hover/item:text-terracotta transition-colors">
+                    <h4 className="text-[15px] font-semibold text-gray-900 group-hover/item:text-terracotta transition-colors">
                       {cat.title}
                     </h4>
                   </div>
                   
-                  <div className="flex flex-col space-y-2">
+                  <div className="flex flex-col space-y-3">
                     {cat.subtypes.map((sub) => (
                       <button
                         key={sub.value}
                         onClick={() => handleSubtypeClick(cat.key, sub.value)}
-                        className="w-full text-left py-0.5 text-[13px] md:text-[15px] font-medium text-gray-500 hover:text-terracotta transition-all duration-200"
+                        className="w-full text-left text-[15px] font-medium text-gray-500 hover:text-terracotta transition-colors duration-200"
                       >
                         {sub.label}
                       </button>

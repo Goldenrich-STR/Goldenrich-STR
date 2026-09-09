@@ -49,9 +49,9 @@ def urlset(entries) -> Response:
 
 async def get_live_properties(db: AsyncIOMotorDatabase):
     properties = await db.properties.find(
-        {"status": "live"},
+        {"status": {"$in": ["live", "LIVE"]}},
         {
-            "_id": 0,
+            "_id": 1,
             "property_id": 1,
             "updated_at": 1,
             "created_at": 1,
@@ -61,12 +61,33 @@ async def get_live_properties(db: AsyncIOMotorDatabase):
 
     sub_ids = [prop.get("subscription_id") for prop in properties if prop.get("subscription_id")]
     if sub_ids:
-        today_str = datetime.now(timezone.utc).date().isoformat()
-        expired_subs = await db.subscriptions.find(
-            {"subscription_id": {"$in": sub_ids}, "end_date": {"$lte": today_str}},
-            {"_id": 0, "subscription_id": 1},
+        today_date = datetime.now(timezone.utc).date()
+        subs = await db.subscriptions.find(
+            {"subscription_id": {"$in": sub_ids}},
+            {"_id": 0, "subscription_id": 1, "end_date": 1, "status": 1},
         ).to_list(length=len(sub_ids))
-        expired_sub_ids = {sub.get("subscription_id") for sub in expired_subs}
+
+        expired_sub_ids = set()
+        for s in subs:
+            sub_id = s.get("subscription_id")
+            if not sub_id:
+                continue
+            if s.get("status") == "expired":
+                expired_sub_ids.add(sub_id)
+                continue
+            end_val = s.get("end_date")
+            if end_val:
+                if isinstance(end_val, str):
+                    try:
+                        end_d = datetime.strptime(end_val.split("T")[0], "%Y-%m-%d").date()
+                        if end_d <= today_date:
+                            expired_sub_ids.add(sub_id)
+                    except Exception:
+                        pass
+                elif hasattr(end_val, "date"):
+                    if end_val.date() <= today_date:
+                        expired_sub_ids.add(sub_id)
+
         properties = [prop for prop in properties if prop.get("subscription_id") not in expired_sub_ids]
 
     return properties
@@ -114,7 +135,7 @@ async def build_sitemap_entries(db: AsyncIOMotorDatabase):
 
     try:
         for prop in await get_live_properties(db):
-            prop_id = prop.get("property_id")
+            prop_id = prop.get("property_id") or (str(prop.get("_id")) if prop.get("_id") else None)
             if not prop_id:
                 continue
             entries.append(url_entry(
@@ -217,7 +238,7 @@ async def get_properties_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     
     try:
         for prop in await get_live_properties(db):
-            prop_id = prop.get("property_id")
+            prop_id = prop.get("property_id") or (str(prop.get("_id")) if prop.get("_id") else None)
             if prop_id:
                 xml_entries.append(url_entry(
                     f"/property/{quote(str(prop_id))}",

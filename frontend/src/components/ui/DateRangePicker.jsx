@@ -41,6 +41,7 @@ export default function DateRangePicker({
   checkIn,
   checkOut,
   minDate,
+  blockedDates = [],
   onChange,
   onClose,
   desktopPosition = null,
@@ -53,6 +54,15 @@ export default function DateRangePicker({
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  const isDateBlocked = (iso) => {
+    if (!blockedDates || !blockedDates.length) return false;
+    return blockedDates.some((b) => {
+      const start = b.start_date ? b.start_date.split('T')[0] : '';
+      const end = b.end_date ? b.end_date.split('T')[0] : '';
+      return iso >= start && iso <= end;
+    });
+  };
 
   const [visibleMonth, setVisibleMonth] = useState(() => {
     const seed = checkIn ? new Date(`${checkIn}T00:00:00`) : new Date();
@@ -91,7 +101,7 @@ export default function DateRangePicker({
         </h4>
       </div>
 
-      <div className="mb-3 grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gray-400">
+      <div className="mb-3 grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gray-600">
         {WEEKDAYS.map((day) => <div key={`${monthDate.getMonth()}-${day}`}>{day}</div>)}
       </div>
 
@@ -100,7 +110,8 @@ export default function DateRangePicker({
           if (!day) return <div key={`empty-${monthDate.getMonth()}-${index}`} className="aspect-square" />;
 
           const iso = toISO(day);
-          const isDisabled = iso < minDate;
+          const isBlocked = isDateBlocked(iso);
+          const isDisabled = iso < minDate || isBlocked;
           const isStart = iso === checkIn;
           const isEnd = iso === checkOut;
           const inRange = checkIn && checkOut && iso > checkIn && iso < checkOut;
@@ -112,8 +123,8 @@ export default function DateRangePicker({
               disabled={isDisabled}
               onClick={() => applyDate(iso)}
               className={[
-                'aspect-square rounded-2xl text-sm font-bold transition',
-                isDisabled ? 'cursor-not-allowed text-gray-300' : 'text-charcoal hover:bg-stone',
+                'aspect-square rounded-2xl text-sm font-bold transition relative',
+                isDisabled ? (isBlocked ? 'cursor-not-allowed text-gray-400 bg-gray-100/80 border border-dashed border-gray-300' : 'cursor-not-allowed text-gray-300 bg-stone/40') : 'text-charcoal hover:bg-stone',
                 inRange ? 'bg-slate-100 text-slate-700' : '',
                 isStart || isEnd ? 'bg-[#1B1924] text-white shadow-sm' : '',
               ].join(' ')}
@@ -177,14 +188,30 @@ export default function DateRangePicker({
         <DateGrid monthDate={visibleMonth} monthCells={cells} />
       </div>
 
+      {/* Calendar Legend / Key */}
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-[10px] font-bold uppercase tracking-wider text-gray-600">
+        <div className="flex items-center space-x-1.5">
+          <span className="h-3 w-3 rounded-full border border-gray-300 bg-white" />
+          <span>Available</span>
+        </div>
+        <div className="flex items-center space-x-1.5">
+          <span className="h-3 w-3 rounded-full bg-[#1B1924]" />
+          <span>Selected</span>
+        </div>
+        <div className="flex items-center space-x-1.5">
+          <span className="h-3 w-3 rounded-full border border-dashed border-gray-300 bg-gray-100" />
+          <span>Unavailable / Blocked</span>
+        </div>
+      </div>
+
       <div className="mt-6 rounded-2xl bg-stone/70 px-4 py-3 text-xs font-semibold text-charcoal md:hidden">
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-gray-400">Check-in</p>
+            <p className="text-[10px] uppercase tracking-widest text-gray-600">Check-in</p>
             <p className="mt-1">{formatDate(checkIn)}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-gray-400">Check-out</p>
+            <p className="text-[10px] uppercase tracking-widest text-gray-600">Check-out</p>
             <p className="mt-1">{formatDate(checkOut)}</p>
           </div>
         </div>

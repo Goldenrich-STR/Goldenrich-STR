@@ -14,7 +14,7 @@ import {
 import SearchLogsManagement from '../components/admin/SearchLogsManagement';
 import AICallsManagement from '../components/admin/AICallsManagement';
 import { Phone, Volume2, HelpCircle, Download, UserPlus } from 'lucide-react';
-import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText } from '../lib/displayLabels';
+import { formatAddress, formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText } from '../lib/displayLabels';
 import { requestReason } from './admin/shared';
 
 const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', required = false, leftIcon, disabled = false }) => {
@@ -4161,7 +4161,7 @@ const PropertyModeration = () => {
               {activeReviewProperty.address && (
                 <div className="mb-3">
                   <span className="text-[9px] font-bold text-charcoal-muted uppercase block mb-0.5">Full Address</span>
-                  <span className="text-xs font-semibold text-charcoal-light">{activeReviewProperty.address}</span>
+                  <span className="text-xs font-semibold text-charcoal-light">{formatAddress(activeReviewProperty.address, activeReviewProperty.city, activeReviewProperty.state, activeReviewProperty.pin_code)}</span>
                 </div>
               )}
 

@@ -94,14 +94,16 @@ const buildDashboardModel = (apiData) => {
   const totalRevenue = asNumber(finance.platform_revenue || finance.total_revenue);
   const totalBookings = asNumber(bookings.total);
   const grossBookingValue = asNumber(finance.gross_booking_value);
-  const bookingStatuses = [
+  const rawStatuses = [
     { label: 'Confirmed', value: asNumber(bookings.active_stays) },
     { label: 'Pending', value: asNumber(bookings.upcoming) },
     { label: 'Completed', value: asNumber(bookings.completed) },
     { label: 'Cancelled', value: asNumber(bookings.cancelled) },
-  ].map((item) => ({
+  ];
+  const statusSum = rawStatuses.reduce((sum, item) => sum + item.value, 0) || totalBookings;
+  const bookingStatuses = rawStatuses.map((item) => ({
     ...item,
-    percent: totalBookings ? Number(((item.value / totalBookings) * 100).toFixed(1)) : 0,
+    percent: statusSum ? Number(((item.value / statusSum) * 100).toFixed(1)) : 0,
   }));
   const pendingActions = Array.isArray(apiData?.pending_actions) ? apiData.pending_actions : [];
 

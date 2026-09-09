@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards, Download, Users, CalendarCheck, IndianRupee, ReceiptText, Hourglass, ShieldCheck, Wallet, Ban } from 'lucide-react';
+import { BarChart3, CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards, Download, Users, CalendarCheck, IndianRupee, ReceiptText, Hourglass, ShieldCheck, Wallet, Ban } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice, Pagination } from './shared';
+import { ErrorState, LoadingState, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice, Pagination } from './shared';
 import { AdminAccountTransactionsTab } from '../AdminAccount';
 import { openBrokerSettlementInvoice, openHostSettlementInvoice } from '../../utils/brokerSettlementInvoice';
 
@@ -15,15 +15,50 @@ const financeSteps = [
 ];
 
 const workspaceTabs = [
-  ['overview', 'Finance Overview'],
+  ['overview', 'Overview'],
   ['settlements', 'Host Settlements'],
-  ['broker_employee_settlements', 'Broker & Employee Settlements'],
-  ['refunds', 'Refunds & Cancellations'],
+  ['broker_employee_settlements', 'Partner Settlements'],
+  ['refunds', 'Refunds'],
   ['tax_commission', 'Taxes'],
   ['commissions', 'Commissions'],
   ['transactions_ledger', 'Transactions'],
-  ['reports_config', 'Invoices & Config'],
+  ['reports_config', 'Reports & Config'],
 ];
+
+const financeTabMeta = {
+  overview: {
+    title: 'Finance Overview',
+    description: 'Track revenue health, payout readiness, refunds and finance controls from one place.',
+  },
+  settlements: {
+    title: 'Host Settlements',
+    description: 'Manage host payout readiness, due rows and payout engine controls.',
+  },
+  broker_employee_settlements: {
+    title: 'Partner Settlements',
+    description: 'Review broker, RM and branch-manager settlement flows with tax visibility.',
+  },
+  refunds: {
+    title: 'Refund Management',
+    description: 'Process refund queues, cancellation policy outcomes and credit note actions.',
+  },
+  tax_commission: {
+    title: 'Taxes',
+    description: 'Monitor TDS, GST and platform-side tax exposure across payout flows.',
+  },
+  commissions: {
+    title: 'Commissions',
+    description: 'Track role-wise commission outputs and host payout handoff points.',
+  },
+  transactions_ledger: {
+    title: 'Transactions Ledger',
+    description: 'Review payment ledger entries, invoices and payment method performance.',
+  },
+  reports_config: {
+    title: 'Reports & Config',
+    description: 'Export finance data, share invoices and update payment configuration.',
+  },
+};
 
 const paiseToMoney = (value) => formatMoney(Number(value || 0) / 100);
 const paiseToRoundedMoney = (value) => formatMoney(Math.round(Number(value || 0) / 100));
@@ -76,6 +111,39 @@ const customerTaxInvoiceNo = ({ invoiceCandidates = [], bookingIdCandidates = []
   const fallback = cleanInvoices[0];
   if (!fallback) return 'NA';
   return fallback.toUpperCase().startsWith('STRB/') ? `STRC/${fallback.split('/').slice(1).join('/')}` : fallback;
+};
+const displayTransactionInvoiceNo = (txn = {}) => {
+  if (['booking_payment', 'refund'].includes(txn.type)) {
+    const invoiceNo = customerTaxInvoiceNo({
+      invoiceCandidates: [
+        txn.customer_invoice_no,
+        txn.tax_invoice_no,
+        txn.booking_invoice_no,
+        txn.invoice_no,
+        txn.invoice_number,
+        txn.booking?.customer_invoice_no,
+        txn.booking?.tax_invoice_no,
+        txn.booking?.booking_invoice_no,
+        txn.booking?.invoice_no,
+        txn.booking?.invoice_number,
+      ],
+      bookingIdCandidates: [
+        txn.booking_id,
+        txn.booking?.booking_id,
+        txn.booking?.id,
+        txn.id,
+        txn.transaction_id,
+      ],
+      dateCandidates: [
+        txn.invoice_date,
+        txn.booking?.invoice_date,
+        txn.created_at,
+        txn.booking?.created_at,
+      ],
+    });
+    if (invoiceNo !== 'NA') return invoiceNo;
+  }
+  return firstPresent(txn.invoice_no, txn.invoice_number, txn.transaction_id) || 'NA';
 };
 const containsText = (value, needle) => !needle || String(value || '').toLowerCase().includes(String(needle).trim().toLowerCase());
 const compactKey = (value) => String(value || '').trim().toLowerCase();
@@ -156,6 +224,283 @@ const downloadCsvFile = (filename, headers, rows) => {
   link.remove();
   URL.revokeObjectURL(url);
 };
+const financeOverviewDatePresets = [
+  { value: 'may_2026', label: '01 May 2026 - 31 May 2026', from: '2026-05-01', to: '2026-05-31' },
+  { value: 'last_3_months', label: 'Last 3 Months', months: 3 },
+  { value: 'last_6_months', label: 'Last 6 Months', months: 6 },
+  { value: 'last_12_months', label: 'Last 12 Months', months: 12 },
+];
+const financeTrendWindowOptions = [
+  { value: '3', label: 'Last 3 Months', months: 3 },
+  { value: '6', label: 'Last 6 Months', months: 6 },
+  { value: '12', label: 'Last 12 Months', months: 12 },
+];
+const transactionDateValue = (txn = {}) => firstPresent(txn.invoice_date, txn.created_at, txn.booking?.created_at, txn.updated_at);
+const payoutDateValue = (row = {}) => firstPresent(row.settlement_due_at, row.eligible_at, row.created_at, row.updated_at);
+const refundDateValue = (row = {}) => firstPresent(row.processed_at, row.created_at, row.updated_at);
+const propertyLabel = (txn = {}) => firstPresent(txn.property?.title, txn.property?.property_name, txn.property_name, txn.property_id, txn.booking?.property?.title, txn.booking?.property_id, 'NA');
+const propertyTypeLabel = (txn = {}) => firstPresent(txn.property?.property_type, txn.property?.type, txn.booking?.property_type, txn.property_type, 'NA');
+const hostLabel = (txn = {}) => firstPresent(txn.host?.full_name, txn.booking?.host?.full_name, txn.host_name, txn.host_id, 'NA');
+const bookerLabel = (txn = {}) => firstPresent(txn.user?.full_name, txn.booker?.name, txn.booking?.guest_name, txn.booking?.booker_name, txn.customer_name, txn.full_name, 'NA');
+const rmLabel = (txn = {}) => firstPresent(txn.employee?.full_name, txn.rm?.full_name, txn.booking?.employee?.full_name, txn.booking?.rm?.full_name, txn.employee_name, txn.rm_name, 'NA');
+const rmCodeLabel = (txn = {}) => firstPresent(txn.employee?.employee_code, txn.rm?.employee_code, txn.employee_code, txn.rm_code, txn.employee?.uid, txn.rm?.uid, 'NA');
+const branchManagerLabel = (txn = {}) => firstPresent(txn.branch_manager?.full_name, txn.booking?.branch_manager?.full_name, txn.branch_manager_name, txn.branch_manager_id, 'NA');
+const branchManagerCodeLabel = (txn = {}) => firstPresent(txn.branch_manager?.employee_code, txn.booking?.branch_manager?.employee_code, txn.branch_manager_code, txn.branch_manager?.uid, 'NA');
+const financeGrossAmount = (txn = {}) => Number(firstPresent(txn.booking_invoice_breakdown?.gross, txn.invoice_breakdown?.gross, txn.amount, txn.total_amount, txn.gross_amount, txn.amount_paise ? txn.amount_paise / 100 : 0) || 0);
+const financePlatformFeeAmount = (txn = {}) => Number(firstPresent(txn.booking_invoice_breakdown?.platform_fee, txn.invoice_breakdown?.platform_fee, txn.platform_fee_amount, txn.platform_fee, 0) || 0);
+const financeDiscountAmount = (txn = {}) => Number(firstPresent(txn.booking_invoice_breakdown?.discount_amount, txn.invoice_breakdown?.discount_amount, txn.discount_amount, txn.discount, 0) || 0);
+const financeTaxableAmount = (txn = {}) => Number(firstPresent(txn.booking_invoice_breakdown?.taxable_amount, txn.invoice_breakdown?.taxable_amount, txn.taxable_amount, Math.max(0, financeGrossAmount(txn) - financeDiscountAmount(txn))) || 0);
+const financeIgstAmount = (txn = {}) => Number(firstPresent(txn.booking_invoice_breakdown?.igst, txn.invoice_breakdown?.igst, txn.igst, 0) || 0);
+const financeCostAmount = (txn = {}) => Number(firstPresent(txn.amount, txn.total_amount, txn.amount_paise ? txn.amount_paise / 100 : 0, txn.gross_amount, 0) || 0);
+const couponLabel = (txn = {}) => firstPresent(txn.booking_invoice_breakdown?.coupon_code, txn.invoice_breakdown?.coupon_code, txn.coupon_code, txn.booking?.coupon_code, 'NA');
+const financeStatusLabel = (value) => {
+  const normalized = String(value || '').toLowerCase();
+  if (['completed', 'paid', 'success'].includes(normalized)) return 'completed';
+  if (['settled', 'processed'].includes(normalized)) return 'settled';
+  if (['in_progress', 'processing', 'pending'].includes(normalized)) return 'in progress';
+  if (['failed', 'rejected'].includes(normalized)) return 'failed';
+  if (['refunded', 'partially_refunded'].includes(normalized)) return 'refunded';
+  return normalized || 'pending';
+};
+const financeDatePresetFilter = (value, rows, getDate) => {
+  const preset = financeOverviewDatePresets.find((item) => item.value === value) || financeOverviewDatePresets[0];
+  if (preset.from || preset.to) return rows.filter((row) => withinDateRange(getDate(row), preset.from, preset.to));
+  if (!preset.months) return rows;
+  const end = new Date();
+  const start = new Date(end.getFullYear(), end.getMonth() - (preset.months - 1), 1);
+  return rows.filter((row) => {
+    const raw = getDate(row);
+    if (!raw) return false;
+    const date = new Date(raw);
+    return !Number.isNaN(date.getTime()) && date >= start && date <= end;
+  });
+};
+const aggregateFinanceTrend = (transactions = [], months = 6) => {
+  const now = new Date();
+  const buckets = [];
+  for (let index = months - 1; index >= 0; index -= 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - index, 1);
+    buckets.push({
+      key: `${date.getFullYear()}-${date.getMonth()}`,
+      label: date.toLocaleString('en-IN', { month: 'short' }),
+      gross: 0,
+      platform: 0,
+      count: 0,
+    });
+  }
+  const bucketMap = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+  transactions.forEach((txn) => {
+    const raw = transactionDateValue(txn);
+    if (!raw) return;
+    const date = new Date(raw);
+    if (Number.isNaN(date.getTime())) return;
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const bucket = bucketMap.get(key);
+    if (!bucket) return;
+    bucket.gross += financeGrossAmount(txn);
+    bucket.platform += financePlatformFeeAmount(txn);
+    bucket.count += 1;
+  });
+  return buckets;
+};
+const financeTrendPercent = (current, previous) => {
+  const currentValue = Number(current || 0);
+  const previousValue = Number(previous || 0);
+  if (!previousValue) return currentValue ? 100 : 0;
+  return Number((((currentValue - previousValue) / previousValue) * 100).toFixed(1));
+};
+const financeTrendTone = (direction, positive = true) => {
+  if (direction > 0 && positive) return 'bg-emerald-50 text-emerald-600';
+  if (direction < 0 && positive) return 'bg-rose-50 text-rose-600';
+  if (direction > 0 && !positive) return 'bg-rose-50 text-rose-600';
+  if (direction < 0 && !positive) return 'bg-emerald-50 text-emerald-600';
+  return 'bg-slate-100 text-slate-600';
+};
+const FinanceOverviewCard = ({ label, value, subtitle, trend, trendPositive = true, icon: Icon, iconClass }) => (
+  <Panel className="rounded-[24px] border border-[#e8eef8] bg-white p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+    <div className="flex items-start justify-between gap-4">
+      <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${iconClass}`}>
+        <Icon className="h-6 w-6" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#5c6b8c]">{label}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <p className="text-[2rem] font-black leading-none tracking-[-0.04em] text-slate-950">{value}</p>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-black ${financeTrendTone(trend, trendPositive)}`}>
+            {trend > 0 ? '↑' : trend < 0 ? '↓' : '→'} {Math.abs(trend).toFixed(1)}%
+          </span>
+        </div>
+        <p className="mt-2 text-sm font-medium text-slate-500">{subtitle}</p>
+      </div>
+    </div>
+  </Panel>
+);
+const FinanceSecondaryCard = ({ label, value, subtitle, icon: Icon, iconClass }) => (
+  <Panel className="rounded-[24px] border border-[#e8eef8] bg-white p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+    <div className={`mb-4 flex h-12 w-12 items-center justify-center rounded-2xl ${iconClass}`}>
+      <Icon className="h-5 w-5" />
+    </div>
+    <p className="text-[11px] font-black uppercase tracking-[0.16em] text-[#5c6b8c]">{label}</p>
+    <p className="mt-2 text-[1.9rem] font-black leading-none tracking-[-0.04em] text-slate-950">{value}</p>
+    <p className="mt-2 text-sm font-medium text-slate-500">{subtitle}</p>
+  </Panel>
+);
+const FinanceTrendChart = ({ rows, range, setRange }) => {
+  const width = 720;
+  const height = 240;
+  const padding = 28;
+  const maxValue = Math.max(1, ...rows.flatMap((row) => [row.gross, row.platform]));
+  const stepX = rows.length > 1 ? (width - (padding * 2)) / (rows.length - 1) : width - (padding * 2);
+  const point = (value, index) => ({
+    x: padding + (stepX * index),
+    y: height - padding - (((Number(value || 0) / maxValue) * (height - (padding * 2)))),
+  });
+  const buildPath = (key) => rows.map((row, index) => {
+    const { x, y } = point(row[key], index);
+    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+  }).join(' ');
+  const buildArea = (key) => {
+    const line = rows.map((row, index) => {
+      const { x, y } = point(row[key], index);
+      return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+    }).join(' ');
+    const lastX = padding + (stepX * Math.max(rows.length - 1, 0));
+    return `${line} L ${lastX} ${height - padding} L ${padding} ${height - padding} Z`;
+  };
+  return (
+    <Panel className="overflow-hidden rounded-[24px] border border-[#e8eef8] bg-white shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+      <div className="flex flex-col gap-3 border-b border-slate-200 p-5 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h2 className="text-[1.5rem] font-black text-slate-950">Revenue Trend</h2>
+          <div className="mt-2 flex flex-wrap items-center gap-5 text-sm font-semibold text-slate-500">
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />Gross Booking Value</span>
+            <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]" />Platform Revenue</span>
+          </div>
+        </div>
+        <select value={range} onChange={(event) => setRange(event.target.value)} className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 outline-none">
+          {financeTrendWindowOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </div>
+      <div className="p-5">
+        <svg viewBox={`0 0 ${width} ${height}`} className="h-[260px] w-full">
+          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
+            const y = height - padding - (ratio * (height - (padding * 2)));
+            const value = maxValue * ratio;
+            return (
+              <g key={ratio}>
+                <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="#e8eef8" strokeDasharray="4 6" />
+                <text x={4} y={y + 4} fontSize="11" fill="#64748b">{formatRoundedMoney(value)}</text>
+              </g>
+            );
+          })}
+          <path d={buildArea('gross')} fill="rgba(37,99,235,0.08)" />
+          <path d={buildArea('platform')} fill="rgba(34,197,94,0.08)" />
+          <path d={buildPath('gross')} fill="none" stroke="#2563eb" strokeWidth="3" strokeLinecap="round" />
+          <path d={buildPath('platform')} fill="none" stroke="#22c55e" strokeWidth="3" strokeLinecap="round" />
+          {rows.map((row, index) => {
+            const gross = point(row.gross, index);
+            const platform = point(row.platform, index);
+            return (
+              <g key={row.key}>
+                <circle cx={gross.x} cy={gross.y} r="4.5" fill="#2563eb" />
+                <circle cx={platform.x} cy={platform.y} r="4.5" fill="#22c55e" />
+                <text x={gross.x} y={height - 6} textAnchor="middle" fontSize="12" fill="#64748b">{row.label}</text>
+              </g>
+            );
+          })}
+        </svg>
+      </div>
+    </Panel>
+  );
+};
+const FinanceSnapshotCard = ({ title, rows }) => (
+  <Panel className="rounded-[24px] border border-[#e8eef8] bg-white p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+    <div className="flex items-center justify-between gap-3">
+      <h2 className="text-[1.35rem] font-black text-slate-950">Finance Snapshot</h2>
+      <div className="inline-flex rounded-2xl bg-[#f5f8ff] p-1 text-xs font-black">
+        <span className="rounded-xl bg-[#eef5ff] px-3 py-1 text-[#2563eb]">Current View</span>
+        <span className="px-3 py-1 text-slate-500">{title}</span>
+      </div>
+    </div>
+    <div className="mt-4 space-y-3">
+      {rows.map((row) => (
+        <div key={row.label} className="flex items-center justify-between gap-3 rounded-2xl bg-slate-50 px-3 py-2.5">
+          <span className="text-sm font-bold text-slate-500">{row.label}</span>
+          <span className={`rounded-full px-2.5 py-1 text-xs font-black ${row.tone || 'text-slate-950'}`}>{row.value}</span>
+        </div>
+      ))}
+    </div>
+  </Panel>
+);
+const FinanceControlCenter = ({ onChangeTab }) => (
+  <Panel className="rounded-[24px] border border-[#e8eef8] bg-white p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+    <h2 className="text-[1.35rem] font-black text-slate-950">Finance Control Center</h2>
+    <p className="mt-1 text-sm font-medium text-slate-500">Quick actions and key finance workflows at a glance.</p>
+    <div className="mt-4 space-y-2">
+      {[
+        ['Step 1 Payout Overview', 'Review pending payouts', 'overview', 'bg-[#eef5ff] text-[#2563eb]'],
+        ['Step 2 Host Settlements', 'Manage settlements', 'settlements', 'bg-emerald-50 text-emerald-600'],
+        ['Step 3 Refund Management', 'Process refunds', 'refunds', 'bg-rose-50 text-rose-600'],
+        ['Step 4 Tax & Compliance', 'View tax reports', 'tax_commission', 'bg-amber-50 text-amber-600'],
+        ['Step 5 Finance Reports', 'Download & export', 'reports_config', 'bg-violet-50 text-violet-600'],
+      ].map(([label, subtitle, tab, tone]) => (
+        <button key={label} type="button" onClick={() => onChangeTab(tab)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-3 text-left transition hover:border-[#bfdbfe] hover:bg-[#f8fbff]">
+          <div className="min-w-0">
+            <p className="text-sm font-black text-slate-900">{label}</p>
+            <p className="mt-1 text-xs font-medium text-slate-500">{subtitle}</p>
+          </div>
+          <span className={`rounded-2xl px-2.5 py-1 text-xs font-black ${tone}`}>Open</span>
+        </button>
+      ))}
+    </div>
+  </Panel>
+);
+const RecentFinanceTransactionsTable = ({ rows, onViewAll, onView, onShare }) => (
+  <Panel className="overflow-hidden rounded-[24px] border border-[#e8eef8] bg-white shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+    <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-5">
+      <h2 className="text-[1.4rem] font-black text-slate-950">Recent 5 Transactions</h2>
+      <button type="button" onClick={onViewAll} className="rounded-2xl bg-[#eef5ff] px-4 py-2.5 text-sm font-black text-[#2563eb]">View All →</button>
+    </div>
+    <div className="overflow-x-auto">
+      <table className="w-full min-w-[1680px] text-left text-sm">
+        <thead className="bg-[#f8fbff] text-[11px] uppercase tracking-[0.16em] text-slate-500">
+          <tr>{['#', 'Invoice Date', 'Invoice No', 'Booker', 'Employee (RM)', 'Branch Manager', 'Host Name', 'Property', 'GST %', 'Property Type', 'Gross Amount', 'Platform Fee', 'Coupon', 'Discount', 'Taxable Amount', 'IGST', 'Cost', 'Status', 'Actions'].map((heading) => <th key={heading} className="px-4 py-3 font-black">{heading}</th>)}</tr>
+        </thead>
+        <tbody className="divide-y divide-slate-100">
+          {rows.map((txn, index) => (
+            <tr key={txn.transaction_id || txn.id || index}>
+              <td className="px-4 py-4 font-semibold text-slate-700">{index + 1}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{shortDate(transactionDateValue(txn))}</td>
+              <td className="px-4 py-4 font-mono text-xs font-bold text-slate-900">{displayTransactionInvoiceNo(txn)}</td>
+              <td className="px-4 py-4"><p className="font-bold text-slate-900">{bookerLabel(txn)}</p><p className="text-xs text-slate-500">{txn.user?.email || txn.booking?.guest_email || txn.phone || 'NA'}</p></td>
+              <td className="px-4 py-4"><p className="font-bold text-slate-900">{rmLabel(txn)}</p><p className="text-xs text-slate-500">{rmCodeLabel(txn)}</p></td>
+              <td className="px-4 py-4"><p className="font-bold text-slate-900">{branchManagerLabel(txn)}</p><p className="text-xs text-slate-500">{branchManagerCodeLabel(txn)}</p></td>
+              <td className="px-4 py-4"><p className="font-bold text-slate-900">{hostLabel(txn)}</p><p className="text-xs text-slate-500">{txn.host?.uid || txn.host_id || 'NA'}</p></td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{propertyLabel(txn)}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{firstPresent(txn.booking_invoice_breakdown?.gst_percent, txn.invoice_breakdown?.gst_percent, txn.gst_percent, 'NA')}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{propertyTypeLabel(txn)}</td>
+              <td className="px-4 py-4 font-black text-slate-950">{formatRoundedMoney(financeGrossAmount(txn))}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{formatRoundedMoney(financePlatformFeeAmount(txn))}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{couponLabel(txn)}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{financeDiscountAmount(txn) ? formatRoundedMoney(financeDiscountAmount(txn)) : '0'}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{formatRoundedMoney(financeTaxableAmount(txn))}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{financeIgstAmount(txn) ? formatRoundedMoney(financeIgstAmount(txn)) : 'NA'}</td>
+              <td className="px-4 py-4 font-semibold text-slate-800">{formatRoundedMoney(financeCostAmount(txn))}</td>
+              <td className="px-4 py-4"><StatusBadge value={financeStatusLabel(txn.status)} /></td>
+              <td className="px-4 py-4">
+                <div className="flex items-center gap-2">
+                  <button type="button" onClick={() => onView(txn)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">View</button>
+                  <button type="button" onClick={() => onShare(txn)} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700 hover:bg-slate-50">Invoice</button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {!rows.length && <p className="p-6 text-sm font-medium text-slate-500">No finance transactions found for this period. Try another date range.</p>}
+    </div>
+  </Panel>
+);
 const PARTNER_SETTLEMENT_DECISIONS_KEY = 'xspace360.partnerSettlementDecisions.v1';
 const readPartnerSettlementDecisions = () => {
   if (typeof window === 'undefined') return {};
@@ -668,9 +1013,11 @@ const settleStatus = (status) => {
 const FinanceSettlements = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const initialTab = workspaceTabs.some(([id]) => id === searchParams.get('tab')) ? searchParams.get('tab') : 'overview';
-  const [state, setState] = useState({ loading: true, error: '', overview: null, transactions: [], payouts: [], refunds: [], autoStatus: null, taxCommission: null, paymentConfig: null, tdsConfig: null });
+  const [state, setState] = useState({ loading: true, error: '', overview: null, mrrChart: [], transactions: [], payouts: [], refunds: [], autoStatus: null, taxCommission: null, paymentConfig: null, tdsConfig: null });
   const [search, setSearch] = useState('');
   const [active, setActive] = useState(initialTab);
+  const [overviewDatePreset, setOverviewDatePreset] = useState('may_2026');
+  const [trendRange, setTrendRange] = useState('6');
   const [payoutStatus, setPayoutStatus] = useState('');
   const [refundStatus, setRefundStatus] = useState('');
   const [busy, setBusy] = useState('');
@@ -683,14 +1030,15 @@ const FinanceSettlements = () => {
   const load = useCallback(async () => {
     try {
       setState((current) => ({ ...current, loading: true }));
-      const transactionLimit = active === 'broker_employee_settlements' ? 500 : active === 'transactions_ledger' ? 300 : 8;
+      const transactionLimit = active === 'broker_employee_settlements' ? 500 : active === 'transactions_ledger' ? 300 : active === 'overview' ? 120 : 8;
       const transactionParams = {
         q: search,
         limit: transactionLimit,
         ...(active === 'broker_employee_settlements' ? { type: 'booking_payment' } : {}),
       };
-      const [overview, transactions, payouts, refunds, autoStatus, taxCommission, paymentConfig, tdsConfig] = await Promise.all([
+      const [overview, mrrChart, transactions, payouts, refunds, autoStatus, taxCommission, paymentConfig, tdsConfig] = await Promise.all([
         adminPhase1API.financeOverview(),
+        adminPhase1API.financeMrrChart({ months: 6 }),
         adminPhase1API.financeTransactions(transactionParams),
         adminPhase1API.financePayouts({
           status: active === 'broker_employee_settlements' ? '' : payoutStatus,
@@ -706,6 +1054,7 @@ const FinanceSettlements = () => {
         loading: false,
         error: '',
         overview: overview.data,
+        mrrChart: mrrChart.data?.months || [],
         transactions: transactions.data.transactions || [],
         payouts: payouts.data.payouts || [],
         refunds: refunds.data.refunds || [],
@@ -738,6 +1087,7 @@ const FinanceSettlements = () => {
       ['Tax Liability', paiseToMoney(revenue.total_tax_paise), FileText, 'Estimated tax reserve'],
     ];
   }, [state.overview]);
+  const activeTabMeta = financeTabMeta[active] || financeTabMeta.overview;
 
   const settlementTotals = useMemo(() => {
     const sum = (fn) => (state.payouts || []).reduce((total, item) => total + Number(fn(item) || 0), 0);
@@ -761,6 +1111,46 @@ const FinanceSettlements = () => {
       hosts: Array.from(hostMap.values()),
     };
   }, [state.payouts]);
+  const financeSnapshot = useMemo(() => {
+    const counts = state.overview?.counts || {};
+    const revenue = state.overview?.revenue || {};
+    const pending = state.overview?.pending_payouts || {};
+    return {
+      transactions: counts.transactions || state.transactions.length,
+      refunds: counts.refunds || state.refunds.length,
+      pendingPayouts: pending.count || state.payouts.filter((item) => !['processed', 'paid', 'success', 'completed'].includes(settleStatus(item.status))).length,
+      settlementValue: paiseToMoney(pending.amount_paise || settlementTotals.net || 0),
+      gatewayMix: state.transactions.filter((item) => item.payment_method).length,
+      taxReserve: paiseToMoney(revenue.total_tax_paise || 0),
+    };
+  }, [settlementTotals.net, state.overview, state.payouts, state.refunds.length, state.transactions]);
+  const overviewTransactions = useMemo(() => financeDatePresetFilter(overviewDatePreset, state.transactions, transactionDateValue), [overviewDatePreset, state.transactions]);
+  const overviewPayouts = useMemo(() => financeDatePresetFilter(overviewDatePreset, state.payouts, payoutDateValue), [overviewDatePreset, state.payouts]);
+  const overviewRefunds = useMemo(() => financeDatePresetFilter(overviewDatePreset, state.refunds, refundDateValue), [overviewDatePreset, state.refunds]);
+  const overviewTrendRows = useMemo(() => {
+    const months = Number(trendRange || 6);
+    return aggregateFinanceTrend(overviewTransactions, months);
+  }, [overviewTransactions, trendRange]);
+  const overviewCurrentBucket = overviewTrendRows[overviewTrendRows.length - 1] || { count: 0, gross: 0 };
+  const overviewPreviousBucket = overviewTrendRows[overviewTrendRows.length - 2] || { count: 0, gross: 0 };
+  const pendingPayoutTrend = financeTrendPercent(
+    overviewPayouts.filter((item) => ['pending', 'eligible', 'processing', 'approved'].includes(String(item.status || '').toLowerCase())).length,
+    state.payouts.filter((item) => ['pending', 'eligible', 'processing', 'approved'].includes(String(item.status || '').toLowerCase())).length - overviewPayouts.filter((item) => ['pending', 'eligible', 'processing', 'approved'].includes(String(item.status || '').toLowerCase())).length
+  );
+  const refundTrend = financeTrendPercent(overviewRefunds.length, Math.max(0, state.refunds.length - overviewRefunds.length));
+  const topOverviewCards = [
+    ['Total Transactions', financeSnapshot.transactions, 'Lodging, payouts and other income', financeTrendPercent(overviewCurrentBucket.count, overviewPreviousBucket.count), ReceiptText, 'bg-[#eef5ff] text-[#2563eb]', true],
+    ['Pending Payouts', financeSnapshot.pendingPayouts, 'Settlements awaiting host or bank payout', pendingPayoutTrend, WalletCards, 'bg-[#f5edff] text-[#7c3aed]', false],
+    ['Refund Requests', financeSnapshot.refunds, 'No new refund requests', refundTrend, RefreshCcw, 'bg-emerald-50 text-emerald-600', true],
+    ['Total Revenue', paiseToMoney(state.overview?.revenue?.total_net_paise || 0), 'Confirmed and settled revenue', financeTrendPercent(overviewCurrentBucket.gross, overviewPreviousBucket.gross), BarChart3, 'bg-[#f4edff] text-[#8b5cf6]', true],
+  ];
+  const overviewSnapshotRows = [
+    { label: 'Gateway Entries', value: financeSnapshot.gatewayMix },
+    { label: 'Refund Queue', value: state.refunds.length },
+    { label: 'Payout Queue', value: state.payouts.length },
+    { label: 'Auto Payout', value: state.autoStatus?.auto_payout_enabled ? 'Enabled' : 'Disabled', tone: state.autoStatus?.auto_payout_enabled ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-100 text-slate-600' },
+    { label: 'Payout Mode', value: state.autoStatus?.payouts_are_mock ? 'Manual' : 'Live', tone: 'bg-[#eef5ff] text-[#2563eb]' },
+  ];
 
   const runPayoutAction = async (action, label) => {
     try {
@@ -1061,56 +1451,99 @@ const FinanceSettlements = () => {
   };
 
   return (
-    <div>
-      <PageHeader
-        title="Finance & Settlements"
-        description="Central finance overview for revenue, host settlements, refunds, tax liability, broker commission and invoice operations."
-        action={
-          <button onClick={exportTransactions} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-500">
+            <span>Finance &amp; Settlements</span>
+            <span className="text-slate-300">›</span>
+            <span className="text-[#2563eb]">{activeTabMeta.title}</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Finance &amp; Settlements</h1>
+            <p className="mt-2 max-w-3xl text-sm text-slate-600">{activeTabMeta.description}</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <select value={overviewDatePreset} onChange={(event) => setOverviewDatePreset(event.target.value)} className="h-12 min-w-[240px] rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm outline-none">
+            {financeOverviewDatePresets.map((preset) => <option key={preset.value} value={preset.value}>{preset.label}</option>)}
+          </select>
+          <button type="button" onClick={exportTransactions} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-[#142d7b] px-5 text-sm font-black text-white shadow-[0_16px_30px_rgba(20,45,123,0.22)] transition hover:bg-[#102564]">
             <Download className="h-4 w-4" /> Export CSV
           </button>
-        }
-      />
-      <Panel className="mb-4 p-3">
-        <div className="mb-3 flex gap-2 overflow-x-auto">
-          {workspaceTabs.map(([id, label]) => <button key={id} onClick={() => setActiveTab(id)} className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${active === id ? 'bg-[#e8f0ff] text-[#2f6df6] shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'}`}>{label}</button>)}
         </div>
-        {active !== 'overview' && <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-inner">
-          <Search className="h-4 w-4 text-slate-400" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm font-medium outline-none" placeholder="Search transaction, booking, host, property or payment reference" />
-        </div>}
+      </div>
+
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        {topOverviewCards.map(([label, value, subtitle, trend, Icon, iconClass, trendPositive]) => (
+          <FinanceOverviewCard key={label} label={label} value={value} subtitle={subtitle} trend={trend} icon={Icon} iconClass={iconClass} trendPositive={trendPositive} />
+        ))}
+      </div>
+
+      <Panel className="overflow-hidden p-0">
+        <div className="flex overflow-x-auto border-b border-slate-100 px-2 pt-2">
+          {workspaceTabs.map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setActiveTab(id)}
+              className={`mb-[-1px] whitespace-nowrap rounded-t-2xl border-b-2 px-4 py-3 text-sm font-black transition ${
+                active === id
+                  ? 'border-[#2563eb] bg-[#f6f9ff] text-[#2563eb]'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+          <div className="space-y-4">
+            {active !== 'overview' && <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50/70 px-4 py-3 shadow-inner">
+              <Search className="h-4 w-4 text-slate-400" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm font-medium outline-none" placeholder="Search transaction, booking, host, property or payment reference" />
+            </div>}
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+              {cards.map(([label, value, Icon, sub]) => (
+                <FinanceSecondaryCard
+                  key={label}
+                  label={label}
+                  value={value}
+                  subtitle={sub}
+                  icon={Icon}
+                  iconClass={
+                    label === 'Gross Booking Value' ? 'bg-[#eef5ff] text-[#2563eb]'
+                      : label === 'Platform Revenue' ? 'bg-[#f5edff] text-[#8b5cf6]'
+                        : label === 'Pending Payout' ? 'bg-amber-50 text-amber-600'
+                          : label === 'Refund Amount' ? 'bg-rose-50 text-rose-600'
+                            : 'bg-emerald-50 text-emerald-600'
+                  }
+                />
+              ))}
+            </div>
+          </div>
+          <FinanceSnapshotCard title={activeTabMeta.title} rows={overviewSnapshotRows} />
+        </div>
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
         <div className="space-y-5">
-          {!['refunds', 'broker_employee_settlements'].includes(active) && (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-              {cards.map(([label, value, Icon, sub]) => (
-                <Panel key={label} className="p-5">
-                  <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef5ff] text-[#2f6df6]"><Icon className="h-5 w-5" /></div>
-                  <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
-                  <p className="mt-2 text-[18px] font-black text-slate-950 md:text-[20px]">{value}</p>
-                  <p className="mt-1 text-xs text-slate-500">{sub}</p>
-                </Panel>
-              ))}
-            </div>
-          )}
           {active === 'overview' ? <div className="space-y-4">
-            <AdminAccountTransactionsTab hideFilters limit={5} />
-            <div className="grid gap-4 lg:grid-cols-2">
-              <Panel className="p-4">
-                <h2 className="font-black">Phase 3 Steps</h2>
-                <div className="mt-3 space-y-2">
-                  {financeSteps.map(([step, label, status]) => <div key={step} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span><b>{step}</b> {label}</span><StatusBadge value={status} /></div>)}
-                </div>
-              </Panel>
-              <Panel className="p-4">
-                <h2 className="font-black">Payout Engine</h2>
-                <div className="mt-3 grid gap-2 text-sm">
-                  <Info label="Auto Payout" value={state.autoStatus?.auto_payout_enabled ? 'Enabled' : 'Disabled'} />
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <FinanceTrendChart rows={overviewTrendRows} range={trendRange} setRange={setTrendRange} />
+              <FinanceControlCenter onChangeTab={setActiveTab} />
+            </div>
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
+              <RecentFinanceTransactionsTable rows={overviewTransactions.slice(0, 5)} onViewAll={() => setActiveTab('transactions_ledger')} onView={(txn) => showNotice({ title: 'Transaction Ready', description: `${displayTransactionInvoiceNo(txn)} is available in the Transactions tab.`, eyebrow: 'Finance Overview' })} onShare={shareInvoice} />
+              <Panel className="rounded-[24px] border border-[#e8eef8] bg-white p-5 shadow-[0_16px_34px_rgba(15,23,42,0.05)]">
+                <h2 className="text-[1.35rem] font-black text-slate-950">Payout Engine</h2>
+                <p className="mt-1 text-sm font-medium text-slate-500">Operational health for payout processing and refund readiness.</p>
+                <div className="mt-4 space-y-3">
                   <Info label="Eligible" value={state.autoStatus?.pending_eligible || 0} />
                   <Info label="Processing" value={state.autoStatus?.processing || 0} />
                   <Info label="Failed" value={state.autoStatus?.failed || 0} />
-                  <Info label="Mode" value={state.autoStatus?.payouts_are_mock ? 'Mock' : 'Live'} />
+                  <Info label="Pending Value" value={financeSnapshot.settlementValue} />
+                </div>
+                <div className="mt-4 rounded-[22px] border border-[#d9e5fb] bg-[#f7faff] p-4 text-sm text-slate-700">
+                  Settlement and payout remain separate finance entities. Overview cards use backend summary values; recent activity uses current filtered records.
                 </div>
               </Panel>
             </div>
@@ -1593,39 +2026,6 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
         refund.created_at,
       ],
     });
-  };
-  const displayTransactionInvoiceNo = (txn = {}) => {
-    if (['booking_payment', 'refund'].includes(txn.type)) {
-      const invoiceNo = customerTaxInvoiceNo({
-        invoiceCandidates: [
-          txn.customer_invoice_no,
-          txn.tax_invoice_no,
-          txn.booking_invoice_no,
-          txn.invoice_no,
-          txn.invoice_number,
-          txn.booking?.customer_invoice_no,
-          txn.booking?.tax_invoice_no,
-          txn.booking?.booking_invoice_no,
-          txn.booking?.invoice_no,
-          txn.booking?.invoice_number,
-        ],
-        bookingIdCandidates: [
-          txn.booking_id,
-          txn.booking?.booking_id,
-          txn.booking?.id,
-          txn.id,
-          txn.transaction_id,
-        ],
-        dateCandidates: [
-          txn.invoice_date,
-          txn.booking?.invoice_date,
-          txn.created_at,
-          txn.booking?.created_at,
-        ],
-      });
-      if (invoiceNo !== 'NA') return invoiceNo;
-    }
-    return firstPresent(txn.invoice_no, txn.invoice_number, txn.transaction_id) || 'NA';
   };
   const accountingDate = (value) => {
     const raw = firstPresent(value);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Building2, MapPin, Mail, Phone, ShieldCheck, CheckCircle2, Sparkles, 
   Facebook, Instagram, Youtube, Menu, X, ArrowRight, Compass, Users, Milestone, Award
@@ -102,7 +102,7 @@ const DEFAULT_FOOTER_DATA = {
     { heading: 'For Guests', items: [
       { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
       { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' }
+      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse?category=residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
@@ -245,18 +245,18 @@ const AboutUs = () => {
 
         {/* Center Pill Links */}
         <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal bg-stone/80 backdrop-blur-md border border-stone-200 rounded-full shadow-subtle">
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="hover:text-terracotta transition">
+          <Link to="/" className="hover:text-terracotta transition">
             Home
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/guest/browse" className="hover:text-terracotta transition">
             Discover
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/blog'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/blog" className="hover:text-terracotta transition">
             Blog
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/support'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/support" className="hover:text-terracotta transition">
             Support
-          </a>
+          </Link>
           <div className="w-[1px] h-4 bg-charcoal/20" />
           <LanguageSelector
             currentLang={lang}

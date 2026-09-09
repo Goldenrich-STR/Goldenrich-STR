@@ -1580,7 +1580,7 @@ const HostDashboard = () => {
                           <h4 className="text-lg font-bold tracking-tight text-charcoal">X-Space360 GRP & Owner (Host) Agreement.</h4>
                           <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest bg-terracotta/5 px-2 py-0.5 rounded-md">Mandatory</span>
                         </div>
-                        <p className="text-xs text-charcoal-muted font-bold mt-1">Review the X-space360 platform T&C - Mutual Agreement between Host & X-space360 enter details and sign.</p>
+                        <p className="text-xs text-charcoal-muted font-bold mt-1">Review the X-Space360 Host Terms & Conditions - Mutual Agreement between Host & X-Space360 enter details and sign.</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">

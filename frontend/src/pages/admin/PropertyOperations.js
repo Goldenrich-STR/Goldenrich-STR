@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { AlertCircle, ArrowUpRight, Building2, CalendarDays, CheckCircle2, Clock3, Download, Edit3, ExternalLink, Eye, Filter, Image, MapPin, MoreVertical, Plus, RefreshCw, Search, SlidersHorizontal, Trash2, UserCog, Users, XCircle } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice, Pagination } from './shared';
+import TableScrollContainer from '../../components/ui/TableScrollContainer';
 
 const tabs = [
   ['all', 'All Properties'],
@@ -1043,81 +1044,83 @@ const PropertyOperations = () => {
               )}
             </div>
           </div>
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[1200px] text-left text-sm">
-              <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400">
-                <tr>
-                  {isVerificationQueue && (
-                    <th className="w-10 px-4 py-4 font-bold">
-                      <input
-                        aria-label="Select all submitted properties on this page"
-                        type="checkbox"
-                        checked={pagedProperties.length > 0 && pagedProperties.every((property) => selectedRows.includes(property.property_id))}
-                        onChange={togglePageSelection}
-                        className="h-4 w-4 rounded border-slate-300 text-[#2f6df6] focus:ring-[#2f6df6]"
-                      />
-                    </th>
-                  )}
-                  {columnOptions.filter(([key]) => visibleColumns[key] !== false).map(([, label]) => (
-                    <th key={label} className="px-4 py-4 font-bold">{label}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {!pagedProperties.length && (
+          <div className="hidden md:block">
+            <TableScrollContainer>
+              <table className="w-full min-w-[1200px] text-left text-sm">
+                <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400">
                   <tr>
-                    <td colSpan={activeColumnCount + (isVerificationQueue ? 1 : 0)} className="px-4 py-12 text-center">
-                      <p className="text-base font-black text-slate-950">No properties found</p>
-                      <p className="mt-1 text-sm font-semibold text-slate-500">Try adjusting your search or filters.</p>
-                    </td>
-                  </tr>
-                )}
-                {pagedProperties.map((property) => (
-                  <tr key={property.property_id} className="transition hover:bg-slate-50/70">
                     {isVerificationQueue && (
-                      <td className="px-4 py-4">
+                      <th className="w-10 px-4 py-4 font-bold">
                         <input
-                          aria-label={`Select ${property.title || property.property_id}`}
+                          aria-label="Select all submitted properties on this page"
                           type="checkbox"
-                          checked={selectedRows.includes(property.property_id)}
-                          onChange={() => toggleRowSelection(property.property_id)}
+                          checked={pagedProperties.length > 0 && pagedProperties.every((property) => selectedRows.includes(property.property_id))}
+                          onChange={togglePageSelection}
                           className="h-4 w-4 rounded border-slate-300 text-[#2f6df6] focus:ring-[#2f6df6]"
                         />
-                      </td>
+                      </th>
                     )}
-                    {isRejectedTab ? (
-                      <>
-                        {visibleColumns.property !== false && <td className="px-4 py-4"><p className="font-mono text-xs font-black text-slate-800">{property.property_id}</p><p className="mt-1 text-[11px] font-bold text-slate-500">Submitted on {asDate(property.submitted_at || property.created_at)}</p></td>}
-                        {visibleColumns.host !== false && <td className="px-4 py-4"><PropertyIdentityCell property={property} showThumbnail /></td>}
-                        {visibleColumns.type !== false && <td className="px-4 py-4"><p className="font-bold">{property.host_name || property.owner_name || '-'}</p><p className="text-xs font-semibold text-slate-500">{property.host_mobile || property.phone || property.mobile || ''}</p></td>}
-                        {visibleColumns.category !== false && <td className="px-4 py-4"><span className="inline-flex rounded-lg bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-inset ring-red-100">{getRejectionStage(property)}</span></td>}
-                        {visibleColumns.city !== false && <td className="px-4 py-4"><p className="font-bold">{getRejectedBy(property)}</p><p className="text-xs font-semibold text-slate-500">{property.rejected_by_role || cleanLabel(property.updated_by_role || '')}</p></td>}
-                        {visibleColumns.broker !== false && <td className="max-w-[260px] px-4 py-4"><p className="line-clamp-2 font-bold text-slate-700">{getRejectionReason(property)}</p></td>}
-                        {visibleColumns.submitted !== false && <td className="px-4 py-4"><p className="font-bold">{asDate(property.rejected_at || property.reviewed_at || property.updated_at || property.created_at)}</p><p className="text-xs font-semibold text-slate-500">{property.rejected_time || ''}</p></td>}
-                        {visibleColumns.actions !== false && <td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td>}
-                      </>
-                    ) : (
-                      <>
-                        {visibleColumns.property !== false && <td className="px-4 py-4"><PropertyIdentityCell property={property} showThumbnail={isVerificationQueue || isLiveTab} /></td>}
-                        {visibleColumns.host !== false && <td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td>}
-                        {visibleColumns.type !== false && <td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td>}
-                        {visibleColumns.category !== false && <td className="px-4 py-4 capitalize">{property.category}</td>}
-                        {visibleColumns.city !== false && <td className="px-4 py-4">{property.city}</td>}
-                        {visibleColumns.broker !== false && <td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td>}
-                        {visibleColumns.rm !== false && <td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td>}
-                        {visibleColumns.branchManager !== false && <td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td>}
-                        {visibleColumns.stage !== false && <td className="px-4 py-4"><StatusBadge value={normalizeStatus(property.status)} /></td>}
-                        {visibleColumns.subscription !== false && <td className="px-4 py-4">{property.subscription_status || '-'}</td>}
-                        {isLiveTab && visibleColumns.rating !== false && <td className="px-4 py-4"><RatingCell property={property} /></td>}
-                        {visibleColumns.submitted !== false && <td className="px-4 py-4"><p className="font-bold">{asDate(property.submitted_at || property.created_at || property.updated_at)}</p><p className="text-xs font-semibold text-slate-500">{property.submitted_at ? asDate(property.updated_at) : ''}</p></td>}
-                        {visibleColumns.price !== false && <td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td>}
-                        {visibleColumns.actions !== false && <td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td>}
-                      </>
-                    )}
+                    {columnOptions.filter(([key]) => visibleColumns[key] !== false).map(([, label]) => (
+                      <th key={label} className="px-4 py-4 font-bold">{label}</th>
+                    ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {!pagedProperties.length && (
+                    <tr>
+                      <td colSpan={activeColumnCount + (isVerificationQueue ? 1 : 0)} className="px-4 py-12 text-center">
+                        <p className="text-base font-black text-slate-950">No properties found</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-500">Try adjusting your search or filters.</p>
+                      </td>
+                    </tr>
+                  )}
+                  {pagedProperties.map((property) => (
+                    <tr key={property.property_id} className="transition hover:bg-slate-50/70">
+                      {isVerificationQueue && (
+                        <td className="px-4 py-4">
+                          <input
+                            aria-label={`Select ${property.title || property.property_id}`}
+                            type="checkbox"
+                            checked={selectedRows.includes(property.property_id)}
+                            onChange={() => toggleRowSelection(property.property_id)}
+                            className="h-4 w-4 rounded border-slate-300 text-[#2f6df6] focus:ring-[#2f6df6]"
+                          />
+                        </td>
+                      )}
+                      {isRejectedTab ? (
+                        <>
+                          {visibleColumns.property !== false && <td className="px-4 py-4"><p className="font-mono text-xs font-black text-slate-800">{property.property_id}</p><p className="mt-1 text-[11px] font-bold text-slate-500">Submitted on {asDate(property.submitted_at || property.created_at)}</p></td>}
+                          {visibleColumns.host !== false && <td className="px-4 py-4"><PropertyIdentityCell property={property} showThumbnail /></td>}
+                          {visibleColumns.type !== false && <td className="px-4 py-4"><p className="font-bold">{property.host_name || property.owner_name || '-'}</p><p className="text-xs font-semibold text-slate-500">{property.host_mobile || property.phone || property.mobile || ''}</p></td>}
+                          {visibleColumns.category !== false && <td className="px-4 py-4"><span className="inline-flex rounded-lg bg-red-50 px-2.5 py-1 text-xs font-black text-red-700 ring-1 ring-inset ring-red-100">{getRejectionStage(property)}</span></td>}
+                          {visibleColumns.city !== false && <td className="px-4 py-4"><p className="font-bold">{getRejectedBy(property)}</p><p className="text-xs font-semibold text-slate-500">{property.rejected_by_role || cleanLabel(property.updated_by_role || '')}</p></td>}
+                          {visibleColumns.broker !== false && <td className="max-w-[260px] px-4 py-4"><p className="line-clamp-2 font-bold text-slate-700">{getRejectionReason(property)}</p></td>}
+                          {visibleColumns.submitted !== false && <td className="px-4 py-4"><p className="font-bold">{asDate(property.rejected_at || property.reviewed_at || property.updated_at || property.created_at)}</p><p className="text-xs font-semibold text-slate-500">{property.rejected_time || ''}</p></td>}
+                          {visibleColumns.actions !== false && <td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td>}
+                        </>
+                      ) : (
+                        <>
+                          {visibleColumns.property !== false && <td className="px-4 py-4"><PropertyIdentityCell property={property} showThumbnail={isVerificationQueue || isLiveTab} /></td>}
+                          {visibleColumns.host !== false && <td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td>}
+                          {visibleColumns.type !== false && <td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td>}
+                          {visibleColumns.category !== false && <td className="px-4 py-4 capitalize">{property.category}</td>}
+                          {visibleColumns.city !== false && <td className="px-4 py-4">{property.city}</td>}
+                          {visibleColumns.broker !== false && <td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td>}
+                          {visibleColumns.rm !== false && <td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td>}
+                          {visibleColumns.branchManager !== false && <td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td>}
+                          {visibleColumns.stage !== false && <td className="px-4 py-4"><StatusBadge value={normalizeStatus(property.status)} /></td>}
+                          {visibleColumns.subscription !== false && <td className="px-4 py-4">{property.subscription_status || '-'}</td>}
+                          {isLiveTab && visibleColumns.rating !== false && <td className="px-4 py-4"><RatingCell property={property} /></td>}
+                          {visibleColumns.submitted !== false && <td className="px-4 py-4"><p className="font-bold">{asDate(property.submitted_at || property.created_at || property.updated_at)}</p><p className="text-xs font-semibold text-slate-500">{property.submitted_at ? asDate(property.updated_at) : ''}</p></td>}
+                          {visibleColumns.price !== false && <td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td>}
+                          {visibleColumns.actions !== false && <td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td>}
+                        </>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TableScrollContainer>
           </div>
           <div className="grid gap-3 p-4 md:hidden">
             {!pagedProperties.length && (

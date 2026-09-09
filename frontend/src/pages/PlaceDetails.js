@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getPlaceBySlug } from '../data/placesToVisit';
+import { getPropertyUrl } from '../lib/propertySlug';
 import { ArrowLeft, MapPin, Calendar, Star, Map } from 'lucide-react';
 import SEO from '../components/SEO';
 
@@ -164,7 +165,7 @@ const PlaceDetails = () => {
               <button
                 key={item.property_id || index}
                 type="button"
-                onClick={() => navigate(`/property/${item.property_id}`)}
+                onClick={() => navigate(getPropertyUrl(item))}
                 className="w-full bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left flex flex-col group"
               >
                 <div className="relative aspect-[16/10] bg-stone overflow-hidden">

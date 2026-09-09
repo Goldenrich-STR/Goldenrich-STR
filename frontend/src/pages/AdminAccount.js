@@ -16,6 +16,7 @@ import CouponManagement from '../components/admin/CouponManagement';
 import { BookingManagement, SubscriptionManagement } from './AdminDashboard';
 import { requestConfirm, showNotice } from './admin/shared';
 import { buildCustomerBookingInvoiceHtml } from '../utils/bookingInvoice';
+import { formatAddress } from '../lib/displayLabels';
 
 const fmtINR = (paise) =>
   new Intl.NumberFormat('en-IN', {
@@ -3792,7 +3793,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
   const property = t.property || {};
   const bookingProperty = t.booking?.property || {};
   const propertyName = property.title || property.property_name || property.name || bookingProperty.title || bookingProperty.property_name || bookingProperty.name || t.property_name || property.property_id || t.booking?.property_id || 'NA';
-  const propertyAddress = [property.address, property.city, property.state, property.pin_code].filter(Boolean).join(', ') || [bookingProperty.address, bookingProperty.city, bookingProperty.state, bookingProperty.pin_code].filter(Boolean).join(', ') || 'NA';
+  const propertyAddress = formatAddress(property.address || bookingProperty.address, property.city || bookingProperty.city, property.state || bookingProperty.state, property.pin_code || bookingProperty.pin_code) || 'NA';
   const invoiceBreakdown = t.booking_invoice_breakdown || t.invoice_breakdown || {};
   const amountINR = Number(invoiceBreakdown.total_amount ?? ((t.amount || 0) / 100));
   const formatInvoiceMoney = (value) =>
@@ -4082,7 +4083,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
       <table class="signature-table">
         <tbody>
           <tr>
-            <td colspan="2" class="jurisdiction-note">Subject to Nashik Juridiction</td>
+            <td colspan="2" class="jurisdiction-note">Subject to Nashik Jurisdiction</td>
           </tr>
           <tr>
             <td class="bank-cell">
@@ -4763,7 +4764,7 @@ const InvoiceModal = ({ transaction, onClose }) => {
               <tbody>
                 <tr>
                   <td colSpan="2" style={{ padding: '6px 12px', borderBottom: '2px solid black', textAlign: 'center', fontSize: '10px', fontWeight: 'bold' }}>
-                    Subject to Nashik Juridiction
+                    Subject to Nashik Jurisdiction
                   </td>
                 </tr>
                 <tr>

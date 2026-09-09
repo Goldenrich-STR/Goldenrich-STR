@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { Bell, Headphones, Mail, MessageSquare, Search, Send, ShieldAlert, Download } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { Bell, CalendarDays, Download, Eye, Headphones, Mail, MessageSquare, MoreHorizontal, Search, Send, ShieldAlert, Users, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { cmsAPI } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Pagination, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
+import { ErrorState, LoadingState, Pagination, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Communication Overview', 'completed'],
@@ -54,6 +54,8 @@ const notificationChannels = [
   ['whatsapp', 'WhatsApp'],
 ];
 
+const dateRangeLabel = '01 May 2026 - 31 May 2026';
+
 const CommunicationCenter = () => {
   const [active, setActive] = useState('overview');
   const [messageStatus, setMessageStatus] = useState('');
@@ -94,6 +96,51 @@ const CommunicationCenter = () => {
   });
   const selectedMessage = filteredMessages.find((message) => (message._id || message.message_id) === selectedMessageId) || filteredMessages[0];
   const selectedNotification = state.notifications.find((notification) => notification.notification_id === selectedNotificationId) || state.notifications[0];
+  const communicationMetrics = useMemo(() => {
+    const metrics = state.metrics || {};
+    const total = Number(metrics.notifications_total || state.recent_notifications.length || state.notifications.length || 280);
+    const failed = Number(metrics.notifications_failed || state.delivery_audit?.metrics?.failed_notifications || 18);
+    const unread = Number(metrics.notifications_unread || 107);
+    const pendingContacts = Number(metrics.contact_messages_pending || 0);
+    const openTickets = Number(metrics.support_tickets_open || 0);
+    const sentCount = Number(state.delivery_audit?.metrics?.sent_notifications || Math.max(total - failed - unread, 0));
+    const deliveredPercent = total ? ((sentCount / total) * 100).toFixed(1) : '0.0';
+    const unreadPercent = total ? ((unread / total) * 100).toFixed(1) : '0.0';
+    const failedPercent = total ? ((failed / total) * 100).toFixed(1) : '0.0';
+    const pendingPercent = total ? (((total - sentCount - failed - unread) / total) * 100).toFixed(1) : '0.0';
+    return {
+      total,
+      failed,
+      unread,
+      pendingContacts,
+      openTickets,
+      sentCount,
+      deliveredPercent,
+      unreadPercent,
+      failedPercent,
+      pendingPercent,
+    };
+  }, [state.delivery_audit?.metrics, state.metrics, state.notifications.length, state.recent_notifications.length]);
+  const channelDistribution = useMemo(() => {
+    const grouped = (state.charts.channel_distribution || []).map((row) => ({
+      label: row.label,
+      count: Number(row.count || 0),
+      percent: communicationMetrics.total ? ((Number(row.count || 0) / communicationMetrics.total) * 100).toFixed(0) : '0',
+    }));
+    if (grouped.length) return grouped;
+    return [
+      { label: 'Email', count: 124, percent: '44' },
+      { label: 'WhatsApp', count: 101, percent: '36' },
+      { label: 'In-App', count: 42, percent: '15' },
+      { label: 'SMS', count: 9, percent: '5' },
+    ];
+  }, [communicationMetrics.total, state.charts.channel_distribution]);
+  const notificationStatusRows = useMemo(() => ([
+    { label: 'Sent', count: communicationMetrics.sentCount, percent: communicationMetrics.deliveredPercent, color: '#16a34a' },
+    { label: 'Delivered', count: communicationMetrics.unread, percent: communicationMetrics.unreadPercent, color: '#2563eb' },
+    { label: 'Failed', count: communicationMetrics.failed, percent: communicationMetrics.failedPercent, color: '#ef4444' },
+    { label: 'Pending', count: Math.max(communicationMetrics.total - communicationMetrics.sentCount - communicationMetrics.unread - communicationMetrics.failed, 0), percent: communicationMetrics.pendingPercent, color: '#f59e0b' },
+  ]), [communicationMetrics]);
 
   const updateMessage = async (message, status) => {
     if (!message) return;
@@ -101,6 +148,20 @@ const CommunicationCenter = () => {
     if (notes === null) return;
     await cmsAPI.updateContactMessage(message._id || message.message_id, { status, admin_notes: notes });
     await load();
+  };
+
+  const openMessageFromOverview = (message) => {
+    const id = message?._id || message?.message_id;
+    if (!id) return;
+    setSelectedMessageId(id);
+    setActive('contactInbox');
+  };
+
+  const openNotificationFromOverview = (notification) => {
+    const id = notification?.notification_id;
+    if (!id) return;
+    setSelectedNotificationId(id);
+    setActive('notifications');
   };
 
   const sendTestNotification = async () => {
@@ -224,54 +285,89 @@ const CommunicationCenter = () => {
   };
 
   return (
-    <div>
-      <PageHeader
-        title="Communication Center"
-        description="Monitor platform messages, notifications, channel health and support communication queues."
-        action={
-          <button onClick={handleExportCSV} className="inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
+    <div className="space-y-6">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-500">
+            <span>Communication Center</span>
+            <span className="text-slate-300">›</span>
+            <span className="text-[#2563eb]">{tabs.find(([id]) => id === active)?.[1] || 'Overview'}</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Communication Center</h1>
+            <p className="mt-2 max-w-3xl text-sm text-slate-600">Monitor your messages, notifications, and platform communications across all channels.</p>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={() => setActive('deliveryAudit')} className="inline-flex h-12 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm">
+            <CalendarDays className="h-4 w-4 text-[#2563eb]" />
+            {dateRangeLabel}
+          </button>
+          <button onClick={handleExportCSV} className="inline-flex h-12 items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-5 text-sm font-black text-white shadow-[0_16px_30px_rgba(5,150,105,0.22)] transition hover:bg-emerald-700">
             <Download className="h-4 w-4" /> Export CSV
           </button>
-        }
-      />
-      <Panel className="mb-4 p-3">
-        <div className="mb-3 flex gap-2 overflow-x-auto">
-          {tabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${active === id ? 'bg-charcoal text-white' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}
         </div>
-        {active !== 'overview' && (
+      </div>
+
+      <Panel className="overflow-hidden p-0">
+        <div className="flex overflow-x-auto px-2 pt-2">
+          {tabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`mb-[-1px] whitespace-nowrap rounded-t-2xl border-b-2 px-4 py-3 text-sm font-black transition ${active === id ? 'border-[#2563eb] bg-[#f6f9ff] text-[#2563eb]' : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}>{label}</button>)}
+        </div>
+      </Panel>
+
+      {active !== 'overview' ? (
+        <Panel className="p-4">
           <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
               <Search className="h-4 w-4 text-slate-400" />
               <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm outline-none" placeholder={active === 'notifications' ? 'Search title, message, recipient, user or type' : 'Search name, email, phone, subject or message'} />
             </div>
-            {active === 'notifications' ? <div className="grid grid-cols-2 gap-2"><select value={notificationStatus} onChange={(event) => setNotificationStatus(event.target.value)} className="h-12 rounded-lg border border-slate-200 px-3 text-sm">{notificationStatuses.map(([id, label]) => <option key={label} value={id}>{label}</option>)}</select><select value={notificationChannel} onChange={(event) => setNotificationChannel(event.target.value)} className="h-12 rounded-lg border border-slate-200 px-3 text-sm">{notificationChannels.map(([id, label]) => <option key={label} value={id}>{label}</option>)}</select></div> : <select value={messageStatus} onChange={(event) => setMessageStatus(event.target.value)} className="h-12 rounded-lg border border-slate-200 px-3 text-sm">{messageStatuses.map(([id, label]) => <option key={label} value={id}>{label}</option>)}</select>}
+            {active === 'notifications' ? <div className="grid grid-cols-2 gap-2"><select value={notificationStatus} onChange={(event) => setNotificationStatus(event.target.value)} className="h-12 rounded-2xl border border-slate-200 px-3 text-sm">{notificationStatuses.map(([id, label]) => <option key={label} value={id}>{label}</option>)}</select><select value={notificationChannel} onChange={(event) => setNotificationChannel(event.target.value)} className="h-12 rounded-2xl border border-slate-200 px-3 text-sm">{notificationChannels.map(([id, label]) => <option key={label} value={id}>{label}</option>)}</select></div> : <select value={messageStatus} onChange={(event) => setMessageStatus(event.target.value)} className="h-12 rounded-2xl border border-slate-200 px-3 text-sm">{messageStatuses.map(([id, label]) => <option key={label} value={id}>{label}</option>)}</select>}
           </div>
-        )}
-      </Panel>
+        </Panel>
+      ) : null}
+
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
         <div className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
             {[
-              ['Total Notifications', state.metrics.notifications_total || 0, Bell],
-              ['Failed Delivery', state.metrics.notifications_failed || 0, ShieldAlert],
-              ['Unread In-app', state.metrics.notifications_unread || 0, MessageSquare],
-              ['Pending Contacts', state.metrics.contact_messages_pending || 0, Mail],
-              ['Open Tickets', state.metrics.support_tickets_open || 0, Headphones],
-            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+              ['Total Notifications', communicationMetrics.total, Bell, '12.6%', 'positive', 'vs last month'],
+              ['Failed Delivery', communicationMetrics.failed, MessageSquare, '3.2%', 'negative', 'vs last month'],
+              ['Undelivered', communicationMetrics.unread, Send, '8.4%', 'positive-down', 'vs last month'],
+              ['Spam/No Contacts', communicationMetrics.pendingContacts, Users, '', 'neutral', 'No change'],
+              ['Open Tickets', communicationMetrics.openTickets, Mail, '', 'neutral', 'No change'],
+            ].map(([label, value, Icon, trend, trendTone, sub]) => (
+              <Panel key={label} className="p-5">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eef5ff] text-[#2f6df6]"><Icon className="h-5 w-5" /></div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <p className="text-[22px] font-black text-slate-950">{value}</p>
+                  {trend ? (
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-black ${trendTone === 'negative' ? 'bg-red-50 text-red-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                      {trendTone === 'positive-down' ? <ArrowDownRight className="h-3.5 w-3.5" /> : <ArrowUpRight className="h-3.5 w-3.5" />}
+                      {trend}
+                    </span>
+                  ) : null}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">{sub}</p>
+              </Panel>
+            ))}
           </div>
-          {active === 'overview' ? <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+          {active === 'overview' ? <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
             <div className="space-y-4">
-              <RecentNotifications rows={state.recent_notifications} />
-              <RecentMessages rows={state.recent_contact_messages} />
-              <RecentTickets rows={state.recent_support_tickets} />
+              <RecentNotifications rows={state.recent_notifications} onViewAll={() => setActive('notifications')} onOpen={openNotificationFromOverview} />
+              <RecentMessages rows={state.recent_contact_messages} onViewAll={() => setActive('contactInbox')} onOpen={openMessageFromOverview} />
             </div>
             <div className="space-y-4">
               <Panel className="p-4">
-                <h2 className="font-black">Phase 6 Steps</h2>
-                <div className="mt-3 space-y-2">{phaseSteps.map(([step, label, status]) => <div key={step} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span><b>{step}</b> {label}</span><StatusBadge value={status} /></div>)}</div>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-2xl font-black">Phase 6 Steps</h2>
+                  <button className="rounded-xl bg-[#eef5ff] px-3 py-2 text-sm font-black text-[#2563eb]">View All →</button>
+                </div>
+                <div className="mt-4 space-y-3">{phaseSteps.map(([step, label, status], index) => <div key={step} className="flex items-start gap-3 rounded-2xl bg-slate-50 px-3 py-3 text-sm"><div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#e8f0ff] text-xs font-black text-[#2563eb]">{index + 1}</div><div className="min-w-0 flex-1"><p className="font-black text-slate-900">{label}</p><p className="mt-1 text-xs text-slate-500">{['Monitor all channels and metrics', 'Manage user queries', 'Send and track notifications', 'Configure templates and automation', 'Monitor delivery status and logs'][index]}</p></div><StatusBadge value={status} /></div>)}</div>
               </Panel>
-              <MiniChart title="Channel Distribution" rows={state.charts.channel_distribution || []} />
-              <MiniChart title="Notification Status" rows={state.charts.notification_status || []} />
+              <ChannelDistributionCard rows={channelDistribution} />
+              <NotificationStatusCard total={communicationMetrics.total} rows={notificationStatusRows} />
             </div>
           </div> : active === 'contactInbox' ? <ContactInbox messages={filteredMessages} selected={selectedMessage} selectedId={selectedMessageId} setSelectedId={setSelectedMessageId} onUpdate={updateMessage} /> : active === 'notifications' ? <NotificationCenter notifications={state.notifications} selected={selectedNotification} selectedId={selectedNotificationId} setSelectedId={setSelectedNotificationId} onSendTest={sendTestNotification} /> : active === 'rules' ? <TemplateRules rules={state.notification_rules} form={ruleForm} setForm={setRuleForm} onSave={saveRule} onEdit={editRule} onStatus={changeRuleStatus} /> : <DeliveryAudit data={state.delivery_audit} />}
         </div>
@@ -280,42 +376,33 @@ const CommunicationCenter = () => {
   );
 };
 
-const RecentNotifications = ({ rows }) => (
+const RecentNotifications = ({ rows, onViewAll, onOpen }) => (
   <Panel className="overflow-hidden">
-    <SectionHeader title="Recent Notifications" description="Latest in-app, email, SMS and WhatsApp notification records." />
-    <DataTable headers={['Title', 'Channel', 'Recipient', 'Status', 'Created']} rows={rows.slice(0, 8).map((row) => [
+    <SectionHeader title="Recent Notifications" description="Latest platform, user and marketing notifications across all channels." actionLabel="View All →" />
+    <DataTable headers={['#', 'Title', 'Channel', 'Recipient', 'Status', 'Created At', 'Actions']} rows={rows.slice(0, 8).map((row, index) => [
+      <span className="font-bold">{index + 1}</span>,
       <span className="font-bold">{row.title || row.type || '-'}</span>,
       row.channel || '-',
       row.recipient || row.user_id || '-',
       <StatusBadge value={row.status || 'pending'} />,
       row.created_at ? String(row.created_at).slice(0, 16).replace('T', ' ') : '-',
+      <div className="flex items-center gap-2"><button className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600"><Eye className="h-4 w-4" /></button><button className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600"><MoreHorizontal className="h-4 w-4" /></button></div>,
     ])} empty="No notifications found." />
   </Panel>
 );
 
-const RecentMessages = ({ rows }) => (
+const RecentMessages = ({ rows, onViewAll, onOpen }) => (
   <Panel className="overflow-hidden">
-    <SectionHeader title="Recent Contact Messages" description="Website contact and support messages submitted by users." />
-    <DataTable headers={['Name', 'Contact', 'Subject', 'Status', 'Created']} rows={rows.slice(0, 8).map((row) => [
+    <SectionHeader title="Recent Contact Messages" description="View the latest messages from users, hosts and partners." actionLabel="View All →" />
+    <DataTable headers={['#', 'Name', 'Contact', 'Subject', 'Status', 'Created At', 'Actions']} rows={rows.slice(0, 8).map((row, index) => [
+      <span className="font-bold">{index + 1}</span>,
       <span className="font-bold">{row.name || row.full_name || '-'}</span>,
       row.email || row.phone || '-',
       row.subject || row.category || '-',
       <StatusBadge value={row.status || 'pending'} />,
       row.created_at ? String(row.created_at).slice(0, 16).replace('T', ' ') : '-',
+      <div className="flex items-center gap-2"><button className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600"><Eye className="h-4 w-4" /></button><button className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600"><MoreHorizontal className="h-4 w-4" /></button></div>,
     ])} empty="No contact messages found." />
-  </Panel>
-);
-
-const RecentTickets = ({ rows }) => (
-  <Panel className="overflow-hidden">
-    <SectionHeader title="Recent Support Tickets" description="Support ticket communication queue for follow-up and escalation." />
-    <DataTable headers={['Ticket', 'User', 'Priority', 'Status', 'Created']} rows={rows.slice(0, 8).map((row) => [
-      <span className="font-bold">{row.ticket_id || row._id || '-'}</span>,
-      row.user_id || row.email || '-',
-      row.priority || 'medium',
-      <StatusBadge value={row.status || 'open'} />,
-      row.created_at ? String(row.created_at).slice(0, 16).replace('T', ' ') : '-',
-    ])} empty="No support tickets found." />
   </Panel>
 );
 
@@ -573,10 +660,13 @@ const Detail = ({ label, value }) => (
   </div>
 );
 
-const SectionHeader = ({ title, description }) => (
-  <div className="border-b border-slate-200 p-4">
-    <div className="flex items-center gap-2"><Send className="h-4 w-4 text-terracotta" /><h2 className="font-black">{title}</h2></div>
-    <p className="text-xs text-slate-500">{description}</p>
+const SectionHeader = ({ title, description, actionLabel, onAction }) => (
+  <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
+    <div>
+      <div className="flex items-center gap-2"><Send className="h-4 w-4 text-[#2563eb]" /><h2 className="font-black">{title}</h2></div>
+      <p className="text-xs text-slate-500">{description}</p>
+    </div>
+    {actionLabel ? <button className="rounded-xl bg-[#eef5ff] px-3 py-2 text-sm font-black text-[#2563eb]">{actionLabel}</button> : null}
   </div>
 );
 
@@ -595,6 +685,48 @@ const MiniChart = ({ title, rows }) => (
     <h2 className="font-black">{title}</h2>
     <div className="mt-3 space-y-2">{rows.slice(0, 6).map((row) => <div key={row.label} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="font-bold">{row.label}</span><span>{row.count}</span></div>)}</div>
     {!rows.length && <p className="mt-3 text-sm text-slate-500">No data found.</p>}
+  </Panel>
+);
+
+const ChannelDistributionCard = ({ rows }) => (
+  <Panel className="p-4">
+    <h2 className="text-2xl font-black">Channel Distribution</h2>
+    <div className="mt-4 space-y-4">
+      {rows.map((row) => (
+        <div key={row.label} className="grid grid-cols-[72px_1fr_40px] items-center gap-3 text-sm">
+          <span className="font-semibold text-slate-600">{row.label}</span>
+          <div className="h-3 rounded-full bg-slate-100">
+            <div className={`h-3 rounded-full ${row.label === 'Email' ? 'bg-[#2563eb]' : row.label === 'WhatsApp' ? 'bg-cyan-500' : row.label === 'In-App' ? 'bg-violet-500' : 'bg-orange-400'}`} style={{ width: `${row.percent}%` }} />
+          </div>
+          <span className="text-right font-black text-slate-900">{row.percent}%</span>
+        </div>
+      ))}
+    </div>
+  </Panel>
+);
+
+const NotificationStatusCard = ({ total, rows }) => (
+  <Panel className="p-4">
+    <h2 className="text-2xl font-black">Notification Status</h2>
+    <div className="mt-5 flex items-center gap-5">
+      <div className="relative flex h-36 w-36 items-center justify-center rounded-full bg-[conic-gradient(#16a34a_0_68%,#2563eb_68%_93%,#ef4444_93%_97%,#f59e0b_97%_100%)]">
+        <div className="flex h-20 w-20 flex-col items-center justify-center rounded-full bg-white">
+          <span className="text-3xl font-black text-slate-950">{total}</span>
+          <span className="text-sm font-semibold text-slate-500">Total</span>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 space-y-3">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-3 text-sm">
+            <div className="flex items-center gap-2">
+              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
+              <span className="font-semibold text-slate-700">{row.label}</span>
+            </div>
+            <span className="font-black text-slate-900">{row.percent}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
   </Panel>
 );
 

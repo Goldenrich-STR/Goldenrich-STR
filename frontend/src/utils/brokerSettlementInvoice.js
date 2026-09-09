@@ -350,7 +350,7 @@ const invoiceHtml = (row = {}, mode = 'broker', options = {}) => {
           <td class="right"><b>Golden Rich Properties</b></td>
         </tr>
       </table>
-      <div class="tiny jurisdiction">Subject to Nashik Juridiction</div>
+      <div class="tiny jurisdiction">Subject to Nashik Jurisdiction</div>
       <div class="center tiny">This is a Computer Generated Invoice</div>
     </section>
   </main>

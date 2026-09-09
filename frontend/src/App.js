@@ -368,6 +368,13 @@ function AppRoutes() {
           <Route path="hosts" element={<HostManagementAdmin />} />
           <Route path="properties" element={<PropertyOperationsAdmin />} />
           <Route path="subscriptions" element={<SubscriptionManagementAdmin />} />
+          <Route path="subscriptions/plans" element={<SubscriptionManagementAdmin />} />
+          <Route path="subscriptions/add-ons" element={<SubscriptionManagementAdmin />} />
+          <Route path="subscriptions/payment-history" element={<SubscriptionManagementAdmin />} />
+          <Route path="subscriptions/renewal-reminders" element={<SubscriptionManagementAdmin />} />
+          <Route path="subscriptions/trials" element={<SubscriptionManagementAdmin />} />
+          <Route path="subscriptions/active" element={<SubscriptionManagementAdmin />} />
+          <Route path="subscriptions/expired-cancelled" element={<SubscriptionManagementAdmin />} />
           <Route path="bookings" element={<BookingOperationsAdmin />} />
           <Route path="finance" element={<FinanceSettlementsAdmin />} />
           <Route path="crm" element={<SalesCrmAdmin />} />

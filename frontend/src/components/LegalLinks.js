@@ -57,13 +57,13 @@ const DEFAULT_CONTEXT_TEXTS = {
 const legalTitleForContext = (context) => {
   switch (context) {
     case 'guest_registration':
-      return 'Guest Registration Legal Terms';
+      return 'Guest Registration Terms';
     case 'host_registration':
-      return 'Host Registration Legal Terms';
+      return 'Host Registration Terms';
     case 'booking':
-      return 'Booking Legal Terms';
+      return 'Booking Terms & Conditions';
     case 'booking_cancellation':
-      return 'Cancellation Policy';
+      return 'Cancellation & Refund Policy';
     case 'host_verification':
       return 'Host Verification Agreement';
     case 'host_onboarding':
@@ -71,7 +71,7 @@ const legalTitleForContext = (context) => {
     case 'host_terms':
       return 'Host Terms & Conditions';
     default:
-      return 'Legal Terms';
+      return 'Terms & Conditions';
   }
 };
 

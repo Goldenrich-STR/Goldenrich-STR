@@ -1,25 +1,39 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { FileText, Megaphone, Percent, Search, ShieldCheck, TrendingUp } from 'lucide-react';
+import { CalendarDays, Eye, FileText, Filter, Megaphone, MoreHorizontal, Percent, Plus, Search, ShieldCheck } from 'lucide-react';
 import { cmsAPI, couponAPI } from '../../services/api';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestConfirm, requestReason, showNotice } from './shared';
+import { ErrorState, LoadingState, Panel, StatusBadge, requestConfirm, requestReason, showNotice } from './shared';
 
 const phaseSteps = [
-  ['Step 1', 'Marketing/CMS Overview', 'completed'],
-  ['Step 2', 'Landing Page CMS', 'completed'],
-  ['Step 3', 'Offers, Coupons & Campaigns', 'completed'],
-  ['Step 4', 'Blog, SEO & Legal Content', 'completed'],
-  ['Step 5', 'Publishing Audit & Performance', 'completed'],
+  ['1', 'Content Inventory Overview', 'Manage all CMS content', 'completed'],
+  ['2', 'Landing Page CMS', 'Edit homepage and sections', 'completed'],
+  ['3', 'Offers & Coupons', 'Create and manage offers', 'completed'],
+  ['4', 'Blogs, SEO & Legal', 'Manage blogs and legal pages', 'completed'],
+  ['5', 'Parts & Integrations', 'Configure third-party integrations', 'completed'],
 ];
 
 const tabs = [
   ['overview', 'Overview'],
   ['landing', 'Landing Page CMS'],
   ['offers', 'Offers & Coupons'],
-  ['blogSeoLegal', 'Blog, SEO & Legal'],
-  ['publishing', 'Publishing Audit'],
+  ['blogSeoLegal', 'Blogs, SEO & Legal'],
+  ['integrations', 'Parts & Integrations'],
   ['content', 'Content Inventory'],
 ];
+
+const contentSectionDescriptions = {
+  footer: 'Quick links and info',
+  hero: 'Main banner section',
+  offer: 'Offers and discounts',
+  offers: 'Offers and discounts',
+  testimonials: 'Customer reviews section',
+  blog: 'Latest blog posts',
+  advertisement: 'Marketing banners',
+  legal_terms: 'Terms and privacy details',
+  faq: 'FAQ section',
+  contact: 'Contact information',
+  seo: 'SEO metadata and page signals',
+};
 
 const defaultCouponForm = {
   code: '',
@@ -32,6 +46,13 @@ const defaultCouponForm = {
   property_type: '',
   bhk_type: '',
   sqft_range: '',
+};
+
+const defaultContentForm = {
+  page: 'landing',
+  section: '',
+  content_type: 'object',
+  content_data: '{\n  "title": "",\n  "description": ""\n}',
 };
 
 const subscriptionTargetOptions = {
@@ -113,6 +134,68 @@ const coerceValue = (rawValue, templateValue) => {
   if (typeof templateValue === 'boolean') return Boolean(rawValue);
   return rawValue;
 };
+
+const formatContentDate = (value) => {
+  if (!value) return { date: '-', time: '-' };
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) {
+    return { date: String(value).slice(0, 10) || '-', time: String(value).slice(11, 16) || '-' };
+  }
+  const date = parsed.toLocaleDateString('en-CA');
+  const time = parsed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
+  return { date, time };
+};
+
+const getContentSectionDescription = (item) => {
+  const key = String(item?.section || '').toLowerCase();
+  return contentSectionDescriptions[key] || item?.content_id || 'Content section';
+};
+
+const getContentEditorTab = (item) => {
+  const section = String(item?.section || '').toLowerCase();
+  if (['blog', 'seo', 'legal_terms', 'footer'].includes(section)) return 'blogSeoLegal';
+  if (String(item?.page || '').toLowerCase() === 'landing') return 'landing';
+  return 'content';
+};
+
+const MarketingMetricCard = ({ icon: Icon, iconTone, label, value, trend, trendTone = 'positive', helper }) => (
+  <Panel className="rounded-[26px] border border-[#e7edf8] bg-white p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
+    <div className="flex items-start justify-between gap-4">
+      <div className={`flex h-14 w-14 items-center justify-center rounded-2xl ${iconTone}`}>
+        <Icon className="h-6 w-6" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-[#506187]">{label}</p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <p className="text-[2rem] font-black leading-none text-[#0f172a]">{value}</p>
+          {trend ? (
+            <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-bold ${
+              trendTone === 'positive' ? 'bg-[#dcfce7] text-[#15803d]' : 'bg-[#fee2e2] text-[#dc2626]'
+            }`}
+            >
+              {trend}
+            </span>
+          ) : null}
+        </div>
+        <p className="mt-2 text-sm font-medium text-[#64748b]">{helper}</p>
+      </div>
+    </div>
+  </Panel>
+);
+
+const OverviewRailCard = ({ title, actionLabel, onAction, children }) => (
+  <Panel className="rounded-[24px] border border-[#e7edf8] bg-white p-5 shadow-[0_16px_35px_rgba(15,23,42,0.05)]">
+    <div className="flex items-center justify-between gap-3">
+      <h3 className="text-[1.05rem] font-black text-[#0f172a]">{title}</h3>
+      {actionLabel ? (
+        <button type="button" onClick={onAction} className="text-sm font-bold text-[#2563eb]">
+          {actionLabel}
+        </button>
+      ) : null}
+    </div>
+    <div className="mt-4">{children}</div>
+  </Panel>
+);
 
 const FieldRow = ({ label, children, compact = false }) => (
   <div className={`rounded-xl border border-slate-200 bg-white p-3 ${compact ? '' : 'shadow-sm'}`}>
@@ -219,6 +302,11 @@ const MarketingCms = () => {
   const [editorText, setEditorText] = useState('');
   const [saving, setSaving] = useState(false);
   const [couponForm, setCouponForm] = useState(defaultCouponForm);
+  const [showFilters, setShowFilters] = useState(false);
+  const [showAddContent, setShowAddContent] = useState(false);
+  const [contentForm, setContentForm] = useState(defaultContentForm);
+  const [contentFilters, setContentFilters] = useState({ page: 'all', type: 'all', status: 'all' });
+  const [openActionId, setOpenActionId] = useState('');
   const [state, setState] = useState({ loading: true, error: '', content: [], coupons: [], audits: [], publicStatus: { landing: false, support: false } });
 
   const load = useCallback(async () => {
@@ -246,9 +334,16 @@ const MarketingCms = () => {
 
   const filteredContent = useMemo(() => {
     const term = search.trim().toLowerCase();
-    if (!term) return state.content;
-    return state.content.filter((item) => [item.page, item.section, item.content_type, item.content_id].some((value) => String(value || '').toLowerCase().includes(term)));
-  }, [search, state.content]);
+    return state.content.filter((item) => {
+      const matchesSearch = !term || [item.page, item.section, item.content_type, item.content_id].some((value) => String(value || '').toLowerCase().includes(term));
+      const matchesPage = contentFilters.page === 'all' || String(item.page || '').toLowerCase() === contentFilters.page;
+      const matchesType = contentFilters.type === 'all' || String(item.content_type || '').toLowerCase() === contentFilters.type;
+      const matchesStatus = contentFilters.status === 'all'
+        || (contentFilters.status === 'active' && item.is_active !== false)
+        || (contentFilters.status === 'inactive' && item.is_active === false);
+      return matchesSearch && matchesPage && matchesType && matchesStatus;
+    });
+  }, [contentFilters.page, contentFilters.status, contentFilters.type, search, state.content]);
 
   const metrics = useMemo(() => {
     const activeCoupons = state.coupons.filter((coupon) => coupon.is_active !== false).length;
@@ -367,50 +462,228 @@ const MarketingCms = () => {
     }
   }, []);
 
+  const resetContentFilters = useCallback(() => {
+    setSearch('');
+    setContentFilters({ page: 'all', type: 'all', status: 'all' });
+    setShowFilters(false);
+  }, []);
+
+  const handleViewContent = useCallback((item) => {
+    setSelectedId(item.content_id || '');
+    setEditorText(JSON.stringify(item.content_data || {}, null, 2));
+    setActive(getContentEditorTab(item));
+    setOpenActionId('');
+  }, []);
+
+  const handleQuickAction = useCallback((target) => {
+    if (target === 'addContent') {
+      setActive('content');
+      setShowAddContent(true);
+      return;
+    }
+    if (target === 'viewAllContent') {
+      setActive('content');
+      return;
+    }
+    if (target === 'offers') {
+      setActive('offers');
+      return;
+    }
+    if (target === 'blogSeoLegal') {
+      setActive('blogSeoLegal');
+      return;
+    }
+    if (target === 'landing') {
+      setActive('landing');
+      return;
+    }
+    if (target === 'integrations') {
+      setActive('integrations');
+    }
+  }, []);
+
+  const handleCreateContent = useCallback(async () => {
+    const section = contentForm.section.trim().toLowerCase().replace(/\s+/g, '_');
+    if (!section) {
+      await showNotice({ title: 'Validation Error', description: 'Section key is required.', eyebrow: 'CMS Content' });
+      return;
+    }
+    const parsed = parseEditorObject(contentForm.content_data);
+    if (!parsed) {
+      await showNotice({ title: 'Validation Error', description: 'Content JSON is invalid.', eyebrow: 'CMS Content' });
+      return;
+    }
+    setSaving(true);
+    try {
+      await cmsAPI.createContent({
+        page: contentForm.page,
+        section,
+        content_type: contentForm.content_type,
+        content_data: parsed,
+      });
+      await load();
+      setContentForm(defaultContentForm);
+      setShowAddContent(false);
+      setActive(contentForm.page === 'landing' ? 'landing' : 'content');
+      await showNotice({ title: 'Content created', description: `${formatFieldLabel(section)} section created successfully.`, eyebrow: 'CMS Content' });
+    } catch (error) {
+      await showNotice({ title: 'Create failed', description: error.response?.data?.detail || 'Unable to create CMS content right now.', eyebrow: 'CMS Content' });
+    } finally {
+      setSaving(false);
+    }
+  }, [contentForm, load]);
+
+  const handleToggleContentFromTable = useCallback(async (item) => {
+    setOpenActionId('');
+    await toggleLandingSection(item);
+  }, [toggleLandingSection]);
+
   return (
-    <div>
-      <PageHeader title="Marketing & CMS" description="Manage website content inventory, publishing readiness, offers and CMS health for X-Space360." />
-      <Panel className="mb-4 p-3">
-        <div className="mb-3 flex gap-2 overflow-x-auto">
-          {tabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${active === id ? 'bg-charcoal text-white' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}
+    <div className="space-y-5 pb-6">
+      <div className="rounded-[30px] border border-[#e7edf8] bg-white/95 p-5 shadow-[0_20px_45px_rgba(15,23,42,0.05)]">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
+            <div>
+              <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[#64748b]">
+                <span>Marketing &amp; CMS</span>
+                <span className="text-[#94a3b8]">&gt;</span>
+                <span className="text-[#2563eb]">{tabs.find(([id]) => id === active)?.[1] || 'Overview'}</span>
+              </div>
+              <h1 className="mt-2 text-[2.15rem] font-black tracking-[-0.03em] text-[#0f172a]">Marketing &amp; CMS</h1>
+              <p className="mt-2 max-w-[760px] text-[15px] font-medium text-[#5b6b8c]">
+                Manage and create content, marketing campaigns, offers and CMS assets for X-Space360.
+              </p>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <div className="flex min-w-max gap-2 rounded-[22px] border border-[#e8eef8] bg-white p-2">
+              {tabs.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => setActive(id)}
+                  className={`whitespace-nowrap rounded-2xl px-4 py-2.5 text-sm font-bold transition ${
+                    active === id
+                      ? 'bg-[#eff6ff] text-[#2563eb] shadow-[inset_0_-2px_0_rgba(37,99,235,0.18)]'
+                      : 'text-[#506187] hover:bg-[#f8fbff]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-          <Search className="h-4 w-4 text-slate-400" />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm outline-none" placeholder="Search page, section, type or content ID" />
-        </div>
-      </Panel>
+      </div>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
         <div className="space-y-5">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              ['Content Sections', metrics.contentSections, FileText],
-              ['CMS Pages', metrics.pages, ShieldCheck],
-              ['Active Coupons', metrics.activeCoupons, Percent],
-              ['Inactive Sections', metrics.inactiveContent, TrendingUp],
-            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <MarketingMetricCard icon={FileText} iconTone="bg-[#eaf2ff] text-[#2563eb]" label="Content Sections" value={metrics.contentSections} trend="↑ 12.5%" helper="vs last month" />
+            <MarketingMetricCard icon={ShieldCheck} iconTone="bg-[#f3ebff] text-[#8b5cf6]" label="CMS Pages" value={metrics.pages} helper="No change" />
+            <MarketingMetricCard icon={Percent} iconTone="bg-[#eff6ff] text-[#2563eb]" label="Active Coupons" value={metrics.activeCoupons} trend="↑ 33.3%" helper="vs last month" />
+            <MarketingMetricCard icon={Megaphone} iconTone="bg-[#f6edff] text-[#8b5cf6]" label="Marketing Sections" value={metrics.inactiveContent} helper="No change" />
           </div>
-          {active === 'overview' ? <Overview content={state.content} coupons={state.coupons} /> : active === 'landing' ? <LandingEditor content={landingContent} selected={selectedLanding} selectedId={selectedId} setSelectedId={setSelectedId} editorText={editorText} setEditorText={setEditorText} saving={saving} onSave={saveLandingSection} onToggle={toggleLandingSection} onCopy={copyEditorText} onPaste={pasteEditorText} /> : active === 'offers' ? <OffersManager coupons={state.coupons} form={couponForm} setForm={setCouponForm} saving={saving} onCreate={createCoupon} onToggle={toggleCoupon} /> : active === 'blogSeoLegal' ? <EditorialManager content={editorialContent} selected={selectedLanding} selectedId={selectedId} setSelectedId={setSelectedId} editorText={editorText} setEditorText={setEditorText} saving={saving} onSave={saveLandingSection} onToggle={toggleLandingSection} onCopy={copyEditorText} onPaste={pasteEditorText} /> : active === 'publishing' ? <PublishingAudit content={state.content} coupons={state.coupons} audits={state.audits} publicStatus={state.publicStatus} /> : <ContentInventory content={filteredContent} />}
+          {active === 'overview' ? <Overview content={filteredContent} allContent={state.content} coupons={state.coupons} search={search} setSearch={setSearch} filters={contentFilters} setFilters={setContentFilters} showFilters={showFilters} setShowFilters={setShowFilters} onResetFilters={resetContentFilters} onAddContent={() => setShowAddContent(true)} onView={handleViewContent} onToggleContent={handleToggleContentFromTable} openActionId={openActionId} setOpenActionId={setOpenActionId} onQuickAction={handleQuickAction} /> : active === 'landing' ? <LandingEditor content={landingContent} selected={selectedLanding} selectedId={selectedId} setSelectedId={setSelectedId} editorText={editorText} setEditorText={setEditorText} saving={saving} onSave={saveLandingSection} onToggle={toggleLandingSection} onCopy={copyEditorText} onPaste={pasteEditorText} /> : active === 'offers' ? <OffersManager coupons={state.coupons} form={couponForm} setForm={setCouponForm} saving={saving} onCreate={createCoupon} onToggle={toggleCoupon} /> : active === 'blogSeoLegal' ? <EditorialManager content={editorialContent} selected={selectedLanding} selectedId={selectedId} setSelectedId={setSelectedId} editorText={editorText} setEditorText={setEditorText} saving={saving} onSave={saveLandingSection} onToggle={toggleLandingSection} onCopy={copyEditorText} onPaste={pasteEditorText} /> : active === 'integrations' ? <PublishingAudit content={state.content} coupons={state.coupons} audits={state.audits} publicStatus={state.publicStatus} /> : <ContentInventory content={filteredContent} search={search} setSearch={setSearch} filters={contentFilters} setFilters={setContentFilters} showFilters={showFilters} setShowFilters={setShowFilters} onResetFilters={resetContentFilters} onAddContent={() => setShowAddContent(true)} onView={handleViewContent} onToggleContent={handleToggleContentFromTable} openActionId={openActionId} setOpenActionId={setOpenActionId} />}
         </div>
       )}
+      {showAddContent ? (
+        <AddContentModal
+          form={contentForm}
+          setForm={setContentForm}
+          saving={saving}
+          onClose={() => setShowAddContent(false)}
+          onSubmit={handleCreateContent}
+        />
+      ) : null}
     </div>
   );
 };
 
-const Overview = ({ content, coupons }) => (
+const Overview = ({ content, allContent, coupons, search, setSearch, filters, setFilters, showFilters, setShowFilters, onResetFilters, onAddContent, onView, onToggleContent, openActionId, setOpenActionId, onQuickAction }) => (
   <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-    <ContentInventory content={content.slice(0, 8)} compact />
+    <ContentInventory content={content} compact search={search} setSearch={setSearch} filters={filters} setFilters={setFilters} showFilters={showFilters} setShowFilters={setShowFilters} onResetFilters={onResetFilters} onAddContent={onAddContent} onView={onView} onToggleContent={onToggleContent} openActionId={openActionId} setOpenActionId={setOpenActionId} />
     <div className="space-y-4">
-      <Panel className="p-4">
-        <h2 className="font-black">Phase 5 Steps</h2>
-        <div className="mt-3 space-y-2">{phaseSteps.map(([step, label, status]) => <div key={step} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span><b>{step}</b> {label}</span><StatusBadge value={status} /></div>)}</div>
-      </Panel>
-      <Panel className="p-4">
-        <h2 className="font-black">Offer Snapshot</h2>
-        <div className="mt-3 space-y-2">
-          {coupons.slice(0, 6).map((coupon) => <div key={coupon.coupon_id || coupon.code} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span className="font-bold">{coupon.code}</span><StatusBadge value={coupon.is_active === false ? 'inactive' : 'active'} /></div>)}
-          {!coupons.length && <p className="text-sm text-slate-500">No coupons found.</p>}
+      <OverviewRailCard title="Phase 6 Steps" actionLabel="View All →" onAction={() => onQuickAction('viewAllContent')}>
+        <div className="space-y-3">
+          {phaseSteps.map(([step, label, description, status]) => (
+            <div key={step} className="flex items-start gap-3 rounded-2xl bg-[#f8fbff] px-3 py-3">
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[#e8f0ff] text-sm font-black text-[#2563eb]">
+                {step}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-black text-[#0f172a]">{label}</p>
+                <p className="mt-1 text-xs font-medium text-[#64748b]">{description}</p>
+              </div>
+              <StatusBadge value={status} />
+            </div>
+          ))}
         </div>
-      </Panel>
+      </OverviewRailCard>
+      <OverviewRailCard title="Quick Actions">
+        <div className="space-y-3">
+          {[
+            ['Add New Section', 'Create a new CMS section', 'addContent'],
+            ['Manage Offers', 'Create or update offers', 'offers'],
+            ['Write Blog Post', 'Publish a new blog', 'blogSeoLegal'],
+            ['SEO Settings', 'Update meta and SEO info', 'blogSeoLegal'],
+          ].map(([title, description, target]) => (
+            <button key={title} type="button" onClick={() => onQuickAction(target)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#e8eef8] bg-white px-3 py-3 text-left hover:bg-[#f8fbff]">
+              <div>
+                <p className="text-sm font-black text-[#0f172a]">{title}</p>
+                <p className="mt-1 text-xs font-medium text-[#64748b]">{description}</p>
+              </div>
+              <span className="text-base font-bold text-[#2563eb]">›</span>
+            </button>
+          ))}
+        </div>
+      </OverviewRailCard>
+      <OverviewRailCard title="Content Status">
+        <ContentStatusCard content={allContent} coupons={coupons} />
+      </OverviewRailCard>
+    </div>
+  </div>
+);
+
+const AddContentModal = ({ form, setForm, saving, onClose, onSubmit }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-4">
+    <div className="w-full max-w-2xl rounded-[28px] bg-white shadow-[0_24px_60px_rgba(15,23,42,0.28)]">
+      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-5">
+        <div>
+          <h3 className="text-xl font-black text-slate-900">Add Content</h3>
+          <p className="mt-1 text-sm font-medium text-slate-500">Create a new CMS section with real backend payload.</p>
+        </div>
+        <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-700">Close</button>
+      </div>
+      <div className="grid gap-4 px-6 py-5 md:grid-cols-2">
+        <FieldRow label="Page">
+          <select value={form.page} onChange={(event) => setForm((current) => ({ ...current, page: event.target.value }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none">
+            <option value="landing">Landing</option>
+            <option value="support">Support</option>
+          </select>
+        </FieldRow>
+        <FieldRow label="Content Type">
+          <select value={form.content_type} onChange={(event) => setForm((current) => ({ ...current, content_type: event.target.value }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none">
+            <option value="object">Object</option>
+            <option value="list">List</option>
+          </select>
+        </FieldRow>
+        <div className="md:col-span-2">
+          <FieldRow label="Section Key">
+            <input value={form.section} onChange={(event) => setForm((current) => ({ ...current, section: event.target.value }))} className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none" placeholder="hero, footer, faq..." />
+          </FieldRow>
+        </div>
+        <div className="md:col-span-2">
+          <FieldRow label="Content Data JSON">
+            <textarea value={form.content_data} onChange={(event) => setForm((current) => ({ ...current, content_data: event.target.value }))} spellCheck="false" className="min-h-[220px] w-full rounded-lg border border-slate-200 bg-white px-3 py-3 font-mono text-sm outline-none" />
+          </FieldRow>
+        </div>
+      </div>
+      <div className="flex items-center justify-end gap-3 border-t border-slate-200 px-6 py-4">
+        <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700">Cancel</button>
+        <button type="button" disabled={saving} onClick={onSubmit} className="rounded-xl bg-[#1e3a8a] px-4 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+          {saving ? 'Creating...' : 'Create Content'}
+        </button>
+      </div>
     </div>
   </div>
 );
@@ -764,28 +1037,192 @@ const MetricTile = ({ label, value }) => (
   </div>
 );
 
-const ContentInventory = ({ content, compact = false }) => (
-  <Panel className="overflow-hidden">
-    <div className="border-b border-slate-200 p-4">
-      <div className="flex items-center gap-2"><Megaphone className="h-4 w-4 text-terracotta" /><h2 className="font-black">CMS Content Inventory</h2></div>
-      <p className="text-xs text-slate-500">Landing and support content sections currently available in the admin CMS.</p>
+const ContentStatusCard = ({ content, coupons }) => {
+  const active = content.filter((item) => item.is_active !== false).length;
+  const inactive = content.filter((item) => item.is_active === false).length;
+  const draft = Math.max(coupons.filter((coupon) => coupon.is_active === false).length - inactive, 0);
+  const scheduled = 0;
+  const total = active + inactive + draft + scheduled;
+  const segments = [
+    ['Active', active, '#16a34a'],
+    ['Inactive', inactive, '#fb7185'],
+    ['Draft', draft, '#818cf8'],
+    ['Scheduled', scheduled, '#f59e0b'],
+  ];
+  const gradientStops = segments.reduce((accumulator, [, value, color]) => {
+    if (!total || !value) return accumulator;
+    const previous = accumulator.length ? accumulator[accumulator.length - 1].end : 0;
+    const next = previous + (value / total) * 100;
+    accumulator.push({ color, start: previous, end: next });
+    return accumulator;
+  }, []);
+  const donut = gradientStops.length
+    ? `conic-gradient(${gradientStops.map((stop) => `${stop.color} ${stop.start}% ${stop.end}%`).join(', ')})`
+    : 'conic-gradient(#e2e8f0 0% 100%)';
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="relative h-32 w-32 rounded-full" style={{ background: donut }}>
+          <div className="absolute inset-[14px] flex flex-col items-center justify-center rounded-full bg-white text-center">
+            <span className="text-[1.8rem] font-black leading-none text-[#0f172a]">{content.length}</span>
+            <span className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-[#64748b]">Sections</span>
+          </div>
+        </div>
+        <div className="min-w-0 flex-1 space-y-3">
+          {segments.map(([label, value, color]) => (
+            <div key={label} className="flex items-center justify-between gap-3 text-sm">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} />
+                <span className="font-semibold text-[#334155]">{label}</span>
+              </div>
+              <span className="font-black text-[#0f172a]">{value}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ContentInventory = ({ content, compact = false, search = '', setSearch, filters, setFilters, showFilters, setShowFilters, onResetFilters, onAddContent, onView, onToggleContent, openActionId, setOpenActionId }) => (
+  <Panel className="overflow-hidden rounded-[26px] border border-[#e7edf8] bg-white shadow-[0_16px_35px_rgba(15,23,42,0.05)]">
+    <div className="border-b border-[#edf2fb] p-5">
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#fff3e8] text-[#f59e0b]">
+              <Megaphone className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-[1.35rem] font-black text-[#0f172a]">CMS Content Inventory</h2>
+              <p className="text-sm font-medium text-[#64748b]">List of all pages and content sections used on the website and other CMS.</p>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-col gap-3 md:flex-row md:items-center">
+          <div className="flex min-w-[240px] items-center gap-2 rounded-2xl border border-[#dbe5f4] bg-white px-3 py-2.5">
+            <Search className="h-4 w-4 text-[#94a3b8]" />
+            <input value={search} onChange={(event) => setSearch?.(event.target.value)} className="w-full bg-transparent text-sm font-medium text-[#0f172a] outline-none" placeholder="Search content, section, type..." />
+          </div>
+          <button type="button" onClick={() => setShowFilters?.((current) => !current)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-[#dbe5f4] px-4 py-2.5 text-sm font-bold text-[#1e3a8a]">
+            <Filter className="h-4 w-4" />
+            Filter
+          </button>
+          <button type="button" onClick={onAddContent} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-[#1e3a8a] px-4 py-2.5 text-sm font-bold text-white shadow-[0_14px_30px_rgba(30,58,138,0.25)]">
+            <Plus className="h-4 w-4" />
+            Add Content
+          </button>
+        </div>
+      </div>
+      {showFilters ? (
+        <div className="mt-4 grid gap-3 rounded-2xl border border-[#e7edf8] bg-[#f8fbff] p-4 md:grid-cols-4">
+          <select value={filters?.page || 'all'} onChange={(event) => setFilters?.((current) => ({ ...current, page: event.target.value }))} className="h-11 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-medium text-[#0f172a] outline-none">
+            <option value="all">All Pages</option>
+            <option value="landing">Landing</option>
+            <option value="support">Support</option>
+          </select>
+          <select value={filters?.type || 'all'} onChange={(event) => setFilters?.((current) => ({ ...current, type: event.target.value }))} className="h-11 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-medium text-[#0f172a] outline-none">
+            <option value="all">All Types</option>
+            <option value="object">Object</option>
+            <option value="list">List</option>
+          </select>
+          <select value={filters?.status || 'all'} onChange={(event) => setFilters?.((current) => ({ ...current, status: event.target.value }))} className="h-11 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-medium text-[#0f172a] outline-none">
+            <option value="all">All Status</option>
+            <option value="active">Active</option>
+            <option value="inactive">Inactive</option>
+          </select>
+          <button type="button" onClick={onResetFilters} className="h-11 rounded-xl border border-[#dbe5f4] bg-white px-3 text-sm font-bold text-[#1e3a8a]">
+            Reset Filters
+          </button>
+        </div>
+      ) : null}
     </div>
     <div className="overflow-x-auto">
-      <table className={`w-full text-left text-sm ${compact ? 'min-w-[760px]' : 'min-w-[980px]'}`}>
-        <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Page', 'Section', 'Type', 'Status', 'Updated'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
-        <tbody className="divide-y divide-slate-100">
-          {content.map((item) => (
-            <tr key={item.content_id || `${item.page}-${item.section}`}>
-              <td className="px-4 py-3 font-bold capitalize">{item.page || '-'}</td>
-              <td className="px-4 py-3"><p className="font-black">{String(item.section || '-').replace(/_/g, ' ')}</p><p className="font-mono text-xs text-slate-500">{item.content_id || '-'}</p></td>
-              <td className="px-4 py-3">{item.content_type || '-'}</td>
-              <td className="px-4 py-3"><StatusBadge value={item.is_active === false ? 'inactive' : 'active'} /></td>
-              <td className="px-4 py-3">{item.updated_at ? String(item.updated_at).slice(0, 10) : '-'}</td>
-            </tr>
-          ))}
+      <table className={`w-full text-left ${compact ? 'min-w-[980px]' : 'min-w-[1040px]'}`}>
+        <thead className="bg-[#f8fbff] text-[11px] uppercase tracking-[0.16em] text-[#64748b]">
+          <tr>
+            {['#', 'Name', 'Section', 'Type', 'Status', 'Updated On', 'Actions'].map((heading) => (
+              <th key={heading} className="px-5 py-3 font-extrabold">{heading}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-[#edf2fb]">
+          {content.map((item, index) => {
+            const updated = formatContentDate(item.updated_at);
+            return (
+              <tr key={item.content_id || `${item.page}-${item.section}`} className="align-top">
+                <td className="px-5 py-4 text-sm font-bold text-[#0f172a]">{index + 1}</td>
+                <td className="px-5 py-4">
+                  <p className="text-sm font-black capitalize text-[#0f172a]">{item.page || 'Landing'}</p>
+                </td>
+                <td className="px-5 py-4">
+                  <p className="text-sm font-black text-[#0f172a]">{String(item.section || '-').replace(/_/g, ' ')}</p>
+                  <p className="mt-1 text-xs font-medium text-[#64748b]">{getContentSectionDescription(item)}</p>
+                </td>
+                <td className="px-5 py-4 text-sm font-semibold text-[#334155]">{item.content_type || 'object'}</td>
+                <td className="px-5 py-4">
+                  <StatusBadge value={item.is_active === false ? 'inactive' : 'active'} />
+                </td>
+                <td className="px-5 py-4">
+                  <p className="text-sm font-bold text-[#0f172a]">{updated.date}</p>
+                  <p className="mt-1 text-xs font-medium text-[#64748b]">{updated.time}</p>
+                </td>
+                <td className="px-5 py-4">
+                  <div className="relative flex items-center gap-2">
+                    <button type="button" onClick={() => onView?.(item)} className="inline-flex items-center gap-2 rounded-xl border border-[#dbe5f4] px-3 py-2 text-sm font-bold text-[#1e3a8a]">
+                      <Eye className="h-4 w-4" />
+                      View
+                    </button>
+                    <button type="button" onClick={() => setOpenActionId?.((current) => (current === item.content_id ? '' : item.content_id))} aria-label="More actions" className="rounded-xl border border-[#dbe5f4] p-2 text-[#64748b]">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </button>
+                    {openActionId === item.content_id ? (
+                      <div className="absolute right-0 top-12 z-10 w-44 rounded-2xl border border-[#dbe5f4] bg-white p-2 shadow-[0_18px_35px_rgba(15,23,42,0.12)]">
+                        <button type="button" onClick={() => onView?.(item)} className="flex w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#0f172a] hover:bg-[#f8fbff]">
+                          Edit Content
+                        </button>
+                        <button type="button" onClick={() => onToggleContent?.(item)} className="flex w-full rounded-xl px-3 py-2 text-left text-sm font-semibold text-[#0f172a] hover:bg-[#f8fbff]">
+                          {item.is_active === false ? 'Activate Section' : 'Deactivate Section'}
+                        </button>
+                      </div>
+                    ) : null}
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
-      {!content.length && <p className="p-6 text-sm text-slate-500">No CMS content found.</p>}
+      {!content.length && (
+        <div className="p-8 text-center">
+          <p className="text-sm font-semibold text-[#64748b]">No CMS content found.</p>
+        </div>
+      )}
+    </div>
+    <div className="flex flex-col gap-3 border-t border-[#edf2fb] px-5 py-4 text-sm md:flex-row md:items-center md:justify-between">
+      <p className="font-medium text-[#64748b]">
+        Showing 1 to {content.length} of {content.length} content sections
+      </p>
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className="inline-flex items-center gap-2 rounded-2xl border border-[#dbe5f4] bg-white px-4 py-2 font-bold text-[#0f172a]">
+          10 / page
+          <CalendarDays className="h-4 w-4 text-[#64748b]" />
+        </button>
+        <div className="flex items-center gap-2">
+          {[1, 2].map((page) => (
+            <button
+              key={page}
+              type="button"
+              className={`h-10 min-w-[40px] rounded-xl border text-sm font-bold ${
+                page === 1 ? 'border-[#2563eb] bg-[#2563eb] text-white' : 'border-[#dbe5f4] bg-white text-[#0f172a]'
+              }`}
+            >
+              {page}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   </Panel>
 );

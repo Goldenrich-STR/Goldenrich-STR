@@ -243,6 +243,8 @@ const ChatbotWidget = () => {
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const toggleBtnRef = useRef(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -253,6 +255,38 @@ const ChatbotWidget = () => {
       scrollToBottom();
     }
   }, [messages, isOpen, isTyping]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setIsOpen(false);
+        toggleBtnRef.current?.focus();
+        return;
+      }
+
+      if (e.key === 'Tab' && chatContainerRef.current) {
+        const focusableElements = chatContainerRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (!focusableElements.length) return;
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen]);
 
   const handleOptionClick = (option) => {
     if (isTyping) return;
@@ -293,10 +327,17 @@ const ChatbotWidget = () => {
   };
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div className="w-[380px] h-[600px] max-h-[85vh] max-w-[calc(100vw-2rem)] bg-white border border-gray-200 shadow-elevated rounded-3xl flex flex-col mb-4 overflow-hidden animate-scale-up z-50">
+        <div 
+          ref={chatContainerRef}
+          role="dialog"
+          aria-label="Support Chat Assistant"
+          aria-modal="true"
+          className="w-[380px] h-[600px] max-h-[85vh] max-w-[calc(100vw-2rem)] bg-white border border-gray-200 shadow-elevated rounded-3xl flex flex-col mb-4 overflow-hidden animate-scale-up z-50 focus:outline-none"
+          tabIndex="-1"
+        >
           
           {/* Header */}
           <div className="flex items-center justify-between px-6 py-4 bg-[#1E1E1E] text-white shadow-md z-10">
@@ -316,8 +357,12 @@ const ChatbotWidget = () => {
               </div>
             </div>
             <button 
-              onClick={() => setIsOpen(false)}
-              className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer text-gray-400 hover:text-white border-none bg-transparent"
+              onClick={() => {
+                setIsOpen(false);
+                toggleBtnRef.current?.focus();
+              }}
+              aria-label="Close support chat assistant"
+              className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer text-gray-400 hover:text-white border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
             >
               <X className="w-4.5 h-4.5" />
             </button>
@@ -352,7 +397,7 @@ const ChatbotWidget = () => {
                             key={i}
                             disabled={isTyping}
                             onClick={() => handleOptionClick(opt)}
-                            className="w-full text-left px-4 py-2.5 bg-white hover:bg-terracotta hover:text-white text-charcoal font-bold text-xs rounded-xl border border-[#EAE3D2] transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between shadow-sm"
+                            className="w-full text-left px-4 py-2.5 bg-white hover:bg-terracotta hover:text-white text-charcoal font-bold text-xs rounded-xl border border-[#EAE3D2] transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                           >
                             <div className="flex items-center space-x-2">
                                <IconComponent className="w-4 h-4 shrink-0 transition-colors duration-200" />
@@ -389,7 +434,7 @@ const ChatbotWidget = () => {
               <button
                 onClick={handleRestart}
                 disabled={isTyping}
-                className="flex-1 py-2 px-3 bg-gray-100 hover:bg-[#1E1E1E] text-charcoal hover:text-white font-bold text-xs rounded-xl transition duration-200 cursor-pointer disabled:opacity-50 border border-gray-200 flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 px-3 bg-gray-100 hover:bg-[#1E1E1E] text-charcoal hover:text-white font-bold text-xs rounded-xl transition duration-200 cursor-pointer disabled:opacity-50 border border-gray-200 flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Restart Assistant</span>
@@ -397,7 +442,7 @@ const ChatbotWidget = () => {
               <button
                 onClick={() => handleOptionClick({ label: "Contact Support Desk", next: "support" })}
                 disabled={isTyping}
-                className="flex-1 py-2 px-3 bg-terracotta/10 hover:bg-terracotta text-terracotta hover:text-white font-bold text-xs rounded-xl transition duration-200 cursor-pointer disabled:opacity-50 border border-terracotta/20 flex items-center justify-center gap-1.5"
+                className="flex-1 py-2 px-3 bg-terracotta/10 hover:bg-terracotta text-terracotta hover:text-white font-bold text-xs rounded-xl transition duration-200 cursor-pointer disabled:opacity-50 border border-terracotta/20 flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <Phone className="w-3.5 h-3.5" />
                 <span>Call Support</span>
@@ -416,9 +461,11 @@ const ChatbotWidget = () => {
           {/* Pulsing ring background */}
           <span className="absolute -inset-1 rounded-full bg-gradient-to-tr from-terracotta to-amber-500 opacity-30 blur animate-pulse group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></span>
           <button
+            ref={toggleBtnRef}
             id="chatbot-toggle-btn"
             onClick={() => setIsOpen(true)}
-            className="relative chatbot-trigger w-16 h-16 rounded-full bg-gradient-to-tr from-terracotta to-amber-500 shadow-elevated flex items-center justify-center transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer border-none"
+            aria-label="Open support chat assistant"
+            className="relative chatbot-trigger w-16 h-16 rounded-full bg-gradient-to-tr from-terracotta to-amber-500 shadow-elevated flex items-center justify-center transition-all duration-300 transform hover:scale-105 active:scale-95 cursor-pointer border-none focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2"
           >
             <MessageSquare className="w-7 h-7 text-white" />
             <span className="absolute -top-0.5 -right-0.5 flex h-3 w-3">

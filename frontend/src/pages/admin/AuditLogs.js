@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, Download, Eye, Filter, Lock, Search, X } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge } from './shared';
+import { ErrorState, LoadingState, Panel, StatusBadge } from './shared';
 
 const inputClass = 'h-10 w-full rounded-lg border border-slate-200 px-3 text-sm';
 const modules = ['', 'user_organization_management', 'roles_access_permissions', 'reporting_hierarchy', 'escalation_sla_matrix', 'audit_activity_logs', 'system_administration'];
@@ -71,21 +71,42 @@ const AuditLogs = () => {
   };
 
   return (
-    <div>
-      <PageHeader
-        title="Audit & Activity Logs"
-        description="Immutable activity timeline for security, access changes, reporting changes, approvals and configuration updates."
-        action={<button onClick={exportCsv} className="inline-flex items-center gap-2 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white"><Download className="h-4 w-4" /> Export CSV</button>}
-      />
-      {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</div>}
-      <div className="mb-4 grid gap-4 md:grid-cols-4">
-        <Panel className="p-4"><p className="text-xs font-bold uppercase text-slate-500">Total Logs</p><p className="mt-2 text-2xl font-black">{stats.total}</p></Panel>
-        <Panel className="p-4"><p className="text-xs font-bold uppercase text-slate-500">Modules</p><p className="mt-2 text-2xl font-black">{stats.moduleCount}</p></Panel>
-        <Panel className="p-4"><p className="text-xs font-bold uppercase text-slate-500">Users</p><p className="mt-2 text-2xl font-black">{stats.users}</p></Panel>
-        <Panel className="p-4"><p className="text-xs font-bold uppercase text-slate-500">Immutable</p><p className="mt-2 flex items-center gap-2 text-2xl font-black"><Lock className="h-5 w-5 text-emerald-600" /> {stats.immutable}</p></Panel>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-500">
+            <span>Settings</span>
+            <span className="text-slate-300">›</span>
+            <span>System Administration</span>
+            <span className="text-slate-300">›</span>
+            <span className="text-[#2563eb]">Audit &amp; Activity Logs</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Audit &amp; Activity Logs</h1>
+            <p className="mt-2 max-w-3xl text-sm text-slate-600">Immutable activity timeline for security, access changes, approvals and configuration updates.</p>
+          </div>
+        </div>
+        <button onClick={exportCsv} className="inline-flex h-12 items-center gap-2 rounded-2xl bg-[#142d7b] px-5 text-sm font-black text-white shadow-[0_16px_30px_rgba(20,45,123,0.22)] hover:bg-[#102564]">
+          <Download className="h-4 w-4" /> Export CSV
+        </button>
       </div>
-      <Panel className="mb-4 p-3">
-        <div className="mb-3 flex items-center gap-2 text-sm font-black"><Filter className="h-4 w-4 text-terracotta" /> Filters</div>
+      {notice && <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-700">{notice}</div>}
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Panel className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Total Logs</p><p className="mt-2 text-[24px] font-black text-slate-950">{stats.total}</p><p className="mt-1 text-xs text-slate-500">Captured audit entries</p></Panel>
+        <Panel className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Modules</p><p className="mt-2 text-[24px] font-black text-slate-950">{stats.moduleCount}</p><p className="mt-1 text-xs text-slate-500">Distinct tracked modules</p></Panel>
+        <Panel className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Users</p><p className="mt-2 text-[24px] font-black text-slate-950">{stats.users}</p><p className="mt-1 text-xs text-slate-500">Unique actors in this result set</p></Panel>
+        <Panel className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">Immutable Entries</p><p className="mt-2 flex items-center gap-2 text-[24px] font-black text-slate-950"><Lock className="h-5 w-5 text-emerald-600" /> {stats.immutable}</p><p className="mt-1 text-xs text-slate-500">Records protected from mutation</p></Panel>
+      </div>
+      <Panel className="p-4">
+        <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="flex items-center gap-2 text-sm font-black text-slate-900"><Filter className="h-4 w-4 text-[#2563eb]" /> Filters</div>
+            <p className="mt-1 text-xs text-slate-500">Search audit events by module, actor, record and date range.</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-2 text-xs font-bold text-slate-600">
+            Last synced from audit API
+          </div>
+        </div>
         <div className="grid gap-3 md:grid-cols-4 xl:grid-cols-7">
           <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 md:col-span-2">
             <Search className="h-4 w-4 text-slate-400" />
@@ -103,6 +124,13 @@ const AuditLogs = () => {
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
         <Panel className="overflow-hidden">
+          <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="font-black text-slate-950">Audit Timeline</h2>
+              <p className="text-xs text-slate-500">Review immutable system actions, decision reasons and record-level changes.</p>
+            </div>
+            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600">{state.logs.length} visible logs</div>
+          </div>
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1100px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Time', 'User', 'Role', 'Module', 'Action', 'Record', 'Reason', 'Status', 'Lock', 'Details'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>

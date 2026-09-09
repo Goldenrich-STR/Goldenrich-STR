@@ -1482,14 +1482,14 @@ async def submit_review(
     except Exception as e:
         logger.error(f"Error submitting review: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to submit review")
-
-
 class GenerateDescriptionRequest(BaseModel):
     title: Optional[str] = ""
     category: Optional[str] = ""
     property_type: Optional[str] = ""
     bhk_type: Optional[str] = ""
     city: Optional[str] = ""
+    address: Optional[str] = ""
+    state: Optional[str] = ""
     amenities: Optional[List[str]] = []
     area_sqft: Optional[int] = None
     max_guests: Optional[int] = None
@@ -1505,7 +1505,7 @@ async def generate_description(
         category = data.category or "residential"
         property_type = data.property_type or ""
         bhk_type = data.bhk_type or ""
-        city = data.city or ""
+        city = (data.city or data.address or data.state or "").strip()
         amenities = data.amenities or []
         area_sqft = data.area_sqft
         max_guests = data.max_guests
@@ -1591,7 +1591,7 @@ async def generate_description(
         # Fallback to local smart template generator
         clean_prop_type = property_type.replace("_", " ").title() if property_type else "property"
         clean_bhk = bhk_type.upper() if bhk_type else ""
-        clean_city = city.title() if city else "our location"
+        clean_city = city.title() if city else "a prime location"
         clean_title = title if title else f"Beautiful {clean_bhk} {clean_prop_type}"
         clean_amenities = [a.replace("_", " ").title() for a in amenities]
 

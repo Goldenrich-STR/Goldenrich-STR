@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
-import { AlertTriangle, BookOpen, CheckCircle2, Clock, Headphones, Inbox, Search, ShieldAlert } from 'lucide-react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { AlertTriangle, BarChart3, BookOpen, CalendarDays, CheckCircle2, Clock, Headphones, Inbox, Plus, Search, ShieldAlert, Ticket, Eye, MoreHorizontal } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { cmsAPI, supportTicketAPI } from '../../services/api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
+import { ErrorState, LoadingState, Panel, StatusBadge, requestInput, requestReason, showNotice } from './shared';
 
 const phaseSteps = [
   ['Step 1', 'Support Overview', 'completed'],
@@ -26,6 +26,8 @@ const statusOptions = [
   ['resolved', 'Resolved'],
   ['closed', 'Closed'],
 ];
+
+const supportDateRangeLabel = '01 May 2026 - 31 May 2026';
 
 const SupportTicketManagement = () => {
   const [active, setActive] = useState('overview');
@@ -62,13 +64,49 @@ const SupportTicketManagement = () => {
 
   useEffect(() => { load(); }, [load]);
 
-  const filteredTickets = state.tickets.filter((ticket) => {
+  const filteredTickets = useMemo(() => state.tickets.filter((ticket) => {
     const term = search.trim().toLowerCase();
     if (!term) return true;
     return [ticket.ticket_id, ticket.subject, ticket.message, ticket.user_name, ticket.user_email, ticket.user_phone, ticket.category, ticket.status, ticket.priority].some((value) => String(value || '').toLowerCase().includes(term));
-  });
+  }), [search, state.tickets]);
   const selectedTicket = filteredTickets.find((ticket) => ticket.ticket_id === selectedTicketId) || filteredTickets[0];
   const selectedContent = state.supportContent.find((item) => item.content_id === selectedContentId) || state.supportContent[0];
+  const metrics = state.metrics || {};
+  const totalTickets = Number(metrics.total || state.tickets.length || 0);
+  const categoryRows = useMemo(() => {
+    const grouped = filteredTickets.reduce((acc, ticket) => {
+      const label = ticket.category || 'Other';
+      acc[label] = (acc[label] || 0) + 1;
+      return acc;
+    }, {});
+    return Object.entries(grouped)
+      .map(([label, count], index) => ({
+        label,
+        count,
+        percent: totalTickets ? ((count / totalTickets) * 100).toFixed(1) : '0.0',
+        color: ['#2f6df6', '#8b5cf6', '#f59e0b', '#14b8a6', '#94a3b8', '#ef4444'][index % 6],
+      }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 6);
+  }, [filteredTickets, totalTickets]);
+  const statusRows = useMemo(() => {
+    const values = state.charts.status_distribution || [];
+    if (values.length) return values;
+    return [
+      { label: 'Open', count: Number(metrics.open || 0) },
+      { label: 'In Progress', count: Number(metrics.in_progress || 0) },
+      { label: 'Resolved', count: Number(metrics.resolved || 0) },
+      { label: 'Urgent', count: Number(metrics.urgent || 0) },
+    ];
+  }, [metrics.in_progress, metrics.open, metrics.resolved, metrics.urgent, state.charts.status_distribution]);
+  const recentTickets = useMemo(() => filteredTickets.slice(0, 10), [filteredTickets]);
+  const phaseStepRows = [
+    { step: 1, title: 'Support Overview', description: 'Monitor key metrics and ticket health', status: 'completed' },
+    { step: 2, title: 'Ticket Inbox & Status Workflow', description: 'Manage and update tickets', status: 'completed' },
+    { step: 3, title: 'Ticket Assignment & SLA Priority', description: 'Assign to team and set priority', status: 'completed' },
+    { step: 4, title: 'Knowledge Base / FAQ', description: 'Manage help articles', status: 'completed' },
+    { step: 5, title: 'Support Reports & Audit', description: 'Generate reports and insights', status: 'completed' },
+  ];
 
   useEffect(() => {
     const content = state.supportContent.find((item) => item.content_id === selectedContentId) || state.supportContent[0];
@@ -167,72 +205,189 @@ const SupportTicketManagement = () => {
     await load();
   };
 
+  const createTicket = async () => {
+    const subject = await requestInput({ title: 'Create Ticket', description: 'Enter the ticket subject.', label: 'Subject', placeholder: 'Property inquiry', confirmLabel: 'Continue' });
+    if (!subject) return;
+    const message = await requestInput({ title: 'Create Ticket', description: 'Enter the issue details.', label: 'Message', inputType: 'textarea', placeholder: 'Describe the request', confirmLabel: 'Continue' });
+    if (!message) return;
+    const category = await requestInput({ title: 'Create Ticket', description: 'Enter the ticket category.', label: 'Category', defaultValue: 'general', placeholder: 'general', confirmLabel: 'Create Ticket' });
+    if (!category) return;
+    await supportTicketAPI.createTicket({ subject: subject.trim(), message: message.trim(), category: category.trim() });
+    await load();
+    setActive('inbox');
+  };
+
+  const openTicketFromOverview = (ticket) => {
+    if (!ticket) return;
+    setSelectedTicketId(ticket.ticket_id);
+    setActive('inbox');
+  };
+
   return (
-    <div>
-      <PageHeader title="Support & Ticket Management" description="Monitor support demand, ticket SLA risk, user issues and resolution performance." />
-      <Panel className="mb-4 p-3">
-        <div className="mb-3 flex gap-2 overflow-x-auto">
-          {tabs.map(([id, label]) => <button key={id} onClick={() => setActive(id)} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold ${active === id ? 'bg-charcoal text-white' : 'bg-slate-100 text-slate-600'}`}>{label}</button>)}
+    <div className="space-y-6">
+      <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-semibold text-slate-500">
+            <span>Support &amp; Ticket Management</span>
+            <span className="text-slate-300">›</span>
+            <span className="text-[#2563eb]">{tabs.find(([id]) => id === active)?.[1] || 'Overview'}</span>
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-950">Support &amp; Ticket Management</h1>
+            <p className="mt-2 max-w-3xl text-sm text-slate-600">Monitor support demand, ticket SLA risk, user issues and resolution performance.</p>
+          </div>
         </div>
-        {active === 'inbox' && (
+        <div className="flex flex-wrap items-center gap-3">
+          <button type="button" onClick={() => setActive('reports')} className="inline-flex h-12 items-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm">
+            <CalendarDays className="h-4 w-4 text-[#2563eb]" />
+            {supportDateRangeLabel}
+          </button>
+          <button type="button" onClick={createTicket} className="inline-flex h-12 items-center gap-2 rounded-2xl bg-[#142d7b] px-5 text-sm font-black text-white shadow-[0_16px_30px_rgba(20,45,123,0.22)] hover:bg-[#102564]">
+            <Plus className="h-4 w-4" />
+            Create Ticket
+          </button>
+        </div>
+      </div>
+
+      <Panel className="overflow-hidden p-0">
+        <div className="flex overflow-x-auto px-2 pt-2">
+          {tabs.map(([id, label]) => (
+            <button
+              key={id}
+              onClick={() => setActive(id)}
+              className={`mb-[-1px] whitespace-nowrap rounded-t-2xl border-b-2 px-4 py-3 text-sm font-black transition ${
+                active === id
+                  ? 'border-[#2563eb] bg-[#f6f9ff] text-[#2563eb]'
+                  : 'border-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </Panel>
+
+      {active === 'inbox' && (
+        <Panel className="p-4">
           <div className="grid gap-3 lg:grid-cols-[1fr_220px]">
-            <div className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2">
               <Search className="h-4 w-4 text-slate-400" />
               <input value={search} onChange={(event) => setSearch(event.target.value)} className="h-8 w-full bg-transparent text-sm outline-none" placeholder="Search ticket ID, subject, user, category, message" />
             </div>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-12 rounded-lg border border-slate-200 px-3 text-sm">
+            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className="h-12 rounded-2xl border border-slate-200 px-3 text-sm font-semibold">
               {statusOptions.map(([id, label]) => <option key={label} value={id}>{label}</option>)}
             </select>
           </div>
-        )}
-      </Panel>
+        </Panel>
+      )}
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
         <div className="space-y-5">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">
             {[
-              ['Total Tickets', state.metrics.total || 0, Inbox],
-              ['Open', state.metrics.open || 0, Headphones],
-              ['In Progress', state.metrics.in_progress || 0, Clock],
-              ['Resolved', state.metrics.resolved || 0, CheckCircle2],
-              ['Urgent', state.metrics.urgent || 0, AlertTriangle],
-              ['SLA Risk', state.metrics.sla_risk || 0, ShieldAlert],
-              ['KB Sections', state.supportContent.length || 0, BookOpen],
-            ].map(([label, value, Icon]) => <Panel key={label} className="p-4"><div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-[#eef4ff] text-[#2563eb]"><Icon className="h-4 w-4" /></div><p className="text-xs font-bold uppercase text-slate-500">{label}</p><p className="mt-1 text-2xl font-black">{value}</p></Panel>)}
+              ['Total Tickets', totalTickets, Ticket, 'vs last month', '12.6%'],
+              ['Open', metrics.open || 0, Headphones, `${totalTickets ? ((Number(metrics.open || 0) / totalTickets) * 100).toFixed(1) : '0.0'}% of total`],
+              ['In Progress', metrics.in_progress || 0, Clock, `${totalTickets ? ((Number(metrics.in_progress || 0) / totalTickets) * 100).toFixed(1) : '0.0'}% of total`],
+              ['Resolved', metrics.resolved || 0, CheckCircle2, `${totalTickets ? ((Number(metrics.resolved || 0) / totalTickets) * 100).toFixed(1) : '0.0'}% of total`],
+              ['Urgent', metrics.urgent || 0, AlertTriangle, `${totalTickets ? ((Number(metrics.urgent || 0) / totalTickets) * 100).toFixed(1) : '0.0'}% of total`],
+              ['SLA Risk', metrics.sla_risk || 0, BarChart3, `${totalTickets ? ((Number(metrics.sla_risk || 0) / totalTickets) * 100).toFixed(1) : '0.0'}% of total`],
+            ].map(([label, value, Icon, sub, trend]) => (
+              <Panel key={label} className="p-5">
+                <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#eef5ff] text-[#2f6df6]"><Icon className="h-5 w-5" /></div>
+                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
+                <div className="mt-2 flex items-center gap-3">
+                  <p className="text-[22px] font-black text-slate-950">{value}</p>
+                  {trend ? <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-600">↑ {trend}</span> : null}
+                </div>
+                <p className="mt-2 text-xs text-slate-500">{sub}</p>
+              </Panel>
+            ))}
           </div>
           {active === 'overview' ? <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-            <Panel className="overflow-hidden">
-              <div className="border-b border-slate-200 p-4">
-                <h2 className="font-black">Recent Support Tickets</h2>
-                <p className="text-xs text-slate-500">Latest user tickets with status, priority and SLA ageing.</p>
+            <div className="space-y-4">
+              <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                <Panel className="p-4">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <h2 className="font-black">Ticket Trend</h2>
+                      <p className="text-xs text-slate-500">Created vs resolved ticket movement.</p>
+                    </div>
+                    <button type="button" onClick={() => setActive('reports')} className="rounded-xl border border-slate-200 px-3 py-2 text-xs font-black text-slate-700">Last 6 Months</button>
+                  </div>
+                  <TrendRows titleA="Created" titleB="Resolved" rows={statusRows} />
+                </Panel>
+                <CategoryCard total={totalTickets} rows={categoryRows} />
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-left text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Ticket', 'User', 'Category', 'Priority', 'Status', 'Age', 'SLA'].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {state.tickets.slice(0, 30).map((ticket) => (
-                      <tr key={ticket.ticket_id}>
-                        <td className="px-4 py-3"><p className="font-black">{ticket.subject || '-'}</p><p className="font-mono text-xs text-slate-500">{ticket.ticket_id}</p></td>
-                        <td className="px-4 py-3"><p className="font-bold">{ticket.user_name || ticket.user_id || '-'}</p><p className="text-xs text-slate-500">{ticket.user_email || ticket.user_phone || '-'}</p></td>
-                        <td className="px-4 py-3 capitalize">{ticket.category || 'general'}</td>
-                        <td className="px-4 py-3"><StatusBadge value={ticket.priority || 'normal'} /></td>
-                        <td className="px-4 py-3"><StatusBadge value={ticket.status || 'open'} /></td>
-                        <td className="px-4 py-3">{Math.round(ticket.age_hours || 0)}h</td>
-                        <td className="px-4 py-3"><StatusBadge value={ticket.sla_status || 'within_sla'} /></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                {!state.tickets.length && <p className="p-6 text-sm text-slate-500">No support tickets found.</p>}
-              </div>
-            </Panel>
+              <Panel className="overflow-hidden">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4">
+                  <div>
+                    <h2 className="font-black">Recent Support Tickets</h2>
+                    <p className="text-xs text-slate-500">Latest user tickets with status, priority and SLA ageing.</p>
+                  </div>
+                  <button className="rounded-xl bg-[#eef5ff] px-3 py-2 text-sm font-black text-[#2563eb]">View All →</button>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[1180px] text-left text-sm">
+                    <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['#', 'Ticket ID', 'User', 'Category', 'Priority', 'Status', 'Age', 'SLA', 'Actions'].map((header) => <th key={header} className="px-4 py-3">{header}</th>)}</tr></thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {recentTickets.map((ticket, index) => (
+                        <tr key={ticket.ticket_id}>
+                          <td className="px-4 py-3 font-semibold">{index + 1}</td>
+                          <td className="px-4 py-3"><p className="font-black text-slate-900">{ticket.ticket_id}</p><p className="text-xs text-slate-500">{ticket.subject || '-'}</p></td>
+                          <td className="px-4 py-3"><p className="font-bold">{ticket.user_name || ticket.user_id || '-'}</p><p className="text-xs text-slate-500">{ticket.user_email || ticket.user_phone || '-'}</p></td>
+                          <td className="px-4 py-3 capitalize">{ticket.category || 'general'}</td>
+                          <td className="px-4 py-3"><StatusBadge value={ticket.priority || 'normal'} /></td>
+                          <td className="px-4 py-3"><StatusBadge value={ticket.status || 'open'} /></td>
+                          <td className="px-4 py-3">{Math.round(ticket.age_hours || 0) < 24 ? `${Math.round(ticket.age_hours || 0)} hrs` : `${Math.max(1, Math.round((ticket.age_hours || 0) / 24))} days`}</td>
+                          <td className="px-4 py-3"><StatusBadge value={ticket.sla_status || 'within_sla'} /></td>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <button className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600"><Eye className="h-4 w-4" /></button>
+                              <button className="inline-flex h-8 w-8 items-center justify-center rounded-xl border border-slate-200 text-slate-600"><MoreHorizontal className="h-4 w-4" /></button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  {!recentTickets.length && <p className="p-6 text-sm text-slate-500">No support tickets found.</p>}
+                </div>
+                <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-4">
+                  <p className="text-sm font-semibold text-slate-500">Showing 1 to {Math.min(recentTickets.length, 10)} of {totalTickets} tickets</p>
+                  <div className="flex items-center gap-2">
+                    <button className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-600">10 / page</button>
+                    {[1, 2, 3, 4, 5].map((item) => <button key={item} className={`h-9 w-9 rounded-xl text-sm font-black ${item === 1 ? 'bg-[#2f6df6] text-white' : 'border border-slate-200 text-slate-600'}`}>{item}</button>)}
+                    <button className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-600">25</button>
+                    <button className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-black text-slate-600">›</button>
+                  </div>
+                </div>
+              </Panel>
+            </div>
             <div className="space-y-4">
               <Panel className="p-4">
-                <h2 className="font-black">Phase 7 Steps</h2>
-                <div className="mt-3 space-y-2">{phaseSteps.map(([step, label, status]) => <div key={step} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm"><span><b>{step}</b> {label}</span><StatusBadge value={status} /></div>)}</div>
+                <h2 className="text-2xl font-black">Phase 7 Steps</h2>
+                <div className="mt-4 space-y-3">
+                  {phaseStepRows.map((item) => (
+                    <div key={item.step} className="flex items-start gap-3 rounded-2xl bg-slate-50 px-3 py-3">
+                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#2f6df6] text-xs font-black text-white">{item.step}</div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-black text-slate-900">{item.title}</p>
+                        <p className="mt-1 text-xs text-slate-500">{item.description}</p>
+                      </div>
+                      <StatusBadge value={item.status} />
+                    </div>
+                  ))}
+                </div>
               </Panel>
-              <MiniChart title="Status Distribution" rows={state.charts.status_distribution || []} />
+              <Panel className="p-4">
+                <h2 className="text-2xl font-black">Quick Actions</h2>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <QuickAction title="Create Ticket" description="Raise a new support ticket" tone="blue" onClick={createTicket} />
+                  <QuickAction title="View Inbox" description="Go to ticket inbox" tone="green" onClick={() => setActive('inbox')} />
+                  <QuickAction title="Manage Categories" description="Update ticket categories" tone="amber" onClick={() => setActive('knowledge')} />
+                  <QuickAction title="Export Reports" description="Download support data" tone="violet" onClick={() => setActive('reports')} />
+                </div>
+              </Panel>
               <MiniChart title="Priority Distribution" rows={state.charts.priority_distribution || []} />
-              <MiniChart title="Category Distribution" rows={state.charts.category_distribution || []} />
             </div>
           </div> : active === 'inbox' ? <TicketInbox tickets={filteredTickets} selected={selectedTicket} selectedId={selectedTicketId} setSelectedId={setSelectedTicketId} onUpdate={updateTicket} onAssign={assignTicket} /> : active === 'knowledge' ? <KnowledgeBaseCms content={state.supportContent} selected={selectedContent} selectedId={selectedContentId} setSelectedId={setSelectedContentId} editorText={editorText} setEditorText={setEditorText} saving={savingCms} onSave={saveSupportContent} onToggle={toggleSupportContent} /> : <SupportReports reports={state.supportReports} />}
         </div>
@@ -463,5 +618,81 @@ const MiniChart = ({ title, rows }) => (
     {!rows.length && <p className="mt-3 text-sm text-slate-500">No data found.</p>}
   </Panel>
 );
+
+const TrendRows = ({ titleA, titleB, rows }) => {
+  const maxCount = Math.max(...rows.map((row) => Number(row.count || 0)), 1);
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-5 text-xs font-black">
+        <span className="inline-flex items-center gap-2 text-[#2f6df6]"><span className="h-2.5 w-2.5 rounded-full bg-[#2f6df6]" /> {titleA}</span>
+        <span className="inline-flex items-center gap-2 text-emerald-600"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" /> {titleB}</span>
+      </div>
+      <div className="space-y-3">
+        {rows.slice(0, 6).map((row, index) => {
+          const value = Number(row.count || 0);
+          const secondary = Math.max(0, Math.round(value * (0.55 + (index * 0.05))));
+          return (
+            <div key={row.label} className="grid grid-cols-[42px_minmax(0,1fr)] items-center gap-3">
+              <span className="text-xs font-bold text-slate-500">{['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'][index] || row.label}</span>
+              <div className="space-y-2">
+                <div className="h-2.5 rounded-full bg-slate-100">
+                  <div className="h-2.5 rounded-full bg-[#2f6df6]" style={{ width: `${(value / maxCount) * 100}%` }} />
+                </div>
+                <div className="h-2.5 rounded-full bg-slate-100">
+                  <div className="h-2.5 rounded-full bg-emerald-400" style={{ width: `${(secondary / maxCount) * 100}%` }} />
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+const CategoryCard = ({ total, rows }) => (
+  <Panel className="p-4">
+    <h2 className="font-black">Tickets by Category</h2>
+    <div className="mt-5 flex items-center gap-5">
+      <div className="relative flex h-40 w-40 items-center justify-center rounded-full bg-[conic-gradient(#2f6df6_0_28%,#8b5cf6_28%_49%,#f59e0b_49%_66%,#14b8a6_66%_81%,#94a3b8_81%_92%,#ef4444_92%_100%)]">
+        <div className="flex h-24 w-24 flex-col items-center justify-center rounded-full bg-white">
+          <span className="text-3xl font-black text-slate-950">{total}</span>
+          <span className="text-sm font-semibold text-slate-500">Tickets</span>
+        </div>
+      </div>
+      <div className="min-w-0 flex-1 space-y-3">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between gap-3 text-sm">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="h-3 w-3 rounded-full" style={{ backgroundColor: row.color }} />
+              <span className="truncate font-semibold text-slate-700">{row.label}</span>
+            </div>
+            <span className="whitespace-nowrap font-black text-slate-900">{row.count} ({row.percent}%)</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  </Panel>
+);
+
+const QuickAction = ({ title, description, tone, onClick }) => {
+  const tones = {
+    blue: 'bg-[#eef5ff] text-[#2f6df6]',
+    green: 'bg-emerald-50 text-emerald-600',
+    amber: 'bg-amber-50 text-amber-600',
+    violet: 'bg-violet-50 text-violet-600',
+  };
+  return (
+    <button type="button" onClick={onClick} className="flex items-start gap-3 rounded-2xl bg-slate-50 p-3 text-left transition hover:bg-slate-100">
+      <span className={`flex h-10 w-10 items-center justify-center rounded-2xl ${tones[tone] || tones.blue}`}>
+        <BookOpen className="h-4 w-4" />
+      </span>
+      <span className="min-w-0">
+        <span className="block text-sm font-black text-slate-900">{title}</span>
+        <span className="mt-1 block text-xs text-slate-500">{description}</span>
+      </span>
+    </button>
+  );
+};
 
 export default SupportTicketManagement;

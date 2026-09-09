@@ -69,6 +69,13 @@ export const adminPhase1API = {
   updateSubscriptionPlan: (planId, payload) => apiClient.put(`/subscriptions/admin/plans/${planId}`, null, { params: payload }),
   deleteSubscriptionPlan: (planId) => apiClient.delete(`/subscriptions/admin/plans/${planId}`),
   updateSubscriptionStatus: (subscriptionId, payload) => apiClient.patch(`/admin/core/subscriptions/${subscriptionId}/status`, payload),
+  renewSubscription: (subscriptionId, payload) => apiClient.post(`/admin/subscriptions/${subscriptionId}/renew`, payload),
+  changeSubscriptionPlan: (subscriptionId, payload) => apiClient.post(`/admin/subscriptions/${subscriptionId}/change-plan`, payload),
+  cancelSubscription: (subscriptionId, payload) => apiClient.post(`/admin/subscriptions/${subscriptionId}/cancel`, payload),
+  reactivateSubscription: (subscriptionId, payload) => apiClient.post(`/admin/subscriptions/${subscriptionId}/reactivate`, payload),
+  updateSubscriptionAutoRenew: (subscriptionId, payload) => apiClient.patch(`/admin/subscriptions/${subscriptionId}/auto-renew`, payload),
+  sendSubscriptionReminder: (subscriptionId, payload = {}) => apiClient.post(`/admin/subscriptions/${subscriptionId}/send-renewal-reminder`, payload),
+  convertTrialSubscription: (subscriptionId, payload) => apiClient.post(`/admin/subscriptions/${subscriptionId}/convert-trial`, payload),
   deleteSubscription: async (subscriptionId, payload) => {
     try {
       return await apiClient.post(`/admin/core/subscriptions/${subscriptionId}/delete`, payload);

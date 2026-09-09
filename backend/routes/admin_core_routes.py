@@ -1019,12 +1019,13 @@ async def executive_dashboard(
     draft_properties = await _count(db, "properties", {**visible_property_query, "status": "draft"})
     inactive_properties = await _count(db, "properties", {**visible_property_query, "status": {"$in": ["inactive", "blocked", "expired"]}})
     bookings_total = await _count(db, "bookings", booking_query)
-    upcoming_bookings = await _count(db, "bookings", {"booking_status": {"$in": ["pending", "confirmed"]}})
-    active_bookings = await _count(db, "bookings", {"booking_status": "confirmed"})
-    completed_bookings = await _count(db, "bookings", {"booking_status": "completed"})
-    cancelled_bookings = await _count(db, "bookings", {"booking_status": "cancelled"})
+    upcoming_bookings = await _count(db, "bookings", {**booking_query, "booking_status": "pending"})
+    active_bookings = await _count(db, "bookings", {**booking_query, "booking_status": "confirmed"})
+    completed_bookings = await _count(db, "bookings", {**booking_query, "booking_status": "completed"})
+    cancelled_bookings = await _count(db, "bookings", {**booking_query, "booking_status": "cancelled"})
     confirmed_booking_query = {
-        "booking_status": "confirmed",
+        **booking_query,
+        "booking_status": {"$in": ["confirmed", "completed"]},
         "payment_status": {"$in": ["paid", "success", "captured", "completed"]},
     }
     paid_bookings = await db.bookings.find(confirmed_booking_query, {"_id": 0}).to_list(length=10000)
@@ -3240,10 +3241,10 @@ async def booking_operation_detail(booking_id: str, current_user: dict = Depends
 
 @router.patch("/bookings/{booking_id}/status")
 async def update_booking_operation_status(booking_id: str, payload: BookingStatusPayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
-    allowed_booking = {"pending", "soft_lock", "completed", "cancelled"}
+    allowed_booking = {"pending", "soft_lock", "confirmed", "completed", "cancelled"}
     allowed_payment = {"pending", "paid", "partially_paid", "failed", "refunded"}
     if payload.booking_status and payload.booking_status not in allowed_booking:
-        raise HTTPException(status_code=400, detail="Booking confirmation is controlled by verified payment only")
+        raise HTTPException(status_code=400, detail="Invalid booking status")
     if payload.payment_status and payload.payment_status not in allowed_payment:
         raise HTTPException(status_code=400, detail="Invalid payment status")
     if not payload.booking_status and not payload.payment_status:
@@ -3251,6 +3252,12 @@ async def update_booking_operation_status(booking_id: str, payload: BookingStatu
     booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not booking:
         raise HTTPException(status_code=404, detail="Booking not found")
+    if payload.booking_status == "confirmed":
+        payment_state = str(payload.payment_status or booking.get("payment_status") or "").lower()
+        source = str(booking.get("booking_source") or booking.get("source") or "direct").lower()
+        is_external = source not in {"direct", "website", "web", "mobile", "x-space360", "xspace360"}
+        if payment_state not in {"paid", "partially_paid", "success", "captured", "completed"} and not is_external:
+            raise HTTPException(status_code=400, detail="Direct bookings require verified payment before confirmation")
     updates = {"admin_status_reason": payload.reason, "admin_status_updated_by": current_user["user_id"], "updated_at": _now()}
     if payload.booking_status:
         updates["booking_status"] = payload.booking_status

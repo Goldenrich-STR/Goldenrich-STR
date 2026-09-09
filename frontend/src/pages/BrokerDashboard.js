@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl, accountAPI, uploadAPI } from '../services/api';
 import { createPortal } from 'react-dom';
-import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
+import { formatAddress, formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
 import { NotificationBell } from '../components/NotificationCenter';
 import { openBrokerSettlementInvoice } from '../utils/brokerSettlementInvoice';
 import { 
@@ -2094,7 +2094,7 @@ const ReviewVerificationModal = ({ task, onClose, onReviewed }) => {
               <div>
                 <p className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider mb-1">Full Address</p>
                 <p className="text-xs text-charcoal-light leading-relaxed">
-                  {[propertyDetails.address, propertyDetails.city, propertyDetails.state, propertyDetails.pin_code].filter(Boolean).join(', ')}
+                  {formatAddress(propertyDetails.address, propertyDetails.city, propertyDetails.state, propertyDetails.pin_code)}
                 </p>
               </div>
             )}
@@ -2590,7 +2590,7 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
             {task.property_details?.address && (
               <div className="mb-3">
                 <span className="text-[9px] font-bold text-charcoal-muted uppercase block">Full Address</span>
-                <span className="text-xs font-semibold text-charcoal-light">{task.property_details.address}</span>
+                <span className="text-xs font-semibold text-charcoal-light">{formatAddress(task.property_details.address, task.property_details.city, task.property_details.state, task.property_details.pin_code)}</span>
               </div>
             )}
 
@@ -3939,8 +3939,7 @@ const PropertyDetailsModal = ({ property, onClose }) => {
                   <div className="flex items-start space-x-2">
                     <MapPin className="w-5 h-5 text-terracotta mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-semibold text-charcoal">{property.address}</p>
-                      <p className="text-xs text-charcoal-muted">{property.city}, {property.state} - {property.pin_code}</p>
+                      <p className="text-sm font-semibold text-charcoal">{formatAddress(property.address, property.city, property.state, property.pin_code)}</p>
                     </div>
                   </div>
                   {(property.latitude || property.longitude) && (

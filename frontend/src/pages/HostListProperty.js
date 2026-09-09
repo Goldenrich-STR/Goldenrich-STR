@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, uploadAPI, couponAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
 import { Dialog, DialogContent, DialogTitle } from '../components/ui/dialog';
+import { getAmenityIcon, formatAmenityLabel, formatAddress } from '../lib/displayLabels';
 import {
   Building2,
   ArrowLeft,
@@ -189,57 +190,7 @@ const CATEGORY_AMENITIES = {
   ]
 };
 
-const AMENITY_ICONS = {
-  wifi: Wifi,
-  ac: Wind,
-  parking: Car,
-  kitchen: Utensils,
-  pool: Waves,
-  gym: Dumbbell,
-  tv: Tv,
-  washer: WashingMachine,
-  heating: Flame,
-  fireplace: Flame,
-  coffee: Coffee,
-  printer: Printer,
-  restrooms: Bath,
-  workspace: Monitor,
-  projector: Presentation,
-  whiteboard: Presentation,
-  power_backup: BatteryCharging,
-  av_system: Mic2,
-  stage: Mic2,
-  catering: Utensils,
-  bar: Coffee,
-  rooftop: Building2,
-  changing_rooms: Home,
-  security: ShieldCheck,
-};
 
-const slugifyAmenity = (label) =>
-  label
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '_')
-    .replace(/^_+|_+$/g, '');
-
-const getAmenityIcon = (value, label = '') => {
-  const key = value || slugifyAmenity(label);
-  if (AMENITY_ICONS[key]) return AMENITY_ICONS[key];
-  const text = `${key} ${label}`.toLowerCase();
-  if (text.includes('wifi') || text.includes('internet')) return Wifi;
-  if (text.includes('parking')) return Car;
-  if (text.includes('kitchen') || text.includes('cook')) return Utensils;
-  if (text.includes('pool') || text.includes('swim')) return Waves;
-  if (text.includes('gym') || text.includes('fitness')) return Dumbbell;
-  if (text.includes('tv')) return Tv;
-  if (text.includes('wash')) return WashingMachine;
-  if (text.includes('coffee') || text.includes('tea')) return Coffee;
-  if (text.includes('printer')) return Printer;
-  if (text.includes('projector') || text.includes('board')) return Presentation;
-  if (text.includes('power') || text.includes('backup')) return BatteryCharging;
-  return Sparkles;
-};
 
 const STEPS = [
   { key: 'basics', label: 'Basics' },
@@ -2996,7 +2947,7 @@ const HostListProperty = () => {
                   CATEGORY_DATA[form.category]?.bhkTypes.find(b => b.value === form.bhk_type)?.label || form.bhk_type
                 }`} 
               />
-              <ReviewBlock label="Location" value={`${form.address}, ${form.city}, ${form.state} ${form.pin_code}`} />
+              <ReviewBlock label="Location" value={formatAddress(form.address, form.city, form.state, form.pin_code)} />
               <ReviewBlock 
                 label="Price" 
                 value={

@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useAuth } from '../contexts/AuthContext';
@@ -8,7 +8,8 @@ import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import ShareDropdown from '../components/ShareDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
-import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import { formatCategoryLabel, formatPropertyTypeLabel, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
+import { getPropertySlug, getPropertyUrl as buildPropertyUrl } from '../lib/propertySlug';
 import {
   Crown,
   Building2,
@@ -35,6 +36,7 @@ import {
   Home,
   Briefcase,
   PartyPopper,
+  Phone,
 } from 'lucide-react';
 
 // Fix Leaflet default marker icon for webpack/CRA
@@ -116,7 +118,7 @@ function priceIcon(price, active) {
       font-size:12px;
       white-space:nowrap;
       box-shadow:0 2px 8px rgba(0,0,0,0.15);
-      font-family:'Manrope',sans-serif;
+      font-family:'Inter','Plus Jakarta Sans',sans-serif;
     ">₹${price}</div>
   `;
   return L.divIcon({
@@ -167,7 +169,7 @@ const TRANSLATIONS = {
     findSpaces: 'Find Spaces',
     propertyType: 'Property Type',
     bhkConfig: 'BHK / Configuration',
-    priceRange: 'Price Range (₹/Night)',
+    priceRange: 'Price Range (₹)',
     essentialAmenities: 'Essential Amenities',
     instantBooking: 'Instant Booking',
     petFriendly: 'Pet Friendly',
@@ -315,6 +317,26 @@ const GuestBrowse = () => {
 
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [browseCalendarAnchor, setBrowseCalendarAnchor] = useState('checkIn');
+  const [filters, setFilters] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return {
+      search: params.get('search') || '',
+      category: params.get('category') || '',
+      city: params.get('city') || '',
+      check_in: params.get('checkIn') || params.get('check_in') || '',
+      check_out: params.get('checkOut') || params.get('check_out') || '',
+      guests: params.get('guests') || '2',
+      property_type: params.get('property_type') || '',
+      bhk_type: params.get('bhk_type') || '',
+      min_price: params.get('min_price') || '',
+      max_price: params.get('max_price') || '',
+      amenities: params.get('amenities') ? params.get('amenities').split(',') : [],
+      instant_booking: params.get('instant_booking') === 'true',
+      pet_friendly: params.get('pet_friendly') === 'true',
+      sort: params.get('sort') || 'recommended',
+    };
+  });
+
   const [guestCounts, setGuestCounts] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     const initialGuests = parseInt(params.get('guests')) || 2;
@@ -337,6 +359,76 @@ const GuestBrowse = () => {
   const [viewMode, setViewMode] = useState(VIEW_MODES.GRID);
   const [hoveredId, setHoveredId] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const fetchProperties = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const queryParams = {
+        limit: PAGE_SIZE,
+        skip: (page - 1) * PAGE_SIZE,
+        ...filters,
+        amenities: filters.amenities && filters.amenities.length ? filters.amenities.join(',') : undefined,
+      };
+      Object.keys(queryParams).forEach(key => {
+        if (queryParams[key] === '' || queryParams[key] === null || queryParams[key] === undefined) {
+          delete queryParams[key];
+        }
+      });
+      if (!filters.instant_booking) delete queryParams.instant_booking;
+      if (!filters.pet_friendly) delete queryParams.pet_friendly;
+
+      const res = await propertyAPI.searchProperties(queryParams);
+      const data = res.data;
+      if (Array.isArray(data)) {
+        setProperties(data);
+        setTotalProperties(data.length);
+      } else if (data && data.properties) {
+        setProperties(data.properties);
+        setTotalProperties(data.total || data.properties.length);
+      } else {
+        setProperties([]);
+        setTotalProperties(0);
+      }
+    } catch (err) {
+      console.error('Error fetching properties:', err);
+      setError('Failed to fetch properties. Please try again.');
+      setProperties([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, page]);
+
+  useEffect(() => {
+    fetchProperties();
+  }, [fetchProperties]);
+
+  const handleSearch = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    setPage(1);
+    fetchProperties();
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      search: '',
+      category: '',
+      city: '',
+      check_in: '',
+      check_out: '',
+      guests: '2',
+      property_type: '',
+      bhk_type: '',
+      min_price: '',
+      max_price: '',
+      amenities: [],
+      instant_booking: false,
+      pet_friendly: false,
+      sort: 'recommended',
+    });
+    setGuestCounts({ adults: 2, children: 0, infants: 0 });
+    setPage(1);
+  };
 
   const [wishlist, setWishlist] = useState(() => {
     try {
@@ -392,225 +484,26 @@ const GuestBrowse = () => {
   };
 
   const handleShareWhatsApp = (property) => {
-    const url = `${window.location.origin}/property/${property.property_id}`;
+    const slug = getPropertySlug(property);
+    const url = `${window.location.origin}/property/${slug}`;
     const text = `Check out this amazing property *${property.title}* in *${property.city}* on X-Space360:\n${url}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
 
-  const [filters, setFilters] = useState(() => {
-    const params = new URLSearchParams(window.location.search);
-    const isSignature = params.get('signature') === 'true';
-    return {
-      city: params.get('city') || '',
-      search: params.get('search') || '',
-      category: isSignature ? 'residential' : (params.get('category') || ''),
-      property_type: isSignature ? 'villa' : (params.get('property_type') || ''),
-      bhk_type: '',
-      min_price: isSignature ? '50000' : '',
-      max_price: '',
-      guests: params.get('guests') || '',
-      instant_booking: false,
-      pet_friendly: false,
-      check_in: params.get('checkIn') || '',
-      check_out: params.get('checkOut') || '',
-      latitude: params.get('latitude') || '',
-      longitude: params.get('longitude') || '',
-      radius_km: params.get('radius_km') || '',
-      sort: 'recommended',
-      amenities: [],
-    };
-  });
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const city = params.get('city');
-    const search = params.get('search');
-    const category = params.get('category');
-    const propertyType = params.get('property_type');
-    const checkIn = params.get('checkIn');
-    const checkOut = params.get('checkOut');
-    const guests = params.get('guests');
-    const latitude = params.get('latitude');
-    const longitude = params.get('longitude');
-    const radiusKm = params.get('radius_km');
-    const isWishlist = params.get('wishlist') === 'true';
-    
-    if (isWishlist) {
-      setShowWishlistOnly(true);
-    }
-    
-    const isSignature = params.get('signature') === 'true';
-    if (isSignature) {
-      setFilters(prev => ({
-        ...prev,
-        min_price: '50000',
-        property_type: 'villa',
-        category: 'residential'
-      }));
-    }
-    if (city || search || category || propertyType || checkIn || checkOut || guests || latitude || longitude || radiusKm) {
-      setFilters(prev => ({
-        ...prev,
-        city: city || prev.city,
-        search: search || prev.search,
-        category: isSignature ? 'residential' : (category || prev.category),
-        property_type: isSignature ? 'villa' : (propertyType || prev.property_type),
-        check_in: checkIn || prev.check_in,
-        check_out: checkOut || prev.check_out,
-        guests: guests || prev.guests,
-        latitude: latitude || prev.latitude,
-        longitude: longitude || prev.longitude,
-        radius_km: radiusKm || prev.radius_km
-      }));
-    }
-  }, []);
-
-  useEffect(() => {
-    if (page === 1) {
-      fetchProperties(1);
-    } else {
-      setPage(1);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    filters.sort,
-    filters.city,
-    filters.category,
-    filters.property_type,
-    filters.bhk_type,
-    filters.min_price,
-    filters.max_price,
-    filters.guests,
-    filters.instant_booking,
-    filters.pet_friendly,
-    filters.check_in,
-    filters.check_out,
-    filters.latitude,
-    filters.longitude,
-    filters.radius_km,
-    filters.amenities,
-    showWishlistOnly,
-  ]);
-
-  useEffect(() => {
-    fetchProperties(page);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page]);
-
-  useEffect(() => {
-    if (!showSortMenu) return undefined;
-
-    const handleClose = () => setShowSortMenu(false);
-    window.addEventListener('click', handleClose);
-    return () => window.removeEventListener('click', handleClose);
-  }, [showSortMenu]);
-
-  const usesCommercialSizeFilter = COMMERCIAL_SIZE_TYPES.has(filters.property_type);
-  const configurationOptions = usesCommercialSizeFilter ? SIZE_TYPES : BHK_TYPES;
-
-  useEffect(() => {
-    if (
-      filters.bhk_type &&
-      !configurationOptions.some(option => option.value === filters.bhk_type)
-    ) {
-      setFilters(prev => ({ ...prev, bhk_type: '' }));
-    }
-  }, [configurationOptions, filters.bhk_type]);
-
-  const buildParams = (pageNum = page) => {
-    const isSignature = new URLSearchParams(window.location.search).get('signature') === 'true';
-    if (showWishlistOnly) {
-      const params = { limit: 100 };
-      if (filters.check_in) params.check_in = filters.check_in;
-      if (filters.check_out) params.check_out = filters.check_out;
-      return params;
-    }
-    const params = {
-      limit: PAGE_SIZE,
-      skip: (pageNum - 1) * PAGE_SIZE
-    };
-    if (filters.city) params.city = filters.city;
-    if (filters.search) params.search = filters.search;
-    
-    if (isSignature) {
-      params.category = 'residential';
-      params.property_type = 'villa';
-      params.min_price = Math.max(Number(filters.min_price || 0), 50000);
-    } else {
-      if (filters.category) params.category = filters.category;
-      if (filters.property_type) params.property_type = filters.property_type;
-      if (filters.min_price) params.min_price = Number(filters.min_price);
-    }
-    
-    if (filters.max_price) params.max_price = Number(filters.max_price);
-    if (filters.bhk_type) params.bhk_type = filters.bhk_type;
-    if (filters.instant_booking) params.instant_booking = true;
-    if (filters.pet_friendly) params.pet_friendly = true;
-    if (filters.check_in) params.check_in = filters.check_in;
-    if (filters.check_out) params.check_out = filters.check_out;
-    if (filters.latitude) params.latitude = Number(filters.latitude);
-    if (filters.longitude) params.longitude = Number(filters.longitude);
-    if (filters.radius_km) params.radius_km = Number(filters.radius_km);
-    if (filters.amenities.length) params.amenities = filters.amenities.join(',');
-    if (filters.sort) params.sort = filters.sort;
-    return params;
-  };
-
-  const fetchProperties = async (pageNum = page) => {
-    setLoading(true);
-    setError('');
-    try {
-      const res = await propertyAPI.searchProperties(buildParams(pageNum));
-      setProperties(res.data.properties || []);
-      setTotalProperties(res.data.total || 0);
-      setSeoData(res.data.seo || null);
-    } catch (e) {
-      console.error(e);
-      setError(e.response?.data?.detail || 'Failed to load properties');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const toggleAmenity = (a) => {
-    setFilters((f) => {
-      const has = f.amenities.includes(a);
-      return { ...f, amenities: has ? f.amenities.filter((x) => x !== a) : [...f.amenities, a] };
-    });
-  };
-
-  const clearFilters = () => {
-    const isSignature = new URLSearchParams(window.location.search).get('signature') === 'true';
-    setFilters({
-      city: '',
-      category: isSignature ? 'residential' : '',
-      property_type: isSignature ? 'villa' : '',
-      bhk_type: '',
-      min_price: isSignature ? '50000' : '',
-      max_price: '',
-      guests: '',
-      instant_booking: false,
-      pet_friendly: false,
-      check_in: '',
-      check_out: '',
-      latitude: '',
-      longitude: '',
-      radius_km: '',
-      sort: 'recommended',
-      amenities: [],
-    });
-  };
-
-  const handleSearch = (e) => {
-    e?.preventDefault();
-    fetchProperties();
-  };
-
-  const navigateToProperty = (propertyId) => {
+  const getPropertyUrl = (propertyOrId) => {
     const params = new URLSearchParams(window.location.search);
     const urlGuests = params.get('guests') || '1';
-    navigate(`/property/${propertyId}?checkIn=${filters.check_in || ''}&checkOut=${filters.check_out || ''}&guests=${urlGuests}`);
+    const slug = typeof propertyOrId === 'object' ? getPropertySlug(propertyOrId) : propertyOrId;
+    return `/property/${slug}?checkIn=${filters.check_in || ''}&checkOut=${filters.check_out || ''}&guests=${urlGuests}`;
   };
+
+  const usesCommercialSizeFilter = useMemo(() => {
+    return COMMERCIAL_SIZE_TYPES.has(filters.property_type);
+  }, [filters.property_type]);
+
+  const configurationOptions = useMemo(() => {
+    return usesCommercialSizeFilter ? SIZE_TYPES : BHK_TYPES;
+  }, [usesCommercialSizeFilter]);
 
   const displayedProperties = useMemo(() => {
     if (showWishlistOnly) {
@@ -623,6 +516,17 @@ const GuestBrowse = () => {
     () => displayedProperties.filter((p) => p.latitude && p.longitude),
     [displayedProperties]
   );
+
+  const propsWithoutCoords = useMemo(
+    () => displayedProperties.filter((p) => !p.latitude || !p.longitude),
+    [displayedProperties]
+  );
+
+  const activeSearchDestination = useMemo(() => {
+    const raw = (filters.city || filters.search || new URLSearchParams(window.location.search).get('city') || new URLSearchParams(window.location.search).get('search') || '').trim();
+    if (!raw) return '';
+    return raw.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ');
+  }, [filters.city, filters.search]);
 
   const seoBreadcrumbs = [
     { name: "Home", url: "/" },
@@ -643,6 +547,12 @@ const GuestBrowse = () => {
 
   const indiaCenter = [20.5937, 78.9629];  return (
     <div className="min-h-screen bg-stone flex flex-col selection:bg-terracotta selection:text-white">
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-amber-600 focus:text-white font-bold rounded-md"
+      >
+        Skip to main content
+      </a>
       <SEO
         title={filters.city ? `Properties in ${filters.city}` : "Browse Properties"}
         description="Browse luxury villas, premium offices, event spaces, and short-term rentals on X-Space360."
@@ -654,75 +564,87 @@ const GuestBrowse = () => {
       {/* Header */}
       <header className="relative z-40 glass px-4 md:px-8 py-4 border-b border-gray-100" data-testid="guest-header">
         <div className="w-full flex justify-between items-center gap-2">
+          {/* Left Logo */}
           <div 
             className="flex items-center cursor-pointer shrink-0" 
             onClick={() => navigate('/')}
           >
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
           </div>
-          <div className="hidden md:flex items-center space-x-4 md:space-x-6">
-            {/* Language Selector */}
-            <div className="relative flex items-center">
-              <LanguageSelector
-                currentLang={lang}
-                onLanguageChange={(newLang) => {
-                  setLang(newLang);
-                  localStorage.setItem('preferredLanguage', newLang);
-                }}
-              />
-            </div>
+
+          {/* Right Actions */}
+          <div className="hidden lg:flex items-center space-x-6">
+            <Link
+              to="/guest/browse"
+              className="font-sans font-semibold text-[15px] tracking-tight text-terracotta transition-colors duration-200"
+            >
+              Discover
+            </Link>
+
+            <Link
+              to={user ? '/host/list-property' : '/register?role=host'}
+              className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
+            >
+              List your Property
+            </Link>
+
+            <LanguageSelector
+              currentLang={lang}
+              onLanguageChange={(newLang) => {
+                setLang(newLang);
+                localStorage.setItem('preferredLanguage', newLang);
+              }}
+            />
+
+            {/* Get in Touch Button */}
+            <button 
+              onClick={() => navigate('/support')}
+              className="flex items-center gap-2 rounded-full px-5 py-2 transition font-sans font-semibold text-[15px] tracking-tight shadow-sm border border-gray-200 text-charcoal hover:bg-gray-50"
+            >
+              <Phone className="w-3.5 h-3.5" />
+              <span>Get in Touch</span>
+            </button>
 
             {user && user.role === 'guest' && wishlist.length > 0 && (
-              <>
-                <div className="h-4 w-[1px] bg-sand-300"></div>
-                <button
-                  onClick={() => setShowWishlistOnly(prev => !prev)}
-                  className={`text-[10px] font-bold tracking-tight tracking-widest transition-colors uppercase flex items-center space-x-1 ${
-                    showWishlistOnly ? 'text-red-500' : 'text-charcoal-muted hover:text-terracotta'
-                  }`}
-                >
-                  <Heart className={`w-3 h-3 ${showWishlistOnly ? 'fill-red-500 text-red-500' : ''}`} />
-                  <span>Wishlist</span>
-                </button>
-              </>
+              <button
+                onClick={() => setShowWishlistOnly(prev => !prev)}
+                className={`text-xs font-bold tracking-tight transition-colors uppercase flex items-center space-x-1 ${
+                  showWishlistOnly ? 'text-red-500' : 'text-charcoal-muted hover:text-terracotta'
+                }`}
+              >
+                <Heart className={`w-3.5 h-3.5 ${showWishlistOnly ? 'fill-red-500 text-red-500' : ''}`} />
+                <span>Wishlist</span>
+              </button>
             )}
 
-            <div className="h-4 w-[1px] bg-sand-300"></div>
-
-            {user && (
-              <div className="hidden sm:flex items-center space-x-3 px-4 py-1.5 bg-gray-50 rounded-full border border-gray-100">
-                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-                 <span className="text-sm font-bold text-charcoal">{t('hi')}, {user.full_name?.split(' ')[0]}</span>
-              </div>
-            )}
             {user ? (
-              <>
+              <div className="flex items-center gap-2">
                 <button
                   onClick={() => navigate('/guest/bookings')}
-                  className="text-[10px] font-bold tracking-tight text-charcoal-muted hover:text-terracotta tracking-widest transition-colors uppercase"
+                  className="bg-gray-50 hover:bg-gray-100 text-charcoal font-sans font-semibold text-[14px] tracking-tight px-4 py-2 rounded-full border border-gray-200 transition shadow-subtle"
                 >
                   {t('myBookings')}
                 </button>
                 <button
                   onClick={logout}
-                  className="text-[10px] font-bold tracking-tight text-terracotta hover:underline tracking-widest uppercase"
+                  className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-5 py-2 rounded-full transition shadow-premium"
                 >
                   {t('signOut')}
                 </button>
-              </>
+              </div>
             ) : (
               <button
                 onClick={() => navigate('/login')}
-                className="btn-premium px-6 py-2 text-xs"
+                className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-6 py-2 rounded-full transition shadow-premium"
               >
                 {t('signIn')}
               </button>
             )}
           </div>
-          
+
           {/* Mobile Hamburger Icon */}
-          <div className="md:hidden flex items-center">
-            <button onClick={() => setIsMobileMenuOpen(true)} className="text-charcoal hover:text-terracotta transition p-2">
+          <div className="lg:hidden flex items-center">
+            <button onClick={() => setIsMobileMenuOpen(true)} className="text-charcoal hover:text-terracotta transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center">
               <Menu className="w-7 h-7" />
             </button>
           </div>
@@ -736,7 +658,7 @@ const GuestBrowse = () => {
             <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
               <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
             </div>
-            <button onClick={() => setIsMobileMenuOpen(false)} className="text-charcoal hover:text-terracotta transition p-2 bg-gray-50 rounded-full">
+            <button onClick={() => setIsMobileMenuOpen(false)} className="text-charcoal hover:text-terracotta transition p-2 min-w-[44px] min-h-[44px] flex items-center justify-center bg-gray-50 rounded-full">
               <X className="w-6 h-6" />
             </button>
           </div>
@@ -798,7 +720,7 @@ const GuestBrowse = () => {
       )}
 
       {/* Top Search Bar */}
-      <div className="bg-white/80 backdrop-blur relative md:sticky md:top-0 z-30 px-4 md:px-8 py-4 border-b border-gray-100 shadow-sm">
+      <div id="main-content" className="bg-white/80 backdrop-blur relative md:sticky md:top-0 z-30 px-4 md:px-8 py-4 border-b border-gray-100 shadow-sm">
         {/* Transparent overlay to close active dropdowns on clicking outside */}
         {activeDropdown && (
           <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
@@ -820,9 +742,9 @@ const GuestBrowse = () => {
                   }}
                   className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer group rounded-2xl lg:rounded-l-full border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200"
                 >
-                  <Search className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                  <Search className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                   <div className="w-full text-left">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Search</p>
+                    <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider leading-none">Search</p>
                     <input
                       id="browse-search-query"
                       name="search"
@@ -832,7 +754,7 @@ const GuestBrowse = () => {
                         setFilters({ ...filters, search: e.target.value });
                       }}
                       placeholder="Search properties..."
-                      className="bg-transparent border-none outline-none text-charcoal w-full placeholder-slate-400 font-bold text-[15px] focus:ring-0 focus:outline-none p-0 mt-0.5"
+                      className="bg-transparent border-none outline-none text-charcoal w-full placeholder-slate-600 font-bold text-[15px] focus:ring-0 focus:outline-none p-0 mt-0.5"
                     />
                   </div>
                 </div>
@@ -841,7 +763,7 @@ const GuestBrowse = () => {
               
               {/* Check-in */}
               <div className={`flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full lg:w-auto border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200 group lg:relative z-10 ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkIn' ? 'z-50' : ''}`}>
-                <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                <Calendar className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                 <button
                   type="button"
                   onClick={() => {
@@ -850,8 +772,8 @@ const GuestBrowse = () => {
                   }}
                   className="w-full text-left outline-none border-none bg-transparent"
                 >
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">When</p>
-                  <p className={`font-bold text-[15px] mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-slate-400'}`}>
+                  <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider leading-none">When</p>
+                  <p className={`font-bold text-[15px] mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-slate-600'}`}>
                     {filters.check_in || 'Check-in'}
                   </p>
                 </button>
@@ -877,7 +799,7 @@ const GuestBrowse = () => {
               
               {/* Check-out */}
               <div className={`flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full lg:w-auto border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200 group lg:relative z-10 ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkOut' ? 'z-50' : ''}`}>
-                <Calendar className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                <Calendar className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                 <button
                   type="button"
                   onClick={() => {
@@ -886,8 +808,8 @@ const GuestBrowse = () => {
                   }}
                   className="w-full text-left outline-none border-none bg-transparent"
                 >
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">When</p>
-                  <p className={`font-bold text-[15px] mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-slate-400'}`}>
+                  <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider leading-none">When</p>
+                  <p className={`font-bold text-[15px] mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-slate-600'}`}>
                     {filters.check_out || 'Check-out'}
                   </p>
                 </button>
@@ -917,9 +839,9 @@ const GuestBrowse = () => {
                   onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
                   className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer hover:bg-stone/50 transition duration-200 rounded-2xl lg:rounded-none"
                 >
-                  <User className="w-4.5 h-4.5 text-gray-400 mr-3 shrink-0" />
+                  <User className="w-4.5 h-4.5 text-gray-500 mr-3 shrink-0" />
                   <div className="text-left">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider leading-none">Who</p>
+                    <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider leading-none">Who</p>
                     <p className="text-charcoal font-bold text-[15px] mt-0.5 whitespace-nowrap">
                       {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                     </p>
@@ -932,13 +854,13 @@ const GuestBrowse = () => {
                     <div className="flex items-center justify-between">
                       <div className="text-left">
                         <p className="text-sm font-bold text-charcoal">Adults</p>
-                        <p className="text-xs text-slate-400 font-semibold mt-0.5">Age 13 or above</p>
+                        <p className="text-xs text-slate-600 font-semibold mt-0.5">Age 13 or above</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={() => setGuestCounts({ ...guestCounts, adults: Math.max(1, guestCounts.adults - 1) })}
-                          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
                         >
                           -
                         </button>
@@ -946,7 +868,7 @@ const GuestBrowse = () => {
                         <button
                           type="button"
                           onClick={() => setGuestCounts({ ...guestCounts, adults: guestCounts.adults + 1 })}
-                          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
                         >
                           +
                         </button>
@@ -957,13 +879,13 @@ const GuestBrowse = () => {
                     <div className="flex items-center justify-between">
                       <div className="text-left">
                         <p className="text-sm font-bold text-charcoal">Children</p>
-                        <p className="text-xs text-slate-400 font-semibold mt-0.5">Ages 2–12</p>
+                        <p className="text-xs text-slate-600 font-semibold mt-0.5">Ages 2–12</p>
                       </div>
                       <div className="flex items-center gap-3">
                         <button
                           type="button"
                           onClick={() => setGuestCounts({ ...guestCounts, children: Math.max(0, guestCounts.children - 1) })}
-                          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
                         >
                           -
                         </button>
@@ -971,7 +893,7 @@ const GuestBrowse = () => {
                         <button
                           type="button"
                           onClick={() => setGuestCounts({ ...guestCounts, children: guestCounts.children + 1 })}
-                          className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-200 flex items-center justify-center hover:border-gray-400 hover:bg-gray-50 active:scale-95 transition text-charcoal font-bold"
                         >
                           +
                         </button>
@@ -987,16 +909,18 @@ const GuestBrowse = () => {
                 <button
                   type="button"
                   onClick={() => setShowFilters((v) => !v)}
-                  className={`relative w-12 h-12 rounded-full border transition-all flex items-center justify-center ${
+                  className={`relative h-12 px-5 rounded-full border font-sans font-semibold text-[14px] tracking-tight transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
                     showFilters || filters.amenities.length > 0
-                      ? 'border-terracotta bg-terracotta text-white'
-                      : 'border-gray-200 hover:bg-gray-50 text-charcoal'
+                      ? 'border-terracotta bg-terracotta text-white shadow-subtle'
+                      : 'border-gray-200 bg-white hover:bg-gray-50 text-charcoal'
                   }`}
                   title={t('filters')}
+                  aria-label={t('filters')}
                 >
-                  <SlidersHorizontal className="w-5 h-5" />
+                  <SlidersHorizontal className="w-4 h-4" />
+                  <span>{t('filters')}</span>
                   {filters.amenities.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[9px] font-bold rounded-full w-4 h-4 flex items-center justify-center">
+                    <span className="bg-red-500 text-white text-[10px] font-bold rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none">
                       {filters.amenities.length}
                     </span>
                   )}
@@ -1073,18 +997,20 @@ const GuestBrowse = () => {
               <div className="flex flex-wrap gap-2.5">
                 {AMENITY_OPTIONS.map((a) => {
                   const active = filters.amenities.includes(a);
+                  const Icon = getAmenityIcon(a);
                   return (
                     <button
                       type="button"
                       key={a}
                       onClick={() => toggleAmenity(a)}
-                      className={`text-xs font-bold px-4 py-2 rounded-full border-2 transition-all duration-300 ${
+                      className={`text-xs font-bold px-4 py-2 rounded-full border-2 transition-all duration-300 flex items-center gap-1.5 ${
                         active
                           ? 'bg-terracotta border-terracotta text-white shadow-premium scale-105'
                           : 'bg-white border-gray-100 text-charcoal-muted hover:border-sand-400'
                       }`}
                     >
-                      {a.charAt(0).toUpperCase() + a.slice(1).replace('_', ' ')}
+                      <Icon className="w-3.5 h-3.5" />
+                      <span>{formatAmenityLabel(a)}</span>
                     </button>
                   );
                 })}
@@ -1103,9 +1029,12 @@ const GuestBrowse = () => {
                      checked={filters.instant_booking}
                      onChange={(e) => setFilters({ ...filters, instant_booking: e.target.checked })}
                    />
-                   <div className="flex items-center space-x-2">
-                      <Zap className={`w-4 h-4 ${filters.instant_booking ? 'text-amber-500' : 'text-charcoal-muted'}`} />
-                      <span className="text-sm font-bold text-charcoal tracking-tight">{t('instantBooking')}</span>
+                   <div className="flex flex-col">
+                      <div className="flex items-center space-x-1.5">
+                         <Zap className={`w-4 h-4 ${filters.instant_booking ? 'text-amber-500' : 'text-charcoal-muted'}`} />
+                         <span className="text-sm font-bold text-charcoal tracking-tight">{t('instantBooking')}</span>
+                      </div>
+                      <span className="text-[10px] font-semibold text-charcoal-muted mt-0.5">Book without waiting for host approval</span>
                    </div>
                  </label>
 
@@ -1154,13 +1083,19 @@ const GuestBrowse = () => {
                 "Signature Series"
              ) : loading ? t('searching') : (
                 <>
-                   {showWishlistOnly ? displayedProperties.length : totalProperties} {(showWishlistOnly ? displayedProperties.length : totalProperties) === 1 ? t('spaceFound') : t('spacesFound')}
+                   {activeSearchDestination ? (
+                      `Spaces in ${activeSearchDestination}`
+                   ) : (
+                      <>{showWishlistOnly ? displayedProperties.length : totalProperties} {(showWishlistOnly ? displayedProperties.length : totalProperties) === 1 ? t('spaceFound') : t('spacesFound')}</>
+                   )}
                 </>
              )}
           </h2>
           <p className="text-charcoal-muted font-medium mt-1">
              {new URLSearchParams(window.location.search).get('signature') === 'true'
                 ? "Indulge in India's most ultra-luxury private villas and premium villa stays."
+                : activeSearchDestination
+                ? `${showWishlistOnly ? displayedProperties.length : totalProperties} ${(showWishlistOnly ? displayedProperties.length : totalProperties) === 1 ? 'space' : 'spaces'} found · ${t('curatedResults').replace('{city}', activeSearchDestination)}`
                 : filters.city ? t('curatedResults').replace('{city}', filters.city) : t('discoverExclusive')}
           </p>
         </div>
@@ -1286,7 +1221,8 @@ const GuestBrowse = () => {
                       property={p}
                       compact={viewMode === VIEW_MODES.SPLIT}
                       onHover={setHoveredId}
-                      onClick={() => navigateToProperty(p.property_id)}
+                      propertyUrl={getPropertyUrl(p)}
+                      onClick={() => navigateToProperty(p)}
                       style={{ animationDelay: `${idx * 100}ms` }}
                       t={t}
                       isWishlisted={wishlist.includes(p.property_id)}
@@ -1329,7 +1265,7 @@ const GuestBrowse = () => {
                                 window.scrollTo({ top: 0, behavior: 'smooth' });
                               }
                             }}
-                            className={`w-8 h-8 rounded-full text-xs font-bold transition-all ${
+                            className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-full text-xs font-bold transition-all ${
                               page === pageNum
                                 ? 'bg-terracotta text-white shadow-premium'
                                 : 'border border-gray-200 text-charcoal hover:bg-gray-50'
@@ -1361,71 +1297,114 @@ const GuestBrowse = () => {
 
             {/* Interactive Map */}
             {(viewMode === VIEW_MODES.SPLIT || viewMode === VIEW_MODES.MAP) && (
-              <div className="rounded-3xl overflow-hidden border border-gray-100 h-full shadow-premium relative group">
-                <MapContainer
-                  center={indiaCenter}
-                  zoom={5}
-                  style={{ height: '100%', width: '100%' }}
-                  scrollWheelZoom
-                >
-                  <TileLayer
-                    attribution='&copy; <a href="https://www.google.com/maps">Google Maps</a>'
-                    url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
-                  />
-                  <FitBounds properties={propsWithCoords} />
-                  {propsWithCoords.map((p) => (
-                    <Marker
-                      key={p.property_id}
-                      position={[p.latitude, p.longitude]}
-                      icon={priceIcon(getCustomerNightlyPrice(p).toLocaleString('en-IN'), hoveredId === p.property_id)}
-                      eventHandlers={{
-                        click: () => navigateToProperty(p.property_id),
-                        mouseover: () => setHoveredId(p.property_id),
-                        mouseout: () => setHoveredId(null),
-                      }}
+              <div className="flex flex-col h-full space-y-4">
+                <div className="rounded-3xl overflow-hidden border border-gray-100 h-full min-h-[400px] shadow-premium relative group flex-1">
+                  {propsWithoutCoords.length > 0 && (
+                    <div
+                      className="absolute top-4 left-4 right-14 sm:right-auto z-[1000] bg-white/95 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-amber-200 text-amber-900 shadow-premium flex items-center gap-2.5 text-xs font-bold"
+                      data-testid="unmapped-properties-notice"
                     >
-                      <Popup className="premium-popup">
-                        <div className="p-2" style={{ minWidth: 200 }}>
-                          <img 
-                            src={getImageUrl(p.images?.[0]) || PROPERTY_IMAGE_PLACEHOLDER} 
-                            className="w-full h-24 object-cover rounded-lg mb-3 shadow-sm"
-                            alt=""
-                            loading="lazy"
-                            decoding="async"
-                            onError={(event) => {
-                              event.currentTarget.onerror = null;
-                              event.currentTarget.src = PROPERTY_IMAGE_PLACEHOLDER;
-                            }}
-                          />
-                          <h4 className="font-bold tracking-tight text-charcoal leading-tight mb-1">{p.title}</h4>
-                          <div className="flex items-center text-charcoal-muted text-[10px] font-bold uppercase tracking-widest mb-3">
-                             <MapPin className="w-3 h-3 mr-1" /> {p.city}
-                          </div>
-                          <div className="flex items-center justify-between pt-2 border-t border-sand-100">
-                            <div>
-                              <span className="text-lg font-bold tracking-tight text-terracotta">₹{getCustomerNightlyPrice(p).toLocaleString('en-IN')}</span>
-                              <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
-                                {p.category === 'commercial' || p.category === 'event_venue'
-                                  ? (p.pricing_cycle === 'hourly' ? `/ ${t('hour')}` : p.pricing_cycle === 'weekly' ? `/ ${t('week')}` : p.pricing_cycle === 'monthly' ? `/ ${t('month')}` : `/ ${t('day')}`)
-                                  : `/ ${t('night')}`}
-                              </span>
+                      <MapPin className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        Showing {propsWithCoords.length} of {displayedProperties.length} spaces on map ({propsWithoutCoords.length} space{propsWithoutCoords.length > 1 ? 's' : ''} without map coordinates)
+                      </span>
+                    </div>
+                  )}
+                  <MapContainer
+                    center={indiaCenter}
+                    zoom={5}
+                    style={{ height: '100%', width: '100%' }}
+                    scrollWheelZoom
+                  >
+                    <TileLayer
+                      attribution='&copy; <a href="https://www.google.com/maps">Google Maps</a>'
+                      url="https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}"
+                    />
+                    <FitBounds properties={propsWithCoords} />
+                    {propsWithCoords.map((p) => (
+                      <Marker
+                        key={p.property_id}
+                        position={[p.latitude, p.longitude]}
+                        icon={priceIcon(getCustomerNightlyPrice(p).toLocaleString('en-IN'), hoveredId === p.property_id)}
+                        eventHandlers={{
+                          click: () => navigateToProperty(p.property_id),
+                          mouseover: () => setHoveredId(p.property_id),
+                          mouseout: () => setHoveredId(null),
+                        }}
+                      >
+                        <Popup className="premium-popup">
+                          <div className="p-2" style={{ minWidth: 200 }}>
+                            <img 
+                              src={getImageUrl(p.images?.[0]) || PROPERTY_IMAGE_PLACEHOLDER} 
+                              className="w-full h-24 object-cover rounded-lg mb-3 shadow-sm"
+                              alt=""
+                              loading="lazy"
+                              decoding="async"
+                              onError={(event) => {
+                                event.currentTarget.onerror = null;
+                                event.currentTarget.src = PROPERTY_IMAGE_PLACEHOLDER;
+                              }}
+                            />
+                            <h4 className="font-bold tracking-tight text-charcoal leading-tight mb-1">{p.title}</h4>
+                            <div className="flex items-center text-charcoal-muted text-[10px] font-bold uppercase tracking-widest mb-3">
+                               <MapPin className="w-3 h-3 mr-1" /> {p.city}
                             </div>
-                            <button
-                              onClick={() => navigateToProperty(p.property_id)}
-                              className="px-3 py-1 bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest rounded-md"
-                            >
-                              {t('details')}
-                            </button>
+                            <div className="flex items-center justify-between pt-2 border-t border-sand-100">
+                              <div>
+                                <span className="text-lg font-bold tracking-tight text-terracotta">₹{getCustomerNightlyPrice(p).toLocaleString('en-IN')}</span>
+                                <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest ml-1">
+                                  {p.category === 'commercial' || p.category === 'event_venue'
+                                    ? (p.pricing_cycle === 'hourly' ? `/ ${t('hour')}` : p.pricing_cycle === 'weekly' ? `/ ${t('week')}` : p.pricing_cycle === 'monthly' ? `/ ${t('month')}` : `/ ${t('day')}`)
+                                    : `/ ${t('night')}`}
+                                </span>
+                              </div>
+                              <Link
+                                to={getPropertyUrl(p.property_id)}
+                                className="px-3 py-1 bg-charcoal text-white text-[10px] font-bold tracking-tight uppercase tracking-widest rounded-md inline-block"
+                              >
+                                {t('details')}
+                              </Link>
+                            </div>
                           </div>
-                        </div>
-                      </Popup>
-                    </Marker>
-                  ))}
-                </MapContainer>
-                {/* Map Control Floating Card */}
-                <div className="absolute top-4 right-4 z-[1000] glass px-4 py-2 rounded-xl border border-white/50 shadow-premium pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                   <p className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Interactive Region</p>
+                        </Popup>
+                      </Marker>
+                    ))}
+                  </MapContainer>
+                  {/* Map Control Floating Card */}
+                  <div className="absolute top-4 right-4 z-[1000] glass px-4 py-2 rounded-xl border border-white/50 shadow-premium pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
+                     <p className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">Interactive Region</p>
+                  </div>
                 </div>
+
+                {/* Additional list section in full map mode for properties without coordinates */}
+                {viewMode === VIEW_MODES.MAP && propsWithoutCoords.length > 0 && (
+                  <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium space-y-4 animate-fade-in">
+                    <div className="flex items-center justify-between">
+                      <h4 className="text-sm font-bold text-charcoal uppercase tracking-wider flex items-center gap-2">
+                        <MapPin className="w-4 h-4 text-terracotta" />
+                        <span>Spaces without map coordinates ({propsWithoutCoords.length})</span>
+                      </h4>
+                      <span className="text-xs text-charcoal-muted font-medium">Available for booking</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                      {propsWithoutCoords.map((p) => (
+                        <div
+                          key={p.property_id}
+                          className="flex items-center justify-between p-3 rounded-2xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-gray-200 transition-all cursor-pointer shadow-sm"
+                          onClick={() => navigateToProperty(p.property_id)}
+                        >
+                          <div className="min-w-0 pr-3">
+                            <p className="font-bold text-xs text-charcoal truncate">{p.title}</p>
+                            <p className="text-[10px] text-charcoal-muted font-semibold truncate">{p.city}</p>
+                          </div>
+                          <span className="text-xs font-bold text-terracotta shrink-0">
+                            ₹{getCustomerNightlyPrice(p).toLocaleString('en-IN')}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1435,59 +1414,67 @@ const GuestBrowse = () => {
   );
 };
 
-const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlisted, onWishlistToggle, onShare, user }) => (
-  <div
-    className={`card-premium group cursor-pointer shrink-0 snap-start ${compact ? 'w-full sm:w-auto flex flex-col sm:flex-row min-h-[240px]' : 'w-[280px] sm:w-auto flex flex-col'} transition-all duration-500`}
-    onClick={onClick}
-    onMouseEnter={() => onHover && onHover(property.property_id)}
-    onMouseLeave={() => onHover && onHover(null)}
-    style={style}
-  >
-    <div className={`relative overflow-hidden ${compact ? 'w-full sm:w-1/3 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto' : 'h-48 sm:h-72 rounded-t-2xl'}`}>
-      <img
-        src={getImageUrl(property.images?.[0]) || PROPERTY_IMAGE_PLACEHOLDER}
-        alt={property.title}
-        loading="lazy"
-        decoding="async"
-        onError={(event) => {
-          event.currentTarget.onerror = null;
-          event.currentTarget.src = PROPERTY_IMAGE_PLACEHOLDER;
-        }}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-      />
-      <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
-      
-      <div className="absolute top-4 left-4 z-20">
-         {String(property.property_type || '').toLowerCase() === 'villa' && property.price_per_night >= 50000 ? (
-           <div className="bg-black border border-[#D4AF37]/50 px-3.5 py-1.5 rounded-none shadow-md flex items-center gap-1.5">
-             <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-             <span className="text-[#D4AF37] text-[10px] font-extrabold uppercase tracking-[0.2em] font-serif">
-               Signature Series
-             </span>
-           </div>
-         ) : (
-           <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
-              <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
-                 {formatPropertyTypeLabel(property.property_type) || 'Stay'}
-              </span>
-           </div>
-         )}
-      </div>
-      
-      {/* Share & Wishlist Buttons overlay */}
-      <div className="absolute top-4 right-4 flex space-x-2 z-20">
-         <ShareDropdown property={property} align="right" />
-         <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onWishlistToggle(property.property_id);
-            }}
-            className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
-            title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
-          >
-            <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
-         </button>
-      </div>
+const PropertyCard = ({ property, compact, onHover, onClick, propertyUrl, style, t, isWishlisted, onWishlistToggle, onShare, user }) => {
+  const targetUrl = propertyUrl || getPropertyUrl(property);
+  return (
+    <Link
+      to={targetUrl}
+      className={`card-premium group block cursor-pointer shrink-0 snap-start ${compact ? 'w-full sm:w-auto flex flex-col sm:flex-row min-h-[240px]' : 'w-[280px] sm:w-auto flex flex-col'} transition-all duration-500`}
+      onClick={(e) => {
+        if (onClick && (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey)) {
+          onClick(e);
+        }
+      }}
+      onMouseEnter={() => onHover && onHover(property.property_id)}
+      onMouseLeave={() => onHover && onHover(null)}
+      style={style}
+    >
+      <div className={`relative overflow-hidden bg-sand-200 aspect-[4/3] sm:aspect-auto ${compact ? 'w-full sm:w-1/3 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto' : 'h-48 sm:h-72 rounded-t-2xl'}`}>
+        <img
+          src={getImageUrl(property.images?.[0]) || PROPERTY_IMAGE_PLACEHOLDER}
+          alt={property.title}
+          loading="lazy"
+          decoding="async"
+          onError={(event) => {
+            event.currentTarget.onerror = null;
+            event.currentTarget.src = PROPERTY_IMAGE_PLACEHOLDER;
+          }}
+          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+        
+        <div className="absolute top-4 left-4 z-20">
+           {String(property.property_type || '').toLowerCase() === 'villa' && property.price_per_night >= 50000 ? (
+             <div className="bg-black border border-[#D4AF37]/50 px-3.5 py-1.5 rounded-none shadow-md flex items-center gap-1.5">
+               <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
+               <span className="text-[#D4AF37] text-[10px] font-extrabold uppercase tracking-[0.2em] font-serif">
+                 Signature Series
+               </span>
+             </div>
+           ) : (
+             <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
+                <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
+                   {formatPropertyTypeLabel(property.property_type) || 'Stay'}
+                </span>
+             </div>
+           )}
+        </div>
+        
+        {/* Share & Wishlist Buttons overlay */}
+        <div className="absolute top-4 right-4 flex space-x-2 z-20">
+           <ShareDropdown property={property} align="right" />
+           <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onWishlistToggle(property.property_id);
+              }}
+              className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer"
+              title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
+            >
+              <Heart className={`w-3.5 h-3.5 ${isWishlisted ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'}`} />
+           </button>
+        </div>
 
       <div className="absolute bottom-4 left-4 right-4 flex justify-between items-center z-20">
         <div className="flex items-center gap-2">
@@ -1507,12 +1494,18 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
            <span className="text-[10px] font-bold tracking-tight text-sage-dark uppercase tracking-widest bg-sage/10 px-2 py-0.5 rounded">
               {formatPropertyTypeLabel(property.property_type) || 'Premium Stay'}
            </span>
+           {property.instant_booking && (
+             <span className="inline-flex items-center gap-1 bg-amber-50 border border-amber-200 text-amber-800 px-2 py-0.5 rounded-full text-[9px] font-bold tracking-wide" title="Instant Booking: Confirmed instantly upon payment without waiting for host approval">
+               <Zap className="w-3 h-3 fill-amber-500 text-amber-500 shrink-0" />
+               Instant Booking
+             </span>
+           )}
         </div>
         <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1 group-hover:text-terracotta transition-colors line-clamp-1">{property.title}</h3>
         <div className="flex items-center text-charcoal-muted mb-3 min-w-0">
           <MapPin className="w-3.5 h-3.5 mr-1.5 text-sage shrink-0" />
-          <span className="text-xs font-semibold truncate" title={`${property.address ? `${property.address}, ` : ''}${property.city}${property.state ? `, ${property.state}` : ''}`}>
-            {property.address ? `${property.address}, ` : ''}{property.city}{property.state ? `, ${property.state}` : ''}
+          <span className="text-xs font-semibold truncate" title={formatAddress(property.address, property.city, property.state)}>
+            {formatAddress(property.address, property.city, property.state)}
           </span>
         </div>
         
@@ -1553,11 +1546,15 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
                <span>Non-Veg: ₹{property.non_veg_price}</span>
              </div>
            )}
-           {property.amenities?.slice(0, 2).map((a, i) => (
-             <div key={i} className="flex items-center space-x-1 bg-stone border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted capitalize">
-               <span>{a.replace('_', ' ')}</span>
-             </div>
-           ))}
+           {property.amenities?.slice(0, 2).map((a, i) => {
+             const Icon = getAmenityIcon(a);
+             return (
+               <div key={i} className="flex items-center space-x-1 bg-stone border border-sand-100 px-2 py-1 rounded-md text-[10px] font-bold text-charcoal-muted">
+                 <Icon className="w-3 h-3 text-terracotta shrink-0" />
+                 <span>{formatAmenityLabel(a)}</span>
+               </div>
+             );
+           })}
         </div>
         {/* Check-in / Check-out time badges */}
         {(property.check_in_time || property.check_out_time) && (
@@ -1608,7 +1605,8 @@ const PropertyCard = ({ property, compact, onHover, onClick, style, t, isWishlis
         </div>
       </div>
     </div>
-  </div>
+  </Link>
 );
+};
 
 export default GuestBrowse;
