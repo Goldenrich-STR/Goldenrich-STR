@@ -626,7 +626,7 @@ async def search_properties(
             blocked_props = await db.blocked_dates.distinct(
                 "property_id",
                 {
-                    "start_date": {"$lte": check_out},
+                    "start_date": {"$lt": check_out},
                     "end_date": {"$gte": check_in},
                 },
             )

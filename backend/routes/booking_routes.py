@@ -169,6 +169,19 @@ def _active_booking_query(
     return query
 
 
+def _blocked_date_query(property_id: str, check_in_iso: str, check_out_iso: str, category: str = "") -> dict:
+    """Match inclusive calendar blocks against booking dates.
+
+    Stay checkout is exclusive, while event venue end dates are inclusive.
+    """
+    start_operator = "$lte" if category == "event_venue" else "$lt"
+    return {
+        "property_id": property_id,
+        "start_date": {start_operator: check_out_iso},
+        "end_date": {"$gte": check_in_iso},
+    }
+
+
 class ConfirmPaymentRequest(BaseModel):
     booking_id: str
     razorpay_payment_id: str
@@ -407,11 +420,14 @@ async def _build_booking_quote(
     if existing_booking:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Selected dates are no longer available")
 
-    blocked_conflict = await db.blocked_dates.find_one({
-        "property_id": payload.property_id,
-        "start_date": {"$lte": check_out_iso},
-        "end_date": {"$gte": check_in_iso},
-    })
+    blocked_conflict = await db.blocked_dates.find_one(
+        _blocked_date_query(
+            payload.property_id,
+            check_in_iso,
+            check_out_iso,
+            property_dict.get("category", ""),
+        )
+    )
     if blocked_conflict:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Property is unavailable for selected dates")
 
@@ -641,11 +657,14 @@ async def create_booking(
                 )
         
         # Check for blocked dates (manual or external calendar)
-        blocked_conflict = await db.blocked_dates.find_one({
-            "property_id": booking_data.property_id,
-            "start_date": {"$lte": check_out.isoformat()},
-            "end_date": {"$gte": check_in.isoformat()}
-        })
+        blocked_conflict = await db.blocked_dates.find_one(
+            _blocked_date_query(
+                booking_data.property_id,
+                check_in.isoformat(),
+                check_out.isoformat(),
+                property_dict.get("category", ""),
+            )
+        )
         
         if blocked_conflict:
             raise HTTPException(

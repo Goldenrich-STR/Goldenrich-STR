@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Literal, Optional, List
 from datetime import datetime, date, timezone
 from enum import Enum
 from uuid import uuid4
@@ -34,7 +34,7 @@ class BlockDateRequest(BaseModel):
     start_date: date
     end_date: date
     reason: Optional[str] = None
-    block_type: str = "Held"
+    block_type: Literal["Held", "Reserved", "Maintenance", "Owner Stay"] = "Held"
 
 class ExternalCalendar(BaseModel):
     calendar_id: str = Field(default_factory=lambda: f"cal_{uuid4().hex}")

@@ -440,8 +440,11 @@ export const calendarAPI = {
   listExternalCalendars: (propertyId) =>
     apiClient.get(`/calendar/properties/${propertyId}/external-calendars`),
 
-  listAllExternalCalendars: () =>
-    apiClient.get('/calendar/external-calendars/all'),
+  listAllExternalCalendars: (params = {}) =>
+    apiClient.get('/calendar/external-calendars/all', { params }),
+
+  listExternalReservations: (params = {}) =>
+    apiClient.get('/calendar/external-reservations', { params }),
 
   addExternalCalendar: (propertyId, payload) =>
     apiClient.post(`/calendar/properties/${propertyId}/external-calendars`, payload),

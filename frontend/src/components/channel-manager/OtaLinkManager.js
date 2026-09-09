@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Copy, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, Copy, Plus, RefreshCw, Search, Trash2, X } from 'lucide-react';
 import PropertySelect from './PropertySelect';
 import { channelManagerApi } from './channelManagerApi';
 
@@ -66,6 +66,9 @@ export default function OtaLinkManager({ properties, propertyId, setPropertyId, 
     () => filteredExportProperties.slice(exportPage * EXPORT_PAGE_SIZE, (exportPage + 1) * EXPORT_PAGE_SIZE),
     [exportPage, filteredExportProperties]
   );
+  const hasLocalExportFeed = visibleExportProperties.some((property) => (
+    /https?:\/\/(localhost|127\.0\.0\.1)(?::|\/)/i.test(feedUrls[property.id] || '')
+  ));
   const filteredLinks = useMemo(() => links.filter((link) => (
     selectedPlatform === 'all'
     || String(link.provider || 'Custom iCal').toLowerCase() === selectedPlatform.toLowerCase()
@@ -300,6 +303,7 @@ export default function OtaLinkManager({ properties, propertyId, setPropertyId, 
           <h2 className="text-base font-black text-slate-950">Property-wise Export iCal Links</h2>
           <p className="mt-1 text-xs text-slate-500">Every property has its own unique link. Paste a property's link only into the matching OTA listing.</p>
         </div>
+        {hasLocalExportFeed && <div className="flex items-start gap-2 border-b border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800"><AlertTriangle className="mt-0.5 shrink-0" size={16} /><span>Localhost links are for local testing only and cannot be reached by an OTA. Copy links from the deployed admin where PUBLIC_BACKEND_URL uses the public HTTPS API domain.</span></div>}
         <div className="grid gap-3 border-b border-slate-200 bg-slate-50 p-4 md:grid-cols-3">
           <label><span className="mb-1.5 block text-xs font-bold uppercase text-slate-500">Category</span><select className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold" onChange={(event) => setCategoryFilter(event.target.value)} value={categoryFilter}><option value="all">All categories</option>{categories.map((category) => <option key={category} value={category}>{cleanLabel(category)}</option>)}</select></label>
           <label><span className="mb-1.5 block text-xs font-bold uppercase text-slate-500">Property Type</span><select className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold" onChange={(event) => setTypeFilter(event.target.value)} value={typeFilter}><option value="all">All property types</option>{propertyTypes.map((type) => <option key={type} value={type}>{cleanLabel(type)}</option>)}</select></label>
