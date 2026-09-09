@@ -7,6 +7,9 @@ $packageNames = @(
     "com.xspace360.app",
     "com.goldenrich.str.goldenrich_str_mobile"
 )
+$mobileDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$repoDir = Split-Path -Parent $mobileDir
+$backendDir = Join-Path $repoDir "backend"
 $env:ANDROID_AVD_HOME = "D:\Android\avd"
 $emulator = Join-Path $env:LOCALAPPDATA "Android\Sdk\emulator\emulator.exe"
 $adb = Join-Path $env:LOCALAPPDATA "Android\Sdk\platform-tools\adb.exe"
@@ -29,6 +32,44 @@ function Assert-FileExists {
     if (-not (Test-Path -LiteralPath $Path)) {
         throw "$Label not found at $Path"
     }
+}
+
+function Test-BackendReady {
+    try {
+        $response = Invoke-WebRequest -Uri "http://127.0.0.1:8001/api/health" -UseBasicParsing -TimeoutSec 3
+        return ($response.StatusCode -ge 200 -and $response.StatusCode -lt 500)
+    } catch {
+        return $false
+    }
+}
+
+function Ensure-BackendRunning {
+    if (Test-BackendReady) {
+        Write-Host "Backend is reachable on http://127.0.0.1:8001"
+        return
+    }
+
+    if (-not (Test-Path -LiteralPath $backendDir)) {
+        throw "Backend directory not found at $backendDir"
+    }
+
+    Write-Host "Backend is not reachable. Starting backend on port 8001..."
+    Start-Process -FilePath "powershell" -WorkingDirectory $backendDir -WindowStyle Hidden -ArgumentList @(
+        "-NoProfile",
+        "-ExecutionPolicy", "Bypass",
+        "-Command",
+        "python -m uvicorn server:app --host 0.0.0.0 --port 8001"
+    )
+
+    for ($i = 0; $i -lt 60; $i += 2) {
+        Start-Sleep -Seconds 2
+        if (Test-BackendReady) {
+            Write-Host "Backend started successfully."
+            return
+        }
+    }
+
+    throw "Backend did not become reachable on http://127.0.0.1:8001. Start it manually from backend folder and rerun this script."
 }
 
 function Wait-ForDevice {
@@ -94,6 +135,7 @@ function Start-PreviewEmulator {
 
 Assert-FileExists $emulator "Android emulator"
 Assert-FileExists $adb "ADB"
+Ensure-BackendRunning
 
 $availableAvds = & $emulator -list-avds
 if ($availableAvds -notcontains $avdName) {

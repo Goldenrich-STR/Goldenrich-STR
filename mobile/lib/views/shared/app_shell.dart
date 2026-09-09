@@ -10,6 +10,7 @@ import '../../services/api_service.dart';
 import '../../services/localization_service.dart';
 import '../../theme.dart';
 import '../../utils/currency_formatter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../auth/login_screen.dart';
 import '../guest/guest_browse_screen.dart';
 import '../guest/landing_screen.dart';
@@ -30,6 +31,15 @@ import '../broker/broker_dashboard_screen.dart';
 import '../employee/employee_dashboard_screen.dart';
 import '../admin/admin_dashboard_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+Future<void> _shareAppInvite() async {
+  const subject = 'Join X-Space360';
+  const link = AppConfig.publicUrl;
+  await Share.share(
+    'Find, book and host premium stays, commercial spaces and event venues on X-Space360.\n$link',
+    subject: subject,
+  );
+}
 
 class AppShell extends StatefulWidget {
   final int initialIndex;
@@ -506,6 +516,11 @@ class _HostProfileDrawer extends StatelessWidget {
                       badge: unreadCount > 0 ? unreadCount.toString() : null,
                       onTap: () => _push(context, const NotificationsScreen()),
                     ),
+                    const _HostDrawerItem(
+                      icon: Icons.ios_share_rounded,
+                      label: 'Invite',
+                      onTap: _shareAppInvite,
+                    ),
                     _HostDrawerItem(
                       icon: Icons.chat_bubble_outline_rounded,
                       label: 'Support',
@@ -737,6 +752,11 @@ class _BrokerProfileDrawer extends StatelessWidget {
                       label: 'Notifications',
                       badge: unreadCount > 0 ? unreadCount.toString() : null,
                       onTap: () => _push(context, const NotificationsScreen()),
+                    ),
+                    const _HostDrawerItem(
+                      icon: Icons.ios_share_rounded,
+                      label: 'Invite',
+                      onTap: _shareAppInvite,
                     ),
                     _HostDrawerItem(
                       icon: Icons.chat_bubble_outline_rounded,
@@ -1352,6 +1372,15 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
                                 builder: (_) => const AboutUsScreen()),
                           );
                         },
+                      ),
+                      _ProfileOptionTile(
+                        icon: Icons.ios_share_rounded,
+                        label: 'Invite Friends',
+                        subtitle: 'Share X-Space360 with others',
+                        iconBackground: const Color(0xFFFFF4DD),
+                        iconColor: AppTheme.primary,
+                        compact: isCompact,
+                        onTap: _shareAppInvite,
                       ),
                       _ProfileOptionTile(
                         icon: Icons.policy_outlined,

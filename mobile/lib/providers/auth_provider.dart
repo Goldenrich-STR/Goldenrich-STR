@@ -21,6 +21,20 @@ class AuthProvider with ChangeNotifier {
   bool get isPromoClaimed => _currentUser?.isPromoClaimed ?? false;
   String? get lastDemoOtp => _lastDemoOtp;
 
+  String _authErrorMessage(DioException e, String fallback) {
+    final data = e.response?.data;
+    if (data is Map && data['detail'] != null) {
+      return data['detail'].toString();
+    }
+    if (e.type == DioExceptionType.connectionError ||
+        e.type == DioExceptionType.connectionTimeout ||
+        e.type == DioExceptionType.receiveTimeout ||
+        (e.message ?? '').toLowerCase().contains('connection refused')) {
+      return 'Backend server is not reachable. Start the backend on port 8001, then try again.';
+    }
+    return e.message ?? fallback;
+  }
+
   Future<void> loadSession() async {
     _isLoading = true;
     notifyListeners();
@@ -61,12 +75,7 @@ class AuthProvider with ChangeNotifier {
       _lastError = 'Failed to send OTP.';
       return false;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) {
-        _lastError = data['detail'].toString();
-      } else {
-        _lastError = e.message ?? 'Failed to send OTP.';
-      }
+      _lastError = _authErrorMessage(e, 'Failed to send OTP.');
       return false;
     } catch (e) {
       _lastError = 'Failed to send OTP.';
@@ -115,12 +124,7 @@ class AuthProvider with ChangeNotifier {
       _lastError = 'Registration failed.';
       return false;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) {
-        _lastError = data['detail'].toString();
-      } else {
-        _lastError = e.message ?? 'Registration failed.';
-      }
+      _lastError = _authErrorMessage(e, 'Registration failed.');
       return false;
     } catch (e) {
       _lastError = 'Registration failed.';
@@ -152,12 +156,7 @@ class AuthProvider with ChangeNotifier {
       _lastError = 'Unable to sign in. Please try again.';
       return false;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) {
-        _lastError = data['detail'].toString();
-      } else {
-        _lastError = e.message ?? 'Unable to sign in. Please try again.';
-      }
+      _lastError = _authErrorMessage(e, 'Unable to sign in. Please try again.');
       return false;
     } catch (e) {
       _lastError = 'Unable to sign in. Please try again.';
@@ -182,12 +181,7 @@ class AuthProvider with ChangeNotifier {
       }
       return null;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) {
-        _lastError = data['detail'].toString();
-      } else {
-        _lastError = e.message ?? 'Unable to send reset link.';
-      }
+      _lastError = _authErrorMessage(e, 'Unable to send reset link.');
       return null;
     } catch (e) {
       _lastError = 'Unable to send reset link.';
@@ -214,12 +208,7 @@ class AuthProvider with ChangeNotifier {
       }
       return null;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) {
-        _lastError = data['detail'].toString();
-      } else {
-        _lastError = e.message ?? 'Unable to reset password.';
-      }
+      _lastError = _authErrorMessage(e, 'Unable to reset password.');
       return null;
     } catch (e) {
       _lastError = 'Unable to reset password.';
@@ -258,12 +247,7 @@ class AuthProvider with ChangeNotifier {
       _lastError = 'Unexpected response: ${response.statusCode}';
       return false;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) {
-        _lastError = data['detail'].toString();
-      } else {
-        _lastError = e.message ?? 'Network request failed';
-      }
+      _lastError = _authErrorMessage(e, 'Network request failed');
       return false;
     } catch (e) {
       _lastError = e.toString();
@@ -307,12 +291,7 @@ class AuthProvider with ChangeNotifier {
       _lastError = 'Unable to delete account.';
       return false;
     } on DioException catch (e) {
-      final data = e.response?.data;
-      if (data is Map && data['detail'] != null) {
-        _lastError = data['detail'].toString();
-      } else {
-        _lastError = e.message ?? 'Unable to delete account.';
-      }
+      _lastError = _authErrorMessage(e, 'Unable to delete account.');
       return false;
     } catch (e) {
       _lastError = 'Unable to delete account.';
