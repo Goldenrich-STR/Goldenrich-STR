@@ -5,7 +5,7 @@ const steps = [
   ['1', 'Copy the OTA import URL', 'Open the listing calendar settings in Airbnb, Booking.com, MakeMyTrip, Agoda, Vrbo, or another iCal provider and copy its export link.'],
   ['2', 'Connect one property', 'Select the exact X-Space360 property listing, label the integration, paste the OTA link, and choose a sync frequency.'],
   ['3', 'Export X-Space360 availability', 'Copy the generated X-Space360 export link and add it as an imported calendar in the OTA dashboard.'],
-  ['4', 'Monitor and sync', 'Imported reservations block this property calendar. Use Sync Now after urgent OTA changes and review failed status messages.'],
+  ['4', 'Monitor and sync', 'Imported reservations block this property calendar. Modify or cancel an OTA reservation on that OTA, then use Sync Now and review failed status messages.'],
 ];
 
 export default function HowItWorksGuide() {

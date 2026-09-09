@@ -34,8 +34,31 @@ export const channelManagerApi = {
   },
 
   async reservations() {
-    const response = await adminPhase1API.bookingOperations({ limit: 500 });
-    return unwrap(response).bookings || [];
+    const direct = [];
+    const external = [];
+    const limit = 500;
+    let directSkip = 0;
+    let externalSkip = 0;
+    let directTotal = Number.POSITIVE_INFINITY;
+    let externalTotal = Number.POSITIVE_INFINITY;
+
+    while (directSkip < directTotal) {
+      const response = await adminPhase1API.bookingOperations({ limit, skip: directSkip });
+      const batch = unwrap(response).bookings || [];
+      direct.push(...batch);
+      directTotal = Number(response.data?.meta?.total ?? direct.length);
+      if (!batch.length || batch.length < limit) break;
+      directSkip += batch.length;
+    }
+    while (externalSkip < externalTotal) {
+      const response = await calendarAPI.listExternalReservations({ limit, skip: externalSkip });
+      const batch = response.data?.reservations || [];
+      external.push(...batch);
+      externalTotal = Number(response.data?.total ?? external.length);
+      if (!batch.length || batch.length < limit) break;
+      externalSkip += batch.length;
+    }
+    return [...external, ...direct];
   },
 
   updateReservation(bookingId, bookingStatus) {
@@ -67,8 +90,19 @@ export const channelManagerApi = {
   },
 
   async allIntegrations() {
-    const response = await calendarAPI.listAllExternalCalendars();
-    return response.data?.calendars || [];
+    const integrations = [];
+    const limit = 500;
+    let skip = 0;
+    let total = Number.POSITIVE_INFINITY;
+    while (skip < total) {
+      const response = await calendarAPI.listAllExternalCalendars({ limit, skip });
+      const batch = response.data?.calendars || [];
+      integrations.push(...batch);
+      total = Number(response.data?.total ?? integrations.length);
+      if (!batch.length || batch.length < limit) break;
+      skip += batch.length;
+    }
+    return integrations;
   },
 
   addIntegration(propertyId, payload) {

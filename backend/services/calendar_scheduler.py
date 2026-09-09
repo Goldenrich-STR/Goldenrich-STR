@@ -11,7 +11,9 @@ from services.calendar_sync_service import sync_all_calendars
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SYNC_INTERVAL_MINUTES = int(os.environ.get("ICAL_SYNC_INTERVAL_MINUTES", "30"))
+# The sweep itself skips feeds that are not due, so poll at or below the
+# shortest user-selectable sync frequency.
+DEFAULT_SYNC_INTERVAL_MINUTES = min(15, max(1, int(os.environ.get("ICAL_SYNC_INTERVAL_MINUTES", "5"))))
 
 _scheduler: AsyncIOScheduler | None = None
 

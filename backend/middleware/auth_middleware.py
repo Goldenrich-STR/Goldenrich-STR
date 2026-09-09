@@ -5,6 +5,7 @@ from utils.auth import decode_access_token
 from models.user import UserRole
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     """Dependency to get the current authenticated user from JWT token."""
@@ -19,6 +20,15 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         )
     
     return payload
+
+
+async def get_optional_current_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security),
+):
+    """Return JWT claims when supplied, without requiring public callers to authenticate."""
+    if not credentials:
+        return None
+    return decode_access_token(credentials.credentials)
 
 async def require_role(required_roles: list[UserRole]):
     """Dependency to check if user has required role."""

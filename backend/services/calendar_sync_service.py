@@ -1,14 +1,18 @@
 from __future__ import annotations
 
-import logging
 import html
+import asyncio
+import ipaddress
+import logging
+import os
 import re
+import socket
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Any, Iterable
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
-import requests
+import httpx
 from icalendar import Calendar as ICalendar
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -17,6 +21,17 @@ from models.calendar import BlockedDateSource
 logger = logging.getLogger(__name__)
 
 HTTP_TIMEOUT_SECONDS = 20
+MAX_ICAL_BYTES = 5 * 1024 * 1024
+MAX_REDIRECTS = 5
+SYNC_CONCURRENCY = max(1, int(os.environ.get("ICAL_SYNC_CONCURRENCY", "10")))
+MIN_FRESHNESS_SECONDS = max(60, int(os.environ.get("ICAL_MIN_FRESHNESS", "900")))
+SYNC_FREQUENCY_SECONDS = {
+    "Every 15 minutes": 15 * 60,
+    "Every 30 minutes": 30 * 60,
+    "Hourly": 60 * 60,
+    "Every 6 hours": 6 * 60 * 60,
+    "Daily": 24 * 60 * 60,
+}
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 ICAL_REQUIRED_MARKERS = (b"BEGIN:VCALENDAR", b"BEGIN:VEVENT")
 XSPACE_HOST_SUFFIX = "x-space360.in"
@@ -40,6 +55,88 @@ def _normalize_ical_url(url: str) -> str:
     if url.startswith("webcal://"):
         return "https://" + url[len("webcal://") :]
     return url
+
+
+def _feed_interval_seconds(sync_record: dict) -> int:
+    requested = SYNC_FREQUENCY_SECONDS.get(
+        sync_record.get("sync_frequency"),
+        SYNC_FREQUENCY_SECONDS["Every 30 minutes"],
+    )
+    return max(MIN_FRESHNESS_SECONDS, requested)
+
+
+def _as_utc_datetime(value: Any) -> datetime | None:
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    else:
+        return None
+    return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed.astimezone(timezone.utc)
+
+
+def _calendar_is_due(sync_record: dict, now: datetime | None = None) -> bool:
+    last_synced = _as_utc_datetime(sync_record.get("last_synced_at"))
+    if not last_synced:
+        return True
+    return ((now or _utcnow()) - last_synced).total_seconds() >= _feed_interval_seconds(sync_record)
+
+
+async def _assert_public_calendar_url(url: str) -> None:
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname or parsed.username or parsed.password:
+        raise ValueError("Calendar URL must be a public http:// or https:// URL.")
+
+    hostname = parsed.hostname.rstrip(".").lower()
+    if hostname == "localhost" or hostname.endswith(".localhost"):
+        raise ValueError("Calendar URL must not point to a local or private network address.")
+    try:
+        addresses = [ipaddress.ip_address(hostname)]
+    except ValueError:
+        try:
+            results = await asyncio.to_thread(
+                socket.getaddrinfo,
+                hostname,
+                parsed.port or (443 if parsed.scheme == "https" else 80),
+                type=socket.SOCK_STREAM,
+            )
+        except socket.gaierror as exc:
+            raise ValueError("Calendar URL hostname could not be resolved.") from exc
+        addresses = list({ipaddress.ip_address(item[4][0]) for item in results})
+    if not addresses or any(not address.is_global for address in addresses):
+        raise ValueError("Calendar URL must not point to a local or private network address.")
+
+
+async def _fetch_ical(url: str) -> tuple[bytes, str, str]:
+    current_url = _normalize_ical_url(url)
+    headers = {"User-Agent": USER_AGENT, "Accept": "text/calendar,*/*"}
+    async with httpx.AsyncClient(
+        timeout=httpx.Timeout(HTTP_TIMEOUT_SECONDS),
+        follow_redirects=False,
+        headers=headers,
+    ) as client:
+        for _ in range(MAX_REDIRECTS + 1):
+            await _assert_public_calendar_url(current_url)
+            async with client.stream("GET", current_url) as response:
+                if response.is_redirect:
+                    location = response.headers.get("location")
+                    if not location:
+                        raise ValueError("Calendar URL returned an invalid redirect.")
+                    current_url = urljoin(current_url, location)
+                    continue
+                response.raise_for_status()
+                chunks = []
+                size = 0
+                async for chunk in response.aiter_bytes():
+                    size += len(chunk)
+                    if size > MAX_ICAL_BYTES:
+                        raise ValueError("Calendar feed is larger than the 5 MB limit.")
+                    chunks.append(chunk)
+                return b"".join(chunks), response.headers.get("Content-Type", ""), current_url
+    raise ValueError("Calendar URL redirected too many times.")
 
 
 def _looks_like_airbnb_page(url: str) -> bool:
@@ -131,13 +228,28 @@ def _parse_ical_events(content: bytes) -> list[dict[str, str]]:
     events: list[dict[str, str]] = []
 
     for component in calendar.walk("VEVENT"):
-        start = _to_date(getattr(component.get("dtstart"), "dt", None))
-        end = _to_date(getattr(component.get("dtend"), "dt", None))
+        raw_start = getattr(component.get("dtstart"), "dt", None)
+        raw_end = getattr(component.get("dtend"), "dt", None)
+        start = _to_date(raw_start)
+        exclusive_end = _to_date(raw_end)
+        if start and not exclusive_end:
+            raw_duration = getattr(component.get("duration"), "dt", None)
+            if raw_duration:
+                exclusive_end = _to_date(raw_start + raw_duration)
+            else:
+                exclusive_end = start + timedelta(days=1) if isinstance(raw_start, date) and not isinstance(raw_start, datetime) else start
         uid = _event_uid(component)
+        event_status = (_component_text(component, "status") or "").upper()
+        transparency = (_component_text(component, "transp") or "").upper()
 
-        if not uid or not start or not end:
+        if event_status == "CANCELLED" or transparency == "TRANSPARENT":
+            continue
+        if not uid or not start or not exclusive_end or exclusive_end < start:
             logger.debug("Skipping VEVENT without uid/start/end")
             continue
+
+        # iCal DTEND is exclusive; blocked_dates stores an inclusive end date.
+        end = exclusive_end - timedelta(days=1) if exclusive_end > start else exclusive_end
 
         events.append(
             {
@@ -247,19 +359,14 @@ async def sync_single_calendar(
                 "In External Calendars, add the Airbnb/Vrbo export calendar URL instead."
             )
 
-        response = requests.get(
-            _normalize_ical_url(sync_record["ical_url"]),
-            timeout=HTTP_TIMEOUT_SECONDS,
-            headers={"User-Agent": USER_AGENT, "Accept": "text/calendar,*/*"},
-        )
-        response.raise_for_status()
+        content, content_type, final_url = await _fetch_ical(sync_record["ical_url"])
 
         _validate_ical_response(
-            sync_record["ical_url"],
-            response.content,
-            response.headers.get("Content-Type", ""),
+            final_url,
+            content,
+            content_type,
         )
-        events = _parse_ical_events(response.content)
+        events = _parse_ical_events(content)
         for event in events:
             await _upsert_external_event(db, sync_record, event)
 
@@ -325,16 +432,26 @@ async def sync_all_calendars(db: AsyncIOMotorDatabase) -> dict[str, int]:
     cursor = db.external_calendars.find({"is_active": True}, {"_id": 0})
     sync_records = await cursor.to_list(length=5000)
 
-    stats = {"total": len(sync_records), "success": 0, "failed": 0, "skipped": 0}
-    for sync_record in sync_records:
-        try:
-            result = await sync_single_calendar(sync_record, db)
-            if result["status"] == "skipped":
-                stats["skipped"] += 1
-            else:
-                stats["success"] += 1
-        except Exception:
-            stats["failed"] += 1
+    due_records = [record for record in sync_records if _calendar_is_due(record)]
+    stats = {
+        "total": len(sync_records),
+        "success": 0,
+        "failed": 0,
+        "skipped": len(sync_records) - len(due_records),
+    }
+    semaphore = asyncio.Semaphore(SYNC_CONCURRENCY)
+
+    async def sync_due_record(sync_record: dict) -> str:
+        async with semaphore:
+            try:
+                result = await sync_single_calendar(sync_record, db)
+                return "skipped" if result["status"] == "skipped" else "success"
+            except Exception:
+                return "failed"
+
+    results = await asyncio.gather(*(sync_due_record(record) for record in due_records))
+    for result in results:
+        stats[result] += 1
 
     logger.info("Calendar sync sweep complete: %s", stats)
     return stats

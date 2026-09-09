@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, status, Depends, Query
 from fastapi.responses import Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pydantic import BaseModel
-from typing import List, Optional
+from pydantic import BaseModel, Field
+from typing import List, Literal, Optional
 from models.calendar import (
     BlockedDate,
     BlockDateRequest,
@@ -10,7 +10,7 @@ from models.calendar import (
     BlockedDateSource,
     CalendarEvent,
 )
-from middleware.auth_middleware import get_current_user
+from middleware.auth_middleware import get_current_user, get_optional_current_user
 from datetime import datetime, date, timedelta, timezone
 import html
 import logging
@@ -25,6 +25,7 @@ router = APIRouter(prefix="/calendar", tags=["Calendar"])
 
 BOOKING_BLOCKING_STATUSES = ["confirmed", "completed", "awaiting_host_approval"]
 BOOKING_BLOCKING_PAYMENT_STATUSES = ["paid", "partially_paid", "success", "captured", "completed"]
+BOOKING_TERMINAL_STATUSES = ["cancelled", "canceled", "rejected", "expired"]
 
 async def get_db():
     from server import db_instance
@@ -32,11 +33,11 @@ async def get_db():
 
 
 class ExternalCalendarRequest(BaseModel):
-    name: str
-    ical_url: str
+    name: str = Field(min_length=1, max_length=120)
+    ical_url: str = Field(min_length=8, max_length=4096)
     color: str = "#3B82F6"
-    provider: str = "Custom iCal"
-    sync_frequency: str = "Every 30 minutes"
+    provider: Literal["Airbnb", "Booking.com", "MakeMyTrip", "Agoda", "Vrbo", "Custom iCal"] = "Custom iCal"
+    sync_frequency: Literal["Every 15 minutes", "Every 30 minutes", "Hourly", "Every 6 hours", "Daily"] = "Every 30 minutes"
 
 
 class ICalFeedUrlsRequest(BaseModel):
@@ -108,6 +109,8 @@ async def _build_property_ical(property_id: str, property_data: dict, db: AsyncI
     booking_cursor = db.bookings.find(
         {
             "property_id": property_id,
+            "booking_status": {"$nin": BOOKING_TERMINAL_STATUSES},
+            "check_out_date": {"$gte": date.today().isoformat()},
             "$or": [
                 {"booking_status": {"$in": BOOKING_BLOCKING_STATUSES}},
                 {"payment_status": {"$in": BOOKING_BLOCKING_PAYMENT_STATUSES}},
@@ -115,7 +118,7 @@ async def _build_property_ical(property_id: str, property_data: dict, db: AsyncI
         },
         {"_id": 0},
     )
-    bookings = await booking_cursor.to_list(length=500)
+    bookings = await booking_cursor.to_list(length=5000)
 
     for booking in bookings:
         event = iCalEvent()
@@ -124,7 +127,10 @@ async def _build_property_ical(property_id: str, property_data: dict, db: AsyncI
         ci = booking["check_in_date"]
         co = booking["check_out_date"]
         event.add("dtstart", date.fromisoformat(ci) if isinstance(ci, str) else ci)
-        event.add("dtend", date.fromisoformat(co) if isinstance(co, str) else co)
+        booking_end = date.fromisoformat(co) if isinstance(co, str) else co
+        if property_data.get("category") == "event_venue":
+            booking_end += timedelta(days=1)
+        event.add("dtend", booking_end)
         event.add("dtstamp", datetime.now(timezone.utc))
         event.add("status", "CONFIRMED")
         cal.add_component(event)
@@ -133,10 +139,11 @@ async def _build_property_ical(property_id: str, property_data: dict, db: AsyncI
         {
             "property_id": property_id,
             "source": BlockedDateSource.MANUAL.value,
+            "end_date": {"$gte": date.today().isoformat()},
         },
         {"_id": 0},
     )
-    blocked_dates = await blocked_cursor.to_list(length=500)
+    blocked_dates = await blocked_cursor.to_list(length=5000)
 
     for blocked in blocked_dates:
         event = iCalEvent()
@@ -145,11 +152,10 @@ async def _build_property_ical(property_id: str, property_data: dict, db: AsyncI
         sd = blocked["start_date"]
         ed = blocked["end_date"]
         event.add("dtstart", date.fromisoformat(sd) if isinstance(sd, str) else sd)
-        event.add("dtend", date.fromisoformat(ed) if isinstance(ed, str) else ed)
+        inclusive_end = date.fromisoformat(ed) if isinstance(ed, str) else ed
+        event.add("dtend", inclusive_end + timedelta(days=1))
         event.add("dtstamp", datetime.now(timezone.utc))
         event.add("status", "CONFIRMED")
-        if blocked.get("reason"):
-            event.add("description", blocked["reason"])
         cal.add_component(event)
 
     return cal.to_ical()
@@ -167,6 +173,7 @@ async def get_blocked_dates(
     property_id: str,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    current_user: Optional[dict] = Depends(get_optional_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     """Get blocked dates for a property (public availability check)."""
@@ -187,6 +194,7 @@ async def get_blocked_dates(
         if property_data and property_data.get("category") != "event_venue":
             booking_query = {
                 "property_id": property_id,
+                "booking_status": {"$nin": BOOKING_TERMINAL_STATUSES},
                 "$or": [
                     {"booking_status": {"$in": BOOKING_BLOCKING_STATUSES}},
                     {"payment_status": {"$in": BOOKING_BLOCKING_PAYMENT_STATUSES}},
@@ -211,6 +219,22 @@ async def get_blocked_dates(
                     "source_id": booking_id,
                     "reason": f"Booking {str(booking_id)[:8]}",
                 })
+
+        can_manage = bool(
+            current_user
+            and property_data
+            and _can_manage_property(current_user, property_data)
+        )
+        if not can_manage:
+            blocked_dates = [
+                {
+                    "start_date": item.get("start_date"),
+                    "end_date": item.get("end_date"),
+                    "source": item.get("source"),
+                    "block_type": item.get("block_type") or "Unavailable",
+                }
+                for item in blocked_dates
+            ]
 
         return {"blocked_dates": blocked_dates, "total": len(blocked_dates)}
 
@@ -417,6 +441,7 @@ async def get_unified_calendar(
         booking_cursor = db.bookings.find(
             {
                 "property_id": property_id,
+                "booking_status": {"$nin": BOOKING_TERMINAL_STATUSES},
                 "$or": [
                     {"booking_status": {"$in": BOOKING_BLOCKING_STATUSES}},
                     {"payment_status": {"$in": BOOKING_BLOCKING_PAYMENT_STATUSES}},
@@ -607,6 +632,26 @@ async def add_external_calendar(
                 ),
             )
 
+        from services.calendar_sync_service import _assert_public_calendar_url, _normalize_ical_url
+
+        try:
+            await _assert_public_calendar_url(_normalize_ical_url(ical_url))
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=str(exc),
+            ) from exc
+
+        duplicate = await db.external_calendars.find_one(
+            {"property_id": property_id, "ical_url": ical_url},
+            {"_id": 0, "calendar_id": 1},
+        )
+        if duplicate:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="This OTA calendar is already connected to the selected property",
+            )
+
         external_cal = ExternalCalendar(
             property_id=property_id,
             owner_id=property_data.get("owner_id") or current_user["user_id"],
@@ -646,6 +691,8 @@ async def add_external_calendar(
 
 @router.get("/external-calendars/all")
 async def list_all_external_calendars(
+    limit: int = Query(500, ge=1, le=500),
+    skip: int = Query(0, ge=0),
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
@@ -653,8 +700,50 @@ async def list_all_external_calendars(
     query = {}
     if not _is_admin(current_user):
         query["owner_id"] = current_user["user_id"]
-    calendars = await db.external_calendars.find(query, {"_id": 0}).to_list(length=2000)
-    return {"calendars": calendars, "total": len(calendars)}
+    calendars = await db.external_calendars.find(query, {"_id": 0}).skip(skip).limit(limit).to_list(length=limit)
+    total = await db.external_calendars.count_documents(query)
+    return {"calendars": calendars, "total": total, "limit": limit, "skip": skip}
+
+
+@router.get("/external-reservations")
+async def list_external_reservations(
+    limit: int = Query(500, ge=1, le=500),
+    skip: int = Query(0, ge=0),
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """List OTA iCal events as read-only reservation rows for operations staff."""
+    calendar_query = {}
+    if not _is_admin(current_user):
+        calendar_query["owner_id"] = current_user["user_id"]
+    calendars = await db.external_calendars.find(calendar_query, {"_id": 0}).to_list(length=5000)
+    calendar_by_id = {item.get("calendar_id"): item for item in calendars}
+
+    block_query = {"source": BlockedDateSource.EXTERNAL.value}
+    if not _is_admin(current_user):
+        block_query["source_id"] = {"$in": list(calendar_by_id)}
+    blocks = await db.blocked_dates.find(block_query, {"_id": 0}).sort("start_date", -1).skip(skip).limit(limit).to_list(length=limit)
+    total = await db.blocked_dates.count_documents(block_query)
+
+    reservations = []
+    for block in blocks:
+        integration = calendar_by_id.get(block.get("source_id"), {})
+        reservations.append(
+            {
+                "booking_id": f"ota_{block.get('blocked_date_id')}",
+                "property_id": block.get("property_id"),
+                "booking_source": integration.get("provider") or integration.get("name") or "OTA iCal",
+                "integration_name": integration.get("name"),
+                "calendar_id": block.get("source_id"),
+                "check_in_date": block.get("start_date"),
+                "check_out_date": block.get("end_date"),
+                "booking_status": "confirmed",
+                "payment_status": "managed_on_ota",
+                "guest_name": block.get("title") or "OTA reservation",
+                "is_calendar_import": True,
+            }
+        )
+    return {"reservations": reservations, "total": total, "limit": limit, "skip": skip}
 
 
 @router.post("/external-calendars/{calendar_id}/sync")
