@@ -87,4 +87,9 @@ export const channelManagerApi = {
     const response = await calendarAPI.getICalFeedUrl(propertyId);
     return response.data?.feed_url || '';
   },
+
+  async exportFeeds(propertyIds) {
+    const response = await calendarAPI.getICalFeedUrls(propertyIds);
+    return response.data || { feed_urls: {}, unavailable_property_ids: propertyIds };
+  },
 };

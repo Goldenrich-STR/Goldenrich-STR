@@ -463,6 +463,9 @@ export const calendarAPI = {
   getICalFeedUrl: (propertyId) =>
     apiClient.get(`/calendar/properties/${propertyId}/ical-feed-url`),
 
+  getICalFeedUrls: (propertyIds) =>
+    apiClient.post('/calendar/properties/ical-feed-urls', { property_ids: propertyIds }),
+
   rotateICalFeedUrl: (propertyId) =>
     apiClient.post(`/calendar/properties/${propertyId}/ical-feed-url/rotate`),
 

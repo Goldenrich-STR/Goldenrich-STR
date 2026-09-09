@@ -39,6 +39,10 @@ class ExternalCalendarRequest(BaseModel):
     sync_frequency: str = "Every 30 minutes"
 
 
+class ICalFeedUrlsRequest(BaseModel):
+    property_ids: List[str]
+
+
 def _is_admin(user: dict) -> bool:
     role = getattr(user.get("role"), "value", user.get("role"))
     return str(role or "").lower() == "admin"
@@ -61,6 +65,22 @@ def _clean_ical_url(value: str) -> str:
 
 def _public_backend_url() -> str:
     return os.environ.get("PUBLIC_BACKEND_URL", "https://api.x-space360.in").rstrip("/")
+
+
+async def _get_or_create_feed_url(property_id: str, property_data: dict, db: AsyncIOMotorDatabase) -> str:
+    token = property_data.get("ical_export_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        await db.properties.update_one(
+            {"property_id": property_id},
+            {
+                "$set": {
+                    "ical_export_token": token,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+            },
+        )
+    return f"{_public_backend_url()}/api/calendar/properties/{property_id}/ical-feed/{token}"
 
 
 def _is_own_ical_feed_url(url: str) -> bool:
@@ -779,6 +799,39 @@ async def export_ical(
         )
 
 
+@router.post("/properties/ical-feed-urls")
+async def get_ical_feed_urls(
+    payload: ICalFeedUrlsRequest,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Return export feed URLs for one property-list page in a single request."""
+    property_ids = list(dict.fromkeys(item.strip() for item in payload.property_ids if item and item.strip()))
+    if not property_ids:
+        return {"feed_urls": {}, "unavailable_property_ids": []}
+    if len(property_ids) > 100:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A maximum of 100 property links can be requested at once",
+        )
+
+    properties = await db.properties.find(
+        {"property_id": {"$in": property_ids}},
+        {"_id": 0},
+    ).to_list(length=len(property_ids))
+    property_by_id = {item.get("property_id"): item for item in properties}
+    feed_urls = {}
+    unavailable = []
+    for property_id in property_ids:
+        property_data = property_by_id.get(property_id)
+        if not property_data or not _can_manage_property(current_user, property_data):
+            unavailable.append(property_id)
+            continue
+        feed_urls[property_id] = await _get_or_create_feed_url(property_id, property_data, db)
+
+    return {"feed_urls": feed_urls, "unavailable_property_ids": unavailable}
+
+
 @router.get("/properties/{property_id}/ical-feed-url")
 async def get_ical_feed_url(
     property_id: str,
@@ -799,20 +852,7 @@ async def get_ical_feed_url(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
 
-        token = property_data.get("ical_export_token")
-        if not token:
-            token = secrets.token_urlsafe(32)
-            await db.properties.update_one(
-                {"property_id": property_id},
-                {
-                    "$set": {
-                        "ical_export_token": token,
-                        "updated_at": datetime.now(timezone.utc),
-                    }
-                },
-            )
-
-        feed_url = f"{_public_backend_url()}/api/calendar/properties/{property_id}/ical-feed/{token}"
+        feed_url = await _get_or_create_feed_url(property_id, property_data, db)
         return {"property_id": property_id, "feed_url": feed_url}
 
     except HTTPException:
