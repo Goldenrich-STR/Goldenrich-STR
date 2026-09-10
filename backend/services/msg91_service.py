@@ -342,22 +342,48 @@ class MSG91Service:
                 timeout=10,
             )
 
-            if 200 <= response.status_code < 300:
-                logger.info(f"WhatsApp template sent successfully to {phone}: {response.text}")
-                try:
-                    message_id = response.json().get("message_id")
-                except Exception:
-                    message_id = response.text
+            try:
+                response_body = response.json()
+            except Exception:
+                response_body = {"raw": response.text}
+
+            logger.info(
+                "MSG91 WhatsApp API response: template=%s to=%s http_status=%s body=%s",
+                template_name,
+                clean_phone,
+                response.status_code,
+                response_body,
+            )
+
+            provider_has_error = response_body.get("hasError") is True
+            provider_status = str(response_body.get("status") or "").strip().lower()
+            provider_failed = provider_status in {"error", "failed", "failure", "rejected"}
+
+            if 200 <= response.status_code < 300 and not provider_has_error and not provider_failed:
+                data = response_body.get("data")
+                message_id = response_body.get("message_id") or response_body.get("request_id")
+                if isinstance(data, dict):
+                    message_id = message_id or data.get("message_id") or data.get("unique_id") or data.get("request_id")
                 return {
                     "success": True,
                     "message_id": message_id,
                     "demo_mode": False,
+                    "provider_status": provider_status or "accepted",
+                    "provider_response": response_body,
                 }
 
-            logger.error(f"WhatsApp template failed: {response.status_code} {response.text}")
+            logger.error(
+                "WhatsApp template failed: template=%s to=%s http_status=%s body=%s",
+                template_name,
+                clean_phone,
+                response.status_code,
+                response_body,
+            )
             return {
                 "success": False,
-                "error": response.text,
+                "error": response_body.get("message") or response.text,
+                "provider_status": provider_status or "failed",
+                "provider_response": response_body,
             }
 
         except Exception as e:
@@ -370,8 +396,14 @@ class MSG91Service:
     @staticmethod
     def _clean_indian_phone(phone: str) -> str:
         clean_phone = "".join(ch for ch in str(phone or "") if ch.isdigit())
+        if clean_phone.startswith("00"):
+            clean_phone = clean_phone[2:]
+        if len(clean_phone) == 11 and clean_phone.startswith("0"):
+            clean_phone = clean_phone[1:]
         if len(clean_phone) == 10:
-            return f"91{clean_phone}"
+            clean_phone = f"91{clean_phone}"
+        if len(clean_phone) != 12 or not clean_phone.startswith("91"):
+            raise ValueError("WhatsApp recipient must be a valid Indian mobile number")
         return clean_phone
     
     def send_otp_sms(self, phone: str, otp: str) -> Dict:
