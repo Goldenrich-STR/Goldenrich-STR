@@ -112,8 +112,23 @@ class NotificationService:
         data = data or {}
         template_name = None
         template_parameters = None
+        button_url_parameters = None
 
-        if notification_type == NotificationType.PROPERTY_APPROVED:
+        if notification_type == NotificationType.HOST_REGISTRATION_SUCCESS:
+            template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_HOST_REGISTRATION", "").strip()
+            template_parameters = [
+                data.get("host_name") or data.get("name") or user.get("full_name") or "Host",
+            ]
+            if data.get("action_url"):
+                button_url_parameters = [data["action_url"]]
+        elif notification_type == NotificationType.GUEST_REGISTRATION_SUCCESS:
+            template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_GUEST_REGISTRATION", "").strip()
+            template_parameters = [
+                data.get("guest_name") or data.get("customer_name") or data.get("name") or user.get("full_name") or "Guest",
+            ]
+            if data.get("action_url"):
+                button_url_parameters = [data["action_url"]]
+        elif notification_type == NotificationType.PROPERTY_LISTED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_PROPERTY_LISTED", "").strip()
             template_parameters = [
                 data.get("host_name") or user.get("full_name") or "Host",
@@ -122,29 +137,46 @@ class NotificationService:
                 data.get("location") or data.get("property_address") or "",
                 data.get("status") or "Listed",
             ]
+            if data.get("action_url"):
+                button_url_parameters = [data["action_url"]]
+        elif notification_type == NotificationType.PROPERTY_APPROVED:
+            template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_PROPERTY_APPROVED", "").strip()
+            template_parameters = [
+                data.get("host_name") or user.get("full_name") or "Host",
+                data.get("property_title") or data.get("property_name") or data.get("title") or "Your property",
+            ]
+            if data.get("action_url"):
+                button_url_parameters = [data["action_url"]]
         elif notification_type == NotificationType.BOOKING_CONFIRMED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED_GUEST", "").strip()
             template_parameters = [
                 data.get("guest_name") or data.get("customer_name") or user.get("full_name") or "Guest",
-                data.get("booking_id") or "",
                 data.get("property_title") or "Your property",
+                data.get("booking_id") or "",
                 data.get("check_in_date") or "",
                 data.get("check_out_date") or "",
-                data.get("property_address") or "",
+                data.get("guest_count") or data.get("guests") or data.get("number_of_guests") or "",
+                data.get("total_amount") or data.get("amount") or "",
                 data.get("host_name") or "Host",
                 data.get("host_mobile") or "",
+                data.get("property_address") or data.get("location") or "",
             ]
+            if data.get("action_url"):
+                button_url_parameters = [data["action_url"]]
         elif notification_type == NotificationType.NEW_BOOKING_RECEIVED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_NEW_BOOKING_HOST", "").strip()
             template_parameters = [
                 data.get("host_name") or user.get("full_name") or "Host",
+                data.get("property_title") or "Your property",
                 data.get("booking_id") or "",
                 data.get("guest_name") or data.get("customer_name") or "Guest",
-                data.get("property_title") or "Your property",
                 data.get("check_in_date") or "",
                 data.get("check_out_date") or "",
                 data.get("guest_count") or data.get("guests") or data.get("number_of_guests") or "",
+                data.get("total_amount") or data.get("amount") or "",
             ]
+            if data.get("action_url"):
+                button_url_parameters = [data["action_url"]]
         elif notification_type == NotificationType.PROPERTY_REJECTED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_PROPERTY_REJECTED", "").strip()
             template_parameters = [
@@ -157,7 +189,12 @@ class NotificationService:
         # Use approved WhatsApp templates when configured; otherwise keep the
         # older generic path useful for demo/local testing.
         if template_name and template_parameters is not None:
-            result = msg91_service.send_whatsapp_template(phone, template_name, template_parameters)
+            result = msg91_service.send_whatsapp_template(
+                phone,
+                template_name,
+                template_parameters,
+                button_url_parameters=button_url_parameters,
+            )
         else:
             result = msg91_service.send_whatsapp(phone, message)
         

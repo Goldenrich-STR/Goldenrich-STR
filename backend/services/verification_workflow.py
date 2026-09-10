@@ -463,6 +463,7 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
         )
         frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
         dashboard_url = f"{frontend_url}/host/dashboard"
+        property_url = f"{frontend_url}/properties/{property_data['property_id']}"
         property_title = (
             property_data.get("title")
             or property_data.get("property_title")
@@ -490,7 +491,7 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
                 "status": "Live",
                 "approval_date": approval_date,
                 "published_date": approval_date,
-                "action_url": dashboard_url,
+                "action_url": property_url,
                 "dashboard_url": dashboard_url,
             },
         )
