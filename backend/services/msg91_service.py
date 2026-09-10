@@ -252,6 +252,7 @@ class MSG91Service:
         template_name: str,
         parameters: list[str],
         button_url_parameters: Optional[list[str]] = None,
+        header_media_url: Optional[str] = None,
     ) -> Dict:
         """Send WhatsApp template with numbered body variables via MSG91."""
         try:
@@ -283,6 +284,11 @@ class MSG91Service:
                 }
                 for index, value in enumerate(parameters, start=1)
             }
+            if header_media_url:
+                components["header_1"] = {
+                    "type": "image",
+                    "value": str(header_media_url),
+                }
             for index, value in enumerate(button_url_parameters or [], start=1):
                 components[f"button_{index}"] = {
                     "subtype": "url",
