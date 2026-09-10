@@ -933,7 +933,7 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
 
         try:
             is_host = role_str.lower() == "host"
-            await send_multi_channel_notification(
+            whatsapp_result = await send_multi_channel_notification(
                 db=db,
                 user_id=user.user_id,
                 notification_type=(
@@ -954,6 +954,12 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                     "customer_name": user.full_name,
                     "action_url": _frontend_url("/host/dashboard" if is_host else "/"),
                 },
+            )
+            logger.info(
+                "Registration WhatsApp result for user_id=%s role=%s: %s",
+                user.user_id,
+                role_str,
+                whatsapp_result,
             )
         except Exception as whatsapp_err:
             logger.warning("Registration WhatsApp failed for %s: %s", user.email, whatsapp_err)
