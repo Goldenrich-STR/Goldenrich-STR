@@ -155,8 +155,6 @@ class NotificationService:
                 data.get("host_name") or user.get("full_name") or "Host",
                 data.get("property_title") or data.get("property_name") or data.get("title") or "Your property",
             ]
-            if data.get("property_id"):
-                button_url_parameters = [str(data["property_id"])]
             header_media_url = _public_media_url(data.get("property_image"))
         elif notification_type == NotificationType.BOOKING_CONFIRMED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED_GUEST", "").strip()
@@ -172,8 +170,6 @@ class NotificationService:
                 data.get("host_mobile") or "",
                 data.get("property_address") or data.get("location") or "",
             ]
-            if data.get("booking_id"):
-                button_url_parameters = [str(data["booking_id"])]
             header_media_url = _public_media_url(data.get("property_image"))
         elif notification_type == NotificationType.NEW_BOOKING_RECEIVED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_NEW_BOOKING_HOST", "").strip()
@@ -187,8 +183,6 @@ class NotificationService:
                 data.get("guest_count") or data.get("guests") or data.get("number_of_guests") or "",
                 data.get("total_amount") or data.get("amount") or "",
             ]
-            if data.get("booking_id"):
-                button_url_parameters = [str(data["booking_id"])]
         elif notification_type == NotificationType.PROPERTY_REJECTED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_PROPERTY_REJECTED", "").strip()
             template_parameters = [
