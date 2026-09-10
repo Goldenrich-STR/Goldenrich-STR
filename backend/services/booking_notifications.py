@@ -239,6 +239,11 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             or ""
         )
 
+        frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+        guest_booking_url = f"{frontend_url}/guest/bookings?booking_id={booking.get('booking_id')}"
+        guest_confirmation_url = f"{frontend_url}/guest/booking-confirmation?booking_id={booking.get('booking_id')}"
+        host_booking_url = f"{frontend_url}/host/bookings?booking_id={booking.get('booking_id')}"
+
         data = {
             "booking_id": booking.get("booking_id"),
             "property_id": booking.get("property_id"),
@@ -264,15 +269,12 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             "razorpay_payment_id": booking.get("razorpay_payment_id") or "",
             "razorpay_order_id": booking.get("razorpay_order_id") or "",
             "payment_method": booking.get("payment_method") or "Razorpay",
-            "action_url": (
-                os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
-                + f"/guest/booking-confirmation?booking_id={booking.get('booking_id')}"
-            ),
+            "action_url": guest_booking_url,
             "cancellation_policy_url": (
-                os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
-                + "/?footer=safety-privacy"
+                frontend_url + "/?footer=safety-privacy"
             ),
         }
+        host_data = {**data, "action_url": host_booking_url}
 
         # Use the standard path for every host channel so the configured
         # MSG91 NEW_BOOKING template receives the same booking variables.
@@ -288,7 +290,7 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                 NotificationChannel.WHATSAPP,
                 NotificationChannel.SMS,
             ],
-            data=data,
+            data=host_data,
         )
 
         # Send booking confirmation and a separate payment receipt to the guest.
@@ -325,10 +327,7 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                         or booking.get("updated_at")
                         or datetime.now(timezone.utc)
                     ),
-                    "action_url": (
-                        os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
-                        + f"/guest/booking-confirmation?booking_id={booking.get('booking_id')}"
-                    ),
+                    "action_url": guest_confirmation_url,
                 },
             )
 

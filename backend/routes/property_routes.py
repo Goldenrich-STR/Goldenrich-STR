@@ -26,6 +26,7 @@ from datetime import datetime, timezone
 import asyncio
 import logging
 import math
+import os
 import re
 
 logger = logging.getLogger(__name__)
@@ -339,7 +340,7 @@ async def create_property(
         notification_result = await send_multi_channel_notification(
             db=db,
             user_id=current_user["user_id"],
-            notification_type=NotificationType.PROPERTY_APPROVED,
+            notification_type=NotificationType.PROPERTY_LISTED,
             title="Property listed",
             message=(
                 f"Your property '{property_obj.title}' has been listed successfully "
@@ -355,6 +356,10 @@ async def create_property(
                 "property_title": property_obj.title,
                 "location": location,
                 "status": property_obj.status.value if hasattr(property_obj.status, "value") else property_obj.status,
+                "action_url": (
+                    os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+                    + f"/properties/{property_obj.property_id}"
+                ),
             },
         )
         whatsapp_result = (notification_result.get("results") or {}).get("whatsapp", {})

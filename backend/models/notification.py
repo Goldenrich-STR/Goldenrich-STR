@@ -5,12 +5,15 @@ from enum import Enum
 from uuid import uuid4
 
 class NotificationType(str, Enum):
+    HOST_REGISTRATION_SUCCESS = "host_registration_success"
+    GUEST_REGISTRATION_SUCCESS = "guest_registration_success"
     BOOKING_CONFIRMED = "booking_confirmed"
     BOOKING_CANCELLED = "booking_cancelled"
     BOOKING_PENDING_PAYMENT = "booking_pending_payment"
     BOOKING_REMINDER = "booking_reminder"
     PAYMENT_CONFIRMED = "payment_confirmed"
     NEW_BOOKING_RECEIVED = "new_booking_received"
+    PROPERTY_LISTED = "property_listed"
     PROPERTY_APPROVED = "property_approved"
     PROPERTY_REJECTED = "property_rejected"
     KYC_APPROVED = "kyc_approved"

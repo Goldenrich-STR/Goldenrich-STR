@@ -3,9 +3,11 @@ from fastapi.responses import RedirectResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 from models.user import UserCreate, UserLogin, UserResponse, User, UserRole
+from models.notification import NotificationChannel, NotificationType
 from utils.auth import hash_password, verify_password, create_access_token
 from services.otp_service import otp_service
 from services.msg91_service import msg91_service
+from services.notification_service import send_multi_channel_notification
 from services.object_storage import delete_upload
 from middleware.auth_middleware import get_current_user
 import phonenumbers
@@ -928,6 +930,33 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         # Insert into database
         user_dict = user.model_dump()
         await db.users.insert_one(user_dict)
+
+        try:
+            is_host = role_str.lower() == "host"
+            await send_multi_channel_notification(
+                db=db,
+                user_id=user.user_id,
+                notification_type=(
+                    NotificationType.HOST_REGISTRATION_SUCCESS
+                    if is_host
+                    else NotificationType.GUEST_REGISTRATION_SUCCESS
+                ),
+                title="Registration successful",
+                message=(
+                    f"Welcome to X-Space360, {user.full_name}. "
+                    f"Your {'Host' if is_host else 'Guest'} account has been successfully registered."
+                ),
+                channels=[NotificationChannel.WHATSAPP],
+                data={
+                    "name": user.full_name,
+                    "host_name": user.full_name,
+                    "guest_name": user.full_name,
+                    "customer_name": user.full_name,
+                    "action_url": _frontend_url("/host/dashboard" if is_host else "/"),
+                },
+            )
+        except Exception as whatsapp_err:
+            logger.warning("Registration WhatsApp failed for %s: %s", user.email, whatsapp_err)
 
         try:
             from services.email_service import email_service
