@@ -246,12 +246,22 @@ class MSG91Service:
                 "error": str(e)
             }
 
-    def send_whatsapp_template(self, phone: str, template_name: str, parameters: list[str]) -> Dict:
+    def send_whatsapp_template(
+        self,
+        phone: str,
+        template_name: str,
+        parameters: list[str],
+        button_url_parameters: Optional[list[str]] = None,
+    ) -> Dict:
         """Send WhatsApp template with numbered body variables via MSG91."""
         try:
             if self.is_demo_mode:
                 logger.info(
-                    f"[DEMO] WhatsApp template to {phone}: template={template_name}, parameters={parameters}"
+                    "[DEMO] WhatsApp template to %s: template=%s, parameters=%s, button_url_parameters=%s",
+                    phone,
+                    template_name,
+                    parameters,
+                    button_url_parameters,
                 )
                 return {
                     "success": True,
@@ -273,6 +283,12 @@ class MSG91Service:
                 }
                 for index, value in enumerate(parameters, start=1)
             }
+            for index, value in enumerate(button_url_parameters or [], start=1):
+                components[f"button_{index}"] = {
+                    "subtype": "url",
+                    "type": "text",
+                    "value": str(value if value is not None else ""),
+                }
             template = {
                 "name": template_name,
                 "language": {
