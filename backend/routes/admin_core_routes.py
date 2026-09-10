@@ -2902,6 +2902,24 @@ async def update_property_operation_status(property_id: str, payload: PropertySt
     await db.properties.update_one({"property_id": property_id}, {"$set": updates})
     await db.property_status_history.insert_one({"history_id": f"psh_{uuid4().hex[:12]}", "property_id": property_id, "old_status": prop.get("status"), "new_status": payload.status, "reason": payload.reason, "changed_by": current_user["user_id"], "created_at": _now()})
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="property_operations", action="property_status_changed", record_id=property_id, old_value={"status": prop.get("status")}, new_value=updates, reason=payload.reason)
+
+    # The Admin Core "Live" action is also the explicit resend path for a
+    # listing that became live before WhatsApp notifications were enabled.
+    if payload.status == "live":
+        try:
+            from services.verification_workflow import on_admin_decision
+
+            await on_admin_decision(
+                db,
+                {**prop, **updates},
+                approved=True,
+            )
+        except Exception as notify_err:
+            logger.exception(
+                "Property live WhatsApp notification failed: property_id=%s error=%s",
+                property_id,
+                notify_err,
+            )
     return api_response("Property status updated")
 
 
