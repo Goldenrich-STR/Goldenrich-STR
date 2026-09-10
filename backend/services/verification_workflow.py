@@ -259,7 +259,7 @@ async def _notify(
     channels: Optional[list] = None,
 ) -> None:
     try:
-        await send_multi_channel_notification(
+        result = await send_multi_channel_notification(
             db=db,
             user_id=user_id,
             notification_type=notif_type,
@@ -271,6 +271,12 @@ async def _notify(
                 NotificationChannel.EMAIL,
             ],
             data=data,
+        )
+        logger.info(
+            "Notification result: user_id=%s type=%s result=%s",
+            user_id,
+            notif_type.value,
+            result,
         )
     except Exception as e:
         logger.warning(f"_notify failed for {user_id}: {e}")
@@ -493,6 +499,7 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
                 "published_date": approval_date,
                 "action_url": property_url,
                 "dashboard_url": dashboard_url,
+                "property_image": next(iter(property_data.get("images") or []), None),
             },
         )
     else:
