@@ -8,6 +8,16 @@ import os
 
 logger = logging.getLogger(__name__)
 
+
+def _public_media_url(value: str | None) -> str | None:
+    if not value:
+        return None
+    value = str(value).strip()
+    if value.startswith(("https://", "http://")):
+        return value
+    backend_url = os.getenv("PUBLIC_BACKEND_URL", "https://uat.x-space360.in").rstrip("/")
+    return f"{backend_url}/{value.lstrip('/')}"
+
 class NotificationService:
     """Unified notification service for all channels."""
     
@@ -79,6 +89,11 @@ class NotificationService:
         """Send SMS notification."""
         phone = user.get("phone")
         if not phone:
+            logger.warning(
+                "WhatsApp skipped: user_id=%s type=%s has no phone number",
+                user.get("user_id"),
+                notification_type.value,
+            )
             return {"success": False, "error": "No phone number"}
         
         # Send SMS via MSG91
@@ -113,6 +128,7 @@ class NotificationService:
         template_name = None
         template_parameters = None
         button_url_parameters = None
+        header_media_url = None
 
         if notification_type == NotificationType.HOST_REGISTRATION_SUCCESS:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_HOST_REGISTRATION", "").strip()
@@ -141,6 +157,7 @@ class NotificationService:
             ]
             if data.get("property_id"):
                 button_url_parameters = [str(data["property_id"])]
+            header_media_url = _public_media_url(data.get("property_image"))
         elif notification_type == NotificationType.BOOKING_CONFIRMED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_BOOKING_CONFIRMED_GUEST", "").strip()
             template_parameters = [
@@ -157,6 +174,7 @@ class NotificationService:
             ]
             if data.get("booking_id"):
                 button_url_parameters = [str(data["booking_id"])]
+            header_media_url = _public_media_url(data.get("property_image"))
         elif notification_type == NotificationType.NEW_BOOKING_RECEIVED:
             template_name = os.getenv("MSG91_WHATSAPP_TEMPLATE_NEW_BOOKING_HOST", "").strip()
             template_parameters = [
@@ -182,15 +200,38 @@ class NotificationService:
         
         # Use approved WhatsApp templates when configured; otherwise keep the
         # older generic path useful for demo/local testing.
+        configured_template_types = {
+            NotificationType.HOST_REGISTRATION_SUCCESS,
+            NotificationType.GUEST_REGISTRATION_SUCCESS,
+            NotificationType.PROPERTY_LISTED,
+            NotificationType.PROPERTY_APPROVED,
+            NotificationType.BOOKING_CONFIRMED,
+            NotificationType.NEW_BOOKING_RECEIVED,
+            NotificationType.PROPERTY_REJECTED,
+        }
         if template_name and template_parameters is not None:
             result = msg91_service.send_whatsapp_template(
                 phone,
                 template_name,
                 template_parameters,
                 button_url_parameters=button_url_parameters,
+                header_media_url=header_media_url,
             )
+        elif notification_type in configured_template_types:
+            result = {
+                "success": False,
+                "error": f"WhatsApp template is not configured for {notification_type.value}",
+            }
         else:
             result = msg91_service.send_whatsapp(phone, message)
+
+        logger.info(
+            "WhatsApp result: user_id=%s type=%s template=%s result=%s",
+            user.get("user_id"),
+            notification_type.value,
+            template_name,
+            result,
+        )
         
         # Store notification
         notification = Notification(

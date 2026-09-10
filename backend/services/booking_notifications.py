@@ -249,6 +249,7 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             "property_id": booking.get("property_id"),
             "property_title": property_title,
             "property_address": full_address,
+            "property_image": next(iter(prop_details.get("images") or []), None),
             "guest_name": guest_name,
             "customer_name": guest_name,
             "host_name": host_name,
@@ -278,7 +279,7 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
 
         # Use the standard path for every host channel so the configured
         # MSG91 NEW_BOOKING template receives the same booking variables.
-        await send_multi_channel_notification(
+        host_notification_result = await send_multi_channel_notification(
             db=db,
             user_id=host["user_id"],
             notification_type=NotificationType.NEW_BOOKING_RECEIVED,
@@ -291,6 +292,11 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                 NotificationChannel.SMS,
             ],
             data=host_data,
+        )
+        logger.info(
+            "Host booking notification result: booking_id=%s result=%s",
+            booking.get("booking_id"),
+            host_notification_result,
         )
 
         # Send booking confirmation and a separate payment receipt to the guest.
@@ -311,7 +317,6 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                     "property_title": property_title,
                 },
             )
-
             await send_multi_channel_notification(
                 db=db,
                 user_id=guest["user_id"],
@@ -358,7 +363,7 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                 f"Contact No: {host_phone}"
             )
 
-            await send_multi_channel_notification(
+            guest_whatsapp_result = await send_multi_channel_notification(
                 db=db,
                 user_id=guest["user_id"],
                 notification_type=NotificationType.BOOKING_CONFIRMED,
@@ -369,6 +374,11 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
                     **data,
                     "property_title": property_title,
                 },
+            )
+            logger.info(
+                "Guest booking WhatsApp result: booking_id=%s result=%s",
+                booking.get("booking_id"),
+                guest_whatsapp_result,
             )
 
             # Trigger AI Voice Call Agent Simulation
