@@ -19,106 +19,115 @@ export default function AppPromoSection() {
             <div className="absolute w-[320px] sm:w-[400px] h-[320px] sm:h-[400px] rounded-full bg-[#EAE5D9]/60 pointer-events-none -z-0" />
             <div className="absolute w-[240px] sm:w-[300px] h-[240px] sm:h-[300px] rounded-full bg-white/60 pointer-events-none -z-0 blur-xl" />
 
-            {/* ── Real Space Gray iPhone PNG Render Container ── */}
-            <div className="relative w-[265px] sm:w-[300px] flex justify-center items-center z-10 group hover:scale-[1.01] transition-transform duration-500">
+            {/* ── Realistic 3D Titanium iPhone 15 Pro Frame ── */}
+            <div className="relative w-[265px] sm:w-[295px] flex justify-center items-center z-10 group hover:scale-[1.01] transition-transform duration-500">
               
-              {/* Space Gray iPhone PNG Frame Overlay */}
-              <img
-                src="/images/iphone_spacegray.png"
-                alt="Space Gray iPhone PNG Frame"
-                className="w-full h-auto object-contain drop-shadow-[0_25px_50px_rgba(0,0,0,0.2)] relative z-20 pointer-events-none"
-              />
-
-              {/* iPhone Inner App Screen Cutout Area */}
-              <div className="absolute inset-x-[7%] top-[2.5%] bottom-[3%] bg-[#FAF9F5] rounded-[34px] sm:rounded-[40px] overflow-hidden flex flex-col justify-between text-charcoal shadow-inner z-10">
+              {/* iPhone 15 Pro Titanium Frame Body */}
+              <div className="relative w-full h-[530px] sm:h-[580px] bg-[#121215] rounded-[48px] sm:rounded-[54px] p-3 shadow-[0_25px_60px_-10px_rgba(0,0,0,0.22)] border-[3px] border-[#3a3840] shrink-0">
                 
-                {/* App Screen Header */}
-                <div className="bg-white px-4 pt-8 pb-2 border-b border-gray-100 text-left">
-                  <div className="flex items-center justify-between mb-1.5">
-                    <img src="/logo.png" alt="X-Space360" className="h-4.5 w-auto object-contain" />
-                    <span className="bg-[#875F00] text-white text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                      PRO
-                    </span>
-                  </div>
+                {/* Hardware Side Volume Buttons */}
+                <div className="absolute -left-[5px] top-24 w-[3px] h-7 bg-[#48474e] rounded-l-sm" />
+                <div className="absolute -left-[5px] top-36 w-[3px] h-12 bg-[#48474e] rounded-l-sm" />
+                <div className="absolute -left-[5px] top-52 w-[3px] h-12 bg-[#48474e] rounded-l-sm" />
+                <div className="absolute -right-[5px] top-32 w-[3px] h-16 bg-[#48474e] rounded-r-sm" />
 
-                  {/* App Search Bar inside phone screen */}
-                  <div className="bg-stone/80 rounded-full px-3 py-1.5 flex items-center gap-2 border border-sand-200">
-                    <MapPin className="w-3 h-3 text-[#875F00]" />
-                    <span className="text-[10px] font-bold text-gray-500 truncate">Search luxury villas & venues...</span>
-                  </div>
+                {/* Dynamic Island Notch */}
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 w-22 h-4.5 bg-black rounded-full z-40 flex items-center justify-end px-2 gap-1 shadow-inner">
+                  <div className="w-2 h-2 rounded-full bg-[#0a0a0f]" />
+                  <div className="w-1.5 h-1.5 rounded-full bg-[#12121a]" />
                 </div>
 
-                {/* App Screen Content Body */}
-                <div className="flex-1 p-2.5 overflow-hidden space-y-2 text-left bg-stone/30">
+                {/* iPhone Inner App Screen */}
+                <div className="w-full h-full bg-[#FAF9F5] rounded-[38px] sm:rounded-[44px] overflow-hidden relative flex flex-col justify-between text-charcoal shadow-inner border border-black/20">
                   
-                  {/* Category Filter Pills */}
-                  <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
-                    {['Villas', 'Commercial', 'Venues'].map((cat, i) => (
-                      <span
-                        key={cat}
-                        onClick={() => setActiveTab(cat.toLowerCase())}
-                        className={`text-[9px] font-bold px-3 py-1 rounded-full whitespace-nowrap cursor-pointer transition ${
-                          i === 0 ? 'bg-charcoal text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-100'
-                        }`}
-                      >
-                        {cat}
+                  {/* App Screen Header */}
+                  <div className="bg-white px-4 pt-9 pb-2.5 border-b border-gray-100 text-left">
+                    <div className="flex items-center justify-between mb-2">
+                      <img src="/logo.png" alt="X-Space360" className="h-5 w-auto object-contain" />
+                      <span className="bg-[#875F00] text-white text-[8px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                        PRO
                       </span>
-                    ))}
+                    </div>
+
+                    {/* App Search Bar inside phone screen */}
+                    <div className="bg-stone/80 rounded-full px-3 py-1.5 flex items-center gap-2 border border-sand-200">
+                      <MapPin className="w-3 h-3 text-[#875F00]" />
+                      <span className="text-[10px] font-bold text-gray-500 truncate">Search luxury villas & venues...</span>
+                    </div>
                   </div>
 
-                  {/* Property Card 1 */}
-                  <div className="bg-white rounded-2xl overflow-hidden border border-gray-150 shadow-subtle">
-                    <div className="relative h-24 sm:h-26 bg-gray-200 overflow-hidden">
-                      <img
-                        src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800"
-                        alt="Elysium Glasshouse Villa"
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 left-2 bg-black/80 text-[#D4AF37] px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider">
-                        Signature Series
-                      </div>
-                      <div className="absolute bottom-2 right-2 bg-white/95 text-charcoal px-2 py-0.5 rounded-full text-[9px] font-extrabold shadow-sm">
-                        ⭐ 4.98
-                      </div>
-                    </div>
-                    <div className="p-2">
-                      <h6 className="font-bold text-[11px] text-charcoal truncate">Elysium Glasshouse Villa</h6>
-                      <p className="text-[9px] text-gray-500 font-semibold truncate">Nashik Hills · Private Pool</p>
-                      <div className="mt-1 pt-1 border-t border-gray-100 flex items-center justify-between">
-                        <span className="text-[11px] font-extrabold text-charcoal">₹12,500 <span className="text-[8px] font-normal text-gray-500">/night</span></span>
-                        <span className="bg-emerald-50 text-emerald-700 text-[8px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
-                          <Zap className="w-2.5 h-2.5 fill-current" /> Instant
+                  {/* App Screen Content Body */}
+                  <div className="flex-1 p-3 overflow-hidden space-y-2.5 text-left bg-stone/30">
+                    
+                    {/* Category Filter Pills */}
+                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                      {['Villas', 'Commercial', 'Venues'].map((cat, i) => (
+                        <span
+                          key={cat}
+                          onClick={() => setActiveTab(cat.toLowerCase())}
+                          className={`text-[9px] font-bold px-3 py-1 rounded-full whitespace-nowrap cursor-pointer transition ${
+                            i === 0 ? 'bg-charcoal text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-100'
+                          }`}
+                        >
+                          {cat}
                         </span>
+                      ))}
+                    </div>
+
+                    {/* Property Card 1 */}
+                    <div className="bg-white rounded-2xl overflow-hidden border border-gray-150 shadow-subtle">
+                      <div className="relative h-26 sm:h-28 bg-gray-200 overflow-hidden">
+                        <img
+                          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800"
+                          alt="Elysium Glasshouse Villa"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute top-2 left-2 bg-black/80 text-[#D4AF37] px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider">
+                          Signature Series
+                        </div>
+                        <div className="absolute bottom-2 right-2 bg-white/95 text-charcoal px-2 py-0.5 rounded-full text-[9px] font-extrabold shadow-sm">
+                          ⭐ 4.98
+                        </div>
+                      </div>
+                      <div className="p-2.5">
+                        <h6 className="font-bold text-[11px] text-charcoal truncate">Elysium Glasshouse Villa</h6>
+                        <p className="text-[9px] text-gray-500 font-semibold truncate">Nashik Hills · Private Pool</p>
+                        <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between">
+                          <span className="text-[11px] font-extrabold text-charcoal">₹12,500 <span className="text-[8px] font-normal text-gray-500">/night</span></span>
+                          <span className="bg-emerald-50 text-emerald-700 text-[8px] font-bold px-2 py-0.5 rounded-full flex items-center gap-0.5">
+                            <Zap className="w-2.5 h-2.5 fill-current" /> Instant
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Property Card 2 */}
+                    <div className="bg-white rounded-2xl p-2.5 border border-gray-150 shadow-subtle flex items-center gap-2.5">
+                      <img
+                        src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=400"
+                        alt="Royal Lakefront Estate"
+                        className="w-12 h-12 rounded-xl object-cover shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h6 className="font-bold text-[10px] text-charcoal truncate">Royal Lakefront Estate</h6>
+                        <p className="text-[8px] text-gray-500 font-medium truncate">Udaipur · 5 BHK Villa</p>
+                        <span className="text-[10px] font-extrabold text-charcoal mt-0.5 block">₹18,000 /night</span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Property Card 2 */}
-                  <div className="bg-white rounded-2xl p-2 border border-gray-150 shadow-subtle flex items-center gap-2">
-                    <img
-                      src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=400"
-                      alt="Royal Lakefront Estate"
-                      className="w-11 h-11 rounded-xl object-cover shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h6 className="font-bold text-[10px] text-charcoal truncate">Royal Lakefront Estate</h6>
-                      <p className="text-[8px] text-gray-500 font-medium truncate">Udaipur · 5 BHK Villa</p>
-                      <span className="text-[10px] font-extrabold text-charcoal mt-0.5 block">₹18,000 /night</span>
+                  {/* Bottom App Bar */}
+                  <div className="bg-white py-2 px-4 border-t border-gray-100 flex justify-between items-center text-[8px] font-bold text-gray-400">
+                    <div className="flex flex-col items-center text-[#875F00]">
+                      <div className="w-1.5 h-1.5 rounded-full bg-[#875F00] mb-0.5" />
+                      <span>Discover</span>
                     </div>
+                    <div className="flex flex-col items-center"><span>Explore</span></div>
+                    <div className="flex flex-col items-center"><span>Wishlist</span></div>
+                    <div className="flex flex-col items-center"><span>Bookings</span></div>
                   </div>
-                </div>
 
-                {/* Bottom App Bar */}
-                <div className="bg-white py-2 px-4 border-t border-gray-100 flex justify-between items-center text-[8px] font-bold text-gray-400">
-                  <div className="flex flex-col items-center text-[#875F00]">
-                    <div className="w-1.5 h-1.5 rounded-full bg-[#875F00] mb-0.5" />
-                    <span>Discover</span>
-                  </div>
-                  <div className="flex flex-col items-center"><span>Explore</span></div>
-                  <div className="flex flex-col items-center"><span>Wishlist</span></div>
-                  <div className="flex flex-col items-center"><span>Bookings</span></div>
                 </div>
-
               </div>
 
             </div>
