@@ -1416,9 +1416,9 @@ const PropertyCard = ({ property, compact, onHover, onClick, propertyUrl, style,
             event.currentTarget.onerror = null;
             event.currentTarget.src = PROPERTY_IMAGE_PLACEHOLDER;
           }}
-          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+          className="w-full h-full object-cover"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60 group-hover:opacity-80 transition-opacity"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60"></div>
         
         <div className="absolute top-4 left-4 z-20">
            {String(property.property_type || '').toLowerCase() === 'villa' && property.price_per_night >= 50000 ? (

@@ -69,7 +69,7 @@
   }
 
   .card-premium:hover {
-    @apply -translate-y-1 shadow-premium border-gray-200;
+    @apply border-sand-300 shadow-md;
   }
 
   /* Gradients - Very Subtle */
@@ -262,15 +262,9 @@
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-/* Property cards scale & lift with enhanced shadow */
-.landing-page-container .group\/card,
-.landing-page-container button[class*="shadow-subtle"] {
-  will-change: transform;
-}
-.landing-page-container .group\/card:hover,
-.landing-page-container button[class*="shadow-subtle"]:hover {
-  transform: translateY(-5px) scale(1.01) !important;
-  box-shadow: 0 20px 38px -10px rgba(0, 0, 0, 0.08), 0 12px 24px -10px rgba(0, 0, 0, 0.05) !important;
+/* Property cards clean subtle hover */
+.landing-page-container .group\/card:hover {
+  border-color: rgba(212, 175, 55, 0.4) !important;
 }
 
 /* Category cards / shortcut items */
