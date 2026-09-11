@@ -4433,162 +4433,203 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Main Footer Section */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
-        <div className="absolute inset-0 bg-[#081321] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-12 md:px-10 md:py-14 lg:px-14 xl:px-20 max-w-[1440px] mx-auto">
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-10 lg:gap-8 pb-10 border-b border-white/10">
+      {/* Main Footer Section (Exact 99acres Replica Layout) */}
+      <footer className="relative overflow-hidden bg-[#11161F] text-white border-t border-white/10 font-sans text-xs">
+        <div className="w-full max-w-[1440px] mx-auto px-6 py-10 md:px-10 md:py-12 lg:px-14">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-10">
             
-            {/* Column 1: Brand & Contact Info & Socials (lg:col-span-4) */}
-            <div className="lg:col-span-4">
-              <button
-                type="button"
-                className="mb-4 flex items-center"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-              >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
-              </button>
-              <p className="text-xs sm:text-sm font-normal leading-relaxed text-white/70 pr-4 mb-6">
-                {footerData.brand_description || t('footerSub')}
+            {/* Column 1: Brand / Primary Links (lg:col-span-3) */}
+            <div className="lg:col-span-3">
+              <h4 className="text-sm font-bold text-white mb-4 tracking-wide">X-Space360</h4>
+              <ul className="space-y-2.5 text-white/70 text-[12px]">
+                <li>
+                  <Link to="/guest/browse" className="hover:text-white transition-colors">Mobile Apps</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse" className="hover:text-white transition-colors">Our Services</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse?category=residential" className="hover:text-white transition-colors">Short-term Stays</Link>
+                </li>
+                <li>
+                  <Link to="/register?role=host" className="hover:text-white transition-colors">List Your Property</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse?category=commercial" className="hover:text-white transition-colors">Commercial Workspaces</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse?category=event_venue" className="hover:text-white transition-colors">Event Venues & Lawns</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse" className="hover:text-white transition-colors">Real Estate Investments</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse" className="hover:text-white transition-colors">All Destinations</Link>
+                </li>
+                <li>
+                  <Link to="/support" className="hover:text-white transition-colors">Customer Service</Link>
+                </li>
+                <li>
+                  <Link to="/support" className="hover:text-white transition-colors">Sitemap</Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 2: Company Links (lg:col-span-3) */}
+            <div className="lg:col-span-3">
+              <h4 className="text-sm font-bold text-white mb-4 tracking-wide">Company</h4>
+              <ul className="space-y-2.5 text-white/70 text-[12px]">
+                <li>
+                  <Link to="/about-us" className="hover:text-white transition-colors">About us</Link>
+                </li>
+                <li>
+                  <Link to="/support" className="hover:text-white transition-colors">Contact us</Link>
+                </li>
+                <li>
+                  <button type="button" onClick={() => setFooterPopup({ title: 'Terms & Conditions', content: legalData.terms_text })} className="hover:text-white transition-colors text-left">Terms & Conditions</button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => setFooterPopup({ title: 'Privacy Policy', content: legalData.privacy_text })} className="hover:text-white transition-colors text-left">Privacy Policy</button>
+                </li>
+                <li>
+                  <button type="button" onClick={() => setFooterPopup({ title: 'Check-In Instructions', content: legalData.checkin_text })} className="hover:text-white transition-colors text-left">Safety Guide & Instructions</button>
+                </li>
+                <li>
+                  <Link to="/blog" className="hover:text-white transition-colors">Blog & Articles</Link>
+                </li>
+                <li>
+                  <Link to="/support" className="hover:text-white transition-colors">Feedback</Link>
+                </li>
+                <li>
+                  <Link to="/support" className="hover:text-white transition-colors">Report a problem</Link>
+                </li>
+                <li>
+                  <Link to="/support" className="hover:text-white transition-colors">Testimonials</Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 3: Our Destinations / Services (lg:col-span-3) */}
+            <div className="lg:col-span-3">
+              <h4 className="text-sm font-bold text-white mb-4 tracking-wide">Explore India</h4>
+              <ul className="space-y-2.5 text-white/70 text-[12px]">
+                <li>
+                  <Link to="/guest/browse?city=Nashik" className="hover:text-white transition-colors">Villas in Nashik</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse?category=residential" className="hover:text-white transition-colors">Farmhouses & Estates</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse?category=commercial" className="hover:text-white transition-colors">Office & Coworking</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse?category=event_venue" className="hover:text-white transition-colors">Marriage Lawns & Venues</Link>
+                </li>
+                <li>
+                  <Link to="/register?role=host" className="hover:text-white transition-colors">Become a Host</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse" className="hover:text-white transition-colors">Weekend Getaways</Link>
+                </li>
+                <li>
+                  <Link to="/guest/browse" className="hover:text-white transition-colors">Verified Listings</Link>
+                </li>
+              </ul>
+            </div>
+
+            {/* Column 4: Contact Us, Socials, App Download & Trademarks (lg:col-span-3) */}
+            <div className="lg:col-span-3 space-y-6">
+              
+              {/* Contact Us Block */}
+              <div>
+                <h4 className="text-sm font-bold text-white mb-2 tracking-wide">Contact Us</h4>
+                <p className="text-[12px] text-white font-semibold">
+                  Toll Free - <a href="tel:18003603600" className="text-white hover:underline">1800 360 3600</a>
+                </p>
+                <p className="text-[11px] text-white/60 mt-0.5">
+                  9:30 AM to 6:30 PM (Mon-Sun)
+                </p>
+                <p className="text-[12px] text-white/80 mt-2">
+                  Email - <a href="mailto:support@x-space360.com" className="text-white/90 hover:underline break-all">support@x-space360.com</a>
+                </p>
+              </div>
+
+              {/* Connect with us Block */}
+              <div>
+                <h4 className="text-sm font-bold text-white mb-2.5 tracking-wide">Connect with us</h4>
+                <div className="flex items-center gap-3 text-white/80">
+                  <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-white transition-colors">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                  </a>
+                  <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="hover:text-white transition-colors">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                  </a>
+                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter X" className="hover:text-white transition-colors">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  </a>
+                  <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-white transition-colors">
+                    <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                  </a>
+                </div>
+              </div>
+
+              {/* Download the App Block */}
+              <div>
+                <h4 className="text-sm font-bold text-white mb-2.5 tracking-wide">Download the App</h4>
+                <div className="flex items-center gap-2">
+                  
+                  {/* Google Play Store Badge */}
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-black border border-white/30 rounded-md px-2.5 py-1.5 flex items-center gap-2 hover:border-white transition-colors"
+                  >
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 512 512">
+                      <path fill="#00D2FF" d="M30.6 22.8C25.4 28.3 22.3 36.9 22.3 47.7v416.6c0 10.8 3.1 19.4 8.3 24.9l1.3 1.3 233.1-233.1V256v-2.7L31.9 21.5l-1.3 1.3z"/>
+                      <path fill="#00F076" d="M342.3 339.7l-77.3-77.3v-2.7-10l77.3-77.3 1.8 1 91.5 52c26.1 14.8 26.1 39.1 0 53.9l-91.5 52-1.8 1.4z"/>
+                      <path fill="#FF3A44" d="M265 262.4L31.9 495.5c8.6 9.1 22.8 10.2 38.8 1.1l271.6-154.3-77.3-79.9z"/>
+                      <path fill="#FFE000" d="M265 249.6l77.3-79.9L70.7 15.4C54.7 6.3 40.5 7.4 31.9 16.5L265 249.6z"/>
+                    </svg>
+                    <div className="text-left leading-none">
+                      <span className="text-[7px] font-bold text-gray-300 uppercase tracking-widest block mb-0.5">GET IT ON</span>
+                      <span className="text-[11px] font-bold text-white tracking-tight">Google Play</span>
+                    </div>
+                  </a>
+
+                  {/* App Store Badge */}
+                  <a
+                    href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-black border border-white/30 rounded-md px-2.5 py-1.5 flex items-center gap-2 hover:border-white transition-colors"
+                  >
+                    <svg className="w-5 h-5 fill-current text-white shrink-0" viewBox="0 0 384 512">
+                      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 66.2 32.1 115.7c20.7 31.2 48.7 66.4 81.3 65 30.6-1.4 43-19.7 79.9-19.7 36.7 0 48 19.7 79.9 19.7 33.3 0 58.6-31.5 79.1-62.7 14.8-22.1 20.8-33.8 30.7-56-78-29.8-68.3-99.7-68.3-99.7zM245.9 83.3c17.5-21 29.5-50.1 26-79.3-24.8 1-54.8 16.5-72.3 37.5-15.7 18.6-29.3 48.3-25.6 77.2 27.6 2.1 55.4-15 71.9-35.4z"/>
+                    </svg>
+                    <div className="text-left leading-none">
+                      <span className="text-[7px] font-bold text-gray-300 uppercase tracking-widest block mb-0.5">Download on the</span>
+                      <span className="text-[11px] font-bold text-white tracking-tight">App Store</span>
+                    </div>
+                  </a>
+
+                </div>
+              </div>
+
+              {/* Disclaimer Note (Matches 99acres) */}
+              <p className="text-[10px] text-white/50 leading-relaxed pt-1">
+                Usage of x-space360.com to upload content showing area in non standard units or which enables targeting by religion/community/caste/race is prohibited. Please report inappropriate content by writing to us at <a href="mailto:support@x-space360.com" className="text-white/80 underline hover:text-white">report abuse</a>.
               </p>
 
-              {/* Contact Us block */}
-              <div className="space-y-2 text-xs sm:text-sm text-white/80">
-                <h5 className="text-[12px] font-bold uppercase tracking-wider text-white mb-2.5 flex items-center gap-2">
-                  <span>Contact Us</span>
-                  <span className="h-0.5 w-6 rounded-full bg-white/30" />
-                </h5>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-white">Toll Free -</span>
-                  <a href="tel:18003603600" className="font-bold text-white hover:underline">1800 360 3600</a>
-                </div>
-                <div className="text-white/60 text-xs">
-                  9:30 AM to 6:30 PM (Mon-Sun)
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="font-bold text-white">Email -</span>
-                  <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="text-white/80 hover:text-white hover:underline transition-colors break-all">
-                    {footerData.email || 'support@x-space360.com'}
-                  </a>
-                </div>
-              </div>
-
-              {/* Connect with us block */}
-              <div className="mt-6">
-                <h5 className="text-[12px] font-bold uppercase tracking-wider text-white mb-3 flex items-center gap-2">
-                  <span>Connect with us</span>
-                  <span className="h-0.5 w-6 rounded-full bg-white/30" />
-                </h5>
-                <div className="flex items-center gap-2.5">
-                  <a href={footerData.facebook_link || "https://facebook.com"} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-white/40 hover:bg-white/15">
-                    <svg className="w-4 h-4 fill-current text-white group-hover:text-white transition-colors" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                  </a>
-                  <a href={footerData.youtube_link || "https://youtube.com"} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-white/40 hover:bg-white/15">
-                    <svg className="w-4 h-4 fill-current text-white group-hover:text-white transition-colors" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
-                  </a>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter X" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-white/40 hover:bg-white/15">
-                    <svg className="w-4 h-4 fill-current text-white group-hover:text-white transition-colors" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                  </a>
-                  <a href={footerData.instagram_link || "https://instagram.com"} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-white/40 hover:bg-white/15">
-                    <svg className="w-4 h-4 fill-current text-white group-hover:text-white transition-colors" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Column 2: Navigation Sections (lg:col-span-4) */}
-            <div className="lg:col-span-4 grid grid-cols-2 gap-6">
-              {footerDisplaySections.map((section) => (
-                <div key={section.heading} className="min-w-0">
-                  <h5 className="mb-4 flex flex-col gap-1.5 text-[11px] font-bold uppercase text-white tracking-wider">
-                    {section.heading}
-                    <span className="h-0.5 w-6 rounded-full bg-white/30" />
-                  </h5>
-                  <ul className="space-y-3">
-                    {section.items.map((item) => (
-                      <li key={`${section.heading}-${item.label}`}>
-                        <button
-                          type="button"
-                          onClick={() => handleFooterSectionClick(section, item)}
-                          className="text-left text-xs sm:text-sm font-medium text-white/65 transition hover:text-white hover:underline"
-                        >
-                          {item.label}
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </div>
-
-            {/* Column 3: Download the App (lg:col-span-4) */}
-            <div className="lg:col-span-4 flex flex-col justify-start">
-              <h5 className="mb-4 flex flex-col gap-1.5 text-[12px] font-bold uppercase text-white tracking-wider">
-                Download the App
-                <span className="h-0.5 w-6 rounded-full bg-white/30" />
-              </h5>
-              
-              {/* Official Store Badges */}
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
-                
-                {/* Google Play Button */}
-                <a
-                  href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 min-w-[140px] bg-black hover:bg-neutral-900 border border-white/20 hover:border-white/40 rounded-lg px-3.5 py-2 flex items-center gap-2.5 transition-all duration-200 shadow-md group"
-                >
-                  <svg className="w-6 h-6 shrink-0" viewBox="0 0 512 512">
-                    <path fill="#00D2FF" d="M30.6 22.8C25.4 28.3 22.3 36.9 22.3 47.7v416.6c0 10.8 3.1 19.4 8.3 24.9l1.3 1.3 233.1-233.1V256v-2.7L31.9 21.5l-1.3 1.3z"/>
-                    <path fill="#00F076" d="M342.3 339.7l-77.3-77.3v-2.7-10l77.3-77.3 1.8 1 91.5 52c26.1 14.8 26.1 39.1 0 53.9l-91.5 52-1.8 1.4z"/>
-                    <path fill="#FF3A44" d="M265 262.4L31.9 495.5c8.6 9.1 22.8 10.2 38.8 1.1l271.6-154.3-77.3-79.9z"/>
-                    <path fill="#FFE000" d="M265 249.6l77.3-79.9L70.7 15.4C54.7 6.3 40.5 7.4 31.9 16.5L265 249.6z"/>
-                  </svg>
-                  <div className="text-left leading-tight">
-                    <p className="text-[8px] font-bold text-gray-300 uppercase tracking-wider">GET IT ON</p>
-                    <p className="text-xs font-bold text-white tracking-tight group-hover:underline transition-all">Google Play</p>
-                  </div>
-                </a>
-
-                {/* App Store Button */}
-                <a
-                  href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex-1 min-w-[140px] bg-black hover:bg-neutral-900 border border-white/20 hover:border-white/40 rounded-lg px-3.5 py-2 flex items-center gap-2.5 transition-all duration-200 shadow-md group"
-                >
-                  <svg className="w-6 h-6 fill-current text-white shrink-0" viewBox="0 0 384 512">
-                    <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 66.2 32.1 115.7c20.7 31.2 48.7 66.4 81.3 65 30.6-1.4 43-19.7 79.9-19.7 36.7 0 48 19.7 79.9 19.7 33.3 0 58.6-31.5 79.1-62.7 14.8-22.1 20.8-33.8 30.7-56-78-29.8-68.3-99.7-68.3-99.7zM245.9 83.3c17.5-21 29.5-50.1 26-79.3-24.8 1-54.8 16.5-72.3 37.5-15.7 18.6-29.3 48.3-25.6 77.2 27.6 2.1 55.4-15 71.9-35.4z"/>
-                  </svg>
-                  <div className="text-left leading-tight">
-                    <p className="text-[8px] font-bold text-gray-300 uppercase tracking-wider">Download on the</p>
-                    <p className="text-xs font-bold text-white tracking-tight group-hover:underline transition-all">App Store</p>
-                  </div>
-                </a>
-
+              {/* Copyright & Trademark Block */}
+              <div className="text-[10px] text-white/60 space-y-0.5 pt-1">
+                <p>All trademarks are the property of their respective owners.</p>
+                <p>All rights reserved - X-Space360 (India) Pvt Ltd.</p>
+                <p>A Golden Rich Financial Solutions venture.</p>
               </div>
 
             </div>
 
-          </div>
-
-          {/* Bottom Copyright & Legal Links */}
-          <div className="pt-6 text-center text-xs font-medium text-white/50 space-y-2">
-            <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd. All trademarks are the property of their respective owners.</p>
-            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 pt-1 text-white/70">
-              {footerLegalItems.map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                  className="transition hover:text-white hover:underline"
-                >
-                  {item.label}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
       </footer>
