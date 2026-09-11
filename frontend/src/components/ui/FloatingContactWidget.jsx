@@ -1,7 +1,7 @@
 import React from 'react';
 import { Phone } from 'lucide-react';
 
-const WHATSAPP_NUMBER = '918484826247';
+const WHATSAPP_NUMBER = '919225586010';
 const DEFAULT_MESSAGE = "Hi, I'm interested in booking a stay. Please share details.";
 const WHATSAPP_URL = `https://api.whatsapp.com/send?phone=${WHATSAPP_NUMBER}&text=${encodeURIComponent(DEFAULT_MESSAGE)}`;
 const CALL_URL = `tel:+${WHATSAPP_NUMBER}`;
