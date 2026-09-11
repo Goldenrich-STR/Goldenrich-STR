@@ -16,6 +16,7 @@ import LegalDocument from '../components/LegalDocument';
 import ScrollReveal from '../components/ui/ScrollReveal';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import DownloadAppButton from '../components/ui/DownloadAppButton';
+import AppPromoSection from '../components/ui/AppPromoSection';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
 
@@ -4217,7 +4218,12 @@ const LandingPage = () => {
             );
           })()}
 
-                    {/* Testimonials (Loved by Guests & Hosts) */}
+          {/* ===== Official Mobile App Promo Banner (Nestaway style with 3D iPhone 15 Pro, animated view & clickable Play Store QR Scanner) ===== */}
+          <ScrollReveal duration="duration-[900ms]">
+            <AppPromoSection />
+          </ScrollReveal>
+
+          {/* Testimonials (Loved by Guests & Hosts) */}
           <ScrollReveal duration="duration-[900ms]">
             <div className="mb-12 md:mb-32 text-center">
             <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
