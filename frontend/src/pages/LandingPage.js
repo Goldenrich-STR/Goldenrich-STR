@@ -4433,7 +4433,7 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Main Footer Section */}
+      {/* Main Footer Section (99acres Inspired Real Portal Design) */}
       <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
         <div className="absolute inset-0 bg-[#081321] pointer-events-none" />
         <div className="relative z-10 w-full px-6 py-12 md:px-10 md:py-14 lg:px-14 xl:px-20 max-w-[1440px] mx-auto">
@@ -4458,18 +4458,18 @@ const LandingPage = () => {
               <div className="space-y-2 text-xs sm:text-sm text-white/80">
                 <h5 className="text-[12px] font-bold uppercase tracking-wider text-white mb-2.5 flex items-center gap-2">
                   <span>Contact Us</span>
-                  <span className="h-0.5 w-6 rounded-full bg-white/30" />
+                  <span className="h-0.5 w-6 rounded-full bg-[#E0A51B]" />
                 </h5>
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-white">Toll Free -</span>
-                  <a href="tel:18003603600" className="font-bold text-white hover:underline">1800 360 3600</a>
+                  <a href="tel:18003603600" className="font-bold text-[#E0A51B] hover:underline">1800 360 3600</a>
                 </div>
                 <div className="text-white/60 text-xs">
                   9:30 AM to 6:30 PM (Mon-Sun)
                 </div>
                 <div className="flex items-center gap-2 pt-1">
                   <span className="font-bold text-white">Email -</span>
-                  <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="text-white/80 hover:text-white hover:underline transition-colors break-all">
+                  <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="text-white/80 hover:text-[#E0A51B] transition-colors break-all">
                     {footerData.email || 'support@x-space360.com'}
                   </a>
                 </div>
@@ -4479,20 +4479,20 @@ const LandingPage = () => {
               <div className="mt-6">
                 <h5 className="text-[12px] font-bold uppercase tracking-wider text-white mb-3 flex items-center gap-2">
                   <span>Connect with us</span>
-                  <span className="h-0.5 w-6 rounded-full bg-white/30" />
+                  <span className="h-0.5 w-6 rounded-full bg-[#E0A51B]" />
                 </h5>
                 <div className="flex items-center gap-2.5">
-                  <a href={footerData.facebook_link || "https://facebook.com"} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-white/40 hover:bg-white/15">
-                    <svg className="w-4 h-4 fill-current text-white group-hover:text-white transition-colors" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                  <a href={footerData.facebook_link || "https://facebook.com"} target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-[#E0A51B] hover:bg-white/10">
+                    <svg className="w-4 h-4 fill-current text-white group-hover:text-[#E0A51B] transition-colors" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
                   </a>
-                  <a href={footerData.youtube_link || "https://youtube.com"} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-white/40 hover:bg-white/15">
-                    <svg className="w-4 h-4 fill-current text-white group-hover:text-white transition-colors" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+                  <a href={footerData.youtube_link || "https://youtube.com"} target="_blank" rel="noopener noreferrer" aria-label="YouTube" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-[#E0A51B] hover:bg-white/10">
+                    <svg className="w-4 h-4 fill-current text-white group-hover:text-[#E0A51B] transition-colors" viewBox="0 0 24 24"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
                   </a>
-                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter X" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-white/40 hover:bg-white/15">
-                    <svg className="w-4 h-4 fill-current text-white group-hover:text-white transition-colors" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                  <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" aria-label="Twitter X" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-[#E0A51B] hover:bg-white/10">
+                    <svg className="w-4 h-4 fill-current text-white group-hover:text-[#E0A51B] transition-colors" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
                   </a>
-                  <a href={footerData.instagram_link || "https://instagram.com"} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-white/40 hover:bg-white/15">
-                    <svg className="w-4 h-4 fill-current text-white group-hover:text-white transition-colors" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+                  <a href={footerData.instagram_link || "https://instagram.com"} target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="group flex h-9 w-9 items-center justify-center rounded-lg border border-white/15 bg-white/5 transition hover:border-[#E0A51B] hover:bg-white/10">
+                    <svg className="w-4 h-4 fill-current text-white group-hover:text-[#E0A51B] transition-colors" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
                   </a>
                 </div>
               </div>
@@ -4504,7 +4504,7 @@ const LandingPage = () => {
                 <div key={section.heading} className="min-w-0">
                   <h5 className="mb-4 flex flex-col gap-1.5 text-[11px] font-bold uppercase text-white tracking-wider">
                     {section.heading}
-                    <span className="h-0.5 w-6 rounded-full bg-white/30" />
+                    <span className="h-0.5 w-6 rounded-full bg-[#E0A51B]" />
                   </h5>
                   <ul className="space-y-3">
                     {section.items.map((item) => (
@@ -4512,7 +4512,7 @@ const LandingPage = () => {
                         <button
                           type="button"
                           onClick={() => handleFooterSectionClick(section, item)}
-                          className="text-left text-xs sm:text-sm font-medium text-white/65 transition hover:text-white hover:underline"
+                          className="text-left text-xs sm:text-sm font-medium text-white/65 transition hover:text-[#E0A51B]"
                         >
                           {item.label}
                         </button>
@@ -4523,22 +4523,22 @@ const LandingPage = () => {
               ))}
             </div>
 
-            {/* Column 3: Download the App (lg:col-span-4) */}
+            {/* Column 3: Download the App & Disclaimer (lg:col-span-4) */}
             <div className="lg:col-span-4 flex flex-col justify-start">
               <h5 className="mb-4 flex flex-col gap-1.5 text-[12px] font-bold uppercase text-white tracking-wider">
                 Download the App
-                <span className="h-0.5 w-6 rounded-full bg-white/30" />
+                <span className="h-0.5 w-6 rounded-full bg-[#E0A51B]" />
               </h5>
               
               {/* Official Store Badges */}
-              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3">
+              <div className="flex flex-wrap sm:flex-nowrap items-center gap-3 mb-4">
                 
                 {/* Google Play Button */}
                 <a
                   href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-[140px] bg-black hover:bg-neutral-900 border border-white/20 hover:border-white/40 rounded-lg px-3.5 py-2 flex items-center gap-2.5 transition-all duration-200 shadow-md group"
+                  className="flex-1 min-w-[140px] bg-black hover:bg-neutral-900 border border-white/20 hover:border-[#E0A51B] rounded-lg px-3.5 py-2 flex items-center gap-2.5 transition-all duration-200 shadow-md group"
                 >
                   <svg className="w-6 h-6 shrink-0" viewBox="0 0 512 512">
                     <path fill="#00D2FF" d="M30.6 22.8C25.4 28.3 22.3 36.9 22.3 47.7v416.6c0 10.8 3.1 19.4 8.3 24.9l1.3 1.3 233.1-233.1V256v-2.7L31.9 21.5l-1.3 1.3z"/>
@@ -4548,7 +4548,7 @@ const LandingPage = () => {
                   </svg>
                   <div className="text-left leading-tight">
                     <p className="text-[8px] font-bold text-gray-300 uppercase tracking-wider">GET IT ON</p>
-                    <p className="text-xs font-bold text-white tracking-tight group-hover:underline transition-all">Google Play</p>
+                    <p className="text-xs font-bold text-white tracking-tight group-hover:text-[#E0A51B] transition-colors">Google Play</p>
                   </div>
                 </a>
 
@@ -4557,18 +4557,23 @@ const LandingPage = () => {
                   href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex-1 min-w-[140px] bg-black hover:bg-neutral-900 border border-white/20 hover:border-white/40 rounded-lg px-3.5 py-2 flex items-center gap-2.5 transition-all duration-200 shadow-md group"
+                  className="flex-1 min-w-[140px] bg-black hover:bg-neutral-900 border border-white/20 hover:border-[#E0A51B] rounded-lg px-3.5 py-2 flex items-center gap-2.5 transition-all duration-200 shadow-md group"
                 >
                   <svg className="w-6 h-6 fill-current text-white shrink-0" viewBox="0 0 384 512">
                     <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 66.2 32.1 115.7c20.7 31.2 48.7 66.4 81.3 65 30.6-1.4 43-19.7 79.9-19.7 36.7 0 48 19.7 79.9 19.7 33.3 0 58.6-31.5 79.1-62.7 14.8-22.1 20.8-33.8 30.7-56-78-29.8-68.3-99.7-68.3-99.7zM245.9 83.3c17.5-21 29.5-50.1 26-79.3-24.8 1-54.8 16.5-72.3 37.5-15.7 18.6-29.3 48.3-25.6 77.2 27.6 2.1 55.4-15 71.9-35.4z"/>
                   </svg>
                   <div className="text-left leading-tight">
                     <p className="text-[8px] font-bold text-gray-300 uppercase tracking-wider">Download on the</p>
-                    <p className="text-xs font-bold text-white tracking-tight group-hover:underline transition-all">App Store</p>
+                    <p className="text-xs font-bold text-white tracking-tight group-hover:text-[#E0A51B] transition-colors">App Store</p>
                   </div>
                 </a>
 
               </div>
+
+              {/* Usage & Terms Legal Disclaimer Note */}
+              <p className="text-[11px] leading-relaxed text-white/50 border-t border-white/10 pt-3 mt-1">
+                Usage of x-space360.com to upload content showing area in non standard units or which enables targeting by religion/community/caste/race is prohibited. Please report inappropriate content by writing to us at <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="text-[#E0A51B] underline hover:text-amber-400">report abuse</a>.
+              </p>
 
             </div>
 
@@ -4583,7 +4588,7 @@ const LandingPage = () => {
                   key={item.label}
                   type="button"
                   onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                  className="transition hover:text-white hover:underline"
+                  className="transition hover:text-[#E0A51B]"
                 >
                   {item.label}
                 </button>
