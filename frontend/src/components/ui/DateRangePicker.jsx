@@ -93,19 +93,13 @@ export default function DateRangePicker({
       }
     : undefined;
 
-  const DateGrid = ({ monthDate, monthCells }) => (
+  const DateGrid = ({ monthDate, monthCells, isSecondMonth = false }) => (
     <div className="min-w-0">
-      <div className="mb-4 text-center">
-        <h4 className="text-[1.7rem] font-bold tracking-tight text-charcoal">
-          {MONTHS[monthDate.getMonth()]} {monthDate.getFullYear()}
-        </h4>
-      </div>
-
-      <div className="mb-3 grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase tracking-[0.18em] text-gray-600">
+      <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase tracking-wider text-charcoal-muted">
         {WEEKDAYS.map((day) => <div key={`${monthDate.getMonth()}-${day}`}>{day}</div>)}
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
         {monthCells.map((day, index) => {
           if (!day) return <div key={`empty-${monthDate.getMonth()}-${index}`} className="aspect-square" />;
 
@@ -123,10 +117,12 @@ export default function DateRangePicker({
               disabled={isDisabled}
               onClick={() => applyDate(iso)}
               className={[
-                'aspect-square rounded-2xl text-sm font-bold transition relative',
-                isDisabled ? (isBlocked ? 'cursor-not-allowed text-gray-400 bg-gray-100/80 border border-dashed border-gray-300' : 'cursor-not-allowed text-gray-300 bg-stone/40') : 'text-charcoal hover:bg-stone',
-                inRange ? 'bg-slate-100 text-slate-700' : '',
-                isStart || isEnd ? 'bg-[#1B1924] text-white shadow-sm' : '',
+                'aspect-square w-full rounded-2xl text-xs sm:text-sm font-bold transition-all relative flex items-center justify-center',
+                isDisabled
+                  ? (isBlocked ? 'cursor-not-allowed text-gray-300 bg-gray-100/60 line-through' : 'cursor-not-allowed text-gray-300 bg-stone/30')
+                  : 'text-charcoal hover:bg-sand-100 active:scale-95',
+                inRange ? 'bg-sand-200/90 text-charcoal rounded-none font-bold' : '',
+                isStart || isEnd ? 'bg-[#1A1A1A] text-white shadow-md rounded-2xl z-10 font-extrabold' : '',
               ].join(' ')}
             >
               {day.getDate()}
@@ -150,95 +146,123 @@ export default function DateRangePicker({
     }
   };
 
-
   const pickerContent = (
     <div
       style={desktopStyle}
-      className="fixed inset-x-3 top-24 bottom-6 z-[90] overflow-y-auto rounded-[28px] border border-slate-200 bg-white p-4 shadow-[0_22px_50px_rgba(15,23,42,0.16)] md:absolute md:top-full md:right-0 md:mt-3 md:bottom-auto md:w-[min(92vw,440px)] md:overflow-visible md:rounded-[32px] md:p-8"
+      className={`fixed inset-x-3 top-16 sm:top-20 bottom-auto max-h-[90vh] z-[90] overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5 shadow-[0_20px_50px_rgba(15,23,42,0.16)] ${
+        desktopPosition
+          ? 'md:fixed md:bottom-auto md:h-auto md:z-[90] md:overflow-visible md:rounded-[28px] md:p-5 md:py-4'
+          : 'md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:mt-2.5 md:bottom-auto md:w-[580px] lg:w-[610px] md:overflow-visible md:rounded-[28px] md:p-5 md:py-4'
+      }`}
     >
-      <div className="mb-5 flex flex-col gap-4">
-        <div>
-          <h3 className="text-2xl font-bold tracking-tight text-charcoal">
-            {checkIn && checkOut ? `${formatDate(checkIn)} - ${formatDate(checkOut)}` : 'Select dates'}
+      <div className="mb-3 flex flex-col gap-1">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg md:text-xl font-bold tracking-tight text-charcoal">
+            {checkIn && checkOut ? `${formatDate(checkIn)} — ${formatDate(checkOut)}` : 'Select stay dates'}
           </h3>
-          <p className="mt-1 text-sm font-semibold text-charcoal-muted">
-            {checkIn && checkOut ? 'Review your stay dates before booking.' : 'Choose your check-in and check-out dates.'}
-          </p>
+          <button
+            type="button"
+            onClick={() => onClose?.()}
+            className="text-gray-400 hover:text-charcoal md:hidden p-1"
+          >
+            ✕
+          </button>
         </div>
+        <p className="text-xs font-semibold text-charcoal-muted">
+          {checkIn && checkOut ? 'Review your check-in and check-out dates.' : 'Choose check-in date first, then select check-out date.'}
+        </p>
       </div>
 
-      <div className="mb-5 flex items-center justify-between">
+      {/* Navigation Header for Joined Dual-Month Calendar */}
+      <div className="mb-4 flex items-center justify-between pb-2.5 border-b border-gray-100">
         <button
           type="button"
           onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-charcoal transition hover:bg-stone"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-charcoal transition hover:bg-stone active:scale-95 shrink-0"
+          aria-label="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
         </button>
+
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 text-center px-3">
+          <h4 className="text-base md:text-lg font-bold tracking-tight text-charcoal">
+            {MONTHS[visibleMonth.getMonth()]} {visibleMonth.getFullYear()}
+          </h4>
+          <h4 className="hidden md:block text-base md:text-lg font-bold tracking-tight text-charcoal">
+            {MONTHS[nextVisibleMonth.getMonth()]} {nextVisibleMonth.getFullYear()}
+          </h4>
+        </div>
+
         <button
           type="button"
           onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))}
-          className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 text-charcoal transition hover:bg-stone"
+          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-charcoal transition hover:bg-stone active:scale-95 shrink-0"
+          aria-label="Next month"
         >
           <ChevronRight className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      {/* Dual Joined Month Grids */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-7">
         <DateGrid monthDate={visibleMonth} monthCells={cells} />
+        <div className="hidden md:block">
+          <DateGrid monthDate={nextVisibleMonth} monthCells={nextMonthCells} isSecondMonth />
+        </div>
       </div>
 
       {/* Calendar Legend / Key */}
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4 text-[10px] font-bold uppercase tracking-wider text-gray-600">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[10px] font-bold uppercase tracking-wider text-gray-500">
         <div className="flex items-center space-x-1.5">
-          <span className="h-3 w-3 rounded-full border border-gray-300 bg-white" />
+          <span className="h-2.5 w-2.5 rounded-full border border-gray-300 bg-white" />
           <span>Available</span>
         </div>
         <div className="flex items-center space-x-1.5">
-          <span className="h-3 w-3 rounded-full bg-[#1B1924]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#1A1A1A]" />
           <span>Selected</span>
         </div>
         <div className="flex items-center space-x-1.5">
-          <span className="h-3 w-3 rounded-full border border-dashed border-gray-300 bg-gray-100" />
-          <span>Unavailable / Blocked</span>
+          <span className="h-2.5 w-2.5 rounded-full border border-dashed border-gray-300 bg-gray-100" />
+          <span>Unavailable</span>
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-stone/70 px-4 py-3 text-xs font-semibold text-charcoal md:hidden">
-        <div className="grid grid-cols-2 gap-4">
+      <div className="mt-3 rounded-xl bg-stone/70 px-3.5 py-2 text-xs font-semibold text-charcoal md:hidden">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-gray-600">Check-in</p>
-            <p className="mt-1">{formatDate(checkIn)}</p>
+            <p className="text-[9px] uppercase tracking-widest text-gray-500">Check-in</p>
+            <p className="mt-0.5">{formatDate(checkIn)}</p>
           </div>
           <div>
-            <p className="text-[10px] uppercase tracking-widest text-gray-600">Check-out</p>
-            <p className="mt-1">{formatDate(checkOut)}</p>
+            <p className="text-[9px] uppercase tracking-widest text-gray-500">Check-out</p>
+            <p className="mt-0.5">{formatDate(checkOut)}</p>
           </div>
         </div>
       </div>
 
-      <div className="mt-6 flex gap-3 md:justify-end">
+      <div className="mt-4 flex gap-2.5 md:justify-end">
         <button
           type="button"
           onClick={() => onChange({ checkIn: '', checkOut: '' })}
-          className="w-full rounded-full border border-gray-200 px-4 py-2.5 text-xs font-bold uppercase tracking-widest text-charcoal transition hover:bg-stone md:w-auto md:min-w-[140px]"
+          className="w-full rounded-full border border-gray-200 px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-charcoal transition hover:bg-stone md:w-auto md:min-w-[120px]"
         >
           Clear
         </button>
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="hidden rounded-full bg-[#1B1924] px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-black md:inline-flex md:min-w-[140px] md:items-center md:justify-center"
+          className="w-full rounded-full bg-[#1A1A1A] px-5 py-2 text-[11px] font-bold uppercase tracking-widest text-white transition hover:bg-black md:w-auto md:min-w-[120px] flex items-center justify-center"
         >
-          Close
+          Done
         </button>
       </div>
     </div>
   );
 
-  if (isMobile) {
+  if (isMobile || desktopPosition) {
     return createPortal(pickerContent, document.body);
   }
 
   return pickerContent;
 }
+

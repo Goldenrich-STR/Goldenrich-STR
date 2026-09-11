@@ -562,7 +562,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                 {!isLogin && registerData.role === 'host' ? (
                   <>
                     <h4 className="text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
-                      List Your Property.<br />Maximize Your Yield
+                      List Your Property.<br />Maximize Your Earnings
                     </h4>
                     <p className="text-white text-xs font-semibold max-w-[240px] mb-4 drop-shadow-sm leading-relaxed">
                       Partner with X-Space360 to host guests, manage bookings, and earn maximum revenue.

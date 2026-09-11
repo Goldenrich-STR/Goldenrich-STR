@@ -3,6 +3,7 @@ import "@/App.css";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import SEO from "./components/SEO";
+import ChatbotWidget from "./components/ChatbotWidget";
 
 // Pages (Code-splitted with dynamic lazy imports)
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -422,6 +423,8 @@ function AppRoutes() {
   );
 }
 
+
+
 function App() {
   return (
     <div className="App">
@@ -430,6 +433,7 @@ function App() {
         <Suspense fallback={<ScreenLoading />}>
           <AppRoutes />
         </Suspense>
+        <ChatbotWidget />
       </AuthProvider>
     </div>
   );

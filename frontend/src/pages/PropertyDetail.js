@@ -6,6 +6,7 @@ import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
+import DownloadAppButton from '../components/ui/DownloadAppButton';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText, formatPropertyDescription, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import ShareDropdown from '../components/ShareDropdown';
@@ -542,6 +543,7 @@ const PropertyDetail = () => {
   const [bookingCalendarPosition, setBookingCalendarPosition] = useState(null);
   const checkInButtonRef = useRef(null);
   const checkOutButtonRef = useRef(null);
+  const bookingCardRef = useRef(null);
   const [guests, setGuests] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return Number(params.get('guests')) || 1;
@@ -957,23 +959,39 @@ const PropertyDetail = () => {
 
   const updateCalendarPosition = () => {
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
-    const popupWidth = viewportWidth >= 768
-      ? Math.min(440, viewportWidth - 32)
-      : Math.min(Math.max(viewportWidth - 24, 280), 360);
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
+    const bookingCardNode = bookingCardRef.current || checkInButtonRef.current;
+    
+    if (bookingCardNode && viewportWidth) {
+      const cardRect = bookingCardNode.getBoundingClientRect();
+      const popupWidth = viewportWidth >= 768
+        ? Math.min(600, viewportWidth - 32)
+        : Math.min(Math.max(viewportWidth - 24, 280), 360);
 
-    const checkOutNode = checkOutButtonRef.current;
-    if (checkOutNode && viewportWidth) {
-      const rect = checkOutNode.getBoundingClientRect();
-      const desiredLeft = viewportWidth >= 768
-        ? rect.right - popupWidth
-        : 12;
-      const left = viewportWidth >= 768
-        ? Math.max(16, Math.min(desiredLeft, viewportWidth - popupWidth - 16))
-        : 12;
+      const popupHeight = 450; // Height of joined 2-month DateRangePicker container
+
+      // Center horizontally relative to property price card
+      const cardCenterX = cardRect.left + (cardRect.width / 2);
+      let left = cardCenterX - (popupWidth / 2);
+
+      if (viewportWidth >= 768) {
+        if (left < 16) left = 16;
+        if (left + popupWidth > viewportWidth - 16) left = viewportWidth - popupWidth - 16;
+      }
+
+      // Center vertically relative to property price card
+      const cardCenterY = cardRect.top + (cardRect.height / 2);
+      let top = cardCenterY - (popupHeight / 2);
+
+      // Clamp vertical top position within viewport margins
+      if (top < 70) top = 70;
+      if (top + popupHeight > viewportHeight - 20) {
+        top = Math.max(70, viewportHeight - popupHeight - 20);
+      }
 
       setBookingCalendarPosition({
-        top: viewportWidth >= 768 ? rect.bottom + 12 : 96,
-        left,
+        top: Math.round(top),
+        left: Math.round(left),
         width: popupWidth,
       });
     } else {
@@ -1569,14 +1587,7 @@ const PropertyDetail = () => {
               }}
             />
 
-            {/* Get in Touch Button */}
-            <button 
-              onClick={() => navigate('/support')}
-              className="flex items-center gap-2 rounded-full px-5 py-2 transition font-sans font-semibold text-[15px] tracking-tight shadow-sm border border-gray-200 text-charcoal hover:bg-gray-50"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Get in Touch</span>
-            </button>
+            <DownloadAppButton isNavScrolled={true} />
 
             {/* Back Button */}
             <button
@@ -2442,7 +2453,7 @@ const PropertyDetail = () => {
 
           {/* Sticky Booking Widget */}
           <div className="lg:col-span-1">
-            <div className="card-premium sticky top-28 p-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar animate-slide-up" style={{ animationDelay: '400ms' }}>
+            <div ref={bookingCardRef} className="card-premium sticky top-28 p-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar animate-slide-up" style={{ animationDelay: '400ms' }}>
               <div className="flex items-baseline justify-between mb-8">
                 <div>
                   {property.category === 'event_venue' ? (

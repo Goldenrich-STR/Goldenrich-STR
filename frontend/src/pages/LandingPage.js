@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { Crown, Building2, MapPin, Calendar, Star, Zap, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
+import { Crown, Building2, MapPin, Calendar, Star, Zap, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone, Headphones, IndianRupee, Smartphone } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
@@ -15,6 +15,7 @@ import { organizationSchema, websiteSchema } from '../lib/seoSchemas';
 import LegalDocument from '../components/LegalDocument';
 import ScrollReveal from '../components/ui/ScrollReveal';
 import DateRangePicker from '../components/ui/DateRangePicker';
+import DownloadAppButton from '../components/ui/DownloadAppButton';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
 
@@ -52,13 +53,14 @@ const homeSchema = {
 
 const DEFAULT_HERO_SLIDES = [
   {
-    src: '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg',
+    src: '/videos/hero/hero-coworking-hd.jpg',
     mobilePosition: '58% center',
     tag: 'COMMERCIAL SPACES',
-    tagColor: 'text-white',
-    titlePrefix: 'Premium Workspaces in ',
-    titleHighlight: 'Nashik',
-    highlightColor: 'text-white',
+    subTag: 'COMMERCIAL SPACES',
+    titleLine1: 'Premium Workspaces',
+    titleLine2: 'in Nashik',
+    titlePrefix: 'Premium Workspaces ',
+    titleHighlight: 'in Nashik',
     titleSuffix: '',
     badges: ['Corporate rates & flexible leasing available*']
   },
@@ -66,10 +68,11 @@ const DEFAULT_HERO_SLIDES = [
     src: '/videos/hero/hero-villa-mobile-crop.png',
     mobilePosition: 'center 58%',
     tag: 'RESORT VILLAS',
-    tagColor: 'text-white',
-    titlePrefix: "Luxury Villas in India's ",
-    titleHighlight: 'Wine Capital',
-    highlightColor: 'text-white',
+    subTag: 'RESORT VILLAS',
+    titleLine1: 'Luxury Villas',
+    titleLine2: "in India's Wine Capital",
+    titlePrefix: 'Luxury Villas ',
+    titleHighlight: "in India's Wine Capital",
     titleSuffix: '',
     badges: ['Curated luxury stays with private pools*']
   },
@@ -77,10 +80,11 @@ const DEFAULT_HERO_SLIDES = [
     src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
     mobilePosition: '58% center',
     tag: 'WEDDING VENUES',
-    tagColor: 'text-white',
+    subTag: 'WEDDING VENUES',
+    titleLine1: 'Luxury Weddings,',
+    titleLine2: 'Beautiful Memories',
     titlePrefix: 'Luxury Weddings, ',
     titleHighlight: 'Beautiful Memories',
-    highlightColor: 'text-white',
     titleSuffix: '',
     badges: ['Plan your dream celebration with custom setups*']
   },
@@ -88,10 +92,11 @@ const DEFAULT_HERO_SLIDES = [
     src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
     mobilePosition: 'left center',
     tag: 'RESIDENTIAL SPACES',
-    tagColor: 'text-white',
+    subTag: 'RESIDENTIAL SPACES',
+    titleLine1: 'Experience the',
+    titleLine2: 'Comfort of Home',
     titlePrefix: 'Experience the ',
     titleHighlight: 'Comfort of Home',
-    highlightColor: 'text-white',
     titleSuffix: '',
     badges: ['Fully serviced spaces with premium amenities*']
   }
@@ -2872,14 +2877,6 @@ const LandingPage = () => {
             >
               Discover
             </Link>
-
-            <button
-              type="button"
-              onClick={() => setShowHowItWorksModal(true)}
-              className="hover:text-terracotta transition-colors duration-200"
-            >
-              How It Works
-            </button>
             <Link
               to={user ? '/host/list-property' : '/register?role=host'}
               className="hover:text-terracotta transition-colors duration-200"
@@ -2964,18 +2961,8 @@ const LandingPage = () => {
           <div className="hidden lg:flex items-center space-x-6">
             <LanguageSelector showPropertyTypes />
 
-            {/* Get in Touch Button */}
-            <button 
-              onClick={() => navigate('/support')}
-              className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition font-sans font-semibold text-[17px] tracking-tight shadow-sm border ${
-                isNavScrolled
-                  ? 'border-gray-200 text-charcoal hover:bg-gray-50'
-                  : 'border-white/40 text-white hover:bg-white/10'
-              }`}
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Get in Touch</span>
-            </button>
+            {/* Download App Button with APP badge and QR Scanner Popup */}
+            <DownloadAppButton isNavScrolled={isNavScrolled} />
 
             {/* User/Profile Button */}
             {user ? (
@@ -3068,13 +3055,6 @@ const LandingPage = () => {
             >
               Discover
             </button>
-
-            <button
-              onClick={() => { setIsMobileMenuOpen(false); setShowHowItWorksModal(true); }}
-              className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
-            >
-              How It Works
-            </button>
             <button
               onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/register?role=host'); }}
               className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
@@ -3127,13 +3107,19 @@ const LandingPage = () => {
                 </div>
               )}
             </div>
-            <button
-              onClick={() => { setIsMobileMenuOpen(false); navigate('/support'); }}
-              className="text-left text-[17px] font-medium flex items-center gap-2 py-4 border-b border-gray-200"
+            <a
+              href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-left text-[17px] font-medium flex items-center justify-between py-4 border-b border-gray-200 text-charcoal"
             >
-              <Phone className="w-4.5 h-4.5" />
-              <span>Get in Touch</span>
-            </button>
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-terracotta" />
+                <span>Download App</span>
+              </div>
+              <span className="bg-[#ff4e6d] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">APP</span>
+            </a>
             <div className="py-4 border-b border-gray-200 flex flex-col items-start">
               <LanguageSelector mode="inline" showPropertyTypes />
             </div>
@@ -3176,45 +3162,47 @@ const LandingPage = () => {
       )}
 
       {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
-      <section className="relative w-full z-30 bg-[#121212] px-0 pt-0 pb-0">
-      <div className="relative h-[68vh] min-h-[620px] max-h-[700px] md:h-[62vh] md:min-h-[560px] md:max-h-[640px] w-full z-30 overflow-visible bg-[#181818] bg-gradient-to-br from-charcoal via-slate-900 to-black shadow-premium">
+      <section className="relative w-full z-30 bg-white px-0 pt-0 pb-0">
+      <div className="relative h-[68vh] min-h-[620px] max-h-[700px] md:h-[62vh] md:min-h-[560px] md:max-h-[640px] w-full z-30 overflow-visible bg-[#181818] bg-gradient-to-br from-charcoal via-slate-900 to-black shadow-premium rounded-b-[28px] md:rounded-b-[44px]">
         
-        {/* ── Sliding/Fading Background Images ── */}
-        {heroSlides.map((slide, index) => (
-          <div 
-            key={index}
-            className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out z-0"
-            style={{
-              backgroundImage: index === currentHeroSlide || loadedHeroSlides.has(index)
-                ? `url(${slide.src})`
-                : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: slide.mobilePosition || 'center',
-              opacity: index === currentHeroSlide ? 1 : 0
-            }}
-          />
-        ))}
+        {/* ── Background Sliding/Fading Images (Clipped with bottom rounded corners) ── */}
+        <div className="absolute inset-0 w-full h-full rounded-b-[28px] md:rounded-b-[44px] overflow-hidden z-0">
+          {heroSlides.map((slide, index) => (
+            <div 
+              key={index}
+              className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out z-0"
+              style={{
+                backgroundImage: index === currentHeroSlide || loadedHeroSlides.has(index)
+                  ? `url(${slide.src})`
+                  : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: slide.mobilePosition || 'center',
+                opacity: index === currentHeroSlide ? 1 : 0
+              }}
+            />
+          ))}
 
-        {/* ── 35% dark overlay ── */}
-        <div className="absolute inset-0 bg-black/35 z-10 transition-opacity duration-1000" />
+          {/* ── 35% dark overlay ── */}
+          <div className="absolute inset-0 bg-black/35 z-10 transition-opacity duration-1000" />
+        </div>
 
         {/* ── Hero Slide Navigation Arrows (Floating Left & Right) ── */}
         <button
           type="button"
           onClick={() => setCurrentHeroSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
-          className="absolute left-3 md:left-6 top-1/2 -translate-y-1/2 z-30 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-white/30 bg-black/25 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition shadow-lg shrink-0 cursor-pointer"
+          className="absolute left-2.5 md:left-6 top-[48%] md:top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-11 md:h-11 min-w-[40px] min-h-[40px] rounded-full border border-white/40 bg-black/30 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition shadow-lg shrink-0 cursor-pointer"
           aria-label="Previous hero slide"
         >
-          <ChevronLeft className="w-6 h-6" />
+          <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
         </button>
 
         <button
           type="button"
           onClick={() => setCurrentHeroSlide((prev) => (prev + 1) % heroSlides.length)}
-          className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2 z-30 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-white/30 bg-black/25 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition shadow-lg shrink-0 cursor-pointer"
+          className="absolute right-2.5 md:right-6 top-[48%] md:top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-11 md:h-11 min-w-[40px] min-h-[40px] rounded-full border border-white/40 bg-black/30 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition shadow-lg shrink-0 cursor-pointer"
           aria-label="Next hero slide"
         >
-          <ChevronRight className="w-6 h-6" />
+          <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
         </button>
 
         {/* ── Hero Content (Centered with Spacing & font-lufga) ── */}
@@ -3222,31 +3210,45 @@ const LandingPage = () => {
           {(() => {
             const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
             return (
-              <div className="flex flex-col items-center space-y-3 md:space-y-5 w-full mb-0 md:mb-4 -mt-8 md:mt-0 max-w-4xl mx-auto">
+              <div className="flex flex-col items-center space-y-2.5 sm:space-y-4 w-full mb-0 md:mb-4 -mt-8 md:mt-0 max-w-4xl mx-auto">
+                 
+                 {/* Top Tagline with Side Accent Lines */}
+                 <div className="flex items-center justify-center gap-3 animate-fade-in" key={`tag-${currentHeroSlide}`}>
+                   <span className="h-[1px] w-6 sm:w-10 bg-white/40"></span>
+                   <span className="text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.22em] font-semibold text-white/95 drop-shadow-sm select-none">
+                     {activeHero.subTag || activeHero.tag || 'RESORT VILLAS'}
+                   </span>
+                   <span className="h-[1px] w-6 sm:w-10 bg-white/40"></span>
+                 </div>
+
+                 {/* Main Headline (2-Line Headline, font-lufga, font-medium/semibold) */}
                  <div className="w-full px-2 text-center animate-fade-in" key={`title-${currentHeroSlide}`}>
-                   <h2 className="text-[26px] sm:text-4xl md:text-5xl lg:text-[58px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-full text-center mx-auto">
-                     {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
+                   <h2 className="text-[28px] sm:text-5xl md:text-6xl lg:text-[64px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-4xl text-center mx-auto">
+                     {activeHero.titleLine1 || activeHero.titlePrefix || ''}
+                     <br className="hidden sm:inline" />
+                     {' '}
+                     {activeHero.titleLine2 || activeHero.titleHighlight || activeHero.titleSuffix || ''}
                    </h2>
                  </div>
                  
-                 {/* Custom Badges / Batches instead of Subtitle */}
+                 {/* Custom Badges / Batches */}
                  <div className="flex flex-wrap justify-center gap-2 animate-fade-in" key={`badges-${currentHeroSlide}`}>
                    {activeHero.badges && activeHero.badges.map((badge, idx) => (
-                     <span key={idx} className="border border-white bg-white/10 backdrop-blur-md rounded-full px-4 md:px-6 py-2 text-white font-bold text-[11px] md:text-sm drop-shadow-sm select-none">
+                     <span key={idx} className="border border-white/80 bg-white/10 backdrop-blur-md rounded-full px-4 md:px-6 py-1.5 text-white font-medium text-[11px] md:text-sm drop-shadow-sm select-none">
                        {badge}
                      </span>
                    ))}
                  </div>
 
-                 <div className="w-full mt-3 md:mt-6 relative max-w-5xl text-left">
+                 <div className="w-full mt-3 md:mt-5 relative max-w-4xl text-left mx-auto">
                     {/* Transparent overlay to close active dropdowns on clicking outside */}
-                    {activeDropdown && (
-                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
+                    {(activeDropdown || landingCalendarOpen) && (
+                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => { setActiveDropdown(null); setLandingCalendarOpen(false); }} />
                     )}
 
                     {/* Capsule Search Bar */}
-                    <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px]">
-                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white">
+                    <div className="relative z-50 overflow-visible rounded-[30px] lg:rounded-[40px]">
+                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[26px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-2 lg:p-2 lg:pl-4 lg:pr-2 relative overflow-visible bg-white">
                         
                         {/* Search Input */}
                         <div className="relative flex-1 w-full min-w-0 z-10">
@@ -3255,9 +3257,9 @@ const LandingPage = () => {
                               const el = document.getElementById('landing-search-query');
                               if (el) el.focus();
                             }}
-                            className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer group rounded-2xl lg:rounded-full hover:bg-stone/50 transition duration-200"
+                            className="flex items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer group rounded-xl lg:rounded-full hover:bg-stone/50 transition duration-200"
                           >
-                            <Search className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                            <Search className="w-4 h-4 text-gray-500 mr-2.5 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
                               <label htmlFor="landing-search-query" className="sr-only">Search properties and destinations</label>
                               <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Search</p>
@@ -3271,17 +3273,17 @@ const LandingPage = () => {
                                 }}
                                 placeholder="Search properties..."
                                 aria-label="Search properties and destinations"
-                                className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-600 font-extrabold text-sm focus:ring-0 focus:outline-none p-0 mt-1"
+                                className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-600 font-extrabold text-sm focus:ring-0 focus:outline-none p-0 mt-0.5"
                               />
                             </div>
                           </div>
                         </div>
-                        <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
+                        <div className="hidden lg:block w-[1px] h-7 bg-gray-200" />
                         
                         <div className={`relative flex flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
                           {/* Check-in */}
-                          <div className="relative flex-1 flex items-center px-3 lg:px-6 py-2.5 lg:py-3 hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group shrink-0">
-                            <Calendar className="w-4.5 h-4.5 text-gray-500 mr-2 lg:mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
+                          <div className="relative flex-1 flex items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group shrink-0">
+                            <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
                               onClick={() => {
@@ -3291,30 +3293,19 @@ const LandingPage = () => {
                               className="w-full text-left"
                             >
                               <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Check-in</p>
-                              <p className={`font-extrabold text-xs lg:text-sm mt-1 leading-none ${dates.checkIn ? 'text-charcoal' : 'text-gray-600'}`}>
+                              <p className={`font-extrabold text-xs lg:text-xs mt-0.5 leading-none whitespace-nowrap ${dates.checkIn ? 'text-charcoal' : 'text-gray-600'}`}>
                                 {dates.checkIn || 'Select Date'}
                               </p>
                             </button>
-                            {landingCalendarOpen && landingCalendarAnchor === 'checkIn' && (
-                              <DateRangePicker
-                                open={landingCalendarOpen}
-                                anchor={landingCalendarAnchor}
-                                checkIn={dates.checkIn}
-                                checkOut={dates.checkOut}
-                                minDate={todayISO}
-                                onChange={setDates}
-                                onClose={() => setLandingCalendarOpen(false)}
-                              />
-                            )}
                           </div>
                           
                           {/* Arrow Separator */}
-                          <div className="hidden lg:flex items-center text-gray-300 mx-1 shrink-0">
-                            <ArrowRight className="w-4 h-4" />
+                          <div className="hidden lg:flex items-center text-gray-300 mx-0.5 shrink-0">
+                            <ArrowRight className="w-3.5 h-3.5" />
                           </div>
                           {/* Check-out */}
-                          <div className="relative flex-1 flex items-center px-3 lg:px-6 py-2.5 lg:py-3 hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group shrink-0">
-                            <Calendar className="w-4.5 h-4.5 text-gray-500 mr-2 lg:mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
+                          <div className="relative flex-1 flex items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group shrink-0">
+                            <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
                               onClick={() => {
@@ -3324,30 +3315,32 @@ const LandingPage = () => {
                               className="w-full text-left"
                             >
                               <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Check-out</p>
-                              <p className={`font-extrabold text-xs lg:text-sm mt-1 leading-none ${dates.checkOut ? 'text-charcoal' : 'text-gray-600'}`}>
+                              <p className={`font-extrabold text-xs lg:text-xs mt-0.5 leading-none whitespace-nowrap ${dates.checkOut ? 'text-charcoal' : 'text-gray-600'}`}>
                                 {dates.checkOut || 'Select Date'}
                               </p>
                             </button>
-                            {landingCalendarOpen && landingCalendarAnchor === 'checkOut' && (
-                              <DateRangePicker
-                                open={landingCalendarOpen}
-                                anchor={landingCalendarAnchor}
-                                checkIn={dates.checkIn}
-                                checkOut={dates.checkOut}
-                                minDate={todayISO}
-                                onChange={setDates}
-                                onClose={() => setLandingCalendarOpen(false)}
-                              />
-                            )}
                           </div>
                         </div>
-                        <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
+                        <div className="hidden lg:block w-[1px] h-7 bg-gray-200" />
+
+                        {/* Centered Date Range Picker Popup */}
+                        {landingCalendarOpen && (
+                          <DateRangePicker
+                            open={landingCalendarOpen}
+                            anchor={landingCalendarAnchor}
+                            checkIn={dates.checkIn}
+                            checkOut={dates.checkOut}
+                            minDate={todayISO}
+                            onChange={setDates}
+                            onClose={() => setLandingCalendarOpen(false)}
+                          />
+                        )}
 
                         {/* Guests */}
-                        <div className={`relative flex-1 w-full ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
+                        <div className={`relative shrink-0 w-auto ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                            className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group"
+                            className="flex items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group"
                           >
                             <User className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
@@ -3431,6 +3424,59 @@ const LandingPage = () => {
         </div>
       </div>
       </section>
+
+      {/* ── TRUST & QUALITY GUARANTEE BADGES STRIP ── */}
+      <div className="w-full bg-white relative z-20 border-b border-sand-200/80 py-5 md:py-6">
+        <div className="max-w-[1440px] mx-auto px-4 md:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-sand-200/70">
+            
+            {/* Feature 1: Verified Spaces */}
+            <div className="flex items-center gap-3.5 pb-3 sm:pb-0 sm:px-4 first:px-0">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
+                <CheckCircle2 className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Verified Spaces</h4>
+                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Villas, venues & workspaces inspected</p>
+              </div>
+            </div>
+
+            {/* Feature 2: Direct Host Rates */}
+            <div className="flex items-center gap-3.5 py-3 sm:py-0 sm:px-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
+                <IndianRupee className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Direct Host Rates</h4>
+                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Best prices with transparent quotes</p>
+              </div>
+            </div>
+
+            {/* Feature 3: Instant Confirmation */}
+            <div className="flex items-center gap-3.5 py-3 sm:py-0 sm:px-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
+                <Zap className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Instant Confirmation</h4>
+                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Real-time booking with zero delays</p>
+              </div>
+            </div>
+
+            {/* Feature 4: 24/7 Concierge */}
+            <div className="flex items-center gap-3.5 pt-3 sm:pt-0 sm:px-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
+                <Headphones className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">24/7 Concierge Care</h4>
+                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Dedicated help for stays & event setups</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
 
       {/* ── Category Shortcut Strip ── */}
       <ScrollReveal duration="duration-[800ms]">
@@ -4525,7 +4571,7 @@ const LandingPage = () => {
         </div>
       )}
 
-      <ChatbotWidget />
+
 
       {/* Premium How It Works: Step-by-Step Host Onboarding Modal Component */}
       {(() => {

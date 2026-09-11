@@ -8,6 +8,7 @@ import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import ShareDropdown from '../components/ShareDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
+import DownloadAppButton from '../components/ui/DownloadAppButton';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { getPropertySlug, getPropertyUrl as buildPropertyUrl } from '../lib/propertySlug';
 import {
@@ -596,14 +597,8 @@ const GuestBrowse = () => {
               }}
             />
 
-            {/* Get in Touch Button */}
-            <button 
-              onClick={() => navigate('/support')}
-              className="flex items-center gap-2 rounded-full px-5 py-2 transition font-sans font-semibold text-[15px] tracking-tight shadow-sm border border-gray-200 text-charcoal hover:bg-gray-50"
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Get in Touch</span>
-            </button>
+            {/* Download App Button with APP badge and QR Scanner Popup */}
+            <DownloadAppButton isNavScrolled={true} />
 
             {user && user.role === 'guest' && wishlist.length > 0 && (
               <button
@@ -761,59 +756,48 @@ const GuestBrowse = () => {
               </div>
               <div className="hidden lg:block w-[1px] h-8 bg-sand-200" />
               
-              {/* Check-in */}
-              <div className={`flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full lg:w-auto border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200 group lg:relative z-10 ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkIn' ? 'z-50' : ''}`}>
-                <Calendar className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBrowseCalendarAnchor('checkIn');
-                    setActiveDropdown('dates');
-                  }}
-                  className="w-full text-left outline-none border-none bg-transparent"
-                >
-                  <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider leading-none">When</p>
-                  <p className={`font-bold text-[15px] mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-slate-600'}`}>
-                    {filters.check_in || 'Check-in'}
-                  </p>
-                </button>
-                {activeDropdown === 'dates' && browseCalendarAnchor === 'checkIn' && (
-                  <DateRangePicker
-                    open={activeDropdown === 'dates'}
-                    anchor={browseCalendarAnchor}
-                    checkIn={filters.check_in}
-                    checkOut={filters.check_out}
-                    minDate={todayISO}
-                    onChange={({ checkIn, checkOut }) => {
-                      setFilters((prev) => ({
-                        ...prev,
-                        check_in: checkIn,
-                        check_out: checkOut,
-                      }));
+              {/* Check-in & Check-out Date Range Section */}
+              <div className={`relative flex flex-col lg:flex-row items-stretch lg:items-center w-full lg:w-auto ${activeDropdown === 'dates' ? 'z-50' : 'z-10'}`}>
+                {/* Check-in */}
+                <div className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full lg:w-auto border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200 group">
+                  <Calendar className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBrowseCalendarAnchor('checkIn');
+                      setActiveDropdown('dates');
                     }}
-                    onClose={() => setActiveDropdown(null)}
-                  />
-                )}
-              </div>
-              <div className="hidden lg:block w-[1px] h-8 bg-sand-200" />
-              
-              {/* Check-out */}
-              <div className={`flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full lg:w-auto border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200 group lg:relative z-10 ${activeDropdown === 'dates' && browseCalendarAnchor === 'checkOut' ? 'z-50' : ''}`}>
-                <Calendar className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
-                <button
-                  type="button"
-                  onClick={() => {
-                    setBrowseCalendarAnchor('checkOut');
-                    setActiveDropdown('dates');
-                  }}
-                  className="w-full text-left outline-none border-none bg-transparent"
-                >
-                  <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider leading-none">When</p>
-                  <p className={`font-bold text-[15px] mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-slate-600'}`}>
-                    {filters.check_out || 'Check-out'}
-                  </p>
-                </button>
-                {activeDropdown === 'dates' && browseCalendarAnchor === 'checkOut' && (
+                    className="w-full text-left outline-none border-none bg-transparent"
+                  >
+                    <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider leading-none">When</p>
+                    <p className={`font-bold text-[15px] mt-0.5 ${filters.check_in ? 'text-charcoal' : 'text-slate-600'}`}>
+                      {filters.check_in || 'Check-in'}
+                    </p>
+                  </button>
+                </div>
+
+                <div className="hidden lg:block w-[1px] h-8 bg-sand-200" />
+
+                {/* Check-out */}
+                <div className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full lg:w-auto border-b border-sand-100 lg:border-none hover:bg-stone/50 transition duration-200 group">
+                  <Calendar className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setBrowseCalendarAnchor('checkOut');
+                      setActiveDropdown('dates');
+                    }}
+                    className="w-full text-left outline-none border-none bg-transparent"
+                  >
+                    <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wider leading-none">When</p>
+                    <p className={`font-bold text-[15px] mt-0.5 ${filters.check_out ? 'text-charcoal' : 'text-slate-600'}`}>
+                      {filters.check_out || 'Check-out'}
+                    </p>
+                  </button>
+                </div>
+
+                {/* Single Centered DateRangePicker Popup */}
+                {activeDropdown === 'dates' && (
                   <DateRangePicker
                     open={activeDropdown === 'dates'}
                     anchor={browseCalendarAnchor}
