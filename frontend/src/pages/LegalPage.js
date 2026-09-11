@@ -505,21 +505,44 @@ const LegalPage = () => {
       {/* Footer */}
       <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium mt-16">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-12 md:px-10 lg:px-14 xl:px-20">
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(4,1fr)_1.2fr] lg:gap-12">
-            <div className="max-w-xs">
-              <button
-                type="button"
-                className="mb-6 flex items-center cursor-pointer"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-              >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
-              </button>
-              <p className="text-sm font-medium leading-7 text-white/62">
-                {footerData.brand_description}
-              </p>
-              <div className="mt-7 flex items-center gap-3">
+
+        {/* Top Contact Bar */}
+        <div className="relative z-10 border-b border-white/10 bg-white/[0.03]">
+          <div className="w-full px-6 py-4 md:px-10 lg:px-14 xl:px-20">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6">
+                <a href="tel:+918484826247" className="flex items-center gap-2.5 group">
+                  <div className="w-8 h-8 rounded-full bg-[#E0A51B]/20 flex items-center justify-center group-hover:bg-[#E0A51B]/40 transition">
+                    <Phone className="h-3.5 w-3.5 text-[#E0A51B]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Call Us</p>
+                    <p className="text-sm font-bold text-white group-hover:text-[#E0A51B] transition">+91 8484826247</p>
+                  </div>
+                </a>
+                <div className="w-px h-8 bg-white/10 hidden md:block" />
+                <a href="mailto:support@x-space360.com" className="flex items-center gap-2.5 group">
+                  <div className="w-8 h-8 rounded-full bg-[#E0A51B]/20 flex items-center justify-center group-hover:bg-[#E0A51B]/40 transition">
+                    <Mail className="h-3.5 w-3.5 text-[#E0A51B]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Email Us</p>
+                    <p className="text-sm font-bold text-white group-hover:text-[#E0A51B] transition">{footerData.email || 'support@x-space360.com'}</p>
+                  </div>
+                </a>
+                <div className="w-px h-8 bg-white/10 hidden md:block" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#E0A51B]/20 flex items-center justify-center">
+                    <MapPin className="h-3.5 w-3.5 text-[#E0A51B]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Location</p>
+                    <p className="text-sm font-bold text-white">{footerData.location || 'Nashik, Maharashtra'}, India</p>
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/40 mr-1">Follow</span>
                 {[
                   { icon: Facebook, url: footerData.facebook_link, label: 'Facebook' },
                   { icon: Instagram, url: footerData.instagram_link, label: 'Instagram' },
@@ -533,29 +556,56 @@ const LegalPage = () => {
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label={social.label}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/14 bg-white/[0.03] text-white/70 transition hover:border-[#E0A51B] hover:text-[#E0A51B]"
+                      className="flex h-8 w-8 items-center justify-center rounded-full border border-white/14 bg-white/[0.03] text-white/70 transition hover:border-[#E0A51B] hover:text-[#E0A51B] hover:bg-[#E0A51B]/10"
                     >
-                      <IconComponent className="h-4 w-4" />
+                      <IconComponent className="h-3.5 w-3.5" />
                     </a>
                   );
                 })}
               </div>
             </div>
+          </div>
+        </div>
 
+        {/* Main Footer Grid */}
+        <div className="relative z-10 w-full px-6 pt-12 pb-8 md:px-10 lg:px-14 xl:px-20">
+          <div className="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-[1.6fr_repeat(4,1fr)] lg:gap-10 xl:gap-14">
+
+            {/* Brand Column */}
+            <div className="max-w-xs">
+              <button
+                type="button"
+                className="mb-5 flex items-center cursor-pointer"
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                aria-label="Back to top"
+              >
+                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
+              </button>
+              <p className="text-sm font-medium leading-7 text-white/60 mb-5">
+                {footerData.brand_description}
+              </p>
+              <div className="bg-white/5 border border-white/10 rounded-xl p-4 space-y-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-[#E0A51B]">Golden Rich Group</p>
+                <p className="text-xs text-white/60 font-medium leading-relaxed">Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
+              </div>
+            </div>
+
+            {/* Dynamic Sections */}
             {footerSections.map((section) => (
               <div key={section.heading} className="min-w-0">
-                <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
+                <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-black uppercase tracking-widest text-white">
                   {section.heading}
                   <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
                 </h5>
-                <ul className="space-y-4">
+                <ul className="space-y-3.5">
                   {section.items.map((item) => (
                     <li key={`${section.heading}-${item.label}`}>
                       <button
                         type="button"
                         onClick={() => handleFooterSectionClick(section, item)}
-                        className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
+                        className="text-left text-sm font-medium text-white/60 transition hover:text-[#E0A51B] flex items-center gap-1.5 group"
                       >
+                        <span className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-[#E0A51B] transition shrink-0" />
                         {item.label}
                       </button>
                     </li>
@@ -564,38 +614,61 @@ const LegalPage = () => {
               </div>
             ))}
 
+            {/* Contact Column */}
             <div className="min-w-0">
-              <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
+              <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-black uppercase tracking-widest text-white">
                 Contact
                 <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
               </h5>
-              <div className="space-y-5 text-sm font-medium text-white/62">
+              <div className="space-y-4">
+                <a href="tel:+918484826247" className="flex items-start gap-3 group">
+                  <Phone className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
+                  <div>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Phone</p>
+                    <p className="text-sm font-bold text-white group-hover:text-[#E0A51B] transition">+91 8484826247</p>
+                  </div>
+                </a>
+                <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="flex items-start gap-3 group">
+                  <Mail className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
+                  <div>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Email</p>
+                    <p className="text-sm font-medium text-white/70 group-hover:text-[#E0A51B] transition break-all">{footerData.email || 'support@x-space360.com'}</p>
+                  </div>
+                </a>
                 <div className="flex items-start gap-3">
                   <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.location || 'Nashik, Maharashtra'}, India</span>
+                  <div>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Address</p>
+                    <p className="text-sm font-medium text-white/70 leading-snug">{footerData.location || 'Nashik, Maharashtra'}, India</p>
+                  </div>
                 </div>
-                <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Mail className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span className="break-all">{footerData.email || 'support@x-space360.com'}</span>
-                </a>
-                <a href={`tel:${(footerData.phone || '+91 12345 67890').replace(/\s+/g, '')}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Phone className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.phone || '+91 12345 67890'}</span>
-                </a>
+                <div className="pt-2 border-t border-white/10">
+                  <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1.5">Support Hours</p>
+                  <p className="text-xs font-semibold text-white/60">Mon–Sat: 9:00 AM – 7:00 PM</p>
+                  <p className="text-xs font-semibold text-white/60">Sunday: 10:00 AM – 4:00 PM</p>
+                </div>
               </div>
             </div>
           </div>
 
-          <div className="mt-11 border-t border-white/10 pt-7 text-center">
-            <div className="text-xs font-bold uppercase text-white/52">
-              <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
-              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
+          {/* Bottom Bar */}
+          <div className="mt-12 border-t border-white/10 pt-7">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+              <div className="text-xs font-semibold text-white/40 space-y-1">
+                <p>© {new Date().getFullYear()} X-Space360 — All rights reserved.</p>
+                <p className="text-white/30">Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
+              </div>
+              <a href="tel:+918484826247" className="flex items-center gap-2 text-xs font-bold text-white/60 hover:text-[#E0A51B] transition group">
+                <Phone className="h-3.5 w-3.5 text-[#E0A51B] group-hover:scale-110 transition" />
+                <span>+91 8484826247</span>
+              </a>
+              <div className="flex flex-wrap gap-x-5 gap-y-2">
                 {footerLegalItems.map((item) => (
                   <button
                     key={item.label}
                     type="button"
                     onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                    className="transition hover:text-[#E0A51B]"
+                    className="text-xs font-bold text-white/50 transition hover:text-[#E0A51B] uppercase tracking-wide"
                   >
                     {item.label}
                   </button>

@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   FileText, MessageSquare, Mail, Phone, Search, ChevronRight, Send, Lock, HelpCircle, 
-  ArrowRight, Menu, X, Heart, LogOut, CheckCircle, ChevronDown, ChevronUp 
+  ArrowRight, Menu, X, Heart, LogOut, CheckCircle, ChevronDown, ChevronUp, MapPin
 } from 'lucide-react';
 import { cmsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -808,18 +808,152 @@ const SupportPage = () => {
       </section>
 
       {/* Footer Branding */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white py-16 px-6 md:px-12 lg:px-20 font-medium text-xs">
+      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white">
         <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-6 w-auto object-contain logo-white" />
-            <span className="text-white/30 font-bold">|</span>
-            <span className="text-white/60 font-medium">© {new Date().getFullYear()} Goldenrich Group. All rights reserved.</span>
+
+        {/* Top Contact Bar */}
+        <div className="relative z-10 border-b border-white/10 bg-white/[0.03]">
+          <div className="w-full px-6 py-4 md:px-12 lg:px-20">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex flex-wrap items-center gap-6">
+                <a href="tel:+918484826247" className="flex items-center gap-2.5 group">
+                  <div className="w-8 h-8 rounded-full bg-[#E0A51B]/20 flex items-center justify-center group-hover:bg-[#E0A51B]/40 transition">
+                    <Phone className="h-3.5 w-3.5 text-[#E0A51B]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Call Us</p>
+                    <p className="text-sm font-bold text-white group-hover:text-[#E0A51B] transition">+91 8484826247</p>
+                  </div>
+                </a>
+                <div className="w-px h-8 bg-white/10 hidden md:block" />
+                <a href="mailto:support@x-space360.com" className="flex items-center gap-2.5 group">
+                  <div className="w-8 h-8 rounded-full bg-[#E0A51B]/20 flex items-center justify-center group-hover:bg-[#E0A51B]/40 transition">
+                    <Mail className="h-3.5 w-3.5 text-[#E0A51B]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Email Us</p>
+                    <p className="text-sm font-bold text-white group-hover:text-[#E0A51B] transition">support@x-space360.com</p>
+                  </div>
+                </a>
+                <div className="w-px h-8 bg-white/10 hidden md:block" />
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-[#E0A51B]/20 flex items-center justify-center">
+                    <MapPin className="h-3.5 w-3.5 text-[#E0A51B]" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-white/40">Location</p>
+                    <p className="text-sm font-bold text-white">Nashik, Maharashtra, India</p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="flex space-x-6 text-white/80">
-            <a href="/terms" className="hover:text-terracotta transition duration-300">Terms of Service</a>
-            <a href="/privacy" className="hover:text-terracotta transition duration-300">Privacy Policy</a>
-            <span onClick={scrollToFaq} className="hover:text-terracotta transition cursor-pointer duration-300 font-bold">FAQs</span>
+        </div>
+
+        {/* Footer Grid */}
+        <div className="relative z-10 w-full px-6 pt-10 pb-6 md:px-12 lg:px-20">
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 mb-10">
+            <div>
+              <h5 className="mb-4 text-[11px] font-black uppercase tracking-widest text-white inline-flex flex-col gap-2">
+                For Guests
+                <span className="h-0.5 w-6 rounded-full bg-[#E0A51B]" />
+              </h5>
+              <ul className="space-y-2.5">
+                {[
+                  { label: 'Browse Spaces', href: '/guest/browse' },
+                  { label: 'All Destinations', href: '/guest/browse' },
+                  { label: 'Short-term Stays', href: '/guest/browse?category=residential' },
+                ].map(item => (
+                  <li key={item.label}>
+                    <a href={item.href} className="text-sm font-medium text-white/60 hover:text-[#E0A51B] transition flex items-center gap-1.5 group">
+                      <span className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-[#E0A51B] transition shrink-0" />
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h5 className="mb-4 text-[11px] font-black uppercase tracking-widest text-white inline-flex flex-col gap-2">
+                For Hosts
+                <span className="h-0.5 w-6 rounded-full bg-[#E0A51B]" />
+              </h5>
+              <ul className="space-y-2.5">
+                {[
+                  { label: 'List Your Space', href: '/host/list-property' },
+                  { label: 'Become a Host', href: '/register?role=host' },
+                ].map(item => (
+                  <li key={item.label}>
+                    <a href={item.href} className="text-sm font-medium text-white/60 hover:text-[#E0A51B] transition flex items-center gap-1.5 group">
+                      <span className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-[#E0A51B] transition shrink-0" />
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h5 className="mb-4 text-[11px] font-black uppercase tracking-widest text-white inline-flex flex-col gap-2">
+                Company
+                <span className="h-0.5 w-6 rounded-full bg-[#E0A51B]" />
+              </h5>
+              <ul className="space-y-2.5">
+                {[
+                  { label: 'About Us', href: '/about-us' },
+                  { label: 'Blog', href: '/blog' },
+                  { label: 'Support', href: '/support' },
+                ].map(item => (
+                  <li key={item.label}>
+                    <a href={item.href} className="text-sm font-medium text-white/60 hover:text-[#E0A51B] transition flex items-center gap-1.5 group">
+                      <span className="w-1 h-1 rounded-full bg-white/20 group-hover:bg-[#E0A51B] transition shrink-0" />
+                      {item.label}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div>
+              <h5 className="mb-4 text-[11px] font-black uppercase tracking-widest text-white inline-flex flex-col gap-2">
+                Contact
+                <span className="h-0.5 w-6 rounded-full bg-[#E0A51B]" />
+              </h5>
+              <div className="space-y-3">
+                <a href="tel:+918484826247" className="flex items-start gap-2 group">
+                  <Phone className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#E0A51B]" />
+                  <div>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Phone</p>
+                    <p className="text-sm font-bold text-white group-hover:text-[#E0A51B] transition">+91 8484826247</p>
+                  </div>
+                </a>
+                <a href="mailto:support@x-space360.com" className="flex items-start gap-2 group">
+                  <Mail className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-[#E0A51B]" />
+                  <div>
+                    <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Email</p>
+                    <p className="text-xs font-medium text-white/70 group-hover:text-[#E0A51B] transition break-all">support@x-space360.com</p>
+                  </div>
+                </a>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Bar */}
+          <div className="border-t border-white/10 pt-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <img src="/logo.png" alt="X-Space360" className="h-6 w-auto object-contain logo-white" />
+                <span className="text-white/20 font-bold">|</span>
+                <span className="text-xs font-medium text-white/40">© {new Date().getFullYear()} Golden Rich Group. All rights reserved.</span>
+              </div>
+              <a href="tel:+918484826247" className="flex items-center gap-1.5 text-xs font-bold text-white/50 hover:text-[#E0A51B] transition group">
+                <Phone className="h-3 w-3 text-[#E0A51B]" />
+                <span>+91 8484826247</span>
+              </a>
+              <div className="flex space-x-5 text-white/50 text-xs font-bold">
+                <a href="/terms" className="hover:text-[#E0A51B] transition uppercase tracking-wide">Terms</a>
+                <a href="/privacy" className="hover:text-[#E0A51B] transition uppercase tracking-wide">Privacy Policy</a>
+                <span onClick={scrollToFaq} className="hover:text-[#E0A51B] transition cursor-pointer uppercase tracking-wide">FAQs</span>
+              </div>
+            </div>
           </div>
         </div>
       </footer>
