@@ -9,6 +9,7 @@ import SEO from '../components/SEO';
 import ShareDropdown from '../components/ShareDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import DownloadAppButton from '../components/ui/DownloadAppButton';
+import CustomSelect from '../components/ui/CustomSelect';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { getPropertySlug, getPropertyUrl as buildPropertyUrl } from '../lib/propertySlug';
 import {
@@ -929,30 +930,22 @@ const GuestBrowse = () => {
           <div className="w-full grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-2">
               <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('propertyType')}</label>
-              <select
+              <CustomSelect
                 value={filters.property_type}
-                onChange={(e) => setFilters({ ...filters, property_type: e.target.value })}
+                onChange={(val) => setFilters({ ...filters, property_type: val })}
+                options={PROPERTY_TYPES}
                 disabled={new URLSearchParams(window.location.search).get('signature') === 'true'}
-                className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none disabled:bg-gray-100 disabled:text-gray-400"
-              >
-                {PROPERTY_TYPES.map((tOpt) => (
-                  <option key={tOpt.value} value={tOpt.value}>{tOpt.label}</option>
-                ))}
-              </select>
+              />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">
                 {usesCommercialSizeFilter ? 'Size' : t('bhkConfig')}
               </label>
-              <select
+              <CustomSelect
                 value={filters.bhk_type}
-                onChange={(e) => setFilters({ ...filters, bhk_type: e.target.value })}
-                className="w-full bg-white border-gray-200 rounded-xl px-4 py-3 text-sm font-medium outline-none"
-              >
-                {configurationOptions.map((tOpt) => (
-                  <option key={tOpt.value} value={tOpt.value}>{tOpt.label}</option>
-                ))}
-              </select>
+                onChange={(val) => setFilters({ ...filters, bhk_type: val })}
+                options={configurationOptions}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('priceRange')}</label>
