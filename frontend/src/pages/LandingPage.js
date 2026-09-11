@@ -4225,10 +4225,9 @@ const LandingPage = () => {
 
           {/* Testimonials (Loved by Guests & Hosts) */}
           <ScrollReveal duration="duration-[900ms]">
-            <div className="mb-12 md:mb-32 text-center">
+            <div className="mb-12 md:mb-20 text-center">
             <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
-            <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('lovedByGuests')}</h3>
-            <p className="text-gray-550 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('testimonialsSub')}</p>
+            <h3 className="text-3xl md:text-4xl font-bold text-charcoal mt-2 mb-6 tracking-tight">{t('lovedByGuests')}</h3>
             
             <div className="max-w-7xl mx-auto relative px-4 md:px-8">
               <div 
