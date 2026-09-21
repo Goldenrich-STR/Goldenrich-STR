@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Home, Briefcase, PartyPopper, ChevronDown, Layers } from 'lucide-react';
+import { getSeoUrlForFilters } from '../lib/seoRoutes';
 
 const CATEGORIES = [
   {
@@ -87,12 +88,12 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
   }
 
   const handleCategoryClick = (categoryKey) => {
-    navigate(`/guest/browse?category=${categoryKey}`);
+    navigate(getSeoUrlForFilters({ category: categoryKey }));
     setIsOpen(false);
   };
 
   const handleSubtypeClick = (categoryKey, subtypeValue) => {
-    navigate(`/guest/browse?category=${categoryKey}&property_type=${subtypeValue}`);
+    navigate(getSeoUrlForFilters({ category: categoryKey, property_type: subtypeValue }));
     setIsOpen(false);
   };
 

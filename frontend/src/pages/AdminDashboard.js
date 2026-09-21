@@ -6076,7 +6076,7 @@ const CMSManagement = () => {
                   className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                   value={footerData.phone || ''}
                   onChange={e => setFooterData({ ...footerData, phone: e.target.value })}
-                  placeholder="+91 8484826247"
+                  placeholder="+91 919225586010"
                 />
               </div>
 
@@ -6091,6 +6091,15 @@ const CMSManagement = () => {
                 />
               </div>
               <div>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">LinkedIn URL</label>
+                <input
+                  className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
+                  value={footerData.linkedin_link || ''}
+                  onChange={e => setFooterData({ ...footerData, linkedin_link: e.target.value })}
+                  placeholder="https://linkedin.com/..."
+                />
+              </div>
+              <div>
                 <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">Instagram URL</label>
                 <input
                   className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
@@ -6100,12 +6109,12 @@ const CMSManagement = () => {
                 />
               </div>
               <div>
-                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">YouTube URL</label>
+                <label className="text-[11px] font-bold tracking-tight text-charcoal uppercase tracking-widest block mb-2">WhatsApp Direct Link</label>
                 <input
                   className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
-                  value={footerData.youtube_link || ''}
-                  onChange={e => setFooterData({ ...footerData, youtube_link: e.target.value })}
-                  placeholder="https://youtube.com/..."
+                  value={footerData.whatsapp_link || ''}
+                  onChange={e => setFooterData({ ...footerData, whatsapp_link: e.target.value })}
+                  placeholder="https://api.whatsapp.com/send?phone=..."
                 />
               </div>
 
@@ -6246,13 +6255,19 @@ const CMSManagement = () => {
                     ...(blogData.posts || []),
                     {
                       id: `p_${Date.now()}`,
-                      title: 'New Insights Article',
-                      excerpt: 'Discover short-term rental trends across major metros.',
-                      content: '## New Insights Article\n\nWrite the full article here.',
-                      image_url: '',
-                      author: 'STR Insights Team',
+                      slug: 'what-is-short-term-rental',
+                      metaTitle: 'What Is a Short-Term Rental: A Simple Guide',
+                      metaDescription: 'Learn what a short-term rental is, how it works, who can use it, and what to check before booking a short-term rental in Nashik.',
+                      title: 'What Is a Short-Term Rental? A Simple Guide for Renters',
+                      excerpt: 'Need a place to stay for a few days without booking a hotel? A short-term rental could be the best choice.',
+                      content: 'Need a place to stay for a few days without booking a hotel? A short-term rental could be the best choice...',
+                      image_url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+                      author: 'STR Insights Desk',
                       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
                       read_time: '5 min read',
+                      faqs: [
+                        { question: 'What is another name for a short-term rental?', answer: 'A short-term rental can also be called a vacation rental, holiday rental, temporary rental, or short-term accommodation.' }
+                      ],
                       is_active: true
                     }
                   ];
@@ -6390,44 +6405,47 @@ const CMSManagement = () => {
                         }}
                       />
                     </div>
-                    <div className="grid grid-cols-3 gap-3">
-                      <div>
-                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Author</label>
-                        <input
-                          className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
-                          value={post.author}
-                          onChange={e => {
-                            const updated = [...blogData.posts];
-                            updated[index] = { ...updated[index], author: e.target.value };
-                            setBlogData({ ...blogData, posts: updated });
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Date</label>
-                        <input
-                          className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
-                          value={post.date}
-                          onChange={e => {
-                            const updated = [...blogData.posts];
-                            updated[index] = { ...updated[index], date: e.target.value };
-                            setBlogData({ ...blogData, posts: updated });
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Read Time</label>
-                        <input
-                          className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
-                          value={post.read_time}
-                          onChange={e => {
-                            const updated = [...blogData.posts];
-                            updated[index] = { ...updated[index], read_time: e.target.value };
-                            setBlogData({ ...blogData, posts: updated });
-                          }}
-                        />
-                      </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    <div>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Slug (URL)</label>
+                      <input
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
+                        value={post.slug || ''}
+                        placeholder="e.g. what-is-short-term-rental"
+                        onChange={e => {
+                          const updated = [...blogData.posts];
+                          updated[index] = { ...updated[index], slug: e.target.value };
+                          setBlogData({ ...blogData, posts: updated });
+                        }}
+                      />
                     </div>
+                    <div>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Meta Title (SEO)</label>
+                      <input
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
+                        value={post.metaTitle || ''}
+                        placeholder="What Is a Short-Term Rental: A Simple Guide"
+                        onChange={e => {
+                          const updated = [...blogData.posts];
+                          updated[index] = { ...updated[index], metaTitle: e.target.value };
+                          setBlogData({ ...blogData, posts: updated });
+                        }}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block mb-2">Meta Description (SEO)</label>
+                      <input
+                        className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-3 py-2.5 outline-none transition-all font-semibold text-charcoal bg-white text-xs"
+                        value={post.metaDescription || ''}
+                        placeholder="Learn what a short-term rental is..."
+                        onChange={e => {
+                          const updated = [...blogData.posts];
+                          updated[index] = { ...updated[index], metaDescription: e.target.value };
+                          setBlogData({ ...blogData, posts: updated });
+                        }}
+                      />
+                    </div>
+                  </div>
                   </div>
 
                   <div>
@@ -6453,9 +6471,82 @@ const CMSManagement = () => {
                         updated[index] = { ...updated[index], content: val };
                         setBlogData({ ...blogData, posts: updated });
                       }}
-                      placeholder="Write the full blog article in Markdown..."
+                      placeholder="Paste your entire blog content here..."
                       rows={10}
                     />
+                  </div>
+
+                  {/* FAQ Manager */}
+                  <div className="p-4 bg-white rounded-2xl border border-gray-150 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-[10px] font-bold tracking-tight text-charcoal-light uppercase tracking-widest block">Article FAQs ({post.faqs?.length || 0})</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = [...blogData.posts];
+                          const currentFaqs = updated[index].faqs || [];
+                          updated[index] = {
+                            ...updated[index],
+                            faqs: [...currentFaqs, { question: 'New FAQ Question', answer: 'FAQ Answer...' }]
+                          };
+                          setBlogData({ ...blogData, posts: updated });
+                        }}
+                        className="px-3 py-1.5 bg-terracotta text-white rounded-xl text-[10px] font-bold uppercase tracking-wider hover:bg-terracotta-dark transition"
+                      >
+                        + Add FAQ
+                      </button>
+                    </div>
+
+                    {(!post.faqs || post.faqs.length === 0) ? (
+                      <p className="text-xs text-charcoal-muted italic">No FAQs added for this post. Click "+ Add FAQ" above.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {post.faqs.map((faq, faqIdx) => (
+                          <div key={faqIdx} className="p-3 bg-stone/40 border border-stone-200 rounded-xl space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-bold text-terracotta uppercase">FAQ #{faqIdx + 1}</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const updated = [...blogData.posts];
+                                  const filteredFaqs = (updated[index].faqs || []).filter((_, i) => i !== faqIdx);
+                                  updated[index] = { ...updated[index], faqs: filteredFaqs };
+                                  setBlogData({ ...blogData, posts: updated });
+                                }}
+                                className="text-[10px] text-red-500 font-bold hover:underline"
+                              >
+                                Remove
+                              </button>
+                            </div>
+                            <input
+                              className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-semibold text-charcoal bg-white"
+                              value={faq.question || ''}
+                              placeholder="Question"
+                              onChange={e => {
+                                const updated = [...blogData.posts];
+                                const faqsCopy = [...(updated[index].faqs || [])];
+                                faqsCopy[faqIdx] = { ...faqsCopy[faqIdx], question: e.target.value };
+                                updated[index] = { ...updated[index], faqs: faqsCopy };
+                                setBlogData({ ...blogData, posts: updated });
+                              }}
+                            />
+                            <textarea
+                              rows={2}
+                              className="w-full border border-gray-200 rounded-xl px-3 py-1.5 text-xs font-medium text-charcoal bg-white"
+                              value={faq.answer || ''}
+                              placeholder="Answer"
+                              onChange={e => {
+                                const updated = [...blogData.posts];
+                                const faqsCopy = [...(updated[index].faqs || [])];
+                                faqsCopy[faqIdx] = { ...faqsCopy[faqIdx], answer: e.target.value };
+                                updated[index] = { ...updated[index], faqs: faqsCopy };
+                                setBlogData({ ...blogData, posts: updated });
+                              }}
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div>

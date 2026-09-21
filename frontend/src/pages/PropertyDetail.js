@@ -11,6 +11,7 @@ import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, forma
 import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import ShareDropdown from '../components/ShareDropdown';
 import { getPropertySlug, extractPropertyId, getPropertyUrl } from '../lib/propertySlug';
+import { getSeoUrlForFilters } from '../lib/seoRoutes';
 import {
   ArrowLeft,
   Building2,
@@ -874,6 +875,24 @@ const PropertyDetail = () => {
         fetchRecommendations(res.data.city, res.data.property_id, res.data.category);
       }
     } catch (e) {
+      const isCategorySlug = 
+        id === 'event-venues' || 
+        id === 'commercial-spaces' || 
+        id === 'villas' || 
+        id === 'residential' || 
+        id.startsWith('event-venues') || 
+        id.startsWith('commercial-spaces') || 
+        id.startsWith('villas-in') || 
+        id.startsWith('homestay-in') || 
+        id.startsWith('apartment-in') || 
+        id.startsWith('farmhouse-in') || 
+        id.includes('residential') ||
+        (!id.startsWith('prop_') && e.response?.status === 404);
+
+      if (isCategorySlug) {
+        navigate('/guest/browse', { replace: true });
+        return;
+      }
       setError(e.response?.status === 404 ? 'Property not found' : 'Failed to load property');
     } finally {
       setLoading(false);
@@ -1534,8 +1553,8 @@ const PropertyDetail = () => {
   };
   const seoBreadcrumbs = [
     { name: "Home", url: "/" },
-    { name: property.category === "residential" ? "Residential" : property.category === "commercial" ? "Commercial" : "Event Venues", url: `/guest/browse?category=${property.category}` },
-    { name: property.city, url: `/guest/browse?city=${property.city}` },
+    { name: property.category === "residential" ? "Residential" : property.category === "commercial" ? "Commercial" : "Event Venues", url: getSeoUrlForFilters({ category: property.category }) },
+    { name: property.city, url: getSeoUrlForFilters({ category: property.category, city: property.city }) },
     { name: propertyName, url: propertyPath }
   ];
 
@@ -1573,7 +1592,7 @@ const PropertyDetail = () => {
             </Link>
 
             <Link
-              to={user ? '/host/list-property' : '/register?role=host'}
+              to={user ? '/host/list-property' : '/register/host'}
               className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
             >
               List your Property
@@ -1698,7 +1717,6 @@ const PropertyDetail = () => {
                 data-testid="gallery-main-image"
                 loading="eager"
                 decoding="async"
-                fetchPriority="high"
                 sizes="(min-width: 1024px) 50vw, 100vw"
                 onError={(event) => {
                   event.currentTarget.onerror = null;

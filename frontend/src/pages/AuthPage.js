@@ -80,7 +80,7 @@ const AssignmentSearchSelect = ({ label, value, onChange, options, codeKey, plac
   );
 };
 
-const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
+const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, adminLogin, register, logout, refreshUser } = useAuth();
@@ -91,8 +91,9 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
   const requestedNext = searchParams.get('next') || '';
-  const initialRole = searchParams.get('role') === 'host' ? 'host' : 'guest';
-  const [isLogin, setIsLogin] = useState(location.pathname !== '/register');
+  const isHostRoute = defaultRole === 'host' || location.pathname === '/register/host' || location.pathname === '/host/register';
+  const initialRole = isHostRoute || searchParams.get('role') === 'host' ? 'host' : 'guest';
+  const [isLogin, setIsLogin] = useState(!location.pathname.includes('/register'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -177,32 +178,23 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
   }, [forceLogin, logout]);
 
   useEffect(() => {
-    setIsLogin(location.pathname !== '/register');
+    setIsLogin(!location.pathname.includes('/register'));
     setRegisterPasswordError('');
   }, [location.pathname]);
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const targetRole = params.get('role') === 'host' ? 'host' : 'guest';
+    const isHost = isHostRoute || new URLSearchParams(location.search).get('role') === 'host';
+    const targetRole = isHost ? 'host' : 'guest';
     setRegisterData(prev => prev.role === targetRole ? prev : { ...prev, role: targetRole });
-  }, [location.search]);
+  }, [location.pathname, location.search, isHostRoute]);
 
   const handleRoleChange = (newRole) => {
     setRegisterData(prev => ({ ...prev, role: newRole }));
-    const currentParams = new URLSearchParams(location.search);
     if (newRole === 'host') {
-      currentParams.set('role', 'host');
+      navigate('/register/host', { replace: true });
     } else {
-      currentParams.delete('role');
+      navigate('/register', { replace: true });
     }
-    const newSearch = currentParams.toString();
-    navigate(
-      {
-        pathname: location.pathname,
-        search: newSearch ? `?${newSearch}` : '',
-      },
-      { replace: true }
-    );
   };
 
   useEffect(() => {

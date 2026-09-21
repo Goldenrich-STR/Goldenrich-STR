@@ -35,6 +35,7 @@ const BookingOperationsAdmin = lazy(() => import("./pages/admin/BookingOperation
 const FinanceSettlementsAdmin = lazy(() => import("./pages/admin/FinanceSettlements"));
 const SalesCrmAdmin = lazy(() => import("./pages/admin/SalesCrm"));
 const MarketingCmsAdmin = lazy(() => import("./pages/admin/MarketingCms"));
+const BlogManagementAdmin = lazy(() => import("./pages/admin/BlogManagement"));
 const CommunicationCenterAdmin = lazy(() => import("./pages/admin/CommunicationCenter"));
 const ChannelManagerAdmin = lazy(() => import("./pages/admin/ChannelManager"));
 const SupportTicketManagementAdmin = lazy(() => import("./pages/admin/SupportTicketManagement"));
@@ -51,6 +52,7 @@ const SsoCallback = lazy(() => import("./pages/SsoCallback"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
 const Blog = lazy(() => import("./pages/Blog"));
+const BlogPostDetail = lazy(() => import("./pages/BlogPostDetail"));
 const LegalPage = lazy(() => import("./pages/LegalPage"));
 const AccountDeletionPage = lazy(() => import("./pages/AccountDeletionPage"));
 
@@ -218,6 +220,8 @@ function AppRoutes() {
   const isAuthRoute = 
     location.pathname === "/login" || 
     location.pathname === "/register" || 
+    location.pathname === "/register/host" ||
+    location.pathname === "/host/register" ||
     location.pathname === "/admin/login" ||
     location.pathname === "/md/login";
 
@@ -231,6 +235,8 @@ function AppRoutes() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<AuthPage />} />
         <Route path="/register" element={<AuthPage />} />
+        <Route path="/register/host" element={<AuthPage defaultRole="host" />} />
+        <Route path="/host/register" element={<AuthPage defaultRole="host" />} />
         <Route path="/forgot-password" element={<PasswordRecoveryPage mode="forgot" />} />
         <Route path="/reset-password" element={<PasswordRecoveryPage mode="reset" />} />
         <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
@@ -243,12 +249,42 @@ function AppRoutes() {
             </MdProtectedRoute>
           }
         />
+        {/* SEO Clean Category & City Browse Routes */}
+        <Route path="/property/villas" element={<GuestBrowse />} />
+        <Route path="/property/villas-in-nashik" element={<GuestBrowse />} />
+        <Route path="/property/villas-in-trimbakeshwar" element={<GuestBrowse />} />
+        <Route path="/property/villas-in-igatpuri" element={<GuestBrowse />} />
+        <Route path="/property/villas-in-bhnadardara" element={<GuestBrowse />} />
+        <Route path="/property/laxury-villas-in-nashik" element={<GuestBrowse />} />
+        <Route path="/property/weekend-villas-in-igatpuri" element={<GuestBrowse />} />
+        <Route path="/property/scenic-villas-in-bhnadardara" element={<GuestBrowse />} />
+        <Route path="/property/residential" element={<GuestBrowse />} />
+        <Route path="/property/residential/homestay-in-nashik" element={<GuestBrowse />} />
+        <Route path="/property/residential/apartment-in-nashik" element={<GuestBrowse />} />
+        <Route path="/property/residential/farmhouse-in-nashik" element={<GuestBrowse />} />
+        <Route path="/property/residential/holidayhomes-in-igatpuri" element={<GuestBrowse />} />
+        <Route path="/property/residential/homestay-in-igatpuri" element={<GuestBrowse />} />
+        <Route path="/property/residential/familystay-in-trimbak" element={<GuestBrowse />} />
+        <Route path="/property/residential/apartment-in-trimbak" element={<GuestBrowse />} />
+        <Route path="/property/residential/naturestay-in-bhandardara" element={<GuestBrowse />} />
+        <Route path="/property/residential/banglows" element={<GuestBrowse />} />
+        <Route path="/property/residential/apartment" element={<GuestBrowse />} />
+        <Route path="/property/residential/studio" element={<GuestBrowse />} />
+        <Route path="/property/residential/privatehouse" element={<GuestBrowse />} />
+        <Route path="/property/residential/farmhouse" element={<GuestBrowse />} />
+        <Route path="/property/residential/*" element={<GuestBrowse />} />
+        <Route path="/property/event-venues" element={<GuestBrowse />} />
+        <Route path="/property/event-venues/*" element={<GuestBrowse />} />
+        <Route path="/property/commercial-spaces" element={<GuestBrowse />} />
+        <Route path="/property/commercial-spaces/*" element={<GuestBrowse />} />
+        <Route path="/property/villas/*" element={<GuestBrowse />} />
+
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/places/:slug" element={<PlaceDetails />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/blog" element={<Blog />} />
-        <Route path="/blog/:slug" element={<Blog />} />
+        <Route path="/blog/:slug" element={<BlogPostDetail />} />
         <Route path="/legal" element={<LegalPage />} />
         <Route path="/legal/:slug" element={<LegalPage />} />
         <Route path="/terms" element={<LegalPage />} />
@@ -380,6 +416,7 @@ function AppRoutes() {
           <Route path="finance" element={<FinanceSettlementsAdmin />} />
           <Route path="crm" element={<SalesCrmAdmin />} />
           <Route path="cms" element={<MarketingCmsAdmin />} />
+          <Route path="blogs" element={<BlogManagementAdmin />} />
           <Route path="communication" element={<CommunicationCenterAdmin />} />
           <Route path="channel-manager" element={<ChannelManagerAdmin />} />
           <Route path="support" element={<SupportTicketManagementAdmin />} />
@@ -422,8 +459,6 @@ function AppRoutes() {
     </>
   );
 }
-
-
 
 function App() {
   return (

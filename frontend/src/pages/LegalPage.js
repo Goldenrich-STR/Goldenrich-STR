@@ -10,6 +10,7 @@ import { cmsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import LanguageSelector from '../components/LanguageSelector';
 import LegalDocument from '../components/LegalDocument';
+import Footer from '../components/Footer';
 
 const DEFAULT_LEGAL = {
   title: 'Legal Terms & Platform Policies',
@@ -28,7 +29,7 @@ const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals in India through curation, technology, and superior service.',
   location: 'Nashik, Maharashtra',
   email: 'support@x-space360.com',
-  phone: '+91 8484826247',
+  phone: '+91 919225586010',
   facebook_link: 'https://facebook.com',
   instagram_link: 'https://instagram.com',
   youtube_link: 'https://youtube.com',
@@ -36,11 +37,11 @@ const DEFAULT_FOOTER_DATA = {
     { heading: 'For Guests', items: [
       { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
       { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse?category=residential', text: '' }
+      { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-      { label: 'Become a Host', action_type: 'link', link: '/register?role=host', text: '' }
+      { label: 'Become a Host', action_type: 'link', link: '/register/host', text: '' }
     ] },
     { heading: 'Company', items: [
       { label: 'About Us', action_type: 'link', link: '/about-us', text: '' },
@@ -222,7 +223,7 @@ const LegalPage = () => {
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
       if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register?role=host');
+        navigate(user ? item.link : '/register/host');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -503,130 +504,7 @@ const LegalPage = () => {
       </main>
 
       {/* Footer */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium mt-16">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-12 md:px-10 lg:px-14 xl:px-20">
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(4,1fr)_1.2fr] lg:gap-12">
-            <div className="max-w-xs">
-              <button
-                type="button"
-                className="mb-6 flex items-center cursor-pointer"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-              >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
-              </button>
-              <p className="text-sm font-medium leading-7 text-white/62">
-                {footerData.brand_description}
-              </p>
-              <div className="mt-7 flex items-center gap-3">
-                {[
-                  { icon: Facebook, url: footerData.facebook_link, label: 'Facebook' },
-                  { icon: Instagram, url: footerData.instagram_link, label: 'Instagram' },
-                  { icon: Youtube, url: footerData.youtube_link, label: 'Youtube' },
-                ].filter(social => social.url).map((social) => {
-                  const IconComponent = social.icon;
-                  return (
-                    <a
-                      key={social.label}
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={social.label}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/14 bg-white/[0.03] text-white/70 transition hover:border-[#E0A51B] hover:text-[#E0A51B]"
-                    >
-                      <IconComponent className="h-4 w-4" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-
-            {footerSections.map((section) => (
-              <div key={section.heading} className="min-w-0">
-                <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                  {section.heading}
-                  <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-                </h5>
-                <ul className="space-y-4">
-                  {section.items.map((item) => (
-                    <li key={`${section.heading}-${item.label}`}>
-                      <button
-                        type="button"
-                        onClick={() => handleFooterSectionClick(section, item)}
-                        className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
-                      >
-                        {item.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-
-            <div className="min-w-0">
-              <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                Contact
-                <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-              </h5>
-              <div className="space-y-5 text-sm font-medium text-white/62">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.location || 'Nashik, Maharashtra'}, India</span>
-                </div>
-                <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Mail className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span className="break-all">{footerData.email || 'support@x-space360.com'}</span>
-                </a>
-                <a href={`tel:${(footerData.phone || '+91 12345 67890').replace(/\s+/g, '')}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Phone className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.phone || '+91 12345 67890'}</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-11 border-t border-white/10 pt-7 text-center">
-            <div className="text-xs font-bold uppercase text-white/52">
-              <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
-              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
-                {footerLegalItems.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                    className="transition hover:text-[#E0A51B]"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* Footer Text Popup Modal */}
-      {footerPopup && (
-        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
-            <div className="flex items-start justify-between gap-6 mb-6">
-              <h3 className="text-2xl font-bold tracking-tight text-charcoal">{footerPopup.title}</h3>
-              <button
-                type="button"
-                onClick={() => setFooterPopup(null)}
-                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center"
-                aria-label="Close footer details"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="max-h-[60vh] overflow-y-auto mt-4 pr-1">
-              <LegalDocument text={footerPopup.text} />
-            </div>
-          </div>
-        </div>
-      )}
+      <Footer cmsContent={cmsContent} />
     </div>
   );
 };

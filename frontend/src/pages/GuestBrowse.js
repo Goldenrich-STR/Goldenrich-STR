@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState, useCallback } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +12,7 @@ import DownloadAppButton from '../components/ui/DownloadAppButton';
 import CustomSelect from '../components/ui/CustomSelect';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { getPropertySlug, getPropertyUrl as buildPropertyUrl } from '../lib/propertySlug';
+import { getSeoRoutePreset, getSeoUrlForFilters } from '../lib/seoRoutes';
 import {
   Crown,
   Building2,
@@ -303,6 +304,8 @@ const SUGGESTED_DESTINATIONS = [
 
 const GuestBrowse = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const routePreset = useMemo(() => getSeoRoutePreset(location.pathname), [location.pathname]);
   const { user, logout } = useAuth();
   const [lang, setLang] = useState(localStorage.getItem('preferredLanguage') || 'en');
   const t = (key) => {
@@ -321,21 +324,22 @@ const GuestBrowse = () => {
   const [browseCalendarAnchor, setBrowseCalendarAnchor] = useState('checkIn');
   const [filters, setFilters] = useState(() => {
     const params = new URLSearchParams(window.location.search);
+    const preset = getSeoRoutePreset(window.location.pathname) || {};
     return {
-      search: params.get('search') || '',
-      category: params.get('category') || '',
-      city: params.get('city') || '',
-      check_in: params.get('checkIn') || params.get('check_in') || '',
-      check_out: params.get('checkOut') || params.get('check_out') || '',
-      guests: params.get('guests') || '2',
-      property_type: params.get('property_type') || '',
-      bhk_type: params.get('bhk_type') || '',
-      min_price: params.get('min_price') || '',
-      max_price: params.get('max_price') || '',
-      amenities: params.get('amenities') ? params.get('amenities').split(',') : [],
-      instant_booking: params.get('instant_booking') === 'true',
-      pet_friendly: params.get('pet_friendly') === 'true',
-      sort: params.get('sort') || 'recommended',
+      search: params.get('search') || preset.search || '',
+      category: params.get('category') || preset.category || '',
+      city: params.get('city') || preset.city || '',
+      check_in: params.get('checkIn') || params.get('check_in') || preset.check_in || '',
+      check_out: params.get('checkOut') || params.get('check_out') || preset.check_out || '',
+      guests: params.get('guests') || preset.guests || '2',
+      property_type: params.get('property_type') || preset.property_type || '',
+      bhk_type: params.get('bhk_type') || preset.bhk_type || '',
+      min_price: params.get('min_price') || preset.min_price || '',
+      max_price: params.get('max_price') || preset.max_price || '',
+      amenities: params.get('amenities') ? params.get('amenities').split(',') : (preset.amenities || []),
+      instant_booking: params.get('instant_booking') === 'true' || Boolean(preset.instant_booking),
+      pet_friendly: params.get('pet_friendly') === 'true' || Boolean(preset.pet_friendly),
+      sort: params.get('sort') || preset.sort || 'recommended',
     };
   });
 
@@ -403,7 +407,16 @@ const GuestBrowse = () => {
 
   useEffect(() => {
     fetchProperties();
-  }, [fetchProperties]);
+    if (filters) {
+      const cleanUrl = getSeoUrlForFilters(filters);
+      if (cleanUrl && !cleanUrl.includes('?')) {
+        const currentPath = window.location.pathname;
+        if (currentPath !== cleanUrl) {
+          window.history.replaceState(null, '', cleanUrl);
+        }
+      }
+    }
+  }, [fetchProperties, filters]);
 
   const handleSearch = (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -537,13 +550,13 @@ const GuestBrowse = () => {
   if (filters.category) {
     seoBreadcrumbs.push({
       name: filters.category === "residential" ? "Residential" : filters.category === "commercial" ? "Commercial" : "Event Venues",
-      url: `/guest/browse?category=${filters.category}`
+      url: getSeoUrlForFilters({ category: filters.category })
     });
   }
   if (filters.city) {
     seoBreadcrumbs.push({
       name: filters.city,
-      url: `/guest/browse?city=${filters.city}`
+      url: getSeoUrlForFilters({ category: filters.category, city: filters.city })
     });
   }
 
@@ -556,8 +569,8 @@ const GuestBrowse = () => {
         Skip to main content
       </a>
       <SEO
-        title={filters.city ? `Properties in ${filters.city}` : "Browse Properties"}
-        description="Browse luxury villas, premium offices, event spaces, and short-term rentals on X-Space360."
+        title={routePreset?.title || (filters.city ? `Properties in ${filters.city}` : "Browse Properties")}
+        description={routePreset?.description || "Browse luxury villas, premium offices, event spaces, and short-term rentals on X-Space360."}
         type="listing"
         data={{ properties: displayedProperties }}
         breadcrumbs={seoBreadcrumbs}
@@ -584,7 +597,7 @@ const GuestBrowse = () => {
             </Link>
 
             <Link
-              to={user ? '/host/list-property' : '/register?role=host'}
+              to={user ? '/host/list-property' : '/register/host'}
               className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
             >
               List your Property
@@ -1199,7 +1212,6 @@ const GuestBrowse = () => {
                       compact={viewMode === VIEW_MODES.SPLIT}
                       onHover={setHoveredId}
                       propertyUrl={getPropertyUrl(p)}
-                      onClick={() => navigateToProperty(p)}
                       style={{ animationDelay: `${idx * 100}ms` }}
                       t={t}
                       isWishlisted={wishlist.includes(p.property_id)}
@@ -1304,7 +1316,7 @@ const GuestBrowse = () => {
                         position={[p.latitude, p.longitude]}
                         icon={priceIcon(getCustomerNightlyPrice(p).toLocaleString('en-IN'), hoveredId === p.property_id)}
                         eventHandlers={{
-                          click: () => navigateToProperty(p.property_id),
+                          click: () => navigate(getPropertyUrl(p.property_id)),
                           mouseover: () => setHoveredId(p.property_id),
                           mouseout: () => setHoveredId(null),
                         }}
@@ -1368,7 +1380,7 @@ const GuestBrowse = () => {
                         <div
                           key={p.property_id}
                           className="flex items-center justify-between p-3 rounded-2xl border border-gray-100 bg-gray-50/60 hover:bg-white hover:border-gray-200 transition-all cursor-pointer shadow-sm"
-                          onClick={() => navigateToProperty(p.property_id)}
+                          onClick={() => navigate(getPropertyUrl(p.property_id))}
                         >
                           <div className="min-w-0 pr-3">
                             <p className="font-bold text-xs text-charcoal truncate">{p.title}</p>
@@ -1392,7 +1404,7 @@ const GuestBrowse = () => {
 };
 
 const PropertyCard = ({ property, compact, onHover, onClick, propertyUrl, style, t, isWishlisted, onWishlistToggle, onShare, user }) => {
-  const targetUrl = propertyUrl || getPropertyUrl(property);
+  const targetUrl = propertyUrl || buildPropertyUrl(property);
   return (
     <Link
       to={targetUrl}

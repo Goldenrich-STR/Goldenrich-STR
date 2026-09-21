@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 import ChatbotWidget from '../components/ChatbotWidget';
+import Footer from '../components/Footer';
 
 const DEFAULT_SUPPORT_DATA = {
   title: "How can we help you?",
@@ -41,8 +42,8 @@ const DEFAULT_SUPPORT_DATA = {
       id: "call_support",
       title: "Call Support",
       description: "Speak directly with our support team.",
-      button_text: "+91 8484826247",
-      action_value: "+91 8484826247"
+      button_text: "+91 919225586010",
+      action_value: "+91 919225586010"
     }
   ],
   popular_topics: [
@@ -808,21 +809,7 @@ const SupportPage = () => {
       </section>
 
       {/* Footer Branding */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white py-16 px-6 md:px-12 lg:px-20 font-medium text-xs">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-6 w-auto object-contain logo-white" />
-            <span className="text-white/30 font-bold">|</span>
-            <span className="text-white/60 font-medium">© {new Date().getFullYear()} Goldenrich Group. All rights reserved.</span>
-          </div>
-          <div className="flex space-x-6 text-white/80">
-            <a href="/terms" className="hover:text-terracotta transition duration-300">Terms of Service</a>
-            <a href="/privacy" className="hover:text-terracotta transition duration-300">Privacy Policy</a>
-            <span onClick={scrollToFaq} className="hover:text-terracotta transition cursor-pointer duration-300 font-bold">FAQs</span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
       <ChatbotWidget />
     </div>
   );

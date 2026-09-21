@@ -635,6 +635,7 @@ export const cmsAPI = {
   deleteContent: (contentId) => apiClient.delete(`/cms/admin/content/${contentId}`),
   getContactMessages: (params) => apiClient.get('/cms/admin/contact-messages', { params }),
   updateContactMessage: (id, payload) => apiClient.patch(`/cms/admin/contact-messages/${id}`, payload),
+  generateBlog: (payload) => apiClient.post('/cms/admin/generate-blog', payload),
 };
 
 export const supportTicketAPI = {

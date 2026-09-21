@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, Eye, FileText, Filter, Megaphone, MoreHorizontal, Percent, Plus, Search, ShieldCheck } from 'lucide-react';
+import { CalendarDays, Eye, FileText, Filter, Megaphone, MoreHorizontal, Percent, Plus, Search, ShieldCheck, Trash2, Edit3, ArrowLeft, Table, ExternalLink, BookOpen, Check } from 'lucide-react';
 import { cmsAPI, couponAPI } from '../../services/api';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, Panel, StatusBadge, requestConfirm, requestReason, showNotice } from './shared';
@@ -8,7 +8,7 @@ const phaseSteps = [
   ['1', 'Content Inventory Overview', 'Manage all CMS content', 'completed'],
   ['2', 'Landing Page CMS', 'Edit homepage and sections', 'completed'],
   ['3', 'Offers & Coupons', 'Create and manage offers', 'completed'],
-  ['4', 'Blogs, SEO & Legal', 'Manage blogs and legal pages', 'completed'],
+  ['4', 'SEO & Legal', 'Manage SEO and legal pages', 'completed'],
   ['5', 'Parts & Integrations', 'Configure third-party integrations', 'completed'],
 ];
 
@@ -16,7 +16,7 @@ const tabs = [
   ['overview', 'Overview'],
   ['landing', 'Landing Page CMS'],
   ['offers', 'Offers & Coupons'],
-  ['blogSeoLegal', 'Blogs, SEO & Legal'],
+  ['blogSeoLegal', 'SEO & Legal'],
   ['integrations', 'Parts & Integrations'],
   ['content', 'Content Inventory'],
 ];
@@ -153,7 +153,7 @@ const getContentSectionDescription = (item) => {
 
 const getContentEditorTab = (item) => {
   const section = String(item?.section || '').toLowerCase();
-  if (['blog', 'seo', 'legal_terms', 'footer'].includes(section)) return 'blogSeoLegal';
+  if (['seo', 'legal_terms', 'footer'].includes(section)) return 'blogSeoLegal';
   if (String(item?.page || '').toLowerCase() === 'landing') return 'landing';
   return 'content';
 };
@@ -196,7 +196,6 @@ const OverviewRailCard = ({ title, actionLabel, onAction, children }) => (
     <div className="mt-4">{children}</div>
   </Panel>
 );
-
 const FieldRow = ({ label, children, compact = false }) => (
   <div className={`rounded-xl border border-slate-200 bg-white p-3 ${compact ? '' : 'shadow-sm'}`}>
     <label className="mb-2 block text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">{label}</label>
@@ -204,18 +203,50 @@ const FieldRow = ({ label, children, compact = false }) => (
   </div>
 );
 
+const getDefaultTemplateForPath = (fieldName, sample) => {
+  if (sample && typeof sample === 'object') {
+    return JSON.parse(JSON.stringify(sample));
+  }
+  const key = String(fieldName || '').toLowerCase();
+  if (key === 'posts') {
+    return {
+      id: `p${Date.now().toString().slice(-3)}`,
+      slug: 'what-is-short-term-rental',
+      metaTitle: 'What Is a Short-Term Rental: A Simple Guide',
+      metaDescription: 'Learn what a short-term rental is, how it works, who can use it, and what to check before booking a short-term rental in Nashik.',
+      title: 'What Is a Short-Term Rental? A Simple Guide for Renters',
+      author: 'STR Insights Desk',
+      date: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' }),
+      read_time: '5 min read',
+      image_url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+      excerpt: 'Need a place to stay for a few days without booking a hotel? A short-term rental could be the best choice.',
+      content: 'Need a place to stay for a few days without booking a hotel? A short-term rental could be the best choice...',
+      faqs: [
+        { question: 'What is another name for a short-term rental?', answer: 'A short-term rental can also be called a vacation rental, holiday rental, temporary rental, or short-term accommodation.' }
+      ],
+      is_active: true
+    };
+  }
+  if (key === 'custom_policies') {
+    return { label: '', title: '', status: 'Active', text: '' };
+  }
+  if (key === 'faqs') {
+    return { question: '', answer: '' };
+  }
+  return '';
+};
+
 const StructuredFieldEditor = ({ value, path = [], onChange, onRemove, root = false }) => {
   if (Array.isArray(value)) {
     const sample = value[0];
-    const newItemTemplate = sample && typeof sample === 'object'
-      ? JSON.parse(JSON.stringify(sample))
-      : '';
+    const fieldName = path[path.length - 1];
+    const newItemTemplate = getDefaultTemplateForPath(fieldName, sample);
 
     return (
       <div className="space-y-3">
         {!root && (
           <div className="flex items-center justify-between">
-            <h4 className="text-sm font-black text-slate-900">{formatFieldLabel(path[path.length - 1])}</h4>
+            <h4 className="text-sm font-black text-slate-900">{formatFieldLabel(fieldName)}</h4>
             <button type="button" onClick={() => onChange(path, [...value, newItemTemplate])} className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-bold text-slate-700">Add Item</button>
           </div>
         )}
@@ -223,7 +254,7 @@ const StructuredFieldEditor = ({ value, path = [], onChange, onRemove, root = fa
           {value.map((item, index) => (
             <div key={`${path.join('.')}-${index}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
               <div className="mb-3 flex items-center justify-between">
-                <p className="text-sm font-bold text-slate-800">{formatFieldLabel(path[path.length - 1] || 'Item')} {index + 1}</p>
+                <p className="text-sm font-bold text-slate-800">{formatFieldLabel(fieldName || 'Item')} {index + 1}</p>
                 <button type="button" onClick={() => onRemove(path.concat(index))} className="rounded-lg border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-bold text-red-600">Remove</button>
               </div>
               <StructuredFieldEditor value={item} path={path.concat(index)} onChange={onChange} onRemove={onRemove} />
@@ -265,11 +296,12 @@ const StructuredFieldEditor = ({ value, path = [], onChange, onRemove, root = fa
                     <option value="true">True</option>
                     <option value="false">False</option>
                   </select>
-                ) : String(currentValue || '').length > 90 ? (
+                ) : (['content', 'excerpt', 'description', 'text', 'answer', 'paragraph', 'metaDescription'].includes(key) || String(currentValue || '').length > 60) ? (
                   <textarea
                     value={currentValue ?? ''}
                     onChange={(event) => onChange(path.concat(key), coerceValue(event.target.value, currentValue))}
-                    className="min-h-[120px] w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none"
+                    rows={['content', 'paragraph'].includes(key) ? 8 : 3}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm outline-none font-sans leading-relaxed"
                   />
                 ) : (
                   <input
@@ -359,7 +391,7 @@ const MarketingCms = () => {
 
   const landingContent = useMemo(() => state.content.filter((item) => item.page === 'landing'), [state.content]);
   const selectedLanding = useMemo(() => landingContent.find((item) => item.content_id === selectedId) || landingContent[0], [landingContent, selectedId]);
-  const editorialContent = useMemo(() => landingContent.filter((item) => ['blog', 'seo', 'legal_terms', 'footer'].includes(item.section)), [landingContent]);
+  const editorialContent = useMemo(() => landingContent.filter((item) => ['seo', 'legal_terms', 'footer'].includes(item.section)), [landingContent]);
 
   useEffect(() => {
     if (!selectedLanding) return;
@@ -387,7 +419,7 @@ const MarketingCms = () => {
     if (!reason) return;
     setSaving(true);
     try {
-      await cmsAPI.updateContent(selectedLanding.content_id, { content_data: parsed, is_active: selectedLanding.is_active !== false, reason });
+      await cmsAPI.updateContent(selectedLanding.content_id, { content_data: parsed, is_active: true, reason });
       await load();
     } finally {
       setSaving(false);
@@ -426,7 +458,6 @@ const MarketingCms = () => {
       setSaving(false);
     }
   };
-
   const toggleCoupon = async (coupon) => {
     const confirmed = await requestConfirm({
       title: `${coupon.is_active === false ? 'Activate' : 'Deactivate'} Coupon`,
@@ -868,11 +899,8 @@ const OffersManager = ({ coupons, form, setForm, saving, onCreate, onToggle }) =
 };
 
 const EditorialManager = ({ content, selected, selectedId, setSelectedId, editorText, setEditorText, saving, onSave, onToggle, onCopy, onPaste }) => {
-  const blog = content.find((item) => item.section === 'blog')?.content_data || {};
   const seo = content.find((item) => item.section === 'seo')?.content_data || {};
   const legal = content.find((item) => item.section === 'legal_terms')?.content_data || {};
-  const blogPosts = Array.isArray(blog.posts) ? blog.posts : [];
-  const activePosts = blogPosts.filter((post) => post.is_active !== false);
   const missingSeo = ['title', 'description', 'keywords'].filter((field) => !seo[field]);
   const legalReady = ['terms_text', 'privacy_text', 'refund_text'].filter((field) => legal[field]).length;
   const parsed = parseEditorObject(editorText);
@@ -893,8 +921,6 @@ const EditorialManager = ({ content, selected, selectedId, setSelectedId, editor
         <Panel className="p-4">
           <h2 className="font-black">Editorial Readiness</h2>
           <div className="mt-3 grid grid-cols-2 gap-2">
-            <MetricTile label="Blog Posts" value={blogPosts.length} />
-            <MetricTile label="Active Posts" value={activePosts.length} />
             <MetricTile label="SEO Missing" value={missingSeo.length} />
             <MetricTile label="Legal Docs" value={`${legalReady}/3`} />
           </div>
@@ -902,7 +928,7 @@ const EditorialManager = ({ content, selected, selectedId, setSelectedId, editor
         <Panel className="overflow-hidden">
           <div className="border-b border-slate-200 p-4">
             <h2 className="font-black">Editable Sections</h2>
-            <p className="text-xs text-slate-500">Blog, SEO, footer links and legal policies are consumed by public website pages.</p>
+            <p className="text-xs text-slate-500">SEO, footer links and legal policies are consumed by public website pages.</p>
           </div>
           <div className="p-3">
             {content.map((item) => (
@@ -936,7 +962,7 @@ const EditorialManager = ({ content, selected, selectedId, setSelectedId, editor
         <div className="grid gap-4 p-4 xl:grid-cols-[minmax(0,1fr)_260px]">
           <div>
             <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">
-              Field-wise simple editor. Blog, SEO ani legal content ekek field ne edit kar.
+              Field-wise simple editor. SEO ani legal content ekek field ne edit kar.
             </div>
             {parsed ? (
               <StructuredFieldEditor value={parsed} root onChange={handleFieldChange} onRemove={handleFieldRemove} />

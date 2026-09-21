@@ -10,6 +10,7 @@ import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatAddress } from '../lib/displayLabels';
 import { getPropertySlug, getPropertyUrl } from '../lib/propertySlug';
+import { getSeoUrlForFilters } from '../lib/seoRoutes';
 import { getRecentlyVisitedProperties, RECENTLY_VISITED_PROPERTIES_EVENT } from '../lib/recentlyVisitedProperties';
 import { organizationSchema, websiteSchema } from '../lib/seoSchemas';
 import LegalDocument from '../components/LegalDocument';
@@ -17,6 +18,17 @@ import ScrollReveal from '../components/ui/ScrollReveal';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import DownloadAppButton from '../components/ui/DownloadAppButton';
 import AppPromoSection from '../components/ui/AppPromoSection';
+import { formatContentWithBullets, markdownComponents } from '../lib/formatContent';
+import Footer from '../components/Footer';
+
+const FALLBACK_BLOG_IMAGES = [
+  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1531415080290-bc98528c165a?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
+];
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
 
@@ -626,7 +638,7 @@ const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals in India through curation, technology, and superior service.',
   location: 'Nashik, Maharashtra',
   email: 'support@x-space360.com',
-  phone: '+91 8484826247',
+  phone: '+91 919225586010',
   facebook_link: 'https://facebook.com',
   instagram_link: 'https://instagram.com',
   youtube_link: 'https://youtube.com',
@@ -634,11 +646,11 @@ const DEFAULT_FOOTER_DATA = {
     { heading: 'For Guests', items: [
       { label: 'Browse Space', action_type: 'link', link: '/guest/browse', text: '' },
       { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse?category=residential', text: '' }
+      { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-      { label: 'Become a Host', action_type: 'link', link: '/register?role=host', text: '' }
+      { label: 'Become a Host', action_type: 'link', link: '/register/host', text: '' }
     ] },
     { heading: 'Company', items: [
       { label: 'About Us', action_type: 'link', link: '/about-us', text: '' },
@@ -1040,7 +1052,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
           <button
             onClick={() => {
               onClose();
-              navigate(user ? '/dashboard' : '/register?role=host');
+              navigate(user ? '/dashboard' : '/register/host');
             }}
             className="btn-premium px-12 py-4 text-base shadow-premium hover:scale-[1.02] active:scale-95 transition-transform duration-300"
           >
@@ -1957,11 +1969,10 @@ const CollectionsSection = ({
                     key={col.id}
                     onClick={() => {
                       if (col.id === 'hilltop-retreats') {
-                        navigate('/guest/browse?signature=true');
+                        navigate('/property/villas');
                         return;
                       }
-                      const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
-                      navigate(`/guest/browse?category=${col.query}${typeQuery}`);
+                      navigate(getSeoUrlForFilters({ category: col.query, property_type: col.property_type }));
                     }}
                     className="relative aspect-[3/4] w-[240px] min-w-[240px] snap-start cursor-pointer overflow-hidden rounded-2xl shadow-md transition-all duration-500 hover:shadow-xl md:w-[300px] md:min-w-[300px] group bg-stone-800"
                   >
@@ -2066,9 +2077,16 @@ const CollectionsSection = ({
                     key={item.property_id || `${item.title}-${index}`}
                     className="group flex w-[280px] min-w-[280px] snap-start flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(15,23,42,0.10)] md:w-[320px] md:min-w-[320px]"
                   >
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleCardClick(item)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleCardClick(item);
+                        }
+                      }}
                       className="flex h-full flex-col text-left"
                     >
                       <div className="relative aspect-[1.14] overflow-hidden">
@@ -2131,7 +2149,7 @@ const CollectionsSection = ({
                           </div>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   </article>
                 );
               })}
@@ -2172,6 +2190,37 @@ const LandingPage = () => {
   const [dates, setDates] = useState({ checkIn: '', checkOut: '' });
   const [landingCalendarOpen, setLandingCalendarOpen] = useState(false);
   const [landingCalendarAnchor, setLandingCalendarAnchor] = useState('checkIn');
+
+  const totalGuests = (guestCounts.adults || 0) + (guestCounts.children || 0);
+
+  const handleSearchSubmit = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const city = locationQuery.trim();
+    const category = searchCategory && searchCategory !== 'all' ? searchCategory : '';
+    const cleanUrl = getSeoUrlForFilters({
+      city,
+      category,
+      check_in: dates.checkIn,
+      check_out: dates.checkOut,
+      guests: String(totalGuests)
+    });
+    navigate(cleanUrl);
+  };
+
+  const nearbyDestinations = React.useMemo(() => {
+    return CURATED_DESTINATION_ROWS.flat();
+  }, []);
+
+  const openDestinationProperties = (destination) => {
+    const destinationName = typeof destination === 'string' ? destination : destination.name;
+    const category = isExplicitCategorySelected && searchCategory && searchCategory !== 'all' ? searchCategory : '';
+    const cleanUrl = getSeoUrlForFilters({
+      city: destinationName,
+      category
+    });
+    navigate(cleanUrl);
+  };
+
   const todayISO = React.useMemo(() => {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -2438,55 +2487,63 @@ const LandingPage = () => {
   const defaultLandingBlogPosts = [
     {
       id: 'p1',
-      title: 'Guide to hotel rewards programmes, deals and booking strategies',
-      excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
-      date: '20 April 2026',
-      author: 'Skyscanner',
-      img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800',
-      read_time: '6 min read'
+      slug: 'what-is-short-term-rental',
+      title: 'What Should You Check Before Booking a Short-Term Rental?',
+      excerpt: 'Need a place to stay for a few days without booking a hotel? A short-term rental could be the best choice. Learn what to check before booking.',
+      date: '19 September 2026',
+      author: 'STR Insights Desk',
+      img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+      read_time: '5 min read'
     },
     {
       id: 'p2',
-      title: 'Guide to hotel room types, amenities & policies',
-      excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
-      date: '20 April 2026',
-      author: 'Skyscanner',
-      img: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800',
-      read_time: '5 min read'
+      slug: 'the-future-of-short-term-rentals-in-india',
+      title: 'The Future of Short-Term Rentals in India',
+      excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
+      date: '10 June 2026',
+      author: 'Amit Sharma',
+      img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
+      read_time: '6 min read'
     },
     {
       id: 'p3',
-      title: 'The Smarter Summer Report Your guide to smarter summer planning',
-      excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
-      date: '27 April 2026',
-      author: 'Skyscanner',
-      img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800',
-      read_time: '7 min read'
+      slug: 'design-tips-to-maximize-your-property-yield',
+      title: 'Design Tips to Maximize Your Property Yield',
+      excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
+      date: '05 June 2026',
+      author: 'Neha Patel',
+      img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800',
+      read_time: '5 min read'
     },
     {
       id: 'p4',
-      title: 'Are Indian cricket fans the best cricket fans in the world?',
-      excerpt: 'Exploring the vibrant passion, energy, and dedication of cricket fans across India.',
-      date: '16 October 2023',
-      author: 'Noelia Guinon',
-      img: 'https://images.unsplash.com/photo-1531415080290-bc98528c165a?auto=format&fit=crop&q=80&w=800',
-      read_time: '5 min read'
+      slug: 'top-5-weekend-escapes-near-mumbai-and-nashik',
+      title: 'Top 5 Weekend Escapes Near Mumbai & Nashik',
+      excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
+      date: '28 May 2026',
+      author: 'Vikram Singh',
+      img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
+      read_time: '7 min read'
     }
   ];
   const cmsLandingBlogPosts = Array.isArray(cmsContent?.blog?.posts)
     ? cmsContent.blog.posts
         .filter(post => post?.is_active !== false)
         .slice(0, 4)
-        .map(post => ({
-          id: post.id,
-          title: post.title,
-          excerpt: post.excerpt,
-          content: post.content,
-          date: post.date,
-          author: post.author,
-          img: post.image_url || post.img || '',
-          read_time: post.read_time || '5 min read'
-        }))
+        .map((post, idx) => {
+          const fallbackImg = FALLBACK_BLOG_IMAGES[idx % FALLBACK_BLOG_IMAGES.length];
+          return {
+            id: post.id || post.slug || `blog-post-${idx}`,
+            slug: post.slug || post.id,
+            title: post.title || 'Untitled',
+            excerpt: post.excerpt || '',
+            content: post.content || '',
+            date: post.date || 'June 2026',
+            author: post.author || 'X-Space360 Desk',
+            img: post.image_url || post.img || post.featuredImage || fallbackImg,
+            read_time: post.read_time || '5 min read'
+          };
+        })
     : [];
   const landingBlogPosts = cmsContent?.blog ? cmsLandingBlogPosts : defaultLandingBlogPosts;
   const footerDisplaySections = footerSections;
@@ -2501,13 +2558,13 @@ const LandingPage = () => {
   };
 
   const handleListSpaceClick = () => {
-    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/register?role=host');
+    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/register/host');
   };
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
       if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register?role=host');
+        navigate(user ? item.link : '/register/host');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -2602,39 +2659,23 @@ const LandingPage = () => {
 
   const handleSearch = () => {
     const totalGuests = guestCounts.adults + guestCounts.children;
-    const params = new URLSearchParams();
-    if (locationQuery.trim()) {
-      params.set('search', locationQuery.trim());
+    const city = locationQuery.trim();
+    if (city) {
       setRecentLocationSearches((current) => {
-        const next = [locationQuery.trim(), ...current.filter((item) => item !== locationQuery.trim())].slice(0, 5);
+        const next = [city, ...current.filter((item) => item !== city)].slice(0, 5);
         localStorage.setItem(RECENT_LOCATION_STORAGE_KEY, JSON.stringify(next));
         return next;
       });
     }
-    if (totalGuests) params.set('guests', String(totalGuests));
-    if (dates.checkIn) params.set('checkIn', dates.checkIn);
-    if (dates.checkOut) params.set('checkOut', dates.checkOut);
-    if (searchCategory && searchCategory !== 'all') params.set('category', searchCategory);
-    navigate(`/guest/browse?${params.toString()}`);
-  };
-
-  const nearbyDestinations = React.useMemo(() => {
-    return CURATED_DESTINATION_ROWS.flat();
-  }, []);
-
-  const openDestinationProperties = (destination) => {
-    const destinationName = typeof destination === 'string' ? destination : destination.name;
-    const params = new URLSearchParams();
-    params.set('city', destinationName);
-    if (destination?.latitude && destination?.longitude) {
-      params.set('latitude', String(destination.latitude));
-      params.set('longitude', String(destination.longitude));
-      params.set('radius_km', '3');
-    }
-    if (isExplicitCategorySelected && searchCategory && searchCategory !== 'all') {
-      params.set('category', searchCategory);
-    }
-    navigate(`/guest/browse?${params.toString()}`);
+    const category = searchCategory && searchCategory !== 'all' ? searchCategory : '';
+    const cleanUrl = getSeoUrlForFilters({
+      city,
+      category,
+      check_in: dates.checkIn,
+      check_out: dates.checkOut,
+      guests: totalGuests ? String(totalGuests) : '2'
+    });
+    navigate(cleanUrl);
   };
 
   const saveRecentLocation = React.useCallback((value) => {
@@ -2813,7 +2854,7 @@ const LandingPage = () => {
             {/* View All Card */}
             {sliderInteracted[sectionId] && (
               <Link 
-                to={`/guest/browse?category=${categoryKey}`}
+                to={getSeoUrlForFilters({ category: categoryKey })}
                 className="min-w-[160px] md:min-w-[180px] aspect-[4/3] border border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 snap-start group/viewall"
               >
                 <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2 group-hover/viewall:scale-105 transition-transform">
@@ -2879,7 +2920,7 @@ const LandingPage = () => {
               Discover
             </Link>
             <Link
-              to={user ? '/host/list-property' : '/register?role=host'}
+              to={user ? '/host/list-property' : '/register/host'}
               className="hover:text-terracotta transition-colors duration-200"
             >
               List your Property
@@ -3057,7 +3098,7 @@ const LandingPage = () => {
               Discover
             </button>
             <button
-              onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/register?role=host'); }}
+              onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/register/host'); }}
               className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
             >
               List your Property
@@ -3149,7 +3190,7 @@ const LandingPage = () => {
                   Sign In
                 </button>
                 <button
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register?role=host'); }}
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register/host'); }}
                   className="mt-6 bg-[#d9b233] hover:bg-[#cda62b] text-white font-semibold py-4 rounded-xl text-center transition"
                 >
                   Become a Host
@@ -3987,7 +4028,7 @@ const LandingPage = () => {
                   </p>
                 </div>
                 <button 
-                  onClick={() => navigate(user ? '/host/list-property' : '/register?role=host')}
+                  onClick={() => navigate(user ? '/host/list-property' : '/register/host')}
                   className="self-start md:self-auto bg-[#FBBF24] hover:bg-[#F59E0B] text-charcoal font-bold px-6 py-3 rounded-full shadow-sm hover:scale-[1.02] active:scale-95 transition-all text-xs md:text-sm flex items-center gap-2 cursor-pointer duration-200"
                 >
                   <span>Post Property</span>
@@ -4314,21 +4355,14 @@ const LandingPage = () => {
             </h3>
 
             <div className="flex gap-6 overflow-x-auto pb-3 no-scrollbar md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-10 md:overflow-visible">
-              {landingBlogPosts.map((post, idx) => (
-                <div 
-                  key={post.id || idx} 
-                  onClick={() => setSelectedPost({
-                    id: post.id,
-                    title: post.title,
-                    excerpt: post.excerpt,
-                    content: post.content,
-                    date: post.date,
-                    author: post.author,
-                    image_url: post.img,
-                    read_time: post.read_time || '5 min read'
-                  })}
-                  className="group cursor-pointer flex min-w-[290px] max-w-[290px] flex-col text-left md:min-w-0 md:max-w-none"
-                >
+              {landingBlogPosts.map((post, idx) => {
+                const slug = post.slug || String(post.title || `post-${idx}`).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                return (
+                  <div 
+                    key={post.id || idx} 
+                    onClick={() => navigate(`/blog/${slug}`)}
+                    className="group cursor-pointer flex min-w-[290px] max-w-[290px] flex-col text-left md:min-w-0 md:max-w-none"
+                  >
                   {/* Rectangular Image */}
                   <div className="aspect-[2/1] overflow-hidden rounded-xl bg-stone relative">
                     <img 
@@ -4346,7 +4380,8 @@ const LandingPage = () => {
                     {post.date} &nbsp;•&nbsp; <span className="text-blue-600 hover:underline">{post.author}</span>
                   </p>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
           </ScrollReveal>
@@ -4433,148 +4468,8 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Main Footer Section */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
-        <div className="absolute inset-0 bg-[#081321] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-16 md:px-10 md:py-16 lg:px-14 xl:px-20">
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(5,1fr)] lg:gap-12">
-            <div className="max-w-xs">
-              <button
-                type="button"
-                className="mb-6 flex items-center"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-              >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
-              </button>
-              <p className="text-sm font-medium leading-7 text-white/62">
-                {footerData.brand_description || t('footerSub')}
-              </p>
-              <div className="mt-7 flex items-center gap-3">
-                {[
-                  { icon: Facebook, url: footerData.facebook_link, label: 'Facebook' },
-                  { icon: Instagram, url: footerData.instagram_link, label: 'Instagram' },
-                  { icon: Youtube, url: footerData.youtube_link, label: 'Youtube' },
-                ].filter(social => social.url).map((social) => {
-                  const IconComponent = social.icon;
-                  return (
-                    <a
-                      key={social.label}
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={social.label}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/14 bg-white/[0.03] text-white/70 transition hover:border-[#E0A51B] hover:text-[#E0A51B]"
-                    >
-                      <IconComponent className="h-4 w-4" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-
-            {footerDisplaySections.map((section) => (
-              <div key={section.heading} className="min-w-0">
-                <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                  {section.heading}
-                  <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-                </h5>
-                <ul className="space-y-4">
-                  {section.items.map((item) => (
-                    <li key={`${section.heading}-${item.label}`}>
-                      <button
-                        type="button"
-                        onClick={() => handleFooterSectionClick(section, item)}
-                        className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
-                      >
-                        {item.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-
-            <div className="min-w-0">
-              <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                Contact
-                <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-              </h5>
-              <div className="space-y-5 text-sm font-medium text-white/62">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.location || 'Nashik, Maharashtra'}, India</span>
-                </div>
-                <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Mail className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span className="break-all">{footerData.email || 'support@x-space360.com'}</span>
-                </a>
-                <a href={`tel:${(footerData.phone || '+91 12345 67890').replace(/\s+/g, '')}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Phone className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.phone || '+91 12345 67890'}</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-11 border-t border-white/10 pt-7 text-center">
-            <div className="text-xs font-bold uppercase text-white/52">
-              <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
-              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
-                {footerLegalItems.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                    className="transition hover:text-[#E0A51B]"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      
-      {footerPopup && (
-        <div className="fixed inset-0 z-[120] bg-charcoal/70 backdrop-blur-sm flex items-center justify-center px-4 py-6">
-          <div
-            className="bg-white rounded-2xl shadow-elevated border border-gray-100 w-full max-w-4xl max-h-[88vh] overflow-hidden animate-scale-in"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="footer-legal-title"
-          >
-            <div className="px-6 py-5 md:px-8 border-b border-gray-100 bg-white flex items-start justify-between gap-5">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-terracotta mb-2">
-                  Legal Document
-                </p>
-                <h3 id="footer-legal-title" className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal">
-                  {footerPopup.title}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setFooterPopup(null)}
-                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center shrink-0"
-                aria-label="Close footer details"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="max-h-[calc(88vh-96px)] overflow-y-auto px-6 py-6 md:px-10 md:py-8">
-              <div className="rounded-xl border border-gray-100 bg-stone/40 px-4 py-3 mb-5">
-                <p className="text-xs leading-relaxed text-charcoal-muted">
-                  Please review this document carefully. These terms explain your rights, responsibilities, and platform usage conditions.
-                </p>
-              </div>
-              <LegalDocument text={footerPopup.text} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modern Sleek Dark Footer Section */}
+      <Footer cmsContent={cmsContent} />
 
 
 

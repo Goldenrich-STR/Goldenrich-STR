@@ -77,6 +77,7 @@ export const adminNavigation = [
   { label: 'Finance & Settlements', path: '/admin/finance', icon: WalletCards },
   { label: 'Sales & CRM', path: '/admin/crm', icon: BriefcaseBusiness },
   { label: 'Marketing & CMS', path: '/admin/cms', icon: Megaphone },
+  { label: 'Blog Management', path: '/admin/blogs', icon: BookOpen },
   { label: 'Communication Center', path: '/admin/communication', icon: Headphones },
   { label: 'Channel Manager', path: '/admin/channel-manager', icon: Radio },
   { label: 'Support & Ticket Management', path: '/admin/support', icon: BookOpen },

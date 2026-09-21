@@ -13,7 +13,7 @@ export const getPropertySlug = (property) => {
   if (!property) return '';
   if (typeof property === 'string') return property;
   
-  const propId = property.property_id || property.id || '';
+  const propId = property.property_id || property.id || property._id || '';
   const title = property.title || property.name || property.property_title || '';
   
   if (!title) return propId;
@@ -40,6 +40,7 @@ export const getPropertySlug = (property) => {
  * - "prop_demo_30_1784762653" -> "prop_demo_30_1784762653"
  * - "pune-rooftop-lounge-venue-prop_demo_30_1784762653" -> "prop_demo_30_1784762653"
  * - "luxury-villa-12345" -> "12345"
+ * - "homestay-in-sula-vineyards" -> "homestay-in-sula-vineyards"
  */
 export const extractPropertyId = (param) => {
   if (!param || typeof param !== 'string') return '';
@@ -51,17 +52,31 @@ export const extractPropertyId = (param) => {
   }
   if (!clean) return '';
 
+  // 1. Check for prop_... pattern (e.g. prop_demo_30_1784762653, prop_e3425cf1bd3340)
   const propMatch = clean.match(/(prop_[a-zA-Z0-9_]+)$/i) || clean.match(/(prop_[a-zA-Z0-9_]+)/i);
   if (propMatch) {
     return propMatch[1];
   }
 
-  const parts = clean.split('-');
-  const lastPart = parts[parts.length - 1];
-  if (parts.length > 1 && lastPart && /^[a-zA-Z0-9_]+$/.test(lastPart)) {
-    return lastPart;
+  // 2. Check for 24-character MongoDB ObjectId (e.g. 65f1a234567890abcdef1234)
+  const mongoMatch = clean.match(/([a-f0-9]{24})$/i);
+  if (mongoMatch) {
+    return mongoMatch[1];
   }
 
+  // 3. Check for UUID pattern
+  const uuidMatch = clean.match(/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/i);
+  if (uuidMatch) {
+    return uuidMatch[1];
+  }
+
+  // 4. Check for hyphen followed by pure numeric ID (e.g. luxury-villa-12345)
+  const numMatch = clean.match(/-(\d+)$/);
+  if (numMatch) {
+    return numMatch[1];
+  }
+
+  // Do not split arbitrary hyphenated words. Return clean string as is.
   return clean;
 };
 
