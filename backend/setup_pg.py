@@ -1,45 +1,60 @@
 import asyncio
 import os
-from dotenv import load_dotenv
-import asyncpg
+import re
 from pathlib import Path
+from urllib.parse import urlparse, urlunparse
 
-async def setup_db():
-    ROOT_DIR = Path(__file__).parent
-    load_dotenv(ROOT_DIR / '.env')
-    
-    target_url = os.environ.get('POSTGRES_URL')
-    from urllib.parse import urlparse
-    parsed = urlparse(target_url)
-    db_name = parsed.path.lstrip('/')
-    
+import asyncpg
+from dotenv import load_dotenv
 
 
-        # Check if db exists
-        exists = await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", db_name)
-        if not exists:
-            print(f"Database '{db_name}' does not exist. Creating...")
-            # create database cannot run inside a transaction block
-            await conn.execute(f'CREATE DATABASE "{db_name}"')
-            print(f"Database '{db_name}' created successfully.")
-        else:
-            print(f"Database '{db_name}' already exists.")
-        await conn.close()
-    except Exception as e:
-        print(f"Failed to setup database: {e}")
+_DATABASE_NAME_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+async def setup_db() -> bool:
+    root_dir = Path(__file__).parent
+    load_dotenv(root_dir / ".env")
+
+    target_url = os.environ.get("POSTGRES_URL", "").strip()
+    if not target_url:
+        print("POSTGRES_URL is not configured.")
         return False
-    
-    # Now test connection to our db
-    target_url = os.environ.get('POSTGRES_URL')
-    print(f"Testing connection to {target_url}...")
+
+    parsed = urlparse(target_url)
+    db_name = parsed.path.lstrip("/")
+    if not _DATABASE_NAME_RE.fullmatch(db_name):
+        print("POSTGRES_URL contains an invalid database name.")
+        return False
+
+    maintenance_url = urlunparse(parsed._replace(path="/postgres"))
+    try:
+        conn = await asyncpg.connect(maintenance_url)
+        try:
+            exists = await conn.fetchval(
+                "SELECT 1 FROM pg_database WHERE datname = $1",
+                db_name,
+            )
+            if not exists:
+                # Database identifiers cannot be query parameters; db_name is regex-validated above.
+                await conn.execute(f'CREATE DATABASE "{db_name}"')  # nosec B608
+                print(f"Database '{db_name}' created successfully.")
+            else:
+                print(f"Database '{db_name}' already exists.")
+        finally:
+            await conn.close()
+    except Exception as exc:
+        print(f"Failed to set up database: {exc}")
+        return False
+
     try:
         conn = await asyncpg.connect(target_url)
-        print("Successfully connected to target database!")
         await conn.close()
+        print("Successfully connected to target database.")
         return True
-    except Exception as e:
-        print(f"Failed to connect to target database: {e}")
+    except Exception as exc:
+        print(f"Failed to connect to target database: {exc}")
         return False
+
 
 if __name__ == "__main__":
     asyncio.run(setup_db())

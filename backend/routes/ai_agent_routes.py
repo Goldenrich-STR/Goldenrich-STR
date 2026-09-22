@@ -268,7 +268,8 @@ def _cache_key(message: str, history: list) -> str:
     """Hash of message + last 2 history turns for cache key."""
     recent = str(history[-2:]) if history else ""
     raw = f"{message.strip().lower()}|{recent}"
-    return hashlib.md5(raw.encode()).hexdigest()
+    # This is only a cache key, but SHA-256 also avoids relying on a weak digest.
+    return hashlib.sha256(raw.encode()).hexdigest()
 
 def _get_cached(key: str) -> Optional[str]:
     entry = _RESPONSE_CACHE.get(key)
