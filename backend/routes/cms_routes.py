@@ -1201,3 +1201,63 @@ async def update_contact_message(
             detail="Failed to update contact message"
         )
 
+
+class GenerateBlogRequest(BaseModel):
+    prompt: str = Field(..., description="The user prompt to generate the blog")
+
+@router.post("/admin/generate-blog")
+async def generate_blog(
+    payload: GenerateBlogRequest,
+    current_user: dict = Depends(require_admin)
+):
+    """Generate blog content using Google Gemini AI."""
+    import os
+    import json
+    
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY is not configured on the server.")
+        
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        
+        # Configure model to return JSON
+        model = genai.GenerativeModel(
+            model_name="gemini-2.5-flash",
+            system_instruction=(
+                "You are an expert SEO blog writer for X-Space360, a platform for short-term rentals and villas. "
+                "Your task is to generate a blog post based on the user's prompt. "
+                "You must strictly output ONLY valid JSON without any markdown code blocks, backticks, or extra text. "
+                "The JSON must have this exact structure: "
+                "{"
+                '  "title": "A catchy title",'
+                '  "slug": "url-friendly-slug",'
+                '  "seoTitle": "SEO optimized title (max 60 chars)",'
+                '  "seoDescription": "SEO meta description (max 160 chars)",'
+                '  "excerpt": "A short 2-sentence summary",'
+                '  "content": "The main body of the blog in Markdown format (use ## for headings). Do not include the title in the content.",'
+                '  "tableData": {'
+                '    "title": "Title of the table (if relevant)",'
+                '    "headers": ["Col 1", "Col 2"],'
+                '    "rows": [["Row1Col1", "Row1Col2"], ["Row2Col1", "Row2Col2"]]'
+                '  },'
+                '  "faqs": ['
+                '    {"question": "FAQ 1?", "answer": "Answer 1"},'
+                '    {"question": "FAQ 2?", "answer": "Answer 2"}'
+                '  ]'
+                "}"
+            ),
+            generation_config={"response_mime_type": "application/json"}
+        )
+        
+        response = model.generate_content(payload.prompt)
+        result = json.loads(response.text)
+        
+        return result
+    except Exception as e:
+        logger.error(f"Error generating blog with Gemini: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate blog: {str(e)}"
+        )

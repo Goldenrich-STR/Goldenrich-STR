@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { 
   Building2, MapPin, Mail, Phone, ShieldCheck, CheckCircle2, Sparkles, 
@@ -10,6 +10,17 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 import LegalDocument from '../components/LegalDocument';
+import Footer from '../components/Footer';
+import { formatContentWithBullets, markdownComponents } from '../lib/formatContent';
+
+const FALLBACK_BLOG_IMAGES = [
+  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800'
+];
 
 const blogSchema = {
   "@context": "https://schema.org",
@@ -74,7 +85,7 @@ const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals in India through curation, technology, and superior service.',
   location: 'Nashik, Maharashtra',
   email: 'support@x-space360.com',
-  phone: '+91 8484826247',
+  phone: '+91 919225586010',
   facebook_link: 'https://facebook.com',
   instagram_link: 'https://instagram.com',
   youtube_link: 'https://youtube.com',
@@ -82,11 +93,11 @@ const DEFAULT_FOOTER_DATA = {
     { heading: 'For Guests', items: [
       { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
       { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' }
+      { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-      { label: 'Become a Host', action_type: 'link', link: '/register?role=host', text: '' }
+      { label: 'Become a Host', action_type: 'link', link: '/register/host', text: '' }
     ] },
     { heading: 'Company', items: [
       { label: 'About Us', action_type: 'link', link: '/about-us', text: '' },
@@ -210,7 +221,7 @@ const Blog = () => {
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
       if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register?role=host');
+        navigate(user ? item.link : '/register/host');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -231,31 +242,33 @@ const Blog = () => {
   };
 
   const blogPosts = useMemo(() => {
-    const visibleCmsBlogPosts = Array.isArray(cmsContent?.blog?.posts)
-      ? cmsContent.blog.posts.filter(post => post?.is_active !== false)
-      : [];
-
-    return cmsContent?.blog
-      ? visibleCmsBlogPosts.map((post, idx) => ({
-        id: post.id || `cms-post-${idx}`,
-        title: post.title || 'Untitled',
-        excerpt: post.excerpt || '',
-        content: post.content || '',
-        date: post.date || 'June 2026',
-        author: post.author || 'Editorial Desk',
-        authorName: post.authorName || post.author || 'Editorial Desk',
-        category: post.category || 'Travel and Property',
-        image_url: post.image_url || post.img || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
-        featuredImage: post.featuredImage || post.image_url || post.img || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
-        metaTitle: post.metaTitle || post.seo?.title || post.title || 'X-Space360 Blog',
-        metaDescription: post.metaDescription || post.seo?.description || post.excerpt || 'Read travel guides, property booking tips, host resources, workspace insights and event venue ideas.',
-        keywords: Array.isArray(post.keywords) ? post.keywords : (Array.isArray(post.seo?.keywords) ? post.seo.keywords : DEFAULT_BLOG_KEYWORDS),
-        publishedAt: post.publishedAt || post.date || new Date().toISOString(),
-        updatedAt: post.updatedAt || post.updated_at || post.publishedAt || post.date,
-        slug: post.slug,
-        read_time: post.read_time || '5 min read'
-      }))
-      : DEFAULT_BLOG_POSTS;
+    if (cmsContent?.blog && Array.isArray(cmsContent.blog.posts)) {
+      const visibleCmsBlogPosts = cmsContent.blog.posts.filter(post => post?.is_active !== false);
+      return visibleCmsBlogPosts.map((post, idx) => {
+        const fallbackImg = FALLBACK_BLOG_IMAGES[idx % FALLBACK_BLOG_IMAGES.length];
+        const postImg = post.image_url || post.img || post.featuredImage || fallbackImg;
+        return {
+          id: post.id || `cms-post-${idx}`,
+          title: post.title || 'Untitled',
+          excerpt: post.excerpt || '',
+          content: post.content || '',
+          date: post.date || 'June 2026',
+          author: post.author || 'Editorial Desk',
+          authorName: post.authorName || post.author || 'Editorial Desk',
+          category: post.category || 'Travel and Property',
+          image_url: postImg,
+          featuredImage: postImg,
+          metaTitle: post.metaTitle || post.seo?.title || post.title || 'X-Space360 Blog',
+          metaDescription: post.metaDescription || post.seo?.description || post.excerpt || 'Read travel guides, property booking tips, host resources, workspace insights and event venue ideas.',
+          keywords: Array.isArray(post.keywords) ? post.keywords : (Array.isArray(post.seo?.keywords) ? post.seo.keywords : DEFAULT_BLOG_KEYWORDS),
+          publishedAt: post.publishedAt || post.date || new Date().toISOString(),
+          updatedAt: post.updatedAt || post.updated_at || post.publishedAt || post.date,
+          slug: post.slug,
+          read_time: post.read_time || '5 min read'
+        };
+      });
+    }
+    return DEFAULT_BLOG_POSTS;
   }, [cmsContent]);
 
   const getPostSlug = (post) => post?.slug || slugify(post?.title) || post?.id;
@@ -346,18 +359,18 @@ const Blog = () => {
 
         {/* Center Pill Links */}
         <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal bg-stone/80 backdrop-blur-md border border-stone-200 rounded-full shadow-subtle">
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="hover:text-terracotta transition">
+          <Link to="/" className="hover:text-terracotta transition">
             Home
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/guest/browse" className="hover:text-terracotta transition">
             Discover
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/about-us'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/about-us" className="hover:text-terracotta transition">
             About Us
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/support'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/support" className="hover:text-terracotta transition">
             Support
-          </a>
+          </Link>
           <div className="w-[1px] h-4 bg-charcoal/20" />
           <LanguageSelector
             currentLang={lang}
@@ -480,320 +493,60 @@ const Blog = () => {
         </div>
       )}
 
-      {/* Hero Header Section */}
-      <div className="relative pt-32 pb-24 md:pt-44 md:pb-32 bg-[#0C121D] text-white overflow-hidden border-b border-[#E0A51B]/20">
-        <div
-          className="absolute inset-0 opacity-40 bg-cover bg-center transform scale-105 transition-transform duration-1000"
-          style={{ backgroundImage: `url(${getImageUrl(blogSettings.page_hero_image_url)})` }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/90 to-[#1E293B]/70" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0F172A]/10 to-[#0F172A]" />
-        
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6">
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-4.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-[#E0A51B] animate-pulse">
+      {/* Premium Warm Hero Header Section */}
+      <div className="relative pt-32 pb-16 md:pt-40 md:pb-24 bg-gradient-to-b from-[#FAF8F5] via-[#F5F2EB] to-[#FAF8F5] text-charcoal overflow-hidden border-b border-stone-200">
+        <div className="absolute inset-0 bg-[radial-gradient(#E0A51B_1px,transparent_1px)] [background-size:24px_24px] opacity-15" />
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-5">
+          <div className="inline-flex items-center space-x-2 bg-terracotta/10 border border-terracotta/20 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-terracotta">
             <BookOpen className="w-3.5 h-3.5" />
-            <span>{blogSettings.page_eyebrow}</span>
+            <span>{blogSettings.page_eyebrow || 'X-SPACE360 JOURNAL'}</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight font-serif text-white">
-            {blogSettings.page_title}
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight font-serif text-charcoal">
+            {blogSettings.page_title || 'The Journal'}
           </h1>
-          <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed font-light font-medium">
-            {blogSettings.page_subtitle}
+          <p className="text-base md:text-xl text-charcoal-light max-w-2xl mx-auto leading-relaxed font-normal">
+            {blogSettings.page_subtitle || 'Curated insights, local travel guides, and operational updates for short-term renting.'}
           </p>
         </div>
       </div>
 
-      {/* Blog Posts Grid */}
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      {/* Blog Posts Grid - Clean Minimalist Style */}
+      <div className="max-w-5xl mx-auto px-6 py-16">
+        <div className="space-y-4 mb-10">
+          <h2 className="text-3xl font-bold tracking-tight text-charcoal font-sans">
+            Plan smart, explore more
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           {blogPosts.map((post) => (
             <div 
               key={post.id}
               onClick={() => openPost(post)}
-              className="bg-white rounded-3xl overflow-hidden border border-stone shadow-subtle hover:shadow-premium hover:-translate-y-1.5 transition-all duration-300 cursor-pointer flex flex-col h-full group"
+              className="cursor-pointer group flex flex-col space-y-3"
             >
-              <div className="relative aspect-[16/10] overflow-hidden bg-charcoal">
+              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-stone border border-stone-200 shadow-sm">
                 <img 
                   src={getImageUrl(post.image_url)} 
                   alt={post.title} 
-                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
                 />
-                <span className="absolute bottom-4 left-4 px-2.5 py-1 rounded-full bg-charcoal/60 backdrop-blur-md text-[9px] font-bold tracking-tight uppercase tracking-widest text-white flex items-center gap-1 shadow-sm">
-                  <Clock className="w-3 h-3 text-[#E0A51B]" />
-                  {post.read_time}
-                </span>
               </div>
-              <div className="p-6.5 flex-1 flex flex-col justify-between space-y-4">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-terracotta">
-                    <span>Journal</span>
-                    <span>•</span>
-                    <span className="text-charcoal-muted">{post.date}</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-charcoal leading-snug group-hover:text-terracotta transition duration-300">
-                    {post.title}
-                  </h3>
-                  <p className="text-xs text-charcoal-light font-medium leading-relaxed">
-                    {post.excerpt}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-4 border-t border-stone">
-                  <div className="flex items-center space-x-2 text-xs font-bold text-charcoal-muted uppercase tracking-wider">
-                    <div className="w-6 h-6 rounded-full bg-sage text-white flex items-center justify-center text-[10px] font-bold">
-                      {post.author?.[0] || 'A'}
-                    </div>
-                    <span>{post.author}</span>
-                  </div>
-                  <span className="text-xs font-bold text-terracotta flex items-center gap-1 group-hover:gap-2 transition-all duration-300 uppercase tracking-widest">
-                    <span>Read Article</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </span>
-                </div>
+              <div className="space-y-1 pt-1">
+                <h3 className="text-xl md:text-2xl font-bold text-charcoal leading-snug group-hover:text-terracotta transition-colors duration-200">
+                  {post.title}
+                </h3>
+                <p className="text-xs font-semibold text-charcoal-muted tracking-tight">
+                  {post.date} • <span className="text-terracotta font-bold">{post.author}</span>
+                </p>
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Footer */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-12 md:px-10 lg:px-14 xl:px-20">
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(4,1fr)_1.2fr] lg:gap-12">
-            <div className="max-w-xs">
-              <button
-                type="button"
-                className="mb-6 flex items-center"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-              >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
-              </button>
-              <p className="text-sm font-medium leading-7 text-white/62">
-                {footerData.brand_description || 'Redefining short-term rentals in India through curation, technology, and superior service.'}
-              </p>
-              <div className="mt-7 flex items-center gap-3">
-                {[
-                  { icon: Facebook, url: footerData.facebook_link, label: 'Facebook' },
-                  { icon: Instagram, url: footerData.instagram_link, label: 'Instagram' },
-                  { icon: Youtube, url: footerData.youtube_link, label: 'Youtube' },
-                ].filter(social => social.url).map((social) => {
-                  const IconComponent = social.icon;
-                  return (
-                    <a
-                      key={social.label}
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={social.label}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/14 bg-white/[0.03] text-white/70 transition hover:border-[#E0A51B] hover:text-[#E0A51B]"
-                    >
-                      <IconComponent className="h-4 w-4" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-
-            {footerSections.map((section) => (
-              <div key={section.heading} className="min-w-0">
-                <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                  {section.heading}
-                  <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-                </h5>
-                <ul className="space-y-4">
-                  {section.items.map((item) => (
-                    <li key={`${section.heading}-${item.label}`}>
-                      <button
-                        type="button"
-                        onClick={() => handleFooterSectionClick(section, item)}
-                        className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
-                      >
-                        {item.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-
-            <div className="min-w-0">
-              <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                Contact
-                <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-              </h5>
-              <div className="space-y-5 text-sm font-medium text-white/62">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.location || 'Nashik, Maharashtra'}, India</span>
-                </div>
-                <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Mail className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span className="break-all">{footerData.email || 'support@x-space360.com'}</span>
-                </a>
-                <a href={`tel:${(footerData.phone || '+91 12345 67890').replace(/\s+/g, '')}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Phone className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.phone || '+91 12345 67890'}</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-11 border-t border-white/10 pt-7 text-center">
-            <div className="text-xs font-bold uppercase text-white/52">
-              <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
-              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
-                {footerLegalItems.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                    className="transition hover:text-[#E0A51B]"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* Blog Post Detail Modal */}
-      {selectedPost && (
-        <div 
-          className="fixed inset-0 bg-charcoal/70 backdrop-blur-md flex items-center justify-center z-[99999] p-4 md:p-6 transition-all duration-300 animate-fade-in" 
-          onClick={closePost}
-        >
-          <div 
-            className="bg-white rounded-3xl max-w-5xl w-full max-h-[85vh] md:max-h-[80vh] overflow-hidden shadow-elevated border border-gray-100 flex flex-col md:flex-row relative animate-scale-up" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Left Column: Image Banner (Desktop) / Top Banner (Mobile) */}
-            <div className="relative w-full md:w-[42%] h-[240px] md:h-auto overflow-hidden bg-charcoal shrink-0">
-              <img 
-                src={getImageUrl(selectedPost.image_url)} 
-                alt={selectedPost.title} 
-                className="w-full h-full object-cover opacity-90 transition-transform duration-700 hover:scale-[1.02]"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t md:bg-gradient-to-r from-charcoal/90 via-charcoal/40 to-transparent z-10"></div>
-              
-              <div className="absolute bottom-6 left-6 right-6 z-20 text-white">
-                <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold tracking-tight uppercase tracking-widest text-white mb-3 shadow-sm">
-                  {selectedPost.read_time}
-                </span>
-                <h4 className="text-lg md:text-xl font-bold tracking-tight font-serif italic text-sand-100 leading-tight">
-                  "Curated perspectives on short-term rentals and spaces."
-                </h4>
-              </div>
-            </div>
-
-            {/* Right Column: Article Details & Content */}
-            <div className="flex-1 flex flex-col min-w-0 relative h-[calc(85vh-240px)] md:h-auto">
-              <div className="flex items-center justify-between p-6 md:p-8 pb-4 border-b border-stone">
-                <div className="flex items-center space-x-2 text-xs font-bold tracking-tight text-terracotta uppercase tracking-[0.2em]">
-                  <span>Journal</span>
-                  <span className="text-charcoal-muted font-normal">•</span>
-                  <span className="text-charcoal-muted">{selectedPost.date}</span>
-                </div>
-                
-                <button
-                  onClick={closePost}
-                  className="w-10 h-10 rounded-full bg-gray-50 hover:bg-terracotta hover:text-white flex items-center justify-center transition-all text-charcoal shadow-sm hover:scale-[1.02] active:scale-95"
-                  title="Close article"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {/* Scrollable Article Text */}
-              <div className="overflow-y-auto px-6 md:px-8 py-6 custom-scrollbar flex-1 space-y-6">
-                <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal tracking-tight leading-tight">
-                  {selectedPost.title}
-                </h3>
-
-                <div className="flex items-center space-x-3 bg-stone border border-stone rounded-2xl p-4">
-                  <div className="w-10 h-10 rounded-full bg-sage text-white flex items-center justify-center text-sm font-bold tracking-tight shadow-sm shrink-0">
-                    {selectedPost.author?.[0] || 'A'}
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold tracking-tight text-charcoal leading-tight">{selectedPost.author}</p>
-                    <p className="text-[11px] text-charcoal-muted font-bold uppercase tracking-wider mt-0.5">X-Space360 Editorial Desk</p>
-                  </div>
-                </div>
-
-                <div className="text-charcoal-light font-semibold text-sm md:text-base leading-relaxed space-y-5">
-                  {selectedPost.content ? (
-                    <ReactMarkdown>{selectedPost.content}</ReactMarkdown>
-                  ) : selectedPost.id === 'p1' ? (
-                    <>
-                      <p className="first-letter:text-5xl first-letter:font-bold tracking-tight first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
-                        The real estate landscape is undergoing a massive paradigm shift. Traditional long-term leasing, once the gold standard of property investment, is rapidly losing ground to the dynamic world of short-term rentals (STRs). With the rise of hybrid work models, digital nomadism, and a growing consumer preference for unique, home-like experiences over standardized hotel rooms, properties listed on platforms like X-Space360 are seeing unprecedented demand.
-                      </p>
-                      <p>
-                        What makes short-term renting so lucrative? The math is simple but powerful. Instead of locking in a fixed monthly rent for 11 or 24 months, hosts can optimize pricing daily, weekly, or hourly based on real-time market demand. During peak holiday seasons, weekend getaways, or major local conferences, daily rates can surge, enabling hosts to earn up to 3x more monthly revenue compared to traditional tenancy. Even with average occupancy rates around 60-70%, the net income yields are substantially higher.
-                      </p>
-                      <p className="bg-sage/10 border-l-4 border-sage p-4 rounded-r-xl italic font-serif text-charcoal font-medium my-6">
-                        "Short-term renting isn't just about yielding higher returns; it's about retaining absolute control over your asset, choosing when to host, and ensuring top-tier maintenance under our strict verification guidelines."
-                      </p>
-                      <p>
-                        Furthermore, platforms like X-Space360 eliminate the typical headaches associated with property hosting. Through automated calendar syncing (such as iCal feed integrations), verified digital KYC (using Aadhaar and secure mobile OTPs), and secure checkout locks powered by double-signature Razorpay integrations, the risk of payment defaults or double-bookings is reduced to zero. Whether you own a luxury residential villa, a chic co-working space, or an event rooftop, unlocking your property's short-term potential is the ultimate way to build a robust, passive income stream in 2026.
-                      </p>
-                    </>
-                  ) : selectedPost.id === 'p2' ? (
-                    <>
-                      <p className="first-letter:text-5xl first-letter:font-bold tracking-tight first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
-                        Aesthetics are no longer optional—they are the key driver of your property's daily listing value. In a crowded marketplace, guests browse with their eyes first. If your listing features premium design, curated color palettes, and thoughtful lighting, it immediately commands attention. More importantly, as remote and hybrid work becomes a permanent fixture of modern professional life, integrating a functional, high-end workspace into your rental is one of the highest-ROI improvements you can make.
-                      </p>
-                      <p>
-                        To design a five-star workspace, start with the color psychology. Move away from stark office whites or harsh primary colors. Instead, adopt a curated palette of warm sand, rich terracotta, and calming sage green. These organic tones feel premium, relaxed, and incredibly inviting in photos. Next, invest in an ergonomic chair that combines physical comfort with high-end style, paired with a spacious wooden desk. Position the workspace near natural light, but ensure you install adjustable warm-toned task lighting for late-night productivity sessions.
-                      </p>
-                      <p className="bg-terracotta/5 border-l-4 border-terracotta p-4 rounded-r-xl italic font-serif text-charcoal font-medium my-6">
-                        "In premium lodging, a workspace is no longer a luxury addition; it is an expectations baseline. Seamless integration of ergonomics and high-speed tech justifies up to a 30% daily rate premium."
-                      </p>
-                      <p>
-                        Finally, complement the physical design with seamless technology. A blazing-fast, dedicated Wi-Fi connection is non-negotiable. Provide universal charging docks, clean cable management, and a high-quality secondary monitor if possible. By elevating the workspace from a simple desk-in-a-corner to a dedicated, premium workstation, you transform your property into a prime destination for work-cations, justifying a much higher daily price point and earning glowing five-star reviews from every guest.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="first-letter:text-5xl first-letter:font-bold tracking-tight first-letter:text-terracotta first-letter:mr-3 first-letter:float-left">
-                        {selectedPost.excerpt}
-                      </p>
-                      <p>
-                        Travel trends show a dramatic increase in experiential leisure. Travelers are seeking spaces that tell a story, connect with local culture, and offer high-quality physical amenities in scenic settings. Discovering Nashik's winery retreats or Mumbai's private coastal terraces has never been more popular.
-                      </p>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Footer Text Popup Modal */}
-      {footerPopup && (
-        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
-            <div className="flex items-start justify-between gap-6 mb-6">
-              <h3 className="text-2xl font-bold tracking-tight text-charcoal">{footerPopup.title}</h3>
-              <button
-                type="button"
-                onClick={() => setFooterPopup(null)}
-                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center"
-                aria-label="Close footer details"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="max-h-[60vh] overflow-y-auto mt-4 pr-1">
-              <LegalDocument text={footerPopup.text} />
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Modern Sleek Dark Footer Section */}
+      <Footer cmsContent={cmsContent} />
     </div>
   );
 };

@@ -110,6 +110,10 @@ async def build_sitemap_entries(db: AsyncIOMotorDatabase):
         url_entry("/blog", changefreq="weekly", priority="0.8"),
         url_entry("/support", changefreq="monthly", priority="0.6"),
         url_entry("/legal", changefreq="monthly", priority="0.6"),
+        url_entry("/terms", changefreq="monthly", priority="0.6"),
+        url_entry("/privacy", changefreq="monthly", priority="0.6"),
+        url_entry("/refund-policy", changefreq="monthly", priority="0.6"),
+        url_entry("/account-deletion", changefreq="monthly", priority="0.5"),
     ]
 
     try:
@@ -147,6 +151,9 @@ async def build_sitemap_entries(db: AsyncIOMotorDatabase):
         cities = await db.properties.distinct("city", {"status": "live"})
         for city in cities:
             if city:
+                slug = slugify(city)
+                if slug:
+                    entries.append(url_entry(f"/places/{quote(str(slug))}", changefreq="weekly", priority="0.8"))
                 entries.append(url_entry(f"/guest/browse?city={quote(str(city))}", changefreq="daily", priority="0.7"))
     except Exception as e:
         logger.error(f"Error adding city browse URLs to sitemap: {e}")
@@ -209,6 +216,10 @@ async def get_static_sitemap():
         url_entry("/blog", changefreq="weekly", priority="0.8"),
         url_entry("/support", changefreq="monthly", priority="0.6"),
         url_entry("/legal", changefreq="monthly", priority="0.6"),
+        url_entry("/terms", changefreq="monthly", priority="0.6"),
+        url_entry("/privacy", changefreq="monthly", priority="0.6"),
+        url_entry("/refund-policy", changefreq="monthly", priority="0.6"),
+        url_entry("/account-deletion", changefreq="monthly", priority="0.5"),
     ])
 
 @router.get("/sitemap-properties.xml")
@@ -249,15 +260,15 @@ async def get_blogs_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
 
 @router.get("/sitemap-cities.xml")
 async def get_cities_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
-    base_url = get_base_url()
     xml_entries = []
-    now_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     
     try:
-        # Fetch distinct cities from active properties
         cities = await db.properties.distinct("city", {"status": "live"})
         for city in cities:
             if city:
+                slug = slugify(city)
+                if slug:
+                    xml_entries.append(url_entry(f"/places/{quote(str(slug))}", changefreq="weekly", priority="0.8"))
                 xml_entries.append(url_entry(f"/guest/browse?city={quote(str(city))}", changefreq="daily", priority="0.7"))
     except Exception as e:
         logger.error(f"Error generating cities sitemap: {e}")
