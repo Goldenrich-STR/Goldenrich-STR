@@ -199,6 +199,16 @@ def _is_broker_user(user: Optional[dict]) -> bool:
 
 async def _property_platform_fee_context(db: AsyncIOMotorDatabase, prop: dict, owner: Optional[dict] = None) -> str:
     owner = owner or {}
+    explicit_role = str(
+        prop.get("first_verification_role")
+        or prop.get("primary_verification_role")
+        or prop.get("verification_role")
+        or ""
+    ).strip().lower().replace("-", "_").replace(" ", "_")
+    if explicit_role == "broker" or explicit_role.startswith("broker_"):
+        return PLATFORM_FEE_CONTEXT_BROKER
+    if explicit_role in {"rm", "employee", "relationship_manager"} or explicit_role.startswith(("rm_", "employee_", "relationship_manager_")):
+        return PLATFORM_FEE_CONTEXT_RM
     first_verifier_id = (
         prop.get("broker_id")
         or prop.get("managed_by_broker_id")
@@ -224,16 +234,6 @@ async def _property_platform_fee_context(db: AsyncIOMotorDatabase, prop: dict, o
             return PLATFORM_FEE_CONTEXT_BROKER
 
     if _mapped_value(
-        prop.get("broker_id"),
-        prop.get("broker_lg_code"),
-        prop.get("broker_code"),
-        prop.get("assigned_broker_id"),
-        owner.get("broker_id"),
-        owner.get("broker_lg_code"),
-        owner.get("lg_code"),
-    ):
-        return PLATFORM_FEE_CONTEXT_BROKER
-    if _mapped_value(
         prop.get("rm_id"),
         prop.get("employee_id"),
         prop.get("assigned_employee_id"),
@@ -245,6 +245,15 @@ async def _property_platform_fee_context(db: AsyncIOMotorDatabase, prop: dict, o
         owner.get("employee_code"),
     ):
         return PLATFORM_FEE_CONTEXT_RM
+    if _mapped_value(
+        prop.get("broker_id"),
+        prop.get("broker_lg_code"),
+        prop.get("broker_code"),
+        prop.get("assigned_broker_id"),
+        owner.get("broker_id"),
+        owner.get("broker_lg_code"),
+    ):
+        return PLATFORM_FEE_CONTEXT_BROKER
     return PLATFORM_FEE_CONTEXT_DEFAULT
 
 
