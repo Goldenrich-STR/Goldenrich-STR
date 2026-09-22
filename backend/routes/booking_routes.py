@@ -273,6 +273,16 @@ def _is_broker_user(user: Optional[dict]) -> bool:
 async def _resolve_platform_fee_context(db: AsyncIOMotorDatabase, property_dict: Optional[dict], owner: Optional[dict] = None) -> str:
     property_dict = property_dict or {}
     owner = owner or {}
+    explicit_role = str(
+        property_dict.get("first_verification_role")
+        or property_dict.get("primary_verification_role")
+        or property_dict.get("verification_role")
+        or ""
+    ).strip().lower().replace("-", "_").replace(" ", "_")
+    if explicit_role == "broker" or explicit_role.startswith("broker_"):
+        return PLATFORM_FEE_CONTEXT_BROKER
+    if explicit_role in {"rm", "employee", "relationship_manager"} or explicit_role.startswith(("rm_", "employee_", "relationship_manager_")):
+        return PLATFORM_FEE_CONTEXT_RM
     first_verifier_id = (
         property_dict.get("broker_id")
         or property_dict.get("managed_by_broker_id")
@@ -298,16 +308,6 @@ async def _resolve_platform_fee_context(db: AsyncIOMotorDatabase, property_dict:
             return PLATFORM_FEE_CONTEXT_BROKER
 
     if _mapped_value(
-        property_dict.get("broker_id"),
-        property_dict.get("broker_lg_code"),
-        property_dict.get("broker_code"),
-        property_dict.get("assigned_broker_id"),
-        owner.get("broker_id"),
-        owner.get("broker_lg_code"),
-        owner.get("lg_code"),
-    ):
-        return PLATFORM_FEE_CONTEXT_BROKER
-    if _mapped_value(
         property_dict.get("rm_id"),
         property_dict.get("employee_id"),
         property_dict.get("assigned_employee_id"),
@@ -319,6 +319,15 @@ async def _resolve_platform_fee_context(db: AsyncIOMotorDatabase, property_dict:
         owner.get("employee_code"),
     ):
         return PLATFORM_FEE_CONTEXT_RM
+    if _mapped_value(
+        property_dict.get("broker_id"),
+        property_dict.get("broker_lg_code"),
+        property_dict.get("broker_code"),
+        property_dict.get("assigned_broker_id"),
+        owner.get("broker_id"),
+        owner.get("broker_lg_code"),
+    ):
+        return PLATFORM_FEE_CONTEXT_BROKER
     return PLATFORM_FEE_CONTEXT_DEFAULT
 
 async def _get_booking_payment_config(db: AsyncIOMotorDatabase) -> dict:
