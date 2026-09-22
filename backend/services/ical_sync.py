@@ -24,11 +24,27 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 
 logger = logging.getLogger(__name__)
 
-# How often we sweep all calendars (seconds). Override with env ICAL_SWEEP_INTERVAL.
-DEFAULT_INTERVAL = int(os.environ.get("ICAL_SWEEP_INTERVAL", "1800"))  # 30 min
+# Poll frequently enough to honor the shortest supported per-feed interval.
+DEFAULT_INTERVAL = int(os.environ.get("ICAL_SWEEP_INTERVAL", "300"))  # 5 min
 # Per-feed minimum freshness — skip a calendar if it was synced less than this
 # many seconds ago (override with ICAL_MIN_FRESHNESS).
 MIN_FRESHNESS_SECONDS = int(os.environ.get("ICAL_MIN_FRESHNESS", "900"))  # 15 min
+
+SYNC_FREQUENCY_SECONDS = {
+    "Every 15 minutes": 15 * 60,
+    "Every 30 minutes": 30 * 60,
+    "Hourly": 60 * 60,
+    "Every 6 hours": 6 * 60 * 60,
+    "Daily": 24 * 60 * 60,
+}
+
+
+def _feed_interval_seconds(calendar: dict) -> int:
+    requested = SYNC_FREQUENCY_SECONDS.get(
+        calendar.get("sync_frequency"),
+        SYNC_FREQUENCY_SECONDS["Every 30 minutes"],
+    )
+    return max(MIN_FRESHNESS_SECONDS, requested)
 
 
 _task: Optional[asyncio.Task] = None
@@ -53,7 +69,7 @@ async def _sweep_once(db: AsyncIOMotorDatabase) -> dict:
             # `last` is a tz-aware datetime since motor was opened with tz_aware=True
             if last.tzinfo is None:
                 last = last.replace(tzinfo=timezone.utc)
-            if (now - last).total_seconds() < MIN_FRESHNESS_SECONDS:
+            if (now - last).total_seconds() < _feed_interval_seconds(cal):
                 skipped += 1
                 continue
         try:

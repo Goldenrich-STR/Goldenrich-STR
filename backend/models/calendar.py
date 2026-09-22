@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime, date, timezone
 from enum import Enum
+from uuid import uuid4
 
 class BlockedDateSource(str, Enum):
     MANUAL = "manual"  # Host manually blocked
@@ -9,7 +10,7 @@ class BlockedDateSource(str, Enum):
     EXTERNAL = "external"  # From external calendar (iCal)
 
 class BlockedDate(BaseModel):
-    blocked_date_id: str = Field(default_factory=lambda: f"blocked_{int(datetime.now(timezone.utc).timestamp())}")
+    blocked_date_id: str = Field(default_factory=lambda: f"blocked_{uuid4().hex}")
     property_id: str
     owner_id: str
     
@@ -23,6 +24,7 @@ class BlockedDate(BaseModel):
         
     # Details
     reason: Optional[str] = None
+    block_type: str = "Held"
     
     # Timestamps
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -32,9 +34,10 @@ class BlockDateRequest(BaseModel):
     start_date: date
     end_date: date
     reason: Optional[str] = None
+    block_type: str = "Held"
 
 class ExternalCalendar(BaseModel):
-    calendar_id: str = Field(default_factory=lambda: f"cal_{int(datetime.now(timezone.utc).timestamp())}")
+    calendar_id: str = Field(default_factory=lambda: f"cal_{uuid4().hex}")
     property_id: str
     owner_id: str
     
@@ -43,6 +46,8 @@ class ExternalCalendar(BaseModel):
     name: str
     ical_url: str
     color: str = "#3B82F6"  # Blue
+    provider: str = "Custom iCal"
+    sync_frequency: str = "Every 30 minutes"
     is_active: bool = True
     
     # Sync details
