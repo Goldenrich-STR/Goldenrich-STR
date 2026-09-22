@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CalendarDays, Eye, FileText, Filter, Megaphone, MoreHorizontal, Percent, Plus, Search, ShieldCheck, Trash2, Edit3, ArrowLeft, Table, ExternalLink, BookOpen, Check } from 'lucide-react';
 import { cmsAPI, couponAPI } from '../../services/api';
 import { adminPhase1API } from '../../services/adminPhase1Api';
@@ -27,7 +28,6 @@ const contentSectionDescriptions = {
   offer: 'Offers and discounts',
   offers: 'Offers and discounts',
   testimonials: 'Customer reviews section',
-  blog: 'Latest blog posts',
   advertisement: 'Marketing banners',
   legal_terms: 'Terms and privacy details',
   faq: 'FAQ section',
@@ -328,6 +328,7 @@ const StructuredFieldEditor = ({ value, path = [], onChange, onRemove, root = fa
 };
 
 const MarketingCms = () => {
+  const navigate = useNavigate();
   const [active, setActive] = useState('overview');
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState('');
@@ -367,6 +368,7 @@ const MarketingCms = () => {
   const filteredContent = useMemo(() => {
     const term = search.trim().toLowerCase();
     return state.content.filter((item) => {
+      if (String(item.section || '').toLowerCase() === 'blog') return false;
       const matchesSearch = !term || [item.page, item.section, item.content_type, item.content_id].some((value) => String(value || '').toLowerCase().includes(term));
       const matchesPage = contentFilters.page === 'all' || String(item.page || '').toLowerCase() === contentFilters.page;
       const matchesType = contentFilters.type === 'all' || String(item.content_type || '').toLowerCase() === contentFilters.type;
@@ -389,7 +391,7 @@ const MarketingCms = () => {
     };
   }, [state.content, state.coupons]);
 
-  const landingContent = useMemo(() => state.content.filter((item) => item.page === 'landing'), [state.content]);
+  const landingContent = useMemo(() => state.content.filter((item) => item.page === 'landing' && String(item.section || '').toLowerCase() !== 'blog'), [state.content]);
   const selectedLanding = useMemo(() => landingContent.find((item) => item.content_id === selectedId) || landingContent[0], [landingContent, selectedId]);
   const editorialContent = useMemo(() => landingContent.filter((item) => ['seo', 'legal_terms', 'footer'].includes(item.section)), [landingContent]);
 
@@ -507,6 +509,10 @@ const MarketingCms = () => {
   }, []);
 
   const handleQuickAction = useCallback((target) => {
+    if (target === 'blogs') {
+      navigate('/admin/blogs');
+      return;
+    }
     if (target === 'addContent') {
       setActive('content');
       setShowAddContent(true);
@@ -655,7 +661,7 @@ const Overview = ({ content, allContent, coupons, search, setSearch, filters, se
           {[
             ['Add New Section', 'Create a new CMS section', 'addContent'],
             ['Manage Offers', 'Create or update offers', 'offers'],
-            ['Write Blog Post', 'Publish a new blog', 'blogSeoLegal'],
+            ['Blog Management', 'Manage blog posts & articles', 'blogs'],
             ['SEO Settings', 'Update meta and SEO info', 'blogSeoLegal'],
           ].map(([title, description, target]) => (
             <button key={title} type="button" onClick={() => onQuickAction(target)} className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[#e8eef8] bg-white px-3 py-3 text-left hover:bg-[#f8fbff]">

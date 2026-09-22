@@ -549,6 +549,10 @@ const PropertyDetail = () => {
     const params = new URLSearchParams(window.location.search);
     return Number(params.get('guests')) || 1;
   });
+  const [isCustomGuestCount, setIsCustomGuestCount] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return Number(params.get('guests')) > 500;
+  });
   const [childrenGuests, setChildrenGuests] = useState(0);
   const [infantGuests, setInfantGuests] = useState(0);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
@@ -607,6 +611,7 @@ const PropertyDetail = () => {
       checkIn,
       checkOut,
       guests: Number(guests) || 1,
+      isCustomGuestCount,
       childrenGuests,
       infantGuests,
       selectedSlot,
@@ -648,7 +653,10 @@ const PropertyDetail = () => {
 
       if (intent.checkIn) setCheckIn(intent.checkIn);
       if (intent.checkOut) setCheckOut(intent.checkOut);
-      if (Number(intent.guests) > 0) setGuests(Number(intent.guests));
+      if (Number(intent.guests) > 0) {
+        setGuests(Number(intent.guests));
+        setIsCustomGuestCount(Boolean(intent.isCustomGuestCount) || Number(intent.guests) > 500);
+      }
       setChildrenGuests(Math.max(0, Number(intent.childrenGuests) || 0));
       setInfantGuests(Math.max(0, Number(intent.infantGuests) || 0));
       if (intent.selectedSlot) setSelectedSlot(intent.selectedSlot);
@@ -1060,8 +1068,7 @@ const PropertyDetail = () => {
         : foodPreference === 'veg' 
         ? (property?.veg_price || 0) 
         : 0;
-      let g = Number(guests);
-      if (![100, 200, 300, 400, 500, 600].includes(g)) g = 100;
+      const g = Math.max(0, Math.floor(Number(guests) || 0));
       amt += g * platePrice * nights;
     } else if (property?.category === 'residential' || property?.category === 'commercial') {
       // Extra guest charges are added separately after the final nightly price.
@@ -1078,8 +1085,7 @@ const PropertyDetail = () => {
         : foodPreference === 'veg'
         ? Number(property?.veg_price || 0)
         : 0;
-      let g = Number(guests);
-      if (![100, 200, 300, 400, 500, 600].includes(g)) g = 100;
+      const g = Math.max(0, Math.floor(Number(guests) || 0));
       amt += g * platePrice;
     } else if (property?.category === 'residential' || property?.category === 'commercial') {
       // GST slab is selected from the final nightly price, not from the full
@@ -1147,6 +1153,11 @@ const PropertyDetail = () => {
   const roundedDisplayPricePerNight = Math.round(displayPricePerNight || 0);
   const roundedPerPersonPrice = Math.round(Number(property?.per_person_price || 0));
   const nightlySubtotal = Math.round(finalNightlyPrice * nights);
+  const eventVenueRate = Number(property?.price_per_night) || 0;
+  const eventVenueTotal = eventVenueRate * nights;
+  const eventGuestCount = Math.max(0, Math.floor(Number(guests) || 0));
+  const eventPlatePrice = Number(foodPreference === 'non_veg' ? property?.non_veg_price : property?.veg_price) || 0;
+  const eventFoodTotal = eventPlatePrice * eventGuestCount * nights;
   const quotedExtraGuestTotal = quoteNumber(bookingQuote?.host_extra_guest_fee ?? bookingQuote?.extra_guest_fee, extraGuestTotal);
   const bookingSubtotal = quoteNumber(bookingQuote?.subtotal_before_discount, nightlySubtotal + quotedExtraGuestTotal);
   const taxes = quoteNumber(bookingQuote?.taxes ?? bookingQuote?.gst_amount, bookingSubtotal * (taxPercent / 100));
@@ -1154,7 +1165,8 @@ const PropertyDetail = () => {
   const total = quoteNumber(bookingQuote?.total_amount, bookingSubtotal - discountAmount + taxes);
   const advanceAmount = Math.round(total * (advancePercent / 100));
   const amountDueNow = (property?.category === 'event_venue' && bookingPaymentType === 'advance') ? advanceAmount : Math.round(total);
-  const canShowBookingAmount = Boolean(checkIn && checkOut && nights > 0 && amountDueNow > 0);
+  const effectiveCheckOut = checkOut || (property?.category === 'event_venue' ? checkIn : '');
+  const canShowBookingAmount = Boolean(checkIn && effectiveCheckOut && nights > 0 && amountDueNow > 0);
 
   const goPrev = () => {
     if (calMonth === 1) {
@@ -1203,10 +1215,9 @@ const PropertyDetail = () => {
     } else if (iso < checkIn) {
       setCheckIn(iso);
     } else if (iso === checkIn) {
-      // Allow confirming single day by clicking again if not auto-set
-      if (property?.category === 'event_venue') {
-        setCheckOut(iso);
-      }
+      // Allow confirming single day by clicking same date again
+      setCheckOut(iso);
+      setBookingError('');
     } else {
       // Verify no blocked dates in between
       let cursor = new Date(checkIn);
@@ -1366,13 +1377,13 @@ const PropertyDetail = () => {
             </thead>
             <tbody>
               <tr>
-                <td colspan="2">Venue Rent (Rs.${Math.round(finalNightlyPrice).toLocaleString('en-IN')} x ${nights} days)</td>
-                <td style="text-align: right; font-weight: 800;">Rs.${Math.round(bookingSubtotal).toLocaleString('en-IN')}</td>
+                <td colspan="2">Venue Rent: ₹${Math.round(eventVenueRate).toLocaleString('en-IN')} × ${nights} day${nights !== 1 ? 's' : ''} =</td>
+                <td style="text-align: right; font-weight: 800;">₹${Math.round(eventVenueTotal).toLocaleString('en-IN')}</td>
               </tr>
               ${property.category === 'event_venue' && foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 ? `
               <tr>
-                <td colspan="2">Catering (₹${(foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price)?.toLocaleString('en-IN')} × ${guests} Guests × ${nights} days - ${foodPreference === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'})</td>
-                <td style="text-align: right; font-weight: 800;">₹${((foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) * guests * nights).toLocaleString('en-IN')}</td>
+                <td colspan="2">Food Charges: ₹${eventPlatePrice.toLocaleString('en-IN')} × ${eventGuestCount} Guests × ${nights} day${nights !== 1 ? 's' : ''} =</td>
+                <td style="text-align: right; font-weight: 800;">₹${eventFoodTotal.toLocaleString('en-IN')}</td>
               </tr>
               ` : ''}
               ${discountAmount > 0 ? `
@@ -1386,7 +1397,7 @@ const PropertyDetail = () => {
                 <td style="text-align: right; font-weight: 800;">Rs.${Math.round(taxes).toLocaleString('en-IN')}</td>
               </tr>
               <tr class="total-row">
-                <td colspan="2" style="font-size: 13px; text-transform: uppercase;">Total Estimated Cost</td>
+                <td colspan="2" style="font-size: 13px; text-transform: uppercase;">Total Amount</td>
                 <td style="text-align: right;" class="total-price">₹${Math.round(total).toLocaleString('en-IN')}</td>
               </tr>
             </tbody>
@@ -2550,14 +2561,14 @@ const PropertyDetail = () => {
                               onClick={() => setShowGuestDropdown(!showGuestDropdown)}
                               className="w-full text-left text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer flex justify-between items-center"
                             >
-                              <span>
-                                {Number(guests) === 100 ? 'Less than 100' :
-                                 Number(guests) === 200 ? '100-200' :
-                                 Number(guests) === 300 ? '200-300' :
-                                 Number(guests) === 400 ? '300-400' :
-                                 Number(guests) === 500 ? '400-500' :
-                                 Number(guests) === 600 ? 'Greater than 500' :
-                                 'Less than 100'}
+                               <span>
+                                 {isCustomGuestCount ? `Other (${eventGuestCount} Guests)` :
+                                  Number(guests) === 100 ? 'Less than 100' :
+                                  Number(guests) === 200 ? '100-200' :
+                                  Number(guests) === 300 ? '200-300' :
+                                  Number(guests) === 400 ? '300-400' :
+                                  Number(guests) === 500 ? '400-500' :
+                                  'Less than 100'}
                               </span>
                               <ChevronDown className={`w-3 h-3 transition-transform ${showGuestDropdown ? 'rotate-180' : ''}`} />
                             </button>
@@ -2571,23 +2582,60 @@ const PropertyDetail = () => {
                                   {[
                                     { v: 100, l: 'Less than 100' },
                                     { v: 200, l: '100-200' },
-                                    { v: 300, l: '200-300' },
-                                    { v: 400, l: '300-400' },
-                                    { v: 500, l: '400-500' },
-                                    { v: 600, l: 'Greater than 500' }
-                                  ].map(opt => (
-                                    <div
-                                      key={opt.v}
-                                      onClick={() => { setGuests(opt.v); setShowGuestDropdown(false); }}
-                                      className={`px-4 py-2.5 text-xs font-bold cursor-pointer hover:bg-stone transition-colors ${Number(guests) === opt.v ? 'text-terracotta bg-terracotta/5' : 'text-charcoal'}`}
-                                    >
-                                      {opt.l}
-                                    </div>
+                                     { v: 300, l: '200-300' },
+                                     { v: 400, l: '300-400' },
+                                     { v: 500, l: '400-500' },
+                                     { v: 'other', l: 'Other' }
+                                   ].map(opt => (
+                                     <div
+                                       key={opt.v}
+                                       onClick={() => {
+                                         if (opt.v === 'other') {
+                                           setIsCustomGuestCount(true);
+                                           setGuests(0);
+                                         } else {
+                                           setIsCustomGuestCount(false);
+                                           setGuests(opt.v);
+                                         }
+                                         setShowGuestDropdown(false);
+                                       }}
+                                       className={`px-4 py-2.5 text-xs font-bold cursor-pointer hover:bg-stone transition-colors ${(opt.v === 'other' ? isCustomGuestCount : !isCustomGuestCount && Number(guests) === opt.v) ? 'text-terracotta bg-terracotta/5' : 'text-charcoal'}`}
+                                     >
+                                       {opt.l}
+                                     </div>
                                   ))}
                                 </div>
                               </>
-                            )}
-                          </div>
+                             )}
+                             {isCustomGuestCount && (
+                               <div className="mt-3">
+                                 <label htmlFor="custom-event-guests" className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">
+                                   Enter Guest Count
+                                 </label>
+                                 <input
+                                   id="custom-event-guests"
+                                   type="number"
+                                   min="0"
+                                   step="1"
+                                   value={guests}
+                                   onFocus={(e) => e.target.select()}
+                                   onChange={(e) => {
+                                     const normalizedValue = e.target.value.replace(/^0+(?=\d)/, '');
+                                     if (normalizedValue === '') {
+                                       setGuests('');
+                                       return;
+                                     }
+                                     const nextGuests = Math.max(0, Math.floor(Number(normalizedValue)));
+                                     if (Number.isFinite(nextGuests)) setGuests(nextGuests);
+                                   }}
+                                   onBlur={() => setGuests((current) => Math.max(0, Math.floor(Number(current) || 0)))}
+                                   className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold tracking-tight text-charcoal outline-none focus:border-terracotta"
+                                   placeholder="e.g. 750"
+                                 />
+                                 <p className="mt-1 text-[9px] font-semibold text-charcoal-muted">Enter any guest count.</p>
+                               </div>
+                             )}
+                           </div>
                         ) : property.category === 'commercial' ? (
                           <input
                             type="number"
@@ -2756,30 +2804,19 @@ const PropertyDetail = () => {
                 <div className="mt-6 mb-6 space-y-4 animate-fade-in" data-testid="price-breakdown">
                   {property.category === 'event_venue' ? (
                     <>
-                      <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                          ₹{Math.round(finalNightlyPrice).toLocaleString('en-IN')} × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')} (Venue)
-                        </span>
-                        <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(bookingSubtotal).toLocaleString('en-IN')}</span>
-                      </div>
+                       <div className="flex justify-between items-center">
+                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
+                           Venue Rent: ₹{Math.round(eventVenueRate).toLocaleString('en-IN')} × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')}{nights !== 1 ? 's' : ''} =
+                         </span>
+                         <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(eventVenueTotal).toLocaleString('en-IN')}</span>
+                       </div>
                       {foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 && (
-                        <div className="flex justify-between items-center">
-                        <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                          ₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {
-                            guests === 100 ? '100' :
-                            guests === 200 ? '200' :
-                            guests === 300 ? '300' :
-                            guests === 400 ? '400' :
-                            guests === 500 ? '500' :
-                            guests === 600 ? '600' :
-                            Number(guests) || 100
-                          } Guests × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')}{nights !== 1 ? 's' : ''} (Food)
-                        </span>
-                        <span className="text-sm font-bold tracking-tight text-charcoal">₹{(
-                          (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
-                          (guests === 100 ? 100 : guests === 200 ? 200 : guests === 300 ? 300 : guests === 400 ? 400 : guests === 500 ? 500 : guests === 600 ? 600 : Number(guests) || 100) * nights
-                        ).toLocaleString('en-IN')}</span>
-                      </div>
+                         <div className="flex justify-between items-center">
+                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
+                           Food Charges: ₹{eventPlatePrice.toLocaleString('en-IN')} × {eventGuestCount} Guests × {nights} {property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')}{nights !== 1 ? 's' : ''} =
+                         </span>
+                         <span className="text-sm font-bold tracking-tight text-charcoal">₹{eventFoodTotal.toLocaleString('en-IN')}</span>
+                       </div>
                     )}
                     </>
                   ) : (
@@ -2835,7 +2872,7 @@ const PropertyDetail = () => {
                         onClick={() => setBookingPaymentType('advance')}
                         className={`text-left p-3 rounded-2xl border-2 transition-all ${bookingPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 bg-white hover:border-gray-200'}`}
                       >
-                        <span className="block text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted">Pay {advancePercent}% Advance</span>
+                        <span className="block text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal-muted">Advance ({advancePercent}%)</span>
                         <span className="block text-lg font-bold tracking-tight text-terracotta mt-1">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
                       </button>
                       <button
@@ -3150,17 +3187,14 @@ const PropertyDetail = () => {
                   <span className="text-right">Amount</span>
                 </div>
                 <div className="divide-y divide-sand-100 px-5 font-semibold text-charcoal">
-                  <div className="py-3 grid grid-cols-3">
-                    <span className="col-span-2">Venue Rent (₹{Math.round(finalNightlyPrice).toLocaleString('en-IN')} × {nights} days)</span>
-                    <span className="text-right font-bold tracking-tight">₹{Math.round(bookingSubtotal).toLocaleString('en-IN')}</span>
-                  </div>
+                   <div className="py-3 grid grid-cols-3">
+                     <span className="col-span-2">Venue Rent: ₹{Math.round(eventVenueRate).toLocaleString('en-IN')} × {nights} day{nights !== 1 ? 's' : ''} =</span>
+                     <span className="text-right font-bold tracking-tight">₹{Math.round(eventVenueTotal).toLocaleString('en-IN')}</span>
+                   </div>
                   {property.category === 'event_venue' && foodPreference && (foodPreference === 'non_veg' ? property.non_veg_price : property.veg_price) > 0 && (
-                    <div className="py-3 grid grid-cols-3">
-                      <span className="col-span-2">Catering (₹{(foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)).toLocaleString('en-IN')} × {guests} Guests × {nights} days - {foodPreference === 'veg' ? 'Vegetarian' : 'Non-Vegetarian'})</span>
-                      <span className="text-right font-bold tracking-tight">₹{(
-                        (foodPreference === 'non_veg' ? (property.non_veg_price || 0) : (property.veg_price || 0)) * 
-                        guests * nights
-                      ).toLocaleString('en-IN')}</span>
+                     <div className="py-3 grid grid-cols-3">
+                       <span className="col-span-2">Food Charges: ₹{eventPlatePrice.toLocaleString('en-IN')} × {eventGuestCount} Guests × {nights} day{nights !== 1 ? 's' : ''} =</span>
+                       <span className="text-right font-bold tracking-tight">₹{eventFoodTotal.toLocaleString('en-IN')}</span>
                     </div>
                   )}
                   {discountAmount > 0 && (
@@ -3175,7 +3209,7 @@ const PropertyDetail = () => {
                   </div>
                 </div>
                 <div className="bg-stone/80 px-5 py-4 border-t border-gray-100 grid grid-cols-3 font-bold tracking-tight">
-                  <span className="col-span-2 text-charcoal uppercase tracking-wider text-xs">Total Estimated Cost</span>
+                   <span className="col-span-2 text-charcoal uppercase tracking-wider text-xs">Total Amount</span>
                   <span className="text-right text-terracotta text-lg">₹{Math.round(total).toLocaleString('en-IN')}</span>
                 </div>
               </div>
@@ -3188,7 +3222,7 @@ const PropertyDetail = () => {
                     onClick={() => setQuotationPaymentType('advance')}
                     className={`p-4 rounded-xl border-2 cursor-pointer transition-all flex flex-col justify-between ${quotationPaymentType === 'advance' ? 'border-terracotta bg-terracotta/5' : 'border-gray-100 hover:bg-stone/50 bg-white'}`}
                   >
-                    <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Pay {advancePercent}% Advance</span>
+                    <span className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Advance ({advancePercent}%)</span>
                     <span className="text-xl font-bold tracking-tight text-terracotta mt-2">Rs.{advanceAmount.toLocaleString('en-IN')}</span>
                   </div>
                   <div 

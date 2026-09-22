@@ -1,4 +1,4 @@
-﻿from fastapi import APIRouter, HTTPException, status, Depends, Request
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
 from typing import List, Optional
@@ -402,7 +402,7 @@ async def _build_booking_quote(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid booking dates")
 
-    if check_in >= check_out and property_dict.get("category") != "event_venue":
+    if check_in > check_out or (check_in == check_out and property_dict.get("category") != "event_venue"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Check-out date must be after check-in date")
 
     if int(payload.number_of_guests or 1) > int(property_dict.get("max_guests") or 1):
@@ -602,7 +602,7 @@ async def create_booking(
         check_in = booking_data.check_in_date
         check_out = booking_data.check_out_date
         
-        if check_in >= check_out and property_dict.get("category") != "event_venue":
+        if check_in > check_out or (check_in == check_out and property_dict.get("category") != "event_venue"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Check-out date must be after check-in date"

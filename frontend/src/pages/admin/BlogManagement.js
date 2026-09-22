@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Edit3, Loader2, BookOpen, Save, X, Table as TableIcon } from 'lucide-react';
 import { cmsAPI } from '../../services/api';
+import SimpleMarkdownEditor from '../../components/SimpleMarkdownEditor';
 
 const DEFAULT_BLOG = {
   id: '',
@@ -280,15 +281,12 @@ const BlogForm = ({ post: initialPost, onSave, onCancel, isSaving, generateSlug 
             />
           </div>
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1">Content (Markdown Supported)</label>
-            <div className="mb-2 text-xs text-gray-500">
-              Markdown tables are supported, or you can use the dedicated Table Builder below.
-            </div>
-            <textarea 
-              name="content" value={post.content} onChange={handleChange} 
-              rows={15}
-              className="w-full p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-terracotta/20 focus:border-terracotta outline-none font-mono text-sm"
-              placeholder="Write your blog content here..."
+            <label className="block text-sm font-semibold text-gray-700 mb-1.5">Content Editor</label>
+            <SimpleMarkdownEditor
+              value={post.content || ''}
+              onChange={handleChange}
+              placeholder="Write your blog content here... Use toolbar buttons above to format H1, H2, Bold, Lists, Tables easily!"
+              rows={14}
             />
           </div>
           
