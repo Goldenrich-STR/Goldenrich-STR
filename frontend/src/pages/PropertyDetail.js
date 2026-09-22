@@ -1108,6 +1108,9 @@ const PropertyDetail = () => {
       property_id: property?.property_id || id,
       host_amount: hostAmount,
       tax_slab_base_amount: Number(taxSlabBaseAmount) || hostAmount,
+      charge_base_amount: property?.category === 'event_venue'
+        ? (Number(property?.price_per_night) || 0) * Math.max(1, Number(nights) || 1)
+        : hostAmount,
       pricing_units: Math.max(1, Number(nights) || 1),
       extra_guest_amount: extraGuestTotal,
     })
@@ -1153,13 +1156,17 @@ const PropertyDetail = () => {
   const roundedDisplayPricePerNight = Math.round(displayPricePerNight || 0);
   const roundedPerPersonPrice = Math.round(Number(property?.per_person_price || 0));
   const nightlySubtotal = Math.round(finalNightlyPrice * nights);
-  const eventVenueRate = Number(property?.price_per_night) || 0;
+  const eventVenueRate = displayPricePerNight;
   const eventVenueTotal = eventVenueRate * nights;
   const eventGuestCount = Math.max(0, Math.floor(Number(guests) || 0));
   const eventPlatePrice = Number(foodPreference === 'non_veg' ? property?.non_veg_price : property?.veg_price) || 0;
   const eventFoodTotal = eventPlatePrice * eventGuestCount * nights;
   const quotedExtraGuestTotal = quoteNumber(bookingQuote?.host_extra_guest_fee ?? bookingQuote?.extra_guest_fee, extraGuestTotal);
-  const bookingSubtotal = quoteNumber(bookingQuote?.subtotal_before_discount, nightlySubtotal + quotedExtraGuestTotal);
+  const eventBaseSubtotal = eventVenueTotal + eventFoodTotal + quotedExtraGuestTotal;
+  const bookingSubtotal = quoteNumber(
+    bookingQuote?.subtotal_before_discount,
+    property?.category === 'event_venue' ? eventBaseSubtotal : nightlySubtotal + quotedExtraGuestTotal
+  );
   const taxes = quoteNumber(bookingQuote?.taxes ?? bookingQuote?.gst_amount, bookingSubtotal * (taxPercent / 100));
   const discountAmount = quoteNumber(bookingQuote?.discount_amount, 0);
   const total = quoteNumber(bookingQuote?.total_amount, bookingSubtotal - discountAmount + taxes);

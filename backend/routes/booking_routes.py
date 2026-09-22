@@ -373,6 +373,7 @@ async def _calculate_booking_pricing(
     coupon_discount: float = 0,
     coupon_code: Optional[str] = None,
     tax_slab_base_amount: Optional[float] = None,
+    charge_base_amount: Optional[float] = None,
     pricing_units: Optional[int] = 1,
     extra_guest_amount: float = 0,
     platform_fee_context: Optional[str] = None,
@@ -385,6 +386,7 @@ async def _calculate_booking_pricing(
         coupon_code=coupon_code,
         legacy_service_fee_percent=service_fee_percent,
         tax_slab_base_amount=tax_slab_base_amount,
+        charge_base_amount=charge_base_amount,
         pricing_units=pricing_units,
         extra_guest_amount=extra_guest_amount,
         platform_fee_context=platform_fee_context,
@@ -477,14 +479,22 @@ async def _build_booking_quote(
         else:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid coupon code")
 
+    owner = None
+    owner_id = property_dict.get("owner_id")
+    if owner_id:
+        owner = await db.users.find_one({"user_id": owner_id}, {"_id": 0})
+    platform_fee_context = await _resolve_platform_fee_context(db, property_dict, owner)
+
     pricing = await _calculate_booking_pricing(
         db,
         base_amount,
         coupon_discount=discount_amount,
         coupon_code=coupon_code,
         tax_slab_base_amount=tax_slab_base_amount,
+        charge_base_amount=unit_price * max(1, num_units) if property_dict.get("category") == "event_venue" else None,
         pricing_units=max(1, num_units),
         extra_guest_amount=extra_guest_amount,
+        platform_fee_context=platform_fee_context,
     )
     advance_rate = _event_policy_percent(property_dict, "advance", 50.0)
     payable_now = pricing["total_amount"]
@@ -719,6 +729,7 @@ async def create_booking(
             coupon_discount=discount_amount,
             coupon_code=coupon_code,
             tax_slab_base_amount=tax_slab_base_amount,
+            charge_base_amount=nightly_price * num_nights if property_dict.get("category") == "event_venue" else None,
             pricing_units=num_nights,
             extra_guest_amount=extra_guest_amount,
             platform_fee_context=platform_fee_context,
@@ -794,6 +805,7 @@ async def create_booking(
         booking_dict["final_nightly_price"] = pricing["final_nightly_price"]
         booking_dict["pricing_units"] = pricing["pricing_units"]
         booking_dict["host_amount"] = pricing["host_amount"]
+        booking_dict["charge_base_amount"] = pricing["charge_base_amount"]
         booking_dict["taxable_amount"] = taxable_amount
         booking_dict["charges"] = pricing["charges"]
         booking_dict["platform_fee_context"] = platform_fee_context
@@ -2125,6 +2137,7 @@ class BookingPricingQuoteRequest(BaseModel):
     host_amount: float
     property_id: Optional[str] = None
     tax_slab_base_amount: Optional[float] = None
+    charge_base_amount: Optional[float] = None
     pricing_units: Optional[int] = 1
     extra_guest_amount: Optional[float] = 0
     coupon_discount: Optional[float] = 0
@@ -2149,6 +2162,7 @@ async def booking_pricing_quote(
         db,
         payload.host_amount,
         tax_slab_base_amount=payload.tax_slab_base_amount,
+        charge_base_amount=payload.charge_base_amount,
         pricing_units=payload.pricing_units,
         extra_guest_amount=payload.extra_guest_amount or 0,
         coupon_discount=payload.coupon_discount or 0,
@@ -2224,6 +2238,7 @@ async def apply_coupon(
             original_taxable,
             service_fee_percent=booking_dict.get("service_fee_percent"),
             tax_slab_base_amount=booking_dict.get("tax_slab_base_amount"),
+            charge_base_amount=booking_dict.get("charge_base_amount"),
             pricing_units=booking_dict.get("pricing_units") or 1,
             extra_guest_amount=booking_dict.get("host_extra_guest_fee") or booking_dict.get("extra_guest_fee") or 0,
             platform_fee_context=booking_dict.get("platform_fee_context"),
@@ -2237,6 +2252,7 @@ async def apply_coupon(
             coupon_discount=discount,
             coupon_code=code,
             tax_slab_base_amount=booking_dict.get("tax_slab_base_amount"),
+            charge_base_amount=booking_dict.get("charge_base_amount"),
             pricing_units=booking_dict.get("pricing_units") or 1,
             extra_guest_amount=booking_dict.get("host_extra_guest_fee") or booking_dict.get("extra_guest_fee") or 0,
             platform_fee_context=booking_dict.get("platform_fee_context"),
