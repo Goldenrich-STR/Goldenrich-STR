@@ -354,14 +354,18 @@ def normalize_booking_payment_config(config: Optional[Dict[str, Any]] = None) ->
 
     raw_charges = dict(config.get("charges") or {})
     raw_platform = dict(raw_charges.get("platform_fee") or {})
-    raw_platform.setdefault("enabled", True)
+    # A platform fee must be opt-in. An empty settings document (or an
+    # environment fallback value) must never start charging customers. Keep
+    # legacy admin-saved platform_fee_percent documents working as explicit
+    # configuration while new documents use charges.platform_fee.enabled.
+    raw_platform.setdefault("enabled", "platform_fee_percent" in config)
     raw_platform.setdefault("charge_type", PERCENTAGE)
     raw_platform.setdefault("value", legacy_percent)
     raw_platform.setdefault("label", legacy_label)
     raw_charges["platform_fee"] = raw_platform
 
     charges = {
-        key: _sanitize_charge(key, raw_charges.get(key), default_enabled=(key == "platform_fee"))
+        key: _sanitize_charge(key, raw_charges.get(key), default_enabled=False)
         for key in BOOKING_CHARGE_KEYS
     }
 
@@ -502,6 +506,7 @@ async def calculate_booking_breakdown(
     coupon_code: Optional[str] = None,
     legacy_service_fee_percent: Optional[float] = None,
     tax_slab_base_amount: Optional[float] = None,
+    charge_base_amount: Optional[float] = None,
     pricing_units: Optional[int] = 1,
     extra_guest_amount: float = 0,
     platform_fee_context: Optional[str] = None,
@@ -513,6 +518,8 @@ async def calculate_booking_breakdown(
         host_extra_guest_fee = Decimal("0.00")
     units = max(1, int(pricing_units or 1))
     unit_host_price = money(tax_slab_base_amount if tax_slab_base_amount is not None else (host_price / Decimal(units)))
+    charge_base = money(charge_base_amount if charge_base_amount is not None else host_price)
+    unit_charge_base = money(charge_base / Decimal(units))
 
     charges = []
     total_charges = Decimal("0.00")
@@ -524,7 +531,7 @@ async def calculate_booking_breakdown(
             charge_config["enabled"] = True
             charge_config["charge_type"] = PERCENTAGE
             charge_config["value"] = max(0.0, min(100.0, float(legacy_service_fee_percent or 0)))
-        unit_amount = calculate_configured_charge(unit_host_price, charge_config)
+        unit_amount = calculate_configured_charge(unit_charge_base, charge_config)
         amount = money(unit_amount * Decimal(units))
         total_charges += amount
         charges.append({
@@ -548,7 +555,7 @@ async def calculate_booking_breakdown(
 
     taxable = money(subtotal_before_discount - discount)
     unit_charges_total = money(calculate_configured_charges_total(
-        unit_host_price,
+        unit_charge_base,
         config,
         legacy_service_fee_percent=legacy_service_fee_percent,
         platform_fee_context=platform_fee_context,
@@ -573,6 +580,7 @@ async def calculate_booking_breakdown(
     return {
         "base_amount": as_float(host_price),
         "host_amount": as_float(host_price),
+        "charge_base_amount": as_float(charge_base),
         "charges": charges,
         "service_fee": as_float(platform_fee),
         "service_fee_percent": platform_config.get("rate") or 0,
