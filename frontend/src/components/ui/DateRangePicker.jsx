@@ -133,6 +133,10 @@ export default function DateRangePicker({
       if (iso > checkIn) {
         onChange({ checkIn, checkOut: iso });
         onClose?.();
+      } else if (iso === checkIn) {
+        // Same date clicked again -> single day selection (checkOut = checkIn)
+        onChange({ checkIn, checkOut: iso });
+        onClose?.();
       } else {
         onChange({ checkIn: iso, checkOut: '' });
       }
