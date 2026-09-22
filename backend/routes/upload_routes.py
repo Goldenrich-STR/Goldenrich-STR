@@ -12,9 +12,10 @@ from pathlib import Path
 from uuid import uuid4
 import logging
 import os
-import ssl
+import ipaddress
+import socket
 from urllib.parse import urljoin, urlparse
-from urllib.request import Request, urlopen
+from urllib.request import HTTPRedirectHandler, Request, build_opener
 import re
 from services.object_storage import store_upload
 from services.image_watermark import apply_image_watermark
@@ -108,8 +109,45 @@ def _normalize_special_image_page_url(url: str) -> str:
     return url
 
 
-def _download_remote_image(url: str) -> tuple[bytes, str]:
+def _validate_public_http_url(url: str) -> str:
+    """Reject local/private destinations before server-side URL fetching."""
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        raise ValueError("Only HTTP(S) image URLs are allowed")
+    if parsed.username or parsed.password:
+        raise ValueError("URLs containing credentials are not allowed")
+
+    hostname = parsed.hostname.rstrip(".")
+    try:
+        addresses = socket.getaddrinfo(
+            hostname,
+            parsed.port or (443 if parsed.scheme == "https" else 80),
+            type=socket.SOCK_STREAM,
+        )
+    except socket.gaierror as exc:
+        raise ValueError("Image URL hostname could not be resolved") from exc
+
+    for address in addresses:
+        ip = ipaddress.ip_address(address[4][0])
+        if not ip.is_global:
+            raise ValueError("Private or local image URLs are not allowed")
+    return url
+
+
+class _PublicOnlyRedirectHandler(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        _validate_public_http_url(newurl)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+def _download_remote_image(url: str, redirect_depth: int = 0) -> tuple[bytes, str]:
+    if redirect_depth > 3:
+        raise HTTPException(status_code=400, detail="Too many nested image redirects")
     url = _normalize_special_image_page_url(url)
+    try:
+        _validate_public_http_url(url)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     req = Request(
         url,
         headers={
@@ -118,19 +156,25 @@ def _download_remote_image(url: str) -> tuple[bytes, str]:
             "Accept-Language": "en-US,en;q=0.9",
         },
     )
-    ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
-    
     try:
-        with urlopen(req, timeout=20, context=ssl_context) as response:
+        opener = build_opener(_PublicOnlyRedirectHandler())
+        # The initial URL and every redirect are validated before opening.
+        with opener.open(req, timeout=20) as response:
             content_type = (response.headers.get("Content-Type") or "").lower()
-            contents = response.read()
+            content_length = response.headers.get("Content-Length")
+            if content_length and int(content_length) > MAX_BYTES:
+                raise HTTPException(
+                    status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                    detail=f"Remote image too large (max {MAX_BYTES // (1024*1024)} MB)",
+                )
+            contents = response.read(MAX_BYTES + 1)
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.warning("Remote image fetch failed for %s: %s", url, exc)
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Could not fetch image from URL. Web server response: {exc}. Please check link or use 'Upload from device'.",
+            detail="Could not securely fetch image from URL. Please check the link or upload from device.",
         ) from exc
 
     if content_type.startswith("text/html"):
@@ -140,7 +184,7 @@ def _download_remote_image(url: str) -> tuple[bytes, str]:
             if extracted_url:
                 extracted_url = urljoin(url, extracted_url)
                 if extracted_url != url:
-                    return _download_remote_image(extracted_url)
+                    return _download_remote_image(extracted_url, redirect_depth + 1)
         except Exception as exc:
             logger.warning("Could not extract image URL from HTML page %s: %s", url, exc)
         raise HTTPException(

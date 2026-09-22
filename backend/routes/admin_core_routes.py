@@ -1674,7 +1674,9 @@ async def create_admin_user(payload: AdminUserPayload, current_user: dict = Depe
         raise HTTPException(status_code=400, detail="Invalid base user role")
     if payload.role == "employee" and not payload.employee_code:
         raise HTTPException(status_code=400, detail="Employee code is required for employee users")
-    password = payload.password or "Xspace360@123"
+    if not payload.password:
+        raise HTTPException(status_code=400, detail="Password is required")
+    password = payload.password
     _validate_password_strength(password)
     unique_employee_code = (payload.employee_code or "") if payload.role in {"employee", "broker"} else ""
     await _assert_unique_user_fields(db, email=payload.email, phone=payload.phone, employee_code=unique_employee_code)

@@ -12,6 +12,22 @@ from enum import Enum
 
 logger = logging.getLogger(__name__)
 
+_SQL_IDENTIFIER_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
+
+
+def _safe_identifier(value: str) -> str:
+    """Validate identifiers that cannot be passed as asyncpg parameters."""
+    if not isinstance(value, str) or not _SQL_IDENTIFIER_RE.fullmatch(value):
+        raise ValueError(f"Unsafe SQL identifier: {value!r}")
+    return value
+
+
+def _safe_json_field(value: str) -> str:
+    parts = str(value).split(".")
+    if not parts or any(not _SQL_IDENTIFIER_RE.fullmatch(part) for part in parts):
+        raise ValueError(f"Unsafe JSON field: {value!r}")
+    return ".".join(parts)
+
 class PGUpdateResult(int):
     def __new__(cls, count, matched_count=None, modified_count=None):
         obj = super(PGUpdateResult, cls).__new__(cls, count)
@@ -33,7 +49,7 @@ def _command_count(result: str) -> int:
 
 class PGCursor:
     def __init__(self, table_name, query, projection, pool, sort=None, skip=0, limit=None):
-        self.table_name = table_name
+        self.table_name = _safe_identifier(table_name)
         self.query = query
         self.projection = projection
         self.pool = pool
@@ -79,11 +95,12 @@ class PGCursor:
         
         limit_clause = ""
         if length is not None:
-            limit_clause = f" LIMIT {length}"
+            limit_clause = f" LIMIT {max(0, int(length))}"
         elif self.limit_val is not None:
-            limit_clause = f" LIMIT {self.limit_val}"
+            limit_clause = f" LIMIT {max(0, int(self.limit_val))}"
             
-        offset_clause = f" OFFSET {self.skip_val}" if self.skip_val > 0 else ""
+        safe_offset = max(0, int(self.skip_val))
+        offset_clause = f" OFFSET {safe_offset}" if safe_offset > 0 else ""
         
         sql = f"SELECT data FROM {self.table_name} {where_clause} {order_clause} {limit_clause} {offset_clause}"
         
@@ -122,6 +139,7 @@ class PGCursor:
         param_idx = start_param_idx
         
         def process_field(key, value, p_idx):
+            key = _safe_json_field(key)
             # Handle nested fields: "a.b.c" -> data#>>'{a,b,c}'
             if "." in key:
                 parts = key.split(".")
@@ -242,6 +260,7 @@ class PGCursor:
         # Sort spec can be [("field", 1), ...] or {"field": 1}
         items = sort_spec.items() if isinstance(sort_spec, dict) else sort_spec
         for field, direction in items:
+            field = _safe_json_field(field)
             dir_str = "ASC" if direction == 1 else "DESC"
             parts.append(f"data->>'{field}' {dir_str} NULLS LAST")
             
@@ -249,7 +268,7 @@ class PGCursor:
 
 class PGAggregateCursor:
     def __init__(self, table_name, pipeline, pool):
-        self.table_name = table_name
+        self.table_name = _safe_identifier(table_name)
         self.pipeline = pipeline
         self.pool = pool
         self._data = None
@@ -274,7 +293,7 @@ class PGAggregateCursor:
         sql, params = self._translate_pipeline()
         
         if length is not None and "LIMIT" not in sql.upper():
-            sql += f" LIMIT {length}"
+            sql += f" LIMIT {max(0, int(length))}"
 
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(sql, *params)
@@ -318,7 +337,7 @@ class PGAggregateCursor:
                 if group_id is None:
                     group_clause = ""
                 elif isinstance(group_id, str) and group_id.startswith("$"):
-                    field = group_id[1:]
+                    field = _safe_json_field(group_id[1:])
                     select_parts.append(f"data->>'{field}' as _id")
                     group_clause = f"GROUP BY data->>'{field}'"
                 else:
@@ -326,27 +345,28 @@ class PGAggregateCursor:
                 
                 for key, val in group_data.items():
                     if key == "_id": continue
+                    key = _safe_identifier(key)
                     if isinstance(val, dict):
                         for op, op_val in val.items():
                             if op == "$sum":
                                 if isinstance(op_val, (int, float)):
                                     select_parts.append(f"COALESCE(SUM({op_val}), 0) as {key}")
                                 elif isinstance(op_val, str) and op_val.startswith("$"):
-                                    f = op_val[1:]
+                                    f = _safe_json_field(op_val[1:])
                                     select_parts.append(f"COALESCE(SUM((data->>'{f}')::numeric), 0) as {key}")
                             elif op == "$avg":
                                 if isinstance(op_val, str) and op_val.startswith("$"):
-                                    f = op_val[1:]
+                                    f = _safe_json_field(op_val[1:])
                                     select_parts.append(f"COALESCE(AVG((data->>'{f}')::numeric), 0) as {key}")
                             elif op == "$count":
                                 select_parts.append(f"COUNT(*) as {key}")
                             elif op == "$min":
                                 if isinstance(op_val, str) and op_val.startswith("$"):
-                                    f = op_val[1:]
+                                    f = _safe_json_field(op_val[1:])
                                     select_parts.append(f"COALESCE(MIN((data->>'{f}')::numeric), 0) as {key}")
                             elif op == "$max":
                                 if isinstance(op_val, str) and op_val.startswith("$"):
-                                    f = op_val[1:]
+                                    f = _safe_json_field(op_val[1:])
                                     select_parts.append(f"COALESCE(MAX((data->>'{f}')::numeric), 0) as {key}")
                 
                 if not select_parts:
@@ -355,18 +375,19 @@ class PGAggregateCursor:
             elif "$sort" in stage:
                 parts = []
                 for field, direction in stage["$sort"].items():
+                    field = _safe_identifier(field)
                     dir_str = "ASC" if direction == 1 else "DESC"
                     parts.append(f"{field} {dir_str}")
                 order_clause = "ORDER BY " + ", ".join(parts)
             elif "$limit" in stage:
-                limit_clause = f"LIMIT {stage['$limit']}"
+                limit_clause = f"LIMIT {max(0, int(stage['$limit']))}"
 
         sql = f"SELECT {select_clause} FROM {self.table_name} {where_clause} {group_clause} {order_clause} {limit_clause}"
         return sql, params
 
 class PGCollection:
     def __init__(self, table_name, pool):
-        self.table_name = table_name
+        self.table_name = _safe_identifier(table_name)
         self.pool = pool
 
     async def insert_one(self, document, **kwargs):
@@ -511,6 +532,7 @@ class PGCollection:
             return count
 
     async def distinct(self, field, query=None, **kwargs):
+        field = _safe_json_field(field)
         where_clause, params = PGCursor(self.table_name, query or {}, None, self.pool)._build_where(query or {})
         async with self.pool.acquire() as conn:
             rows = await conn.fetch(f"SELECT DISTINCT data->>'{field}' as val FROM {self.table_name} {where_clause}", *params)
@@ -551,6 +573,7 @@ class PGAdapter:
         return self.__getattr__(name)
 
     async def ensure_table(self, table_name):
+        table_name = _safe_identifier(table_name)
         async with self.pool.acquire() as conn:
             try:
                 await conn.execute(f"CREATE TABLE IF NOT EXISTS {table_name} (id SERIAL PRIMARY KEY, data JSONB)")
