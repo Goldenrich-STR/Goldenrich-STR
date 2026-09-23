@@ -649,7 +649,7 @@ const DEFAULT_FOOTER_DATA = {
       { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
-      { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
+      { label: 'List Your Space', action_type: 'link', link: '/list-your-property', text: '' },
       { label: 'Become a Host', action_type: 'link', link: '/register/host', text: '' }
     ] },
     { heading: 'Company', items: [
@@ -1206,18 +1206,18 @@ const EXPLORE_MENU_TABS = [
         createExploreItem('Farmhouses in Nashik', { category: 'residential', property_type: 'farmhouse', city: 'Nashik' }),
       ],
       [
-        createExploreItem('Wedding Venues in Nashik', { category: 'event_venue', city: 'Nashik' }),
-        createExploreItem('Banquet Halls in Nashik', { category: 'event_venue', property_type: 'banquet_hall', city: 'Nashik' }),
-        createExploreItem('Event Lawns in Nashik', { category: 'event_venue', property_type: 'lawn', city: 'Nashik' }),
-        createExploreItem('Corporate Events in Nashik', { category: 'event_venue', city: 'Nashik' }),
+        createExploreItem('Wedding Venues in Nashik', { path: '/event-venues/wedding-venues-in-nashik/' }),
+        createExploreItem('Banquet Halls in Nashik', { path: '/event-venues/banquet-halls-in-nashik/' }),
+        createExploreItem('Event Lawns in Nashik', { path: '/event-venues/event-lawns-in-nashik/' }),
+        createExploreItem('Corporate Events in Nashik', { path: '/event-venues/corporate-event-venues-in-nashik/' }),
       ],
       [
-        createExploreItem('Workspaces in Nashik', { category: 'commercial', city: 'Nashik' }),
-        createExploreItem('Private Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
-        createExploreItem('Team Spaces in Nashik', { category: 'commercial', city: 'Nashik' }),
-        createExploreItem('Premium Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
-        createExploreItem('Co-working in Nashik', { category: 'commercial', property_type: 'co_working', city: 'Nashik' }),
-        createExploreItem('Meeting Rooms in Nashik', { category: 'commercial', property_type: 'meeting_room', city: 'Nashik' }),
+        createExploreItem('Workspaces in Nashik', { path: '/property/workspaces/' }),
+        createExploreItem('Private Offices in Nashik', { path: '/property/private-offices-in-nashik/' }),
+        createExploreItem('Team Spaces in Nashik', { path: '/property/team-spaces-in-nashik/' }),
+        createExploreItem('Premium Offices in Nashik', { path: '/property/private-offices/' }),
+        createExploreItem('Co-working in Nashik', { path: '/property/coworking-spaces-in-nashik/' }),
+        createExploreItem('Meeting Rooms in Nashik', { path: '/property/meeting-rooms-in-nashik/' }),
       ]
     ]
   },
@@ -1228,11 +1228,11 @@ const EXPLORE_MENU_TABS = [
       [
         createExploreItem('Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
         createExploreItem('Pool Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
-        createExploreItem('Family Stays in Trimbak', { category: 'residential', city: 'Trimbakeshwar' }),
+        createExploreItem('Family Stays in Trimbak', { path: '/property/residential/familystay-in-trimbak' }),
       ],
       [
-        createExploreItem('Apartments in Trimbak', { category: 'residential', property_type: 'apartment', city: 'Trimbakeshwar' }),
-        createExploreItem('Resorts & Lawns in Trimbak', { category: 'event_venue', property_type: 'resort', city: 'Trimbakeshwar' }),
+        createExploreItem('Apartments in Trimbak', { path: '/property/residential/apartment-in-trimbak' }),
+        createExploreItem('Resorts & Lawns in Trimbak', { path: '/event-venues/resorts-and-lawns-in-trimbakeshwar/' }),
         createExploreItem('Office Suites in Trimbak', { category: 'commercial', city: 'Trimbakeshwar' }),
       ]
     ]
@@ -1243,18 +1243,18 @@ const EXPLORE_MENU_TABS = [
     columns: [
       [
         createExploreItem('Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
-        createExploreItem('Weekend Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
-        createExploreItem('Homestays in Igatpuri', { category: 'residential', city: 'Igatpuri' }),
-        createExploreItem('Holiday Homes in Igatpuri', { category: 'residential', city: 'Igatpuri' }),
-        createExploreItem('Celebration Venues in Igatpuri', { category: 'event_venue', city: 'Igatpuri' }),
-        createExploreItem('Wedding Venues in Igatpuri', { category: 'event_venue', city: 'Igatpuri' }),
+        createExploreItem('Weekend Villas in Igatpuri', { path: '/property/weekend-villas-in-igatpuri' }),
+        createExploreItem('Homestays in Igatpuri', { path: '/property/residential/homestay-in-igatpuri' }),
+        createExploreItem('Holiday Homes in Igatpuri', { path: '/property/residential/holidayhomes-in-igatpuri' }),
+        createExploreItem('Celebration Venues in Igatpuri', { path: '/event-venues/celebration-venues-in-igatpuri/' }),
+        createExploreItem('Wedding Venues in Igatpuri', { path: '/event-venues/wedding-venues-in-igatpuri/' }),
         createExploreItem('Corporate Spaces in Igatpuri', { category: 'commercial', city: 'Igatpuri' }),
       ],
       [
         createExploreItem('Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
-        createExploreItem('Scenic Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
-        createExploreItem('Nature Stays in Bhandardara', { category: 'residential', city: 'Bhandardara' }),
-        createExploreItem('Resorts in Bhandardara', { category: 'event_venue', property_type: 'resort', city: 'Bhandardara' }),
+        createExploreItem('Scenic Villas in Bhandardara', { path: '/property/scenic-villas-in-bhandardara' }),
+        createExploreItem('Nature Stays in Bhandardara', { path: '/property/residential/naturestay-in-bhandardara' }),
+        createExploreItem('Resorts in Bhandardara', { path: '/event-venues/resorts-in-bhandardara/' }),
       ]
     ]
   },
@@ -1263,16 +1263,16 @@ const EXPLORE_MENU_TABS = [
     label: 'Places & Attractions',
     columns: [
       [
-        createExploreItem('Sula Vineyards', { path: '/places/sula-vineyards' }),
-        createExploreItem('Trimbakeshwar', { path: '/places/trimbakeshwar' }),
-        createExploreItem('Pandav Leni', { path: '/places/pandav-leni' }),
-        createExploreItem('Gangapur Dam', { path: '/places/gangapur-dam' }),
+        createExploreItem('Sula Vineyards', { path: '/places/sula-vineyards/' }),
+        createExploreItem('Trimbakeshwar', { path: '/places/trimbakeshwar-temple/' }),
+        createExploreItem('Pandav Leni', { path: '/places/pandav-leni/' }),
+        createExploreItem('Gangapur Dam', { path: '/places/gangapur-dam/' }),
       ],
       [
-        createExploreItem('Anjaneri', { path: '/places/anjaneri' }),
-        createExploreItem('Harihar Fort', { path: '/places/harihar-fort' }),
-        createExploreItem('Bhandardara', { path: '/places/bhandardara' }),
-        createExploreItem('Igatpuri', { path: '/places/igatpuri' }),
+        createExploreItem('Anjaneri', { path: '/places/anjaneri/' }),
+        createExploreItem('Harihar Fort', { path: '/places/harihar-fort/' }),
+        createExploreItem('Bhandardara', { path: '/places/bhandardara/' }),
+        createExploreItem('Igatpuri', { path: '/places/igatpuri/' }),
       ]
     ]
   }
@@ -2558,13 +2558,13 @@ const LandingPage = () => {
   };
 
   const handleListSpaceClick = () => {
-    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/register/host');
+    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/list-your-property');
   };
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
-      if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register/host');
+      if (item.link === '/host/list-property' || item.link === '/list-your-property') {
+        navigate(user ? '/host/list-property' : '/list-your-property');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -2878,9 +2878,10 @@ const LandingPage = () => {
         Skip to content
       </a>
       <SEO
-        title="Book Stays, Workspaces and Event Venues"
-        description="Discover and book villas, farmhouses, residential stays, commercial workspaces and event venues across India with X-Space360."
+        title="Short-Term Stays, Event Venues & Workspaces in Nashik"
+        description="Discover villas, stays, event venues and workspaces in Nashik, Igatpuri, Trimbakeshwar and Bhandardara with X-Space360."
         path="/"
+        appendSiteName={false}
         keywords={[
           "villa booking",
           "farmhouse booking",
@@ -2890,7 +2891,6 @@ const LandingPage = () => {
         ]}
         type="home"
         schema={homeSchema}
-        seo={cmsContent?.seo}
         breadcrumbs={[{ name: "Home", url: "/" }]}
       />
       {/* Navbar */}
@@ -2920,7 +2920,7 @@ const LandingPage = () => {
               Discover
             </Link>
             <Link
-              to={user ? '/host/list-property' : '/register/host'}
+              to={user ? '/host/list-property' : '/list-your-property'}
               className="hover:text-terracotta transition-colors duration-200"
             >
               List your Property
@@ -3098,7 +3098,7 @@ const LandingPage = () => {
               Discover
             </button>
             <button
-              onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/register/host'); }}
+              onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/list-your-property'); }}
               className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
             >
               List your Property
@@ -3265,12 +3265,9 @@ const LandingPage = () => {
 
                  {/* Main Headline (2-Line Headline, font-lufga, font-medium/semibold) */}
                  <div className="w-full px-2 text-center animate-fade-in" key={`title-${currentHeroSlide}`}>
-                   <h2 className="text-[28px] sm:text-5xl md:text-6xl lg:text-[64px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-4xl text-center mx-auto">
-                     {activeHero.titleLine1 || activeHero.titlePrefix || ''}
-                     <br className="hidden sm:inline" />
-                     {' '}
-                     {activeHero.titleLine2 || activeHero.titleHighlight || activeHero.titleSuffix || ''}
-                   </h2>
+                   <h1 className="text-[28px] sm:text-5xl md:text-6xl lg:text-[64px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-4xl text-center mx-auto">
+                     Find Stays, Event Venues & Workspaces in Nashik
+                   </h1>
                  </div>
                  
                  {/* Custom Badges / Batches */}
@@ -4028,7 +4025,7 @@ const LandingPage = () => {
                   </p>
                 </div>
                 <button 
-                  onClick={() => navigate(user ? '/host/list-property' : '/register/host')}
+                  onClick={() => navigate(user ? '/host/list-property' : '/list-your-property')}
                   className="self-start md:self-auto bg-[#FBBF24] hover:bg-[#F59E0B] text-charcoal font-bold px-6 py-3 rounded-full shadow-sm hover:scale-[1.02] active:scale-95 transition-all text-xs md:text-sm flex items-center gap-2 cursor-pointer duration-200"
                 >
                   <span>Post Property</span>

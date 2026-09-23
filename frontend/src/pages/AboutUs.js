@@ -106,7 +106,7 @@ const DEFAULT_FOOTER_DATA = {
       { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
-      { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
+      { label: 'List Your Space', action_type: 'link', link: '/list-your-property', text: '' },
       { label: 'Become a Host', action_type: 'link', link: '/register/host', text: '' }
     ] },
     { heading: 'Company', items: [
@@ -202,8 +202,8 @@ const AboutUs = () => {
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
-      if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register/host');
+      if (item.link === '/host/list-property' || item.link === '/list-your-property') {
+        navigate(user ? '/host/list-property' : '/list-your-property');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -227,9 +227,10 @@ const AboutUs = () => {
   return (
     <div className="min-h-screen bg-sand-50 font-sans text-charcoal">
       <SEO
-        title="About X-Space360"
-        description="Learn about X-Space360, our mission and our smart property discovery platform for stays, workspaces and event venues."
+        title="About X-Space360 | Stays, Venues & Workspaces"
+        description="Learn how X-Space360 helps guests find stays, event venues and workspaces across Nashik and nearby destinations."
         path="/about-us"
+        appendSiteName={false}
         keywords={[
           "about X-Space360",
           "property booking platform India",
@@ -388,7 +389,7 @@ const AboutUs = () => {
             <span>Discover X-Space360</span>
           </div>
           <h1 className="text-4xl md:text-5xl lg:text-[56px] font-black tracking-tight font-sans text-[#0F4A33] leading-[1.1]">
-            {t('aboutTitle')}
+            About X-Space360
           </h1>
           <p className="text-xl md:text-2xl text-gray-500 font-light leading-relaxed max-w-3xl mx-auto">
             {t('aboutSubtitle')}

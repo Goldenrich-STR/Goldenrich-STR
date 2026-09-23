@@ -58,10 +58,13 @@ const SEO = ({
   type = "website", // website, property, listing, blog, host, faq
   data = {},
   breadcrumbs = [],
+  appendSiteName = true,
   seo = null // API returned seo object: {title, description, keywords, canonical, image, robots}
 }) => {
   const baseTitle = seo?.title || title || "Short-term Rentals & Event Venues";
-  const pageTitle = baseTitle.includes(SITE_NAME) ? baseTitle : `${baseTitle} | ${SITE_NAME}`;
+  const pageTitle = appendSiteName && !baseTitle.includes(SITE_NAME)
+    ? `${baseTitle} | ${SITE_NAME}`
+    : baseTitle;
   const pageDesc = seo?.description || description || "Explore short-term rentals, premium villas, commercial spaces, and event venues across India on X-Space360.";
   const resolvedKeywords = seo?.keywords || keywords;
   const pageKeywords = Array.isArray(resolvedKeywords)

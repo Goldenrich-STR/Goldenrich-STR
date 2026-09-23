@@ -335,9 +335,10 @@ const SupportPage = () => {
         Skip to main content
       </a>
       <SEO
-        title="Help and Support Center"
-        description="Get help with X-Space360 bookings, cancellations, refunds, payments, host accounts and property listings."
+        title="X-Space360 Help Center | Booking & Property Support"
+        description="Get answers about bookings, stays, listings, property management and using X-Space360. Find the help you need quickly."
         path="/support"
+        appendSiteName={false}
         keywords={[
           "X-Space360 support",
           "booking help",
@@ -466,14 +467,9 @@ const SupportPage = () => {
             <span className="inline-block px-4 py-1.5 bg-terracotta/15 text-terracotta border border-terracotta/30 text-[10px] font-black uppercase tracking-widest rounded-full">
               Support Center
             </span>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-tight text-white">
-              {supportData.title.split(' ').map((word, idx, arr) => {
-                if (word.toLowerCase().includes('help')) {
-                  return <span key={idx} className="text-terracotta italic font-serif">help </span>;
-                }
-                return word + ' ';
-              })}
-            </h2>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight text-white">
+              X-Space360 <span className="text-terracotta italic font-serif">Help Center</span>
+            </h1>
             <p className="text-sm md:text-base text-white/70 font-medium max-w-xl mx-auto leading-relaxed">
               {supportData.subtitle}
             </p>

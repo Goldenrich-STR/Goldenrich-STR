@@ -9,6 +9,62 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SEO"])
 
+SEO_LANDING_PATHS = (
+    "/list-your-property",
+    "/property/villas",
+    "/property/villas-in-nashik",
+    "/property/villas-in-trimbakeshwar",
+    "/property/villas-in-igatpuri",
+    "/property/villas-in-bhandardara",
+    "/property/luxury-villas-in-nashik",
+    "/property/weekend-villas-in-igatpuri",
+    "/property/scenic-villas-in-bhandardara",
+    "/property/residential/",
+    "/property/residential/homestay-in-nashik",
+    "/property/residential/apartment-in-nashik",
+    "/property/residential/farmhouse-in-nashik",
+    "/property/residential/holidayhomes-in-igatpuri",
+    "/property/residential/homestay-in-igatpuri",
+    "/property/residential/familystay-in-trimbak",
+    "/property/residential/apartment-in-trimbak",
+    "/property/residential/naturestay-in-bhandardara",
+    "/property/residential/banglows",
+    "/property/residential/apartment",
+    "/property/residential/studio",
+    "/property/residential/privatehouse",
+    "/property/residential/farmhouse",
+    "/event-venues/",
+    "/event-venues/wedding-venues/",
+    "/event-venues/wedding-venues-in-nashik/",
+    "/event-venues/wedding-venues-in-igatpuri/",
+    "/event-venues/banquet-halls/",
+    "/event-venues/banquet-halls-in-nashik/",
+    "/event-venues/hotel-ballrooms/",
+    "/event-venues/corporate-event-venues-in-nashik/",
+    "/event-venues/event-lawns-in-nashik/",
+    "/event-venues/celebration-venues-in-igatpuri/",
+    "/event-venues/resorts-and-lawns-in-trimbakeshwar/",
+    "/event-venues/resorts-in-bhandardara/",
+    "/property/workspaces/",
+    "/property/coworking-spaces/",
+    "/property/coworking-spaces-in-nashik/",
+    "/property/private-offices/",
+    "/property/private-offices-in-nashik/",
+    "/property/meeting-rooms/",
+    "/property/meeting-rooms-in-nashik/",
+    "/property/team-spaces/",
+    "/property/team-spaces-in-nashik/",
+    "/property/corporate-spaces/",
+    "/places/sula-vineyards/",
+    "/places/trimbakeshwar-temple/",
+    "/places/pandav-leni/",
+    "/places/gangapur-dam/",
+    "/places/anjaneri/",
+    "/places/harihar-fort/",
+    "/places/bhandardara/",
+    "/places/igatpuri/",
+)
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -136,6 +192,10 @@ async def build_sitemap_entries(db: AsyncIOMotorDatabase):
         url_entry("/refund-policy", changefreq="monthly", priority="0.6"),
         url_entry("/account-deletion", changefreq="monthly", priority="0.5"),
     ]
+    entries.extend(
+        url_entry(path, changefreq="monthly", priority="0.7")
+        for path in SEO_LANDING_PATHS
+    )
 
     try:
         for prop in await get_live_properties(db):
@@ -230,7 +290,7 @@ async def get_sitemap_index():
 
 @router.get("/sitemap-static.xml")
 async def get_static_sitemap():
-    return urlset([
+    entries = [
         url_entry("", changefreq="daily", priority="1.0"),
         url_entry("/guest/browse", changefreq="daily", priority="0.9"),
         url_entry("/about-us", changefreq="monthly", priority="0.7"),
@@ -241,7 +301,12 @@ async def get_static_sitemap():
         url_entry("/privacy", changefreq="monthly", priority="0.6"),
         url_entry("/refund-policy", changefreq="monthly", priority="0.6"),
         url_entry("/account-deletion", changefreq="monthly", priority="0.5"),
-    ])
+    ]
+    entries.extend(
+        url_entry(path, changefreq="monthly", priority="0.7")
+        for path in SEO_LANDING_PATHS
+    )
+    return urlset(entries)
 
 @router.get("/sitemap-properties.xml")
 async def get_properties_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):

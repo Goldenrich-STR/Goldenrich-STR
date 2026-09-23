@@ -1794,7 +1794,7 @@ const PropertyDetail = () => {
             </Link>
 
             <Link
-              to={user ? '/host/list-property' : '/register/host'}
+              to={user ? '/host/list-property' : '/list-your-property'}
               className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
             >
               List your Property
