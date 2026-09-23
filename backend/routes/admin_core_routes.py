@@ -1,5 +1,6 @@
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
+import logging
 import re
 from typing import Optional
 from uuid import uuid4
@@ -28,6 +29,7 @@ from services.tds_service import (
 )
 
 
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/core", tags=["Admin Core"])
 
 
@@ -3286,8 +3288,13 @@ async def update_booking_operation_status(booking_id: str, payload: BookingStatu
     if payload.payment_status:
         updates["payment_status"] = payload.payment_status
     await db.bookings.update_one({"booking_id": booking_id}, {"$set": updates})
-    if payload.booking_status == "cancelled":
+    if payload.booking_status == "cancelled" and booking.get("booking_status") != "cancelled":
         await db.blocked_dates.delete_many({"source": "booking", "source_id": booking_id})
+        try:
+            from services.booking_notifications import notify_booking_cancelled
+            await notify_booking_cancelled(db, {**booking, **updates}, reason=payload.reason or "Admin cancellation")
+        except Exception as notify_err:
+            logger.exception("Admin cancellation notification failed for %s: %s", booking_id, notify_err)
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="booking_operations", action="booking_status_changed", record_id=booking_id, old_value={"booking_status": booking.get("booking_status"), "payment_status": booking.get("payment_status")}, new_value=updates, reason=payload.reason)
     return api_response("Booking status updated")
 

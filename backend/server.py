@@ -405,6 +405,12 @@ async def startup_sequence():
 
     # 4. Start background jobs
     try:
+        from services.notification_service import log_whatsapp_configuration
+        log_whatsapp_configuration()
+    except Exception as e:
+        logger.error(f"Failed to validate MSG91 WhatsApp configuration: {e}")
+
+    try:
         from services.soft_lock_reaper import (
             start_soft_lock_reaper,
             recover_pending_reminders,

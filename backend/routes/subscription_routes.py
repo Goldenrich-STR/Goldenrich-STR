@@ -53,12 +53,46 @@ async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, templ
                     or subscription.get("expires_at")
                     or subscription.get("expiry_date")
                 ),
-                "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/host/dashboard",
+                "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://x-space360.in").rstrip("/") + "/host/dashboard",
                 **(extra or {}),
             },
         )
     except Exception as email_err:
         logger.warning("Subscription email failed: %s", email_err)
+
+
+async def send_subscription_success_whatsapp(
+    db: AsyncIOMotorDatabase,
+    subscription: dict,
+    payment_id: str,
+) -> None:
+    try:
+        from models.notification import NotificationChannel, NotificationType
+        from services.notification_service import send_multi_channel_notification
+
+        plan = await db.subscription_plans.find_one(
+            {"plan_id": subscription.get("plan_id")},
+            {"_id": 0, "plan_name": 1},
+        ) or {}
+        await send_multi_channel_notification(
+            db=db,
+            user_id=subscription["user_id"],
+            notification_type=NotificationType.SUBSCRIPTION_SUCCESS,
+            title="Subscription activated",
+            message=f"Subscription {subscription.get('subscription_id')} is active.",
+            channels=[NotificationChannel.IN_APP, NotificationChannel.WHATSAPP],
+            data={
+                "host_name": subscription.get("host_name"),
+                "plan_name": plan.get("plan_name") or subscription.get("plan_type") or subscription.get("plan_id"),
+                "start_date": subscription.get("start_date") or subscription.get("activated_at") or subscription.get("updated_at") or "",
+                "end_date": subscription.get("end_date") or subscription.get("expires_at") or subscription.get("expiry_date") or "",
+                "amount": subscription.get("amount") or "",
+                "transaction_id": payment_id,
+                "subscription_id": subscription.get("subscription_id"),
+            },
+        )
+    except Exception as whatsapp_err:
+        logger.exception("Subscription WhatsApp failed for %s: %s", subscription.get("subscription_id"), whatsapp_err)
 
 
 async def _activate_property_after_subscription_payment(
@@ -694,6 +728,7 @@ async def confirm_subscription_payment(
             "subscription_activated",
             {**subscription, "razorpay_subscription_id": razorpay_payment_id},
         )
+        await send_subscription_success_whatsapp(db, updated_subscription, razorpay_payment_id)
 
         return {
             "message": "Subscription activated successfully",
@@ -784,6 +819,7 @@ async def mock_pay_subscription(
         "subscription_activated",
         {**subscription, "razorpay_subscription_id": mock_payment["razorpay_payment_id"]},
     )
+    await send_subscription_success_whatsapp(db, updated_subscription, mock_payment["razorpay_payment_id"])
 
     return {
         "message": "Subscription activated successfully",
@@ -864,6 +900,7 @@ async def confirm_subscription_upi_payment(
         {**subscription, "razorpay_subscription_id": upi_transaction_id},
         {"payment_id": upi_transaction_id},
     )
+    await send_subscription_success_whatsapp(db, updated_subscription, upi_transaction_id)
 
     return {
         "message": "Subscription activated successfully",

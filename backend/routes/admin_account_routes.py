@@ -1530,6 +1530,7 @@ async def share_transaction_invoice(
         
         channel_name = payload.channel.lower()
         amount_inr = round((txn.get("amount") or 0) / 100, 2)
+        invoice_no = await get_invoice_number(db, txn)
         
         title = f"Invoice {invoice_no} for Transaction {transaction_id}"
         message = (
@@ -1564,25 +1565,44 @@ async def share_transaction_invoice(
                     "invoice_number": invoice_no,
                     "total_amount": amount_inr,
                     "reason": (txn.get("type") or "transaction").replace("_", " ").title(),
-                    "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/admin/account",
+                    "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://x-space360.in").rstrip("/") + "/admin/account",
                 },
             )
         else:
-            await send_multi_channel_notification(
+            if txn.get("type") != "booking_payment" or not txn.get("booking_id"):
+                raise HTTPException(400, detail="WhatsApp booking invoice is available only for booking payment transactions")
+            booking = await db.bookings.find_one({"booking_id": txn["booking_id"]}, {"_id": 0}) or {}
+            prop = await db.properties.find_one({"property_id": booking.get("property_id")}, {"_id": 0}) or {}
+            breakdown = _booking_invoice_breakdown({**txn, "booking": booking})
+            gst_amount = sum(float(breakdown.get(key) or 0) for key in ("igst", "cgst", "sgst"))
+            send_result = await send_multi_channel_notification(
                 db=db,
                 user_id=uid,
-                notification_type=NotificationType.BOOKING_CONFIRMED,
+                notification_type=NotificationType.BOOKING_INVOICE,
                 title=title,
                 message=message,
                 channels=chosen_channels,
                 data={
-                    "amount": amount_inr,
+                    "guest_name": user_info.get("full_name"),
+                    "booking_id": txn.get("booking_id"),
+                    "property_title": prop.get("title") or "Your property",
+                    "taxable_amount": breakdown.get("taxable_amount") or amount_inr,
+                    "gstin": os.getenv("COMPANY_GSTIN", "27AAKCG1285C1ZP"),
+                    "gst_amount": gst_amount,
+                    "total_invoice_amount": breakdown.get("total") or amount_inr,
                     "transaction_id": transaction_id,
-                    "invoice_no": invoice_no,
-                    "created_at": str(txn.get("created_at")),
-                    "full_name": user_info.get("full_name")
+                    "invoice_number": invoice_no,
+                    "invoice_date": str(txn.get("created_at") or datetime.now(timezone.utc)),
+                    "invoice_document_url": txn.get("invoice_document_url") or txn.get("invoice_url"),
+                    "invoice_filename": f"{invoice_no.replace('/', '-')}.pdf",
                 }
             )
+            whatsapp_result = (send_result.get("results") or {}).get("whatsapp") or {}
+            if not whatsapp_result.get("success"):
+                raise HTTPException(
+                    status_code=502,
+                    detail=whatsapp_result.get("error") or "MSG91 rejected the booking invoice message",
+                )
         
         return {
             "success": True,

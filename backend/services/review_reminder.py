@@ -46,6 +46,9 @@ async def _send_review_request(db: AsyncIOMotorDatabase, booking: dict) -> bool:
     prop = await db.properties.find_one(
         {"property_id": booking["property_id"]}, {"_id": 0, "title": 1, "city": 1}
     ) or {}
+    guest = await db.users.find_one(
+        {"user_id": booking["guest_id"]}, {"_id": 0, "full_name": 1}
+    ) or {}
     title = prop.get("title", "your stay")
 
     deep_link = (
@@ -57,7 +60,7 @@ async def _send_review_request(db: AsyncIOMotorDatabase, booking: dict) -> bool:
         result = await send_multi_channel_notification(
             db=db,
             user_id=booking["guest_id"],
-            notification_type=NotificationType.REVIEW_REQUEST,
+            notification_type=NotificationType.GUEST_STAY_COMPLETED,
             title=f"How was {title}?",
             message=(
                 f"Hope you enjoyed {title}! Take 30 seconds to share your experience — "
@@ -70,16 +73,20 @@ async def _send_review_request(db: AsyncIOMotorDatabase, booking: dict) -> bool:
             ],
             data={
                 "booking_id": booking["booking_id"],
+                "guest_name": guest.get("full_name") or "Guest",
                 "property_id": booking["property_id"],
                 "property_title": title,
                 "check_in_date": booking.get("check_in_date"),
                 "check_out_date": booking.get("check_out_date"),
+                "check_out_date_time": booking.get("check_out_date"),
                 "deep_link": deep_link,
                 "action_url": deep_link,
             },
         )
-        email_result = (result.get("results") or {}).get("email") or {}
-        return bool(email_result.get("success"))
+        results = result.get("results") or {}
+        email_result = results.get("email") or {}
+        whatsapp_result = results.get("whatsapp") or {}
+        return bool(email_result.get("success") or whatsapp_result.get("success"))
     except Exception as e:
         logger.warning(f"[review-reminder] send failed for {booking['booking_id']}: {e}")
         return False

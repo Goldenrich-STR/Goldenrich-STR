@@ -3,7 +3,7 @@ import asyncio
 import html
 import logging
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -12,6 +12,67 @@ from services.notification_service import send_multi_channel_notification
 from services.email_service import email_service
 
 logger = logging.getLogger(__name__)
+
+
+async def _booking_message_data(db: AsyncIOMotorDatabase, booking: dict) -> tuple[dict, dict, dict]:
+    guest = await db.users.find_one({"user_id": booking.get("guest_id")}, {"_id": 0}) or {}
+    host = await db.users.find_one({"user_id": booking.get("host_id")}, {"_id": 0}) or {}
+    prop = await db.properties.find_one({"property_id": booking.get("property_id")}, {"_id": 0}) or {}
+    data = {
+        "booking_id": booking.get("booking_id"),
+        "property_id": booking.get("property_id"),
+        "property_title": prop.get("title") or "Your property",
+        "guest_name": guest.get("full_name") or "Guest",
+        "host_name": host.get("full_name") or "Host",
+        "check_in_date": booking.get("check_in_date") or "",
+        "check_out_date": booking.get("check_out_date") or "",
+        "number_of_guests": booking.get("number_of_guests") or "",
+        "total_amount": booking.get("total_amount") or "",
+        "amount": booking.get("notification_amount") or booking.get("remaining_amount") or booking.get("total_amount") or "",
+        "reason": booking.get("cancellation_reason") or booking.get("rejection_reason") or "Booking cancelled",
+    }
+    return guest, host, data
+
+
+async def notify_booking_cancelled(db: AsyncIOMotorDatabase, booking: dict, reason: str = "Booking cancelled") -> None:
+    guest, host, data = await _booking_message_data(db, booking)
+    data["reason"] = reason or data["reason"]
+    if guest:
+        await send_multi_channel_notification(
+            db=db,
+            user_id=guest["user_id"],
+            notification_type=NotificationType.GUEST_BOOKING_CANCELLED,
+            title="Booking cancelled",
+            message=f"Your booking {booking.get('booking_id')} has been cancelled.",
+            channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL, NotificationChannel.WHATSAPP],
+            data=data,
+        )
+    if host:
+        await send_multi_channel_notification(
+            db=db,
+            user_id=host["user_id"],
+            notification_type=NotificationType.HOST_BOOKING_CANCELLED,
+            title="Booking cancelled",
+            message=f"Booking {booking.get('booking_id')} has been cancelled.",
+            channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL, NotificationChannel.WHATSAPP],
+            data=data,
+        )
+
+
+async def notify_guest_payment_failed(db: AsyncIOMotorDatabase, booking: dict, payment_id: str = "") -> None:
+    guest, _host, data = await _booking_message_data(db, booking)
+    if not guest:
+        return
+    data["payment_id"] = payment_id
+    await send_multi_channel_notification(
+        db=db,
+        user_id=guest["user_id"],
+        notification_type=NotificationType.GUEST_PAYMENT_FAILED,
+        title="Payment failed",
+        message=f"Payment failed for booking {booking.get('booking_id')}.",
+        channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL, NotificationChannel.WHATSAPP],
+        data=data,
+    )
 
 
 def _money_from_paise(value) -> str:
@@ -239,7 +300,7 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
             or ""
         )
 
-        frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+        frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://x-space360.in").rstrip("/")
         guest_booking_url = f"{frontend_url}/guest/bookings?booking_id={booking.get('booking_id')}"
         guest_confirmation_url = f"{frontend_url}/guest/booking-confirmation?booking_id={booking.get('booking_id')}"
         host_booking_url = f"{frontend_url}/host/bookings?booking_id={booking.get('booking_id')}"
@@ -484,16 +545,6 @@ def schedule_soft_lock_reminder(db: AsyncIOMotorDatabase, booking_id: str, expir
 
 async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: dict) -> None:
     """Send In-App + Email notification to guest when a refund is processed successfully."""
-    if os.getenv("REFUND_EMAIL_ENABLED", "false").strip().lower() not in {
-        "1", "true", "yes", "on",
-    }:
-        logger.info(
-            "Refund notification skipped because REFUND_EMAIL_ENABLED is false "
-            "for booking %s",
-            refund_dict.get("booking_id"),
-        )
-        return
-
     try:
         guest = await db.users.find_one({"user_id": refund_dict["guest_id"]}, {"_id": 0})
         booking = await db.bookings.find_one({"booking_id": refund_dict["booking_id"]}, {"_id": 0})
@@ -522,18 +573,24 @@ async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: d
         refund_date_val = refund_dict.get("created_at") or datetime.now(timezone.utc)
         refund_ref = refund_dict.get("razorpay_refund_id") or refund_dict.get("refund_id") or "N/A"
 
+        channels = [NotificationChannel.IN_APP, NotificationChannel.WHATSAPP]
+        if os.getenv("REFUND_EMAIL_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}:
+            channels.append(NotificationChannel.EMAIL)
+
         await send_multi_channel_notification(
             db=db,
             user_id=refund_dict["guest_id"],
             notification_type=NotificationType.REFUND_RECEIVED,
             title="Refund Received",
             message=message,
-            channels=[NotificationChannel.IN_APP, NotificationChannel.EMAIL],
+            channels=channels,
             data={
+                "guest_name": guest.get("full_name") or "Guest",
                 "booking_id": refund_dict["booking_id"],
                 "refund_id": refund_dict.get("refund_id"),
                 "refund_amount": refund_amt_inr,
                 "property_name": property_title,
+                "property_title": property_title,
                 "refund_date": refund_date_val,
                 "payment_method": payment_method,
                 "refund_reference_number": refund_ref,
