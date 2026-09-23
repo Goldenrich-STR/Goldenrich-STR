@@ -185,13 +185,18 @@ async def get_blocked_dates(
             query["end_date"] = {"$gte": start_date}
 
         property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
-        if property_data and property_data.get("category") == "event_venue":
+        is_hourly_commercial = bool(
+            property_data
+            and property_data.get("category") == "commercial"
+            and str(property_data.get("pricing_cycle") or "").lower() == "hourly"
+        )
+        if property_data and (property_data.get("category") == "event_venue" or is_hourly_commercial):
             query["source"] = {"$ne": "booking"}
 
         cursor = db.blocked_dates.find(query, {"_id": 0})
         blocked_dates = await cursor.to_list(length=1000)
 
-        if property_data and property_data.get("category") != "event_venue":
+        if property_data and property_data.get("category") != "event_venue" and not is_hourly_commercial:
             booking_query = {
                 "property_id": property_id,
                 "booking_status": {"$nin": BOOKING_TERMINAL_STATUSES},

@@ -42,6 +42,7 @@ export default function DateRangePicker({
   checkOut,
   minDate,
   blockedDates = [],
+  singleDate = false,
   onChange,
   onClose,
   desktopPosition = null,
@@ -134,6 +135,12 @@ export default function DateRangePicker({
   );
 
   const applyDate = (iso) => {
+    if (singleDate) {
+      onChange({ checkIn: iso, checkOut: iso });
+      onClose?.();
+      return;
+    }
+
     if (!checkIn || (checkIn && checkOut)) {
       onChange({ checkIn: iso, checkOut: '' });
     } else {
@@ -173,7 +180,11 @@ export default function DateRangePicker({
           </button>
         </div>
         <p className="text-xs font-semibold text-charcoal-muted">
-          {checkIn && checkOut ? 'Review your check-in and check-out dates.' : 'Choose check-in date first, then select check-out date.'}
+          {singleDate
+            ? 'Choose one date for your hourly booking.'
+            : checkIn && checkOut
+            ? 'Review your check-in and check-out dates.'
+            : 'Choose check-in date first, then select check-out date.'}
         </p>
       </div>
 
@@ -269,4 +280,3 @@ export default function DateRangePicker({
 
   return pickerContent;
 }
-

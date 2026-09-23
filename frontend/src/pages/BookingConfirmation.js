@@ -392,20 +392,20 @@ const BookingConfirmation = () => {
           </h2>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-8 mb-8">
             <div className="space-y-1">
-              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Check-in</p>
-              <p className="text-sm font-bold tracking-tight text-charcoal">{booking.check_in_date}</p>
+              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{booking.start_time ? 'Booking Dates' : 'Check-in'}</p>
+              <p className="text-sm font-bold tracking-tight text-charcoal">{booking.start_time && booking.check_in_date !== booking.check_out_date ? `${booking.check_in_date} to ${booking.check_out_date}` : booking.check_in_date}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Check-out</p>
-              <p className="text-sm font-bold tracking-tight text-charcoal">{booking.check_out_date}</p>
+              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{booking.start_time ? 'Daily Hours' : 'Check-out'}</p>
+              <p className="text-sm font-bold tracking-tight text-charcoal">{booking.start_time ? `${booking.start_time} - ${booking.end_time}` : booking.check_out_date}</p>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Total Guests</p>
               <p className="text-sm font-bold tracking-tight text-charcoal">{booking.number_of_guests}</p>
             </div>
             <div className="space-y-1">
-              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Food Pref</p>
-              <p className="text-sm font-bold tracking-tight text-charcoal uppercase">{booking.food_preference ? (booking.food_preference === 'veg' ? 'Veg' : 'Non-Veg') : 'N/A'}</p>
+              <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{booking.start_time ? 'Billable Time' : 'Food Pref'}</p>
+              <p className="text-sm font-bold tracking-tight text-charcoal uppercase">{booking.start_time ? `${booking.booking_days || 1} Day${Number(booking.booking_days || 1) !== 1 ? 's' : ''} × ${booking.daily_hours || booking.duration_hours || 1} Hr${Number(booking.daily_hours || booking.duration_hours || 1) !== 1 ? 's' : ''}` : booking.food_preference ? (booking.food_preference === 'veg' ? 'Veg' : 'Non-Veg') : 'N/A'}</p>
             </div>
             <div className="space-y-1">
               <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Booking Status</p>

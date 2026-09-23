@@ -71,6 +71,103 @@ const formatListingTime = (value) => {
   return `${displayHour}:${minutes} ${suffix}`;
 };
 
+const timeToMinutes = (value) => {
+  const match = String(value || '').match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours < 0 || hours > 24 || minutes < 0 || minutes > 59 || (hours === 24 && minutes !== 0)) return null;
+  return (hours * 60) + minutes;
+};
+
+const minutesToTime = (minutes) => {
+  const boundedMinutes = Math.max(0, Math.min(24 * 60, minutes));
+  const hours = Math.floor(boundedMinutes / 60);
+  const mins = boundedMinutes % 60;
+  return `${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}`;
+};
+
+const HOURLY_START_OPTIONS = Array.from({ length: 24 }, (_, hour) => minutesToTime(hour * 60));
+const HOURLY_END_OPTIONS = Array.from({ length: 24 }, (_, index) => minutesToTime((index + 1) * 60));
+
+const formatHourlyOption = (time) => {
+  if (time === '24:00') return '12:00 AM';
+  const minutes = timeToMinutes(time);
+  if (minutes === null) return time;
+  const hours = Math.floor(minutes / 60);
+  const displayHour = hours % 12 || 12;
+  const suffix = hours >= 12 ? 'PM' : 'AM';
+  return `${String(displayHour).padStart(2, '0')}:00 ${suffix}`;
+};
+
+const getHourlyPeriod = (time) => {
+  const minutes = timeToMinutes(time);
+  const hours = minutes === 24 * 60 ? 0 : Math.floor((minutes || 0) / 60);
+  if (hours >= 5 && hours < 12) return 'Morning';
+  if (hours >= 12 && hours < 17) return 'Afternoon';
+  if (hours >= 17 && hours < 21) return 'Evening';
+  return 'Night';
+};
+
+const HourlyTimeDropdown = ({ label, value, options, open, align = 'left', onToggle, onChange, onClose }) => (
+  <div className="relative min-w-0">
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      className={`w-full rounded-xl border bg-white px-3 py-2.5 text-left transition-all ${open ? 'border-terracotta ring-2 ring-terracotta/10' : 'border-gray-200 hover:border-terracotta/50'}`}
+    >
+      <span className="mb-1 block text-[8px] font-bold uppercase tracking-widest text-charcoal-muted">{label}</span>
+      <span className="flex items-center justify-between gap-2">
+        <span className="min-w-0">
+          <span className="block truncate text-xs font-bold text-charcoal">{formatHourlyOption(value)}</span>
+          <span className="block text-[8px] font-bold uppercase tracking-wider text-terracotta">{getHourlyPeriod(value)}</span>
+        </span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-charcoal-muted transition-transform ${open ? 'rotate-180 text-terracotta' : ''}`} />
+      </span>
+    </button>
+    {open && (
+      <>
+        <button type="button" aria-label="Close time selector" className="fixed inset-0 z-40 cursor-default" onClick={onClose} />
+        <div className={`absolute top-full z-50 mt-2 w-56 rounded-2xl border border-gray-100 bg-white p-2 shadow-[0_18px_45px_rgba(15,23,42,0.18)] ${align === 'right' ? 'right-0' : 'left-0'}`}>
+          <div className="mb-2 flex items-center justify-between px-2 pt-1">
+            <span className="text-[9px] font-bold uppercase tracking-widest text-charcoal-muted">{label}</span>
+            <span className="text-[9px] font-bold text-terracotta">{options.length} options</span>
+          </div>
+          <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+            {['Morning', 'Afternoon', 'Evening', 'Night'].map((period) => {
+              const periodOptions = options.filter((time) => getHourlyPeriod(time) === period);
+              if (periodOptions.length === 0) return null;
+              return (
+                <div key={period}>
+                  <div className="sticky top-0 z-10 mb-1 rounded-md bg-stone px-2 py-1 text-[8px] font-bold uppercase tracking-[0.16em] text-charcoal-muted">
+                    {period}
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    {periodOptions.map((time) => {
+                      const selected = value === time;
+                      return (
+                        <button
+                          key={time}
+                          type="button"
+                          onClick={() => onChange(time)}
+                          className={`rounded-lg px-2.5 py-2 text-left text-[11px] font-bold transition-colors ${selected ? 'bg-charcoal text-white shadow-sm' : 'text-charcoal hover:bg-stone'}`}
+                        >
+                          {formatHourlyOption(time)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </>
+    )}
+  </div>
+);
+
 const formatExtraPersonPrice = (value) => {
   const amount = Number(value || 0);
   if (!amount) return null;
@@ -545,6 +642,7 @@ const PropertyDetail = () => {
   const checkInButtonRef = useRef(null);
   const checkOutButtonRef = useRef(null);
   const bookingCardRef = useRef(null);
+  const restoredHourlyTimeRef = useRef(false);
   const [guests, setGuests] = useState(() => {
     const params = new URLSearchParams(window.location.search);
     return Number(params.get('guests')) || 1;
@@ -560,6 +658,10 @@ const PropertyDetail = () => {
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
   const [selectedSlot, setSelectedSlot] = useState('');
+  const [selectedStartTime, setSelectedStartTime] = useState('09:00');
+  const [selectedEndTime, setSelectedEndTime] = useState('10:00');
+  const [openTimeDropdown, setOpenTimeDropdown] = useState('');
+  const [hourlyBookingMode, setHourlyBookingMode] = useState('single');
   const [bookingPaymentType, setBookingPaymentType] = useState('full');
   const [showQuotationModal, setShowQuotationModal] = useState(false);
   const [quotationPaymentType, setQuotationPaymentType] = useState('full');
@@ -615,6 +717,9 @@ const PropertyDetail = () => {
       childrenGuests,
       infantGuests,
       selectedSlot,
+      selectedStartTime,
+      selectedEndTime,
+      hourlyBookingMode,
       foodPreference,
       bookingPaymentType,
       savedAt: Date.now(),
@@ -629,6 +734,8 @@ const PropertyDetail = () => {
     setSelectedSlot('');
     setFoodPreference('veg');
     setShowGuestDropdown(false);
+    setOpenTimeDropdown('');
+    setHourlyBookingMode('single');
 
     fetchProperty();
     fetchBlockedDates();
@@ -660,6 +767,12 @@ const PropertyDetail = () => {
       setChildrenGuests(Math.max(0, Number(intent.childrenGuests) || 0));
       setInfantGuests(Math.max(0, Number(intent.infantGuests) || 0));
       if (intent.selectedSlot) setSelectedSlot(intent.selectedSlot);
+      if (intent.selectedStartTime && intent.selectedEndTime) {
+        setSelectedStartTime(intent.selectedStartTime);
+        setSelectedEndTime(intent.selectedEndTime);
+        restoredHourlyTimeRef.current = true;
+      }
+      if (intent.hourlyBookingMode === 'multi') setHourlyBookingMode('multi');
       if (intent.foodPreference !== undefined) setFoodPreference(intent.foodPreference);
       if (intent.bookingPaymentType) setBookingPaymentType(intent.bookingPaymentType);
       sessionStorage.removeItem(BOOKING_INTENT_KEY);
@@ -807,6 +920,20 @@ const PropertyDetail = () => {
   }, [mainImage?.src]);
 
   const allCategories = Object.keys(groupedImages);
+  const isHourlyCommercial = property?.category === 'commercial' && property?.pricing_cycle === 'hourly';
+  const isHourlySingleDay = isHourlyCommercial && hourlyBookingMode === 'single';
+  const configuredHourlyStart = timeToMinutes(property?.check_in_time);
+  const configuredHourlyEnd = timeToMinutes(property?.check_out_time);
+  const hourlyOpeningMinutes = configuredHourlyStart !== null && configuredHourlyStart < (24 * 60)
+    ? configuredHourlyStart
+    : 0;
+  const hourlyClosingMinutes = configuredHourlyEnd !== null && configuredHourlyEnd > hourlyOpeningMinutes
+    ? configuredHourlyEnd
+    : 24 * 60;
+  const availableHourlyStartOptions = HOURLY_START_OPTIONS.filter((time) => {
+    const minutes = timeToMinutes(time);
+    return minutes !== null && minutes >= hourlyOpeningMinutes && minutes < hourlyClosingMinutes;
+  });
   const maxGuests = Math.max(1, Number(property?.max_guests) || 6);
   const adultGuests = Number(guests) || 1;
   const chargeableGuests = Math.max(1, adultGuests + childrenGuests);
@@ -845,6 +972,41 @@ const PropertyDetail = () => {
     setChildrenGuests(0);
     setGuests(Math.max(1, maxGuests));
   }, [property, hasExtraGuestPrice, chargeableGuests, maxGuests]);
+
+  useEffect(() => {
+    if (property?.category !== 'event_venue' || isCustomGuestCount) return;
+
+    const eventGuestBuckets = [100, 200, 300, 400, 500];
+    if (!eventGuestBuckets.includes(Number(guests))) {
+      // The event selector displays "Less than 100" for its default option,
+      // so its pricing and booking guest count must use that option's value too.
+      setGuests(100);
+    }
+  }, [property?.category, isCustomGuestCount, guests]);
+
+  useEffect(() => {
+    if (!isHourlyCommercial) return;
+    if (restoredHourlyTimeRef.current) {
+      restoredHourlyTimeRef.current = false;
+      return;
+    }
+
+    const startMinutes = configuredHourlyStart !== null && configuredHourlyStart < (24 * 60)
+      ? configuredHourlyStart
+      : 9 * 60;
+    const endMinutes = configuredHourlyEnd !== null && configuredHourlyEnd > startMinutes
+      ? configuredHourlyEnd
+      : Math.min(24 * 60, startMinutes + 60);
+
+    setSelectedStartTime(minutesToTime(startMinutes));
+    setSelectedEndTime(minutesToTime(endMinutes));
+  }, [isHourlyCommercial, property?.property_id, configuredHourlyStart, configuredHourlyEnd]);
+
+  useEffect(() => {
+    if (isHourlySingleDay && checkIn && checkOut !== checkIn) {
+      setCheckOut(checkIn);
+    }
+  }, [isHourlySingleDay, checkIn, checkOut]);
 
   const fetchReviews = async () => {
     try {
@@ -1057,11 +1219,27 @@ const PropertyDetail = () => {
     return Math.max(0, diff);
   }, [checkIn, checkOut, property?.category]);
 
-  const perPersonTotal = (Number(property?.per_person_price) || 0) * chargeableGuests * nights;
-  const extraGuestTotal = listedExtraGuestPrice * extraGuests * nights;
+  const hourlyDuration = useMemo(() => {
+    if (!isHourlyCommercial || !checkIn || !checkOut) return 0;
+    const startMinutes = timeToMinutes(selectedStartTime);
+    const endMinutes = timeToMinutes(selectedEndTime);
+    if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) return 0;
+    return (endMinutes - startMinutes) / 60;
+  }, [isHourlyCommercial, checkIn, checkOut, selectedStartTime, selectedEndTime]);
+  const hourlyDayCount = useMemo(() => {
+    if (!isHourlyCommercial || !checkIn || !checkOut) return 0;
+    const startDate = new Date(`${checkIn}T00:00:00`);
+    const endDate = new Date(`${checkOut}T00:00:00`);
+    const difference = Math.round((endDate - startDate) / (1000 * 60 * 60 * 24));
+    return difference >= 0 ? difference + 1 : 0;
+  }, [isHourlyCommercial, checkIn, checkOut]);
+  const bookingUnits = isHourlyCommercial ? hourlyDuration * hourlyDayCount : nights;
+
+  const perPersonTotal = (Number(property?.per_person_price) || 0) * chargeableGuests * bookingUnits;
+  const extraGuestTotal = listedExtraGuestPrice * extraGuests * bookingUnits;
 
   const baseAmount = useMemo(() => {
-    let amt = (property?.price_per_night || 0) * nights;
+    let amt = (property?.price_per_night || 0) * bookingUnits;
     if (property?.category === 'event_venue') {
       const platePrice = foodPreference === 'non_veg' 
         ? (property?.non_veg_price || 0) 
@@ -1069,13 +1247,13 @@ const PropertyDetail = () => {
         ? (property?.veg_price || 0) 
         : 0;
       const g = Math.max(0, Math.floor(Number(guests) || 0));
-      amt += g * platePrice * nights;
+      amt += g * platePrice * bookingUnits;
     } else if (property?.category === 'residential' || property?.category === 'commercial') {
       // Extra guest charges are added separately after the final nightly price.
       // Keep the host-entered extra guest value unchanged in its own line item.
     }
     return amt;
-  }, [property, nights, guests, chargeableGuests, foodPreference]);
+  }, [property, bookingUnits, guests, foodPreference]);
 
   const taxSlabBaseAmount = useMemo(() => {
     let amt = Number(property?.price_per_night || 0);
@@ -1093,7 +1271,7 @@ const PropertyDetail = () => {
       // per-night charges before resolving the slab.
     }
     return amt;
-  }, [property, guests, chargeableGuests, foodPreference]);
+  }, [property, guests, foodPreference]);
 
   useEffect(() => {
     let cancelled = false;
@@ -1111,7 +1289,7 @@ const PropertyDetail = () => {
       charge_base_amount: property?.category === 'event_venue'
         ? (Number(property?.price_per_night) || 0) * Math.max(1, Number(nights) || 1)
         : hostAmount,
-      pricing_units: Math.max(1, Number(nights) || 1),
+      pricing_units: Math.max(1, Number(bookingUnits) || 1),
       extra_guest_amount: extraGuestTotal,
     })
       .then((res) => {
@@ -1136,7 +1314,7 @@ const PropertyDetail = () => {
           });
       });
     return () => { cancelled = true; };
-  }, [baseAmount, taxSlabBaseAmount, nights, extraGuestTotal]);
+  }, [baseAmount, taxSlabBaseAmount, bookingUnits, extraGuestTotal, id, nights, property?.category, property?.price_per_night, property?.property_id]);
 
   const quoteNumber = (value, fallback = 0) => {
     const parsed = Number(value);
@@ -1155,7 +1333,7 @@ const PropertyDetail = () => {
   const finalNightlyPrice = quoteNumber(bookingQuote?.final_nightly_price, displayPricePerNight);
   const roundedDisplayPricePerNight = Math.round(displayPricePerNight || 0);
   const roundedPerPersonPrice = Math.round(Number(property?.per_person_price || 0));
-  const nightlySubtotal = Math.round(finalNightlyPrice * nights);
+  const nightlySubtotal = Math.round(finalNightlyPrice * bookingUnits);
   const eventVenueRate = displayPricePerNight;
   const eventVenueTotal = eventVenueRate * nights;
   const eventGuestCount = Math.max(0, Math.floor(Number(guests) || 0));
@@ -1173,7 +1351,7 @@ const PropertyDetail = () => {
   const advanceAmount = Math.round(total * (advancePercent / 100));
   const amountDueNow = (property?.category === 'event_venue' && bookingPaymentType === 'advance') ? advanceAmount : Math.round(total);
   const effectiveCheckOut = checkOut || (property?.category === 'event_venue' ? checkIn : '');
-  const canShowBookingAmount = Boolean(checkIn && effectiveCheckOut && nights > 0 && amountDueNow > 0);
+  const canShowBookingAmount = Boolean(checkIn && effectiveCheckOut && bookingUnits > 0 && amountDueNow > 0);
 
   const goPrev = () => {
     if (calMonth === 1) {
@@ -1271,7 +1449,11 @@ const PropertyDetail = () => {
       setBookingError('Please select check-in and check-out dates');
       return;
     }
-    if (nights < (property?.minimum_stay_days || 1)) {
+    if (isHourlyCommercial && hourlyDuration < 1) {
+      setBookingError('Please select a valid start and end time of at least 1 hour');
+      return;
+    }
+    if (!isHourlyCommercial && nights < (property?.minimum_stay_days || 1)) {
       setBookingError(
         property?.category === 'commercial' || property?.category === 'event_venue'
           ? `Minimum booking duration is ${property?.minimum_stay_days} day(s)`
@@ -1287,6 +1469,8 @@ const PropertyDetail = () => {
         check_in_date: checkIn,
         check_out_date: checkOut,
         number_of_guests: property?.category === 'event_venue' ? Number(guests) : chargeableGuests,
+        start_time: isHourlyCommercial ? selectedStartTime : undefined,
+        end_time: isHourlyCommercial ? selectedEndTime : undefined,
         selected_slot: property?.category === 'event_venue' ? selectedSlot : undefined,
         food_preference: property?.category === 'event_venue' ? foodPreference : undefined,
         payment_type: property?.category === 'event_venue' ? paymentType : 'full',
@@ -1896,7 +2080,7 @@ const PropertyDetail = () => {
                   { icon: MapPin, label: 'Location', value: propertyCity ? `${propertyCity}${property.state ? `, ${property.state}` : ''}` : null },
                   { icon: Building2, label: 'Property type', value: propertyType },
                   { icon: Users, label: property.category === 'commercial' ? 'Staff capacity' : 'Guest capacity', value: guestCapacity ? `${guestCapacity} ${property.category === 'commercial' ? 'staff' : 'guests'}` : null },
-                  { icon: CalendarIcon, label: 'Minimum stay', value: property.minimum_stay_days ? `${property.minimum_stay_days} ${property.category === 'commercial' || property.category === 'event_venue' ? (Number(property.minimum_stay_days) === 1 ? 'day' : 'days') : (Number(property.minimum_stay_days) === 1 ? 'night' : 'nights')}` : null },
+                  { icon: CalendarIcon, label: isHourlyCommercial ? 'Minimum booking' : 'Minimum stay', value: isHourlyCommercial ? '1 hour' : property.minimum_stay_days ? `${property.minimum_stay_days} ${property.category === 'commercial' || property.category === 'event_venue' ? (Number(property.minimum_stay_days) === 1 ? 'day' : 'days') : (Number(property.minimum_stay_days) === 1 ? 'night' : 'nights')}` : null },
                   { icon: Clock, label: 'Check-in time', value: formatListingTime(property.check_in_time) },
                   { icon: Clock, label: 'Check-out time', value: formatListingTime(property.check_out_time) },
                   { icon: CreditCard, label: 'Starting price', value: roundedDisplayPricePerNight > 0 ? `Rs ${roundedDisplayPricePerNight.toLocaleString('en-IN')}` : null },
@@ -2525,28 +2709,110 @@ const PropertyDetail = () => {
               </div>
 
               <div className="bg-stone/80 rounded-2xl border border-gray-100 mb-6">
-                <div className="grid grid-cols-2 divide-x divide-sand-200">
+                {isHourlyCommercial && (
+                  <div className="border-b border-gray-100 p-3">
+                    <div className="grid grid-cols-2 rounded-xl bg-white p-1 shadow-sm ring-1 ring-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHourlyBookingMode('single');
+                          if (checkIn) setCheckOut(checkIn);
+                          setOpenTimeDropdown('');
+                        }}
+                        className={`rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${hourlyBookingMode === 'single' ? 'bg-charcoal text-white shadow-sm' : 'text-charcoal-muted hover:bg-stone'}`}
+                      >
+                        Single Day
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHourlyBookingMode('multi');
+                          if (checkIn === checkOut) setCheckOut('');
+                          setOpenTimeDropdown('');
+                        }}
+                        className={`rounded-lg px-3 py-2 text-[10px] font-bold uppercase tracking-wider transition-all ${hourlyBookingMode === 'multi' ? 'bg-charcoal text-white shadow-sm' : 'text-charcoal-muted hover:bg-stone'}`}
+                      >
+                        Multiple Days
+                      </button>
+                    </div>
+                    <p className="mt-2 px-1 text-[9px] font-semibold text-charcoal-muted">
+                      {hourlyBookingMode === 'single' ? 'Book hours for one date.' : 'Book the same hours on every date in the range.'}
+                    </p>
+                  </div>
+                )}
+                <div className={`${isHourlySingleDay ? 'grid grid-cols-1' : 'grid grid-cols-2 divide-x divide-sand-200'}`}>
                   <button
                     ref={checkInButtonRef}
                     onClick={() => openBookingCalendar('checkIn')}
                     className="p-4 text-left hover:bg-white transition-colors group rounded-tl-2xl"
                   >
-                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkIn')}</label>
+                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{isHourlySingleDay ? 'Booking Date' : isHourlyCommercial ? 'Start Date' : t('checkIn')}</label>
                     <div id="cal-trigger" className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer">
                       {checkIn || 'Select Date'}
                     </div>
                   </button>
-                  <button
+                  {!isHourlySingleDay && <button
                     ref={checkOutButtonRef}
                     onClick={() => openBookingCalendar('checkOut')}
                     className="p-4 text-left hover:bg-white transition-colors group rounded-tr-2xl"
                   >
-                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{t('checkOut')}</label>
+                    <label className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block group-hover:text-terracotta transition-colors">{isHourlyCommercial ? 'End Date' : t('checkOut')}</label>
                     <div id="cal-trigger-out" className="w-full text-xs font-bold tracking-tight text-charcoal bg-transparent outline-none cursor-pointer">
                       {checkOut || 'Select Date'}
                     </div>
-                  </button>
+                  </button>}
                 </div>
+                {isHourlyCommercial && checkIn && checkOut && (
+                  <div className="border-t border-gray-100 p-4">
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-terracotta" />
+                        <label className="text-[9px] font-bold uppercase tracking-widest text-charcoal-muted">Select Hours</label>
+                      </div>
+                      <span className="text-[10px] font-bold text-terracotta">
+                        {hourlyDuration > 0 ? (hourlyDayCount > 1 ? `${hourlyDayCount} Days × ${hourlyDuration} Hrs` : `${hourlyDuration} Hour${hourlyDuration !== 1 ? 's' : ''}`) : 'Choose a valid time'}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <HourlyTimeDropdown
+                        label="Start Time"
+                        value={selectedStartTime}
+                        options={availableHourlyStartOptions}
+                        open={openTimeDropdown === 'start'}
+                        onToggle={() => setOpenTimeDropdown((current) => current === 'start' ? '' : 'start')}
+                        onClose={() => setOpenTimeDropdown('')}
+                        onChange={(nextStart) => {
+                            setSelectedStartTime(nextStart);
+                            if ((timeToMinutes(selectedEndTime) ?? 0) <= (timeToMinutes(nextStart) ?? 0)) {
+                              setSelectedEndTime(minutesToTime(Math.min(24 * 60, (timeToMinutes(nextStart) ?? 0) + 60)));
+                            }
+                            setOpenTimeDropdown('');
+                          }}
+                      />
+                      <HourlyTimeDropdown
+                        label="End Time"
+                        value={selectedEndTime}
+                        options={HOURLY_END_OPTIONS.filter((time) => {
+                          const minutes = timeToMinutes(time) ?? 0;
+                          return minutes > (timeToMinutes(selectedStartTime) ?? 0) && minutes <= hourlyClosingMinutes;
+                        })}
+                        open={openTimeDropdown === 'end'}
+                        align="right"
+                        onToggle={() => setOpenTimeDropdown((current) => current === 'end' ? '' : 'end')}
+                        onClose={() => setOpenTimeDropdown('')}
+                        onChange={(nextEnd) => {
+                          setSelectedEndTime(nextEnd);
+                          setOpenTimeDropdown('');
+                        }}
+                      />
+                    </div>
+                    <p className="mt-2 text-[9px] font-semibold text-charcoal-muted">
+                      {hourlyDayCount > 1
+                        ? `Every day: ${formatHourlyOption(selectedStartTime)} (${getHourlyPeriod(selectedStartTime)}) → ${formatHourlyOption(selectedEndTime)} (${getHourlyPeriod(selectedEndTime)}) · ${bookingUnits} total hours.`
+                        : `${formatHourlyOption(selectedStartTime)} (${getHourlyPeriod(selectedStartTime)}) → ${formatHourlyOption(selectedEndTime)} (${getHourlyPeriod(selectedEndTime)}) · ${hourlyDuration} hour${hourlyDuration !== 1 ? 's' : ''}.`}
+                    </p>
+                  </div>
+                )}
                 <div className="p-4 border-t border-gray-100 flex flex-col hover:bg-white transition-colors group gap-4 rounded-b-2xl">
                   <div className="flex items-center w-full justify-between">
                     <div className="flex items-center w-full">
@@ -2807,7 +3073,7 @@ const PropertyDetail = () => {
                 </div>
               )}
 
-              {nights > 0 && (
+              {bookingUnits > 0 && (
                 <div className="mt-6 mb-6 space-y-4 animate-fade-in" data-testid="price-breakdown">
                   {property.category === 'event_venue' ? (
                     <>
@@ -2831,11 +3097,9 @@ const PropertyDetail = () => {
                     {pricingDisplayMode !== 'per_person' && (
                     <div className="flex justify-between items-center">
                       <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                        ₹{Math.round(finalNightlyPrice).toLocaleString('en-IN')} × {nights} {
-                          property.category === 'commercial' 
-                            ? (property.pricing_cycle === 'hourly' ? t('hour') : property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day'))
-                            : t('night')
-                        }
+                        {isHourlyCommercial
+                          ? <>₹{Math.round(finalNightlyPrice).toLocaleString('en-IN')} × {hourlyDayCount} day{hourlyDayCount !== 1 ? 's' : ''} × {hourlyDuration} hr{hourlyDuration !== 1 ? 's' : ''}</>
+                          : <>₹{Math.round(finalNightlyPrice).toLocaleString('en-IN')} × {bookingUnits} {property.category === 'commercial' ? (property.pricing_cycle === 'weekly' ? t('week') : property.pricing_cycle === 'monthly' ? t('month') : t('day')) : t('night')}</>}
                       </span>
                       <span className="text-sm font-bold tracking-tight text-charcoal">₹{Math.round(nightlySubtotal).toLocaleString('en-IN')}</span>
                     </div>
@@ -2843,7 +3107,7 @@ const PropertyDetail = () => {
                     {pricingDisplayMode === 'per_person' && Number(property?.per_person_price || 0) > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-charcoal-muted underline decoration-sand-300 underline-offset-4">
-                          ₹{roundedPerPersonPrice.toLocaleString('en-IN')} × {chargeableGuests} {property.category === 'commercial' ? 'staff' : 'guests'} × {nights} {property.category === 'commercial' ? 'day' : 'night'}{nights !== 1 ? 's' : ''}
+                          ₹{roundedPerPersonPrice.toLocaleString('en-IN')} × {chargeableGuests} {property.category === 'commercial' ? 'staff' : 'guests'} × {bookingUnits} {isHourlyCommercial ? 'hour' : property.category === 'commercial' ? 'day' : 'night'}{bookingUnits !== 1 ? 's' : ''}
                         </span>
                         <span className="text-sm font-bold tracking-tight text-charcoal">₹{perPersonTotal.toLocaleString('en-IN')}</span>
                       </div>
@@ -2851,7 +3115,7 @@ const PropertyDetail = () => {
                     {extraGuests > 0 && listedExtraGuestPrice > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="text-xs font-bold text-terracotta underline decoration-sand-300 underline-offset-4">
-                          Extra {property.category === 'commercial' ? 'staff' : 'guests'}: ₹{listedExtraGuestPrice.toLocaleString('en-IN')} × {extraGuests} × {nights} {property.category === 'commercial' ? 'day' : 'night'}{nights !== 1 ? 's' : ''}
+                          Extra {property.category === 'commercial' ? 'staff' : 'guests'}: ₹{listedExtraGuestPrice.toLocaleString('en-IN')} × {extraGuests} × {bookingUnits} {isHourlyCommercial ? 'hour' : property.category === 'commercial' ? 'day' : 'night'}{bookingUnits !== 1 ? 's' : ''}
                         </span>
                         <span className="text-sm font-bold tracking-tight text-terracotta">₹{quotedExtraGuestTotal.toLocaleString('en-IN')}</span>
                       </div>
@@ -2915,7 +3179,7 @@ const PropertyDetail = () => {
 
               <button
                 onClick={() => handleBookNow(null, bookingPaymentType)}
-                disabled={booking || !checkIn || !checkOut || nights === 0}
+                disabled={booking || !checkIn || !checkOut || bookingUnits === 0}
                 className="hidden lg:block btn-premium w-full py-4 text-sm shadow-premium disabled:opacity-50 disabled:translate-y-0 transition-all"
               >
                 {booking ? (
@@ -2969,6 +3233,7 @@ const PropertyDetail = () => {
                 checkOut={checkOut}
                 minDate={todayISO}
                 blockedDates={blockedDates}
+                singleDate={isHourlySingleDay}
                 desktopPosition={bookingCalendarPosition}
                 onChange={({ checkIn: nextCheckIn, checkOut: nextCheckOut }) => {
                   setCheckIn(nextCheckIn);
@@ -3028,7 +3293,7 @@ const PropertyDetail = () => {
                         <div>
                           <span className="text-lg font-bold tracking-tight text-charcoal">₹{Number(prop.display_price_per_night ?? prop.customer_price_per_night ?? prop.price_per_night ?? 0).toLocaleString('en-IN')}</span>
                           <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider ml-1">
-                            {prop.category === 'event_venue' ? '/ day' : prop.category === 'commercial' ? '/ day' : '/ night'}
+                            {prop.category === 'event_venue' ? '/ day' : prop.category === 'commercial' ? (prop.pricing_cycle === 'hourly' ? '/ hr' : '/ day') : '/ night'}
                           </span>
                         </div>
                         {prop.rating > 0 && (
