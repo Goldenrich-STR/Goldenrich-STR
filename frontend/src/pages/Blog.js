@@ -96,7 +96,7 @@ const DEFAULT_FOOTER_DATA = {
       { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
-      { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
+      { label: 'List Your Space', action_type: 'link', link: '/list-your-property', text: '' },
       { label: 'Become a Host', action_type: 'link', link: '/register/host', text: '' }
     ] },
     { heading: 'Company', items: [
@@ -220,8 +220,8 @@ const Blog = () => {
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
-      if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register/host');
+      if (item.link === '/host/list-property' || item.link === '/list-your-property') {
+        navigate(user ? '/host/list-property' : '/list-your-property');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -340,11 +340,12 @@ const Blog = () => {
   return (
     <div className="min-h-screen bg-sand-50 font-sans text-charcoal">
       <SEO
-        title={selectedPost ? (selectedPost.metaTitle || selectedPost.title) : "Travel, Property and Host Guides"}
+        title={selectedPost ? (selectedPost.metaTitle || selectedPost.title) : "Travel, Stays & Property Management Blog | X-Space360"}
         description={selectedPost
           ? (selectedPost.metaDescription || selectedPost.excerpt || "Read X-Space360 travel, property and host insights.")
-          : "Explore travel guides, villa booking tips, host resources, workspace insights and event venue ideas from X-Space360."}
+          : "Explore travel guides, stay ideas, destination tips and short-term rental property management insights from X-Space360."}
         path={selectedPost ? selectedPostCanonicalPath : "/blog"}
+        appendSiteName={false}
         image={selectedPost ? selectedPostImage : undefined}
         type={selectedPost ? "article" : "website"}
         keywords={selectedPost ? selectedPostKeywords : DEFAULT_BLOG_KEYWORDS}
@@ -502,7 +503,7 @@ const Blog = () => {
             <span>{blogSettings.page_eyebrow || 'X-SPACE360 JOURNAL'}</span>
           </div>
           <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight font-serif text-charcoal">
-            {blogSettings.page_title || 'The Journal'}
+            {selectedPost ? (blogSettings.page_title || 'The Journal') : 'X-Space360 Blog'}
           </h1>
           <p className="text-base md:text-xl text-charcoal-light max-w-2xl mx-auto leading-relaxed font-normal">
             {blogSettings.page_subtitle || 'Curated insights, local travel guides, and operational updates for short-term renting.'}

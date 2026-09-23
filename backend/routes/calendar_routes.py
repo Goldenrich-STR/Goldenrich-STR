@@ -12,8 +12,10 @@ from models.calendar import (
 )
 from middleware.auth_middleware import get_current_user, get_optional_current_user
 from datetime import datetime, date, timedelta, timezone
+import html
 import logging
 import os
+import re
 import secrets
 from urllib.parse import urlparse
 from icalendar import Calendar as iCalendar, Event as iCalEvent
@@ -51,6 +53,17 @@ def _can_manage_property(user: dict, property_data: dict) -> bool:
     return _is_admin(user) or property_data.get("owner_id") == user.get("user_id")
 
 
+ICAL_URL_PATTERN = re.compile(r"(webcal://\S+|https?://\S+)", re.IGNORECASE)
+
+
+def _clean_ical_url(value: str) -> str:
+    cleaned = html.unescape((value or "").strip()).strip("\"'<>")
+    match = ICAL_URL_PATTERN.search(cleaned)
+    if match:
+        cleaned = match.group(0)
+    return cleaned.strip().strip("\"'<>.,);]")
+
+
 def _public_backend_url() -> str:
     return os.environ.get("PUBLIC_BACKEND_URL", "https://api.x-space360.in").rstrip("/")
 
@@ -72,7 +85,7 @@ async def _get_or_create_feed_url(property_id: str, property_data: dict, db: Asy
 
 
 def _is_own_ical_feed_url(url: str) -> bool:
-    parsed = urlparse((url or "").strip())
+    parsed = urlparse(_clean_ical_url(url))
     public_host = urlparse(_public_backend_url()).netloc.lower()
     host = parsed.netloc.lower()
     path = parsed.path.lower()
@@ -172,13 +185,18 @@ async def get_blocked_dates(
             query["end_date"] = {"$gte": start_date}
 
         property_data = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
-        if property_data and property_data.get("category") == "event_venue":
+        is_hourly_commercial = bool(
+            property_data
+            and property_data.get("category") == "commercial"
+            and str(property_data.get("pricing_cycle") or "").lower() == "hourly"
+        )
+        if property_data and (property_data.get("category") == "event_venue" or is_hourly_commercial):
             query["source"] = {"$ne": "booking"}
 
         cursor = db.blocked_dates.find(query, {"_id": 0})
         blocked_dates = await cursor.to_list(length=1000)
 
-        if property_data and property_data.get("category") != "event_venue":
+        if property_data and property_data.get("category") != "event_venue" and not is_hourly_commercial:
             booking_query = {
                 "property_id": property_id,
                 "booking_status": {"$nin": BOOKING_TERMINAL_STATUSES},
@@ -603,12 +621,14 @@ async def add_external_calendar(
                 status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized"
             )
 
-        if not payload.ical_url.startswith(("http://", "https://", "webcal://")):
+        ical_url = _clean_ical_url(payload.ical_url)
+
+        if not ical_url.startswith(("http://", "https://", "webcal://")):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="iCal URL must start with http://, https://, or webcal://",
             )
-        if _is_own_ical_feed_url(payload.ical_url):
+        if _is_own_ical_feed_url(ical_url):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=(
@@ -641,7 +661,7 @@ async def add_external_calendar(
             property_id=property_id,
             owner_id=property_data.get("owner_id") or current_user["user_id"],
             name=payload.name,
-            ical_url=payload.ical_url,
+            ical_url=ical_url,
             color=payload.color,
             provider=payload.provider,
             sync_frequency=payload.sync_frequency,

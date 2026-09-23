@@ -80,7 +80,7 @@ const AssignmentSearchSelect = ({ label, value, onChange, options, codeKey, plac
   );
 };
 
-const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
+const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { login, adminLogin, register, logout, refreshUser } = useAuth();
@@ -91,8 +91,9 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
   const searchParams = new URLSearchParams(window.location.search);
   const forceLogin = searchParams.get('force_login') === '1';
   const requestedNext = searchParams.get('next') || '';
-  const initialRole = searchParams.get('role') === 'host' ? 'host' : 'guest';
-  const [isLogin, setIsLogin] = useState(location.pathname !== '/register');
+  const isHostRoute = defaultRole === 'host' || location.pathname === '/register/host' || location.pathname === '/host/register';
+  const initialRole = isHostRoute || searchParams.get('role') === 'host' ? 'host' : 'guest';
+  const [isLogin, setIsLogin] = useState(!location.pathname.includes('/register'));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -177,9 +178,24 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
   }, [forceLogin, logout]);
 
   useEffect(() => {
-    setIsLogin(location.pathname !== '/register');
+    setIsLogin(!location.pathname.includes('/register'));
     setRegisterPasswordError('');
   }, [location.pathname]);
+
+  useEffect(() => {
+    const isHost = isHostRoute || new URLSearchParams(location.search).get('role') === 'host';
+    const targetRole = isHost ? 'host' : 'guest';
+    setRegisterData(prev => prev.role === targetRole ? prev : { ...prev, role: targetRole });
+  }, [location.pathname, location.search, isHostRoute]);
+
+  const handleRoleChange = (newRole) => {
+    setRegisterData(prev => ({ ...prev, role: newRole }));
+    if (newRole === 'host') {
+      navigate('/register/host', { replace: true });
+    } else {
+      navigate('/register', { replace: true });
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -535,15 +551,31 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
 
               {/* Middle Text and Pill Badge */}
               <div className="mb-6 flex flex-col items-center">
-                <h4 className="text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
-                  Book a Room.<br />Enjoy A Villa Getaway
-                </h4>
-                <p className="text-white text-xs font-semibold max-w-[220px] mb-4 drop-shadow-sm">
-                  Enjoy the luxuries & privacy of a villa with
-                </p>
-                <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide text-white drop-shadow-sm">
-                  Rooms Starting at ₹2,000*
-                </div>
+                {!isLogin && registerData.role === 'host' ? (
+                  <>
+                    <h4 className="text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
+                      List Your Property.<br />Maximize Your Earnings
+                    </h4>
+                    <p className="text-white text-xs font-semibold max-w-[240px] mb-4 drop-shadow-sm leading-relaxed">
+                      Partner with X-Space360 to host guests, manage bookings, and earn maximum revenue.
+                    </p>
+                    <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide text-white drop-shadow-sm">
+                      Zero Listing Fee · Premium Hosts
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
+                      Book a Room.<br />Enjoy A Villa Getaway
+                    </h4>
+                    <p className="text-white text-xs font-semibold max-w-[240px] mb-4 drop-shadow-sm leading-relaxed">
+                      Enjoy the luxury, comfort, and privacy of premium spaces across India.
+                    </p>
+                    <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide text-white drop-shadow-sm">
+                      Rooms Starting at ₹2,000*
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -554,11 +586,6 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
           
           {/* Top Header Section */}
           <div className="w-full">
-            {/* Mini Logo */}
-            <div className="mb-4 flex items-center justify-between pr-10">
-              <img src="/logo.png" alt="X-Space360" className="h-8 w-auto object-contain" />
-            </div>
-
             {/* Title / Subtext */}
             <div className="mb-6">
               <span className="text-sm font-semibold text-gray-500 block mb-1">
@@ -686,7 +713,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                     <div className="flex justify-between items-center bg-gray-50 p-1.5 rounded-xl border border-gray-150 max-w-[240px] mx-auto mb-4">
                       <button
                         type="button"
-                        onClick={() => setRegisterData({ ...registerData, role: 'guest' })}
+                        onClick={() => handleRoleChange('guest')}
                         className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
                           registerData.role === 'guest' ? 'bg-[#1b1924] text-white shadow-sm' : 'text-gray-400'
                         }`}
@@ -695,7 +722,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => setRegisterData({ ...registerData, role: 'host' })}
+                        onClick={() => handleRoleChange('host')}
                         className={`flex-1 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition ${
                           registerData.role === 'host' ? 'bg-[#1b1924] text-white shadow-sm' : 'text-gray-400'
                         }`}
@@ -954,13 +981,14 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false }) => {
             )}
           </div>
 
-          {/* Bottom Footer Notice */}
-          <div className="w-full pt-4 border-t border-gray-100 text-center">
-            <p className="text-[10px] text-gray-400 font-semibold leading-relaxed">
-              By signing up, you agree to our <br className="md:hidden" />
-              <a href="/terms" className="text-blue-500 hover:underline">Terms & Conditions</a> and <a href="/privacy" className="text-blue-500 hover:underline">Privacy Policy</a>
-            </p>
-          </div>
+          {/* Bottom Footer Notice (Only for Login) */}
+          {isLogin && (
+            <div className="w-full pt-4 border-t border-gray-100 text-center">
+              <p className="text-[10px] text-gray-400 font-semibold leading-relaxed">
+                By logging in, you agree to our <LegalLinks className="inline text-terracotta" context="general" />.
+              </p>
+            </div>
+          )}
 
         </div>
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   FileText, MessageSquare, Mail, Phone, Search, ChevronRight, Send, Lock, HelpCircle, 
   ArrowRight, Menu, X, Heart, LogOut, CheckCircle, ChevronDown, ChevronUp 
@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 import ChatbotWidget from '../components/ChatbotWidget';
+import Footer from '../components/Footer';
 
 const DEFAULT_SUPPORT_DATA = {
   title: "How can we help you?",
@@ -41,8 +42,8 @@ const DEFAULT_SUPPORT_DATA = {
       id: "call_support",
       title: "Call Support",
       description: "Speak directly with our support team.",
-      button_text: "+91 8484826247",
-      action_value: "+91 8484826247"
+      button_text: "+91 919225586010",
+      action_value: "+91 919225586010"
     }
   ],
   popular_topics: [
@@ -327,10 +328,17 @@ const SupportPage = () => {
 
   return (
     <div className="min-h-screen bg-[#FDFCF8] font-sans text-charcoal overflow-x-hidden selection:bg-terracotta/20">
+      <a 
+        href="#main-content" 
+        className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:p-4 focus:bg-amber-600 focus:text-white font-bold rounded-md"
+      >
+        Skip to main content
+      </a>
       <SEO
-        title="Help and Support Center"
-        description="Get help with X-Space360 bookings, cancellations, refunds, payments, host accounts and property listings."
+        title="X-Space360 Help Center | Booking & Property Support"
+        description="Get answers about bookings, stays, listings, property management and using X-Space360. Find the help you need quickly."
         path="/support"
+        appendSiteName={false}
         keywords={[
           "X-Space360 support",
           "booking help",
@@ -349,21 +357,19 @@ const SupportPage = () => {
 
         {/* Center Pill Links */}
         <div className="hidden lg:flex h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal-muted bg-sand-50 border border-sand-200 rounded-none shadow-sm self-center">
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
+          <Link
+            to="/guest/browse"
             className="hover:text-terracotta transition"
           >
             Discover
-          </a>
+          </Link>
 
-          <a
-            href="#"
-            onClick={(e) => { e.preventDefault(); navigate('/'); }}
+          <Link
+            to="/"
             className="hover:text-terracotta transition"
           >
             Home
-          </a>
+          </Link>
           <div className="w-[1px] h-4 bg-sand-200" />
           <LanguageSelector
             currentLang={lang}
@@ -448,7 +454,7 @@ const SupportPage = () => {
       )}
 
       {/* Hero Section */}
-      <section className="relative bg-[#0C121D] text-white py-24 px-6 md:px-12 lg:px-20 overflow-hidden border-b border-[#E0A51B]/20">
+      <main id="main-content" className="relative bg-[#0C121D] text-white py-24 px-6 md:px-12 lg:px-20 overflow-hidden border-b border-[#E0A51B]/20">
         {/* Subtle mesh background grid */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-20" />
         <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/90 to-[#1E293B]/70" />
@@ -461,14 +467,9 @@ const SupportPage = () => {
             <span className="inline-block px-4 py-1.5 bg-terracotta/15 text-terracotta border border-terracotta/30 text-[10px] font-black uppercase tracking-widest rounded-full">
               Support Center
             </span>
-            <h2 className="text-4xl md:text-6xl font-black tracking-tight leading-tight text-white">
-              {supportData.title.split(' ').map((word, idx, arr) => {
-                if (word.toLowerCase().includes('help')) {
-                  return <span key={idx} className="text-terracotta italic font-serif">help </span>;
-                }
-                return word + ' ';
-              })}
-            </h2>
+            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight text-white">
+              X-Space360 <span className="text-terracotta italic font-serif">Help Center</span>
+            </h1>
             <p className="text-sm md:text-base text-white/70 font-medium max-w-xl mx-auto leading-relaxed">
               {supportData.subtitle}
             </p>
@@ -480,12 +481,15 @@ const SupportPage = () => {
               <div className="flex items-center pl-4 text-gray-400">
                 <Search className="w-5 h-5" />
               </div>
+              <label htmlFor="support-search-input" className="sr-only">Search help articles</label>
               <input
+                id="support-search-input"
                 type="text"
+                aria-label="Search help articles"
                 placeholder={supportData.search_placeholder}
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-3 pr-4 py-3.5 text-charcoal placeholder-gray-400 outline-none font-semibold text-sm rounded-l-2xl border-none focus:ring-0"
+                className="w-full pl-3 pr-4 py-3.5 text-charcoal placeholder-gray-600 outline-none font-semibold text-sm rounded-l-2xl border-none focus:ring-0"
               />
               <button
                 type="button"
@@ -497,7 +501,7 @@ const SupportPage = () => {
             </div>
           </div>
         </div>
-      </section>
+      </main>
 
       {/* Grid: 4 Support Channel Cards */}
       <section className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 -mt-10 relative z-20">
@@ -801,21 +805,7 @@ const SupportPage = () => {
       </section>
 
       {/* Footer Branding */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white py-16 px-6 md:px-12 lg:px-20 font-medium text-xs">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex items-center space-x-2">
-            <img src="/logo.png" alt="X-Space360 Logo" className="h-6 w-auto object-contain logo-white" />
-            <span className="text-white/30 font-bold">|</span>
-            <span className="text-white/60 font-medium">© {new Date().getFullYear()} Goldenrich Group. All rights reserved.</span>
-          </div>
-          <div className="flex space-x-6 text-white/80">
-            <a href="/terms" className="hover:text-terracotta transition duration-300">Terms of Service</a>
-            <a href="/privacy" className="hover:text-terracotta transition duration-300">Privacy Policy</a>
-            <span onClick={scrollToFaq} className="hover:text-terracotta transition cursor-pointer duration-300 font-bold">FAQs</span>
-          </div>
-        </div>
-      </footer>
+      <Footer />
       <ChatbotWidget />
     </div>
   );

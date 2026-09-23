@@ -1,5 +1,4 @@
 @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Great+Vibes&display=swap');
 
 @font-face {
@@ -70,7 +69,7 @@
   }
 
   .card-premium:hover {
-    @apply -translate-y-1 shadow-premium border-gray-200;
+    @apply border-sand-300 shadow-md;
   }
 
   /* Gradients - Very Subtle */
@@ -115,9 +114,33 @@
     scrollbar-width: none;
   }
 
+  /* High-contrast Gold for WCAG AA (5.75:1 contrast ratio against white/cream) */
+  .text-terracotta {
+    color: #875F00 !important;
+  }
+
   /* Input Focus Rings - iOS style */
-  input, textarea, select {
-    @apply transition-all duration-300 border-gray-200 bg-white rounded-xl focus:border-charcoal focus:ring-1 focus:ring-charcoal outline-none placeholder:text-gray-400;
+  input, textarea {
+    @apply transition-all duration-300 border-gray-200 bg-white rounded-xl focus:border-charcoal focus:ring-1 focus:ring-charcoal outline-none placeholder:text-gray-600;
+  }
+
+  select {
+    @apply transition-all duration-200 border border-gray-200 bg-white rounded-xl focus:border-terracotta focus:ring-2 focus:ring-terracotta/20 outline-none cursor-pointer font-semibold text-charcoal shadow-subtle hover:border-sand-400;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%20475569' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19.5 8.25l-7.5 7.5-7.5-7.5' /%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.125rem 1.125rem;
+    padding-right: 2.75rem !important;
+  }
+
+  select option {
+    padding: 8px 12px;
+    background-color: #ffffff;
+    color: #1A1A1A;
+    font-weight: 600;
   }
 
   /* X-Space360 full logo treatment (Inner Pages / Footer) */
@@ -239,15 +262,9 @@
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
 }
 
-/* Property cards scale & lift with enhanced shadow */
-.landing-page-container .group\/card,
-.landing-page-container button[class*="shadow-subtle"] {
-  will-change: transform;
-}
-.landing-page-container .group\/card:hover,
-.landing-page-container button[class*="shadow-subtle"]:hover {
-  transform: translateY(-5px) scale(1.01) !important;
-  box-shadow: 0 20px 38px -10px rgba(0, 0, 0, 0.08), 0 12px 24px -10px rgba(0, 0, 0, 0.05) !important;
+/* Property cards clean subtle hover */
+.landing-page-container .group\/card:hover {
+  border-color: rgba(212, 175, 55, 0.4) !important;
 }
 
 /* Category cards / shortcut items */
@@ -275,3 +292,38 @@
   transform: scale(1.08);
   transition: transform 0.3s ease !important;
 }
+
+/* Custom Floating Animations for App Promo Banner */
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes float-reverse {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(8px); }
+}
+.animate-float-slow {
+  animation: float-slow 4s ease-in-out infinite;
+}
+.animate-float-reverse {
+  animation: float-reverse 5s ease-in-out infinite;
+}
+
+/* Reduced Motion & Print Visibility Safeguards */
+@media (prefers-reduced-motion: reduce) {
+  div[class*="will-change-transform"] {
+    transition: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+@media print {
+  div[class*="will-change-transform"] {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+

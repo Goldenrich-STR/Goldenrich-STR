@@ -9,6 +9,62 @@ from motor.motor_asyncio import AsyncIOMotorDatabase
 logger = logging.getLogger(__name__)
 router = APIRouter(tags=["SEO"])
 
+SEO_LANDING_PATHS = (
+    "/list-your-property",
+    "/property/villas",
+    "/property/villas-in-nashik",
+    "/property/villas-in-trimbakeshwar",
+    "/property/villas-in-igatpuri",
+    "/property/villas-in-bhandardara",
+    "/property/luxury-villas-in-nashik",
+    "/property/weekend-villas-in-igatpuri",
+    "/property/scenic-villas-in-bhandardara",
+    "/property/residential/",
+    "/property/residential/homestay-in-nashik",
+    "/property/residential/apartment-in-nashik",
+    "/property/residential/farmhouse-in-nashik",
+    "/property/residential/holidayhomes-in-igatpuri",
+    "/property/residential/homestay-in-igatpuri",
+    "/property/residential/familystay-in-trimbak",
+    "/property/residential/apartment-in-trimbak",
+    "/property/residential/naturestay-in-bhandardara",
+    "/property/residential/banglows",
+    "/property/residential/apartment",
+    "/property/residential/studio",
+    "/property/residential/privatehouse",
+    "/property/residential/farmhouse",
+    "/event-venues/",
+    "/event-venues/wedding-venues/",
+    "/event-venues/wedding-venues-in-nashik/",
+    "/event-venues/wedding-venues-in-igatpuri/",
+    "/event-venues/banquet-halls/",
+    "/event-venues/banquet-halls-in-nashik/",
+    "/event-venues/hotel-ballrooms/",
+    "/event-venues/corporate-event-venues-in-nashik/",
+    "/event-venues/event-lawns-in-nashik/",
+    "/event-venues/celebration-venues-in-igatpuri/",
+    "/event-venues/resorts-and-lawns-in-trimbakeshwar/",
+    "/event-venues/resorts-in-bhandardara/",
+    "/property/workspaces/",
+    "/property/coworking-spaces/",
+    "/property/coworking-spaces-in-nashik/",
+    "/property/private-offices/",
+    "/property/private-offices-in-nashik/",
+    "/property/meeting-rooms/",
+    "/property/meeting-rooms-in-nashik/",
+    "/property/team-spaces/",
+    "/property/team-spaces-in-nashik/",
+    "/property/corporate-spaces/",
+    "/places/sula-vineyards/",
+    "/places/trimbakeshwar-temple/",
+    "/places/pandav-leni/",
+    "/places/gangapur-dam/",
+    "/places/anjaneri/",
+    "/places/harihar-fort/",
+    "/places/bhandardara/",
+    "/places/igatpuri/",
+)
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -49,9 +105,9 @@ def urlset(entries) -> Response:
 
 async def get_live_properties(db: AsyncIOMotorDatabase):
     properties = await db.properties.find(
-        {"status": "live"},
+        {"status": {"$in": ["live", "LIVE"]}},
         {
-            "_id": 0,
+            "_id": 1,
             "property_id": 1,
             "updated_at": 1,
             "created_at": 1,
@@ -61,12 +117,33 @@ async def get_live_properties(db: AsyncIOMotorDatabase):
 
     sub_ids = [prop.get("subscription_id") for prop in properties if prop.get("subscription_id")]
     if sub_ids:
-        today_str = datetime.now(timezone.utc).date().isoformat()
-        expired_subs = await db.subscriptions.find(
-            {"subscription_id": {"$in": sub_ids}, "end_date": {"$lte": today_str}},
-            {"_id": 0, "subscription_id": 1},
+        today_date = datetime.now(timezone.utc).date()
+        subs = await db.subscriptions.find(
+            {"subscription_id": {"$in": sub_ids}},
+            {"_id": 0, "subscription_id": 1, "end_date": 1, "status": 1},
         ).to_list(length=len(sub_ids))
-        expired_sub_ids = {sub.get("subscription_id") for sub in expired_subs}
+
+        expired_sub_ids = set()
+        for s in subs:
+            sub_id = s.get("subscription_id")
+            if not sub_id:
+                continue
+            if s.get("status") == "expired":
+                expired_sub_ids.add(sub_id)
+                continue
+            end_val = s.get("end_date")
+            if end_val:
+                if isinstance(end_val, str):
+                    try:
+                        end_d = datetime.strptime(end_val.split("T")[0], "%Y-%m-%d").date()
+                        if end_d <= today_date:
+                            expired_sub_ids.add(sub_id)
+                    except Exception:
+                        pass
+                elif hasattr(end_val, "date"):
+                    if end_val.date() <= today_date:
+                        expired_sub_ids.add(sub_id)
+
         properties = [prop for prop in properties if prop.get("subscription_id") not in expired_sub_ids]
 
     return properties
@@ -115,10 +192,14 @@ async def build_sitemap_entries(db: AsyncIOMotorDatabase):
         url_entry("/refund-policy", changefreq="monthly", priority="0.6"),
         url_entry("/account-deletion", changefreq="monthly", priority="0.5"),
     ]
+    entries.extend(
+        url_entry(path, changefreq="monthly", priority="0.7")
+        for path in SEO_LANDING_PATHS
+    )
 
     try:
         for prop in await get_live_properties(db):
-            prop_id = prop.get("property_id")
+            prop_id = prop.get("property_id") or (str(prop.get("_id")) if prop.get("_id") else None)
             if not prop_id:
                 continue
             entries.append(url_entry(
@@ -209,7 +290,7 @@ async def get_sitemap_index():
 
 @router.get("/sitemap-static.xml")
 async def get_static_sitemap():
-    return urlset([
+    entries = [
         url_entry("", changefreq="daily", priority="1.0"),
         url_entry("/guest/browse", changefreq="daily", priority="0.9"),
         url_entry("/about-us", changefreq="monthly", priority="0.7"),
@@ -220,7 +301,12 @@ async def get_static_sitemap():
         url_entry("/privacy", changefreq="monthly", priority="0.6"),
         url_entry("/refund-policy", changefreq="monthly", priority="0.6"),
         url_entry("/account-deletion", changefreq="monthly", priority="0.5"),
-    ])
+    ]
+    entries.extend(
+        url_entry(path, changefreq="monthly", priority="0.7")
+        for path in SEO_LANDING_PATHS
+    )
+    return urlset(entries)
 
 @router.get("/sitemap-properties.xml")
 async def get_properties_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
@@ -228,7 +314,7 @@ async def get_properties_sitemap(db: AsyncIOMotorDatabase = Depends(get_db)):
     
     try:
         for prop in await get_live_properties(db):
-            prop_id = prop.get("property_id")
+            prop_id = prop.get("property_id") or (str(prop.get("_id")) if prop.get("_id") else None)
             if prop_id:
                 xml_entries.append(url_entry(
                     f"/property/{quote(str(prop_id))}",

@@ -38,7 +38,9 @@ async def create_missing_users(db=None):
     from datetime import timezone
     now = datetime.now(timezone.utc)
     admin_email = os.environ.get("ADMIN_EMAIL", "admin@xspace360.com")
-    admin_password = os.environ.get("ADMIN_PASSWORD", "admin@123")
+    admin_password = os.environ.get("ADMIN_PASSWORD", "").strip()
+    if not admin_password:
+        raise RuntimeError("ADMIN_PASSWORD must be configured")
     admin_name = os.environ.get("ADMIN_NAME", "X-Space360 Admin")
     
     users = [

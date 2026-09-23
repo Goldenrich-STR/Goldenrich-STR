@@ -1,6 +1,7 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
 import { organizationSchema, websiteSchema } from "../lib/seoSchemas";
+import { getPropertySlug } from "../lib/propertySlug";
 
 const SITE_NAME = "X-Space360";
 const SITE_URL = "https://x-space360.in";
@@ -57,10 +58,13 @@ const SEO = ({
   type = "website", // website, property, listing, blog, host, faq
   data = {},
   breadcrumbs = [],
+  appendSiteName = true,
   seo = null // API returned seo object: {title, description, keywords, canonical, image, robots}
 }) => {
   const baseTitle = seo?.title || title || "Short-term Rentals & Event Venues";
-  const pageTitle = baseTitle.includes(SITE_NAME) ? baseTitle : `${baseTitle} | ${SITE_NAME}`;
+  const pageTitle = appendSiteName && !baseTitle.includes(SITE_NAME)
+    ? `${baseTitle} | ${SITE_NAME}`
+    : baseTitle;
   const pageDesc = seo?.description || description || "Explore short-term rentals, premium villas, commercial spaces, and event venues across India on X-Space360.";
   const resolvedKeywords = seo?.keywords || keywords;
   const pageKeywords = Array.isArray(resolvedKeywords)
@@ -109,7 +113,7 @@ const SEO = ({
     const accommodationSchema = {
       "@context": "https://schema.org",
       "@type": p.category === "commercial" ? "CommercialProperties" : "Accommodation",
-      "@id": `https://x-space360.in/property/${p.property_id}#accommodation`,
+      "@id": `https://x-space360.in/property/${getPropertySlug(p)}#accommodation`,
       "name": p.title,
       "description": p.description,
       "image": cleanImages,
@@ -131,7 +135,7 @@ const SEO = ({
         "price": basePrice,
         "priceCurrency": p.currency || "INR",
         "availability": p.status === "live" ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
-        "url": `https://x-space360.in/property/${p.property_id}`
+        "url": `https://x-space360.in/property/${getPropertySlug(p)}`
       },
       "amenityFeature": Array.isArray(p.amenities) ? p.amenities.map(amenity => ({
         "@type": "LocationFeatureSpecification",
@@ -179,7 +183,7 @@ const SEO = ({
     const listItems = data.properties.map((p, idx) => ({
       "@type": "ListItem",
       "position": idx + 1,
-      "url": `https://x-space360.in/property/${p.property_id}`,
+      "url": `https://x-space360.in/property/${getPropertySlug(p)}`,
       "name": p.title,
       "image": p.images && p.images[0] ? (p.images[0].startsWith("http") ? p.images[0] : `https://x-space360.in/api/uploads/${p.images[0]}`) : undefined
     }));

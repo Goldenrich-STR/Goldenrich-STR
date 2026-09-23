@@ -111,13 +111,76 @@ def _event_policy_percent(property_dict: dict, key: str, default: float) -> floa
     return percent
 
 
+def _is_hourly_commercial(property_dict: dict) -> bool:
+    return (
+        property_dict.get("category") == "commercial"
+        and str(property_dict.get("pricing_cycle") or "").lower() == "hourly"
+    )
+
+
+def _time_minutes(value: str) -> int:
+    parts = value.split(":")
+    if len(parts) != 2:
+        raise ValueError
+    hours, minutes = (int(part) for part in parts)
+    if hours < 0 or hours > 24 or minutes < 0 or minutes > 59 or (hours == 24 and minutes != 0):
+        raise ValueError
+    return (hours * 60) + minutes
+
+
+def _hourly_duration(start_time: Optional[str], end_time: Optional[str]) -> int:
+    if not start_time or not end_time:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Please select start time and end time",
+        )
+
+    try:
+        start_minutes = _time_minutes(start_time)
+        end_minutes = _time_minutes(end_time)
+    except (TypeError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Time must use HH:MM format",
+        )
+
+    duration_minutes = end_minutes - start_minutes
+    if duration_minutes < 60 or duration_minutes % 60 != 0:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Select a whole-hour duration of at least 1 hour",
+        )
+    return duration_minutes // 60
+
+
+def _hourly_booking_duration(property_dict: dict, start_time: Optional[str], end_time: Optional[str]) -> int:
+    duration = _hourly_duration(start_time, end_time)
+    try:
+        opening_minutes = _time_minutes(str(property_dict.get("check_in_time") or ""))
+        closing_minutes = _time_minutes(str(property_dict.get("check_out_time") or ""))
+        selected_start = _time_minutes(start_time or "")
+        selected_end = _time_minutes(end_time or "")
+    except ValueError:
+        return duration
+
+    if closing_minutes > opening_minutes and (selected_start < opening_minutes or selected_end > closing_minutes):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Select a time between {property_dict.get('check_in_time')} and {property_dict.get('check_out_time')}",
+        )
+    return duration
+
+
 def _active_booking_query(
     property_id: str,
     check_in_iso: str,
     check_out_iso: str,
     *,
     category: str = "",
+    pricing_cycle: str = "",
     selected_slot: str | None = None,
+    start_time: str | None = None,
+    end_time: str | None = None,
 ) -> dict:
     now = datetime.now(timezone.utc)
     status_filter = {
@@ -139,6 +202,28 @@ def _active_booking_query(
                 {
                     "check_in_date": {"$lte": check_in_iso},
                     "check_out_date": {"$gte": check_in_iso},
+                },
+            ],
+        }
+
+    if category == "commercial" and pricing_cycle == "hourly" and start_time and end_time:
+        return {
+            "property_id": property_id,
+            "$and": [
+                status_filter,
+                {
+                    "check_in_date": {"$lte": check_out_iso},
+                    "check_out_date": {"$gte": check_in_iso},
+                },
+                {
+                    "$or": [
+                        {"start_time": {"$exists": False}},
+                        {"end_time": {"$exists": False}},
+                        {
+                            "start_time": {"$lt": end_time},
+                            "end_time": {"$gt": start_time},
+                        },
+                    ]
                 },
             ],
         }
@@ -169,12 +254,18 @@ def _active_booking_query(
     return query
 
 
-def _blocked_date_query(property_id: str, check_in_iso: str, check_out_iso: str, category: str = "") -> dict:
+def _blocked_date_query(
+    property_id: str,
+    check_in_iso: str,
+    check_out_iso: str,
+    category: str = "",
+    pricing_cycle: str = "",
+) -> dict:
     """Match inclusive calendar blocks against booking dates.
 
     Stay checkout is exclusive, while event venue end dates are inclusive.
     """
-    start_operator = "$lte" if category == "event_venue" else "$lt"
+    start_operator = "$lte" if category == "event_venue" or pricing_cycle == "hourly" else "$lt"
     return {
         "property_id": property_id,
         "start_date": {start_operator: check_out_iso},
@@ -194,6 +285,8 @@ class BookingQuoteRequest(BaseModel):
     check_in_date: str
     check_out_date: str
     number_of_guests: int = 1
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     selected_slot: Optional[str] = None
     food_preference: Optional[str] = None
     payment_type: Optional[str] = "full"
@@ -413,8 +506,11 @@ async def _build_booking_quote(
     except ValueError:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid booking dates")
 
-    if check_in > check_out or (check_in == check_out and property_dict.get("category") != "event_venue"):
+    is_hourly = _is_hourly_commercial(property_dict)
+    if check_in > check_out or (check_in == check_out and property_dict.get("category") != "event_venue" and not is_hourly):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Check-out date must be after check-in date")
+    daily_hours = _hourly_booking_duration(property_dict, payload.start_time, payload.end_time) if is_hourly else None
+    booking_days = ((check_out - check_in).days + 1) if is_hourly else None
 
     if int(payload.number_of_guests or 1) > int(property_dict.get("max_guests") or 1):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Guest count exceeds property capacity")
@@ -426,7 +522,10 @@ async def _build_booking_quote(
         check_in_iso,
         check_out_iso,
         category=property_dict.get("category", ""),
+        pricing_cycle=property_dict.get("pricing_cycle", ""),
         selected_slot=payload.selected_slot,
+        start_time=payload.start_time,
+        end_time=payload.end_time,
     ))
     if existing_booking:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Selected dates are no longer available")
@@ -437,13 +536,16 @@ async def _build_booking_quote(
             check_in_iso,
             check_out_iso,
             property_dict.get("category", ""),
+            property_dict.get("pricing_cycle", ""),
         )
     )
     if blocked_conflict:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Property is unavailable for selected dates")
 
     num_units = (check_out - check_in).days
-    if property_dict.get("category") == "event_venue":
+    if is_hourly:
+        num_units = daily_hours * booking_days
+    elif property_dict.get("category") == "event_venue":
         num_units = max(1, num_units + 1)
 
     unit_price = float(property_dict.get("base_price") or property_dict.get("price_per_night") or 0)
@@ -514,7 +616,11 @@ async def _build_booking_quote(
         "check_in_date": check_in_iso,
         "check_out_date": check_out_iso,
         "duration_units": max(1, num_units),
-        "duration_label": "day" if property_dict.get("category") in {"commercial", "event_venue"} else "night",
+        "duration_label": "hour" if is_hourly else "day" if property_dict.get("category") in {"commercial", "event_venue"} else "night",
+        "start_time": payload.start_time if is_hourly else None,
+        "end_time": payload.end_time if is_hourly else None,
+        "daily_hours": daily_hours,
+        "booking_days": booking_days,
         "number_of_guests": int(payload.number_of_guests or 1),
         "selected_slot": payload.selected_slot,
         "food_preference": payload.food_preference,
@@ -621,11 +727,15 @@ async def create_booking(
         check_in = booking_data.check_in_date
         check_out = booking_data.check_out_date
         
-        if check_in > check_out or (check_in == check_out and property_dict.get("category") != "event_venue"):
+        is_hourly = _is_hourly_commercial(property_dict)
+        if check_in > check_out or (check_in == check_out and property_dict.get("category") != "event_venue" and not is_hourly):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Check-out date must be after check-in date"
             )
+        daily_hours = _hourly_booking_duration(property_dict, booking_data.start_time, booking_data.end_time) if is_hourly else None
+        booking_days = ((check_out - check_in).days + 1) if is_hourly else None
+        duration_hours = (daily_hours * booking_days) if is_hourly else None
         
         # Check for existing active bookings. Event venues are slot-level:
         # the same date can still be booked for a different available slot.
@@ -634,7 +744,10 @@ async def create_booking(
             check_in.isoformat(),
             check_out.isoformat(),
             category=property_dict.get("category", ""),
+            pricing_cycle=property_dict.get("pricing_cycle", ""),
             selected_slot=booking_data.selected_slot,
+            start_time=booking_data.start_time,
+            end_time=booking_data.end_time,
         ))
         
         if existing_booking:
@@ -656,6 +769,11 @@ async def create_booking(
         "booking_details": {
                             "check_in_date": existing_booking.get("check_in_date"),
                             "check_out_date": existing_booking.get("check_out_date"),
+                            "start_time": existing_booking.get("start_time"),
+                            "end_time": existing_booking.get("end_time"),
+                            "duration_hours": existing_booking.get("duration_hours"),
+                            "daily_hours": existing_booking.get("daily_hours"),
+                            "booking_days": existing_booking.get("booking_days"),
                             "base_amount": existing_booking.get("base_amount", 0),
                             "service_fee": existing_booking.get("service_fee", 0),
                             "taxes": existing_booking.get("taxes", 0),
@@ -672,7 +790,13 @@ async def create_booking(
             if existing_booking:
                 raise HTTPException(
                     status_code=status.HTTP_409_CONFLICT,
-                    detail="Selected slot is already booked for these dates" if property_dict.get("category") == "event_venue" else "Property is already booked for selected dates"
+                    detail=(
+                        "Selected slot is already booked for these dates"
+                        if property_dict.get("category") == "event_venue"
+                        else "Selected time is already booked for this date"
+                        if is_hourly
+                        else "Property is already booked for selected dates"
+                    )
                 )
         
         # Check for blocked dates (manual or external calendar)
@@ -682,6 +806,7 @@ async def create_booking(
                 check_in.isoformat(),
                 check_out.isoformat(),
                 property_dict.get("category", ""),
+                property_dict.get("pricing_cycle", ""),
             )
         )
         
@@ -693,7 +818,9 @@ async def create_booking(
         
         # Calculate pricing
         num_nights = (check_out - check_in).days
-        if property_dict.get("category") == "event_venue":
+        if is_hourly:
+            num_nights = duration_hours
+        elif property_dict.get("category") == "event_venue":
             num_nights = max(1, num_nights + 1)
             
         nightly_price = property_dict.get("base_price")
@@ -775,6 +902,11 @@ async def create_booking(
             check_in_date=check_in,
             check_out_date=check_out,
             number_of_guests=booking_data.number_of_guests,
+            start_time=booking_data.start_time if is_hourly else None,
+            end_time=booking_data.end_time if is_hourly else None,
+            duration_hours=duration_hours,
+            daily_hours=daily_hours,
+            booking_days=booking_days,
             base_amount=base_amount,
             service_fee=service_fee,
             taxes=taxes,
@@ -881,6 +1013,11 @@ async def create_booking(
             "booking_details": {
                 "check_in_date": check_in.isoformat(),
                 "check_out_date": check_out.isoformat(),
+                "start_time": booking.start_time,
+                "end_time": booking.end_time,
+                "duration_hours": booking.duration_hours,
+                "daily_hours": booking.daily_hours,
+                "booking_days": booking.booking_days,
                 "base_amount": base_amount,
                 "service_fee": service_fee,
                 "service_fee_percent": service_fee_percent,

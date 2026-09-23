@@ -22,7 +22,9 @@ async def create():
         db = client[os.environ['DB_NAME']]
 
     email = 'admin2@goldenrichstay.com'
-    password = 'admin@123'
+    password = os.environ.get("ADMIN_PASSWORD", "").strip()
+    if not password:
+        raise RuntimeError("ADMIN_PASSWORD must be configured")
     
     # Check if exists
     existing = await db.users.find_one({'email': email})

@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
+import { formatContentWithBullets } from '../lib/formatContent';
 
 const markdownComponents = {
   h1: ({ node, ...props }) => <h1 className="text-2xl font-extrabold text-charcoal mb-4" {...props} />,
@@ -23,7 +24,7 @@ const LegalDocument = ({ text = '' }) => {
   }
 
   // Pre-process text to strip double titles or double headers if they exist
-  let cleanedText = String(text || '');
+  let cleanedText = formatContentWithBullets(String(text || ''));
 
   return (
     <article className="prose max-w-none text-left">

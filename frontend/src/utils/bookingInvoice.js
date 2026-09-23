@@ -1,3 +1,5 @@
+import { formatAddress } from '../lib/displayLabels';
+
 const plainMoney = (value) => Math.round(Number(value || 0)).toLocaleString('en-IN');
 
 const usefulInvoiceText = (...values) => {
@@ -263,7 +265,7 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
     ...(booking.property || {}),
   };
   const propertyName = propObj.title || propObj.property_name || propObj.name || booking.property_name || propObj.property_id || booking.property_id || 'NA';
-  const propertyAddress = [propObj.address, propObj.city, propObj.state, propObj.pin_code].filter(Boolean).join(', ') || booking.property_address || 'NA';
+  const propertyAddress = formatAddress(propObj.address || booking.property_address, propObj.city, propObj.state, propObj.pin_code) || 'NA';
   
   const userObj = user || booking.user || booking.guest || {};
   const customerName = userObj.full_name || userObj.name || booking.customer_name || booking.guest_name || 'Guest';

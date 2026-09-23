@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { getPlaceBySlug } from '../data/placesToVisit';
+import { getPropertyUrl } from '../lib/propertySlug';
 import { ArrowLeft, MapPin, Calendar, Star, Map } from 'lucide-react';
 import SEO from '../components/SEO';
 
 const PROPERTY_IMAGE_FALLBACK = 'https://images.unsplash.com/photo-1564013799919-ab600027ffc6?auto=format&fit=crop&q=80';
+const SITE_URL = 'https://x-space360.in';
 const getImageUrl = (url) => {
   if (!url) return PROPERTY_IMAGE_FALLBACK;
   if (url.startsWith('http')) {
@@ -22,6 +24,12 @@ const PlaceDetails = () => {
   
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (place && slug !== place.slug) {
+      navigate(place.canonicalPath || `/places/${place.slug}/`, { replace: true });
+    }
+  }, [navigate, place, slug]);
 
   useEffect(() => {
     if (!place) return;
@@ -55,9 +63,33 @@ const PlaceDetails = () => {
     );
   }
 
+  const canonicalPath = place.canonicalPath || `/places/${place.slug}/`;
+  const canonicalUrl = `${SITE_URL}${canonicalPath}`;
+  const seoDescription = place.metaDescription || place.description;
+  const placeSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'TouristAttraction',
+    name: place.h1 || place.title,
+    description: seoDescription,
+    image: place.heroImage,
+    url: canonicalUrl
+  };
+
   return (
     <div className="min-h-screen bg-stone/30">
-      <SEO title={`${place.title} - Places to Visit`} description={place.description} />
+      <SEO
+        title={place.seoTitle || `${place.title} - Places to Visit`}
+        description={seoDescription}
+        path={canonicalPath}
+        canonicalUrl={canonicalUrl}
+        image={place.heroImage}
+        schema={placeSchema}
+        appendSiteName={false}
+        breadcrumbs={[
+          { name: 'Home', url: '/' },
+          { name: place.h1 || place.title, url: canonicalPath }
+        ]}
+      />
       
       {/* Hero Section */}
       <div className="relative h-[60vh] min-h-[400px] w-full bg-charcoal flex items-end pb-12">
@@ -79,7 +111,7 @@ const PlaceDetails = () => {
             <span className="font-medium">Back to Home</span>
           </button>
           <h1 className="text-5xl md:text-7xl font-bold text-white mb-2 tracking-tight">
-            {place.title}
+            {place.h1 || place.title}
           </h1>
           <p className="text-xl md:text-2xl text-white/90 font-light max-w-2xl">
             {place.subtitle}
@@ -164,7 +196,7 @@ const PlaceDetails = () => {
               <button
                 key={item.property_id || index}
                 type="button"
-                onClick={() => navigate(`/property/${item.property_id}`)}
+                onClick={() => navigate(getPropertyUrl(item))}
                 className="w-full bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left flex flex-col group"
               >
                 <div className="relative aspect-[16/10] bg-stone overflow-hidden">

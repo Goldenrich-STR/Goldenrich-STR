@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import apiClient, { verificationAPI, getImageUrl } from '../services/api';
 import { NotificationBell } from '../components/NotificationCenter';
-import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText } from '../lib/displayLabels';
+import { formatCategoryLabel, formatDisplayLabel, formatPropertyTypeLabel, formatReadableText, formatAddress } from '../lib/displayLabels';
 import { 
   Users, Building2, FileCheck, AlertCircle, CheckCircle, 
   XCircle, Download, FileText, BarChart3, LogOut, Eye, ChevronLeft, ChevronRight, Plus,
@@ -984,7 +984,7 @@ const VerificationReviewSection = () => {
                     </div>
                     <div>
                       <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider">Location Status</p>
-                      <p className="font-bold text-charcoal truncate" title={`${selectedVerification.property_details.address}, ${selectedVerification.property_details.city}`}>
+                      <p className="font-bold text-charcoal truncate" title={formatAddress(selectedVerification.property_details.address, selectedVerification.property_details.city)}>
                         {selectedVerification.property_details.city || 'N/A'}
                       </p>
                     </div>
@@ -1027,7 +1027,7 @@ const VerificationReviewSection = () => {
                     <div className="pt-2">
                       <p className="text-[9px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider mb-1">Full Address</p>
                       <p className="text-xs text-charcoal-light leading-relaxed">
-                        {selectedVerification.property_details.address}, {selectedVerification.property_details.city}, {selectedVerification.property_details.state} - {selectedVerification.property_details.pin_code}
+                        {formatAddress(selectedVerification.property_details.address, selectedVerification.property_details.city, selectedVerification.property_details.state, selectedVerification.property_details.pin_code)}
                       </p>
                     </div>
                   )}

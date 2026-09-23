@@ -109,12 +109,12 @@ export default function Footer({ cmsContent }) {
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => navigate('/property/commercial-spaces')} className="hover:text-white transition">
+                  <button type="button" onClick={() => navigate('/property/workspaces/')} className="hover:text-white transition">
                     Commercial &amp; Workspaces
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => navigate('/property/event-venues')} className="hover:text-white transition">
+                  <button type="button" onClick={() => navigate('/event-venues/')} className="hover:text-white transition">
                     Event Venues &amp; Rooftops
                   </button>
                 </li>
@@ -124,7 +124,7 @@ export default function Footer({ cmsContent }) {
                   </button>
                 </li>
                 <li>
-                  <button type="button" onClick={() => navigate('/host/list-property')} className="hover:text-white transition">
+                  <button type="button" onClick={() => navigate('/list-your-property')} className="hover:text-white transition">
                     Post Your Property
                   </button>
                 </li>

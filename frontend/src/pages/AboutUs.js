@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Building2, MapPin, Mail, Phone, ShieldCheck, CheckCircle2, Sparkles, 
   Facebook, Instagram, Youtube, Menu, X, ArrowRight, Compass, Users, Milestone, Award
@@ -10,6 +10,7 @@ import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 import { organizationSchema } from '../lib/seoSchemas';
 import LegalDocument from '../components/LegalDocument';
+import Footer from '../components/Footer';
 
 const TRANSLATIONS = {
   en: {
@@ -94,7 +95,7 @@ const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals in India through curation, technology, and superior service.',
   location: 'Nashik, Maharashtra',
   email: 'support@x-space360.com',
-  phone: '+91 8484826247',
+  phone: '+91 919225586010',
   facebook_link: 'https://facebook.com',
   instagram_link: 'https://instagram.com',
   youtube_link: 'https://youtube.com',
@@ -102,11 +103,11 @@ const DEFAULT_FOOTER_DATA = {
     { heading: 'For Guests', items: [
       { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
       { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' }
+      { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
-      { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-      { label: 'Become a Host', action_type: 'link', link: '/register?role=host', text: '' }
+      { label: 'List Your Space', action_type: 'link', link: '/list-your-property', text: '' },
+      { label: 'Become a Host', action_type: 'link', link: '/register/host', text: '' }
     ] },
     { heading: 'Company', items: [
       { label: 'About Us', action_type: 'link', link: '/about-us', text: '' },
@@ -201,8 +202,8 @@ const AboutUs = () => {
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
-      if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register?role=host');
+      if (item.link === '/host/list-property' || item.link === '/list-your-property') {
+        navigate(user ? '/host/list-property' : '/list-your-property');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -226,9 +227,10 @@ const AboutUs = () => {
   return (
     <div className="min-h-screen bg-sand-50 font-sans text-charcoal">
       <SEO
-        title="About X-Space360"
-        description="Learn about X-Space360, our mission and our smart property discovery platform for stays, workspaces and event venues."
+        title="About X-Space360 | Stays, Venues & Workspaces"
+        description="Learn how X-Space360 helps guests find stays, event venues and workspaces across Nashik and nearby destinations."
         path="/about-us"
+        appendSiteName={false}
         keywords={[
           "about X-Space360",
           "property booking platform India",
@@ -245,18 +247,18 @@ const AboutUs = () => {
 
         {/* Center Pill Links */}
         <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 top-1/2 -translate-y-1/2 h-12 items-center px-8 space-x-6 font-semibold text-[11px] uppercase tracking-widest text-charcoal bg-stone/80 backdrop-blur-md border border-stone-200 rounded-full shadow-subtle">
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/'); }} className="hover:text-terracotta transition">
+          <Link to="/" className="hover:text-terracotta transition">
             Home
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/guest/browse" className="hover:text-terracotta transition">
             Discover
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/blog'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/blog" className="hover:text-terracotta transition">
             Blog
-          </a>
-          <a href="#" onClick={(e) => { e.preventDefault(); navigate('/support'); }} className="hover:text-terracotta transition">
+          </Link>
+          <Link to="/support" className="hover:text-terracotta transition">
             Support
-          </a>
+          </Link>
           <div className="w-[1px] h-4 bg-charcoal/20" />
           <LanguageSelector
             currentLang={lang}
@@ -379,105 +381,100 @@ const AboutUs = () => {
         </div>
       )}
 
-      {/* Hero Header Section */}
-      <div className="relative pt-32 pb-24 md:pt-44 md:pb-32 bg-[#0C121D] text-white overflow-hidden border-b border-[#E0A51B]/20">
-        <div className="absolute inset-0 opacity-40 bg-[url('https://images.unsplash.com/photo-1512917774080-9991f1c4c750?q=80&w=2070')] bg-cover bg-center transform scale-105 transition-transform duration-1000" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/90 to-[#1E293B]/70" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0F172A]/10 to-[#0F172A]" />
-        
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-6">
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-4.5 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-[#E0A51B] animate-pulse">
+      {/* Hero Header Section - Clean Trulia Style */}
+      <div className="relative pt-32 pb-16 md:pt-44 md:pb-20 bg-[#FBFBFA] border-b border-gray-200">
+        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-6">
+          <div className="inline-flex items-center space-x-2 bg-emerald-50 text-emerald-800 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Discover X-Space360</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight font-serif text-white">
-            {t('aboutTitle')}
+          <h1 className="text-4xl md:text-5xl lg:text-[56px] font-black tracking-tight font-sans text-[#0F4A33] leading-[1.1]">
+            About X-Space360
           </h1>
-          <p className="text-lg md:text-xl text-white/80 max-w-3xl mx-auto leading-relaxed font-light">
+          <p className="text-xl md:text-2xl text-gray-500 font-light leading-relaxed max-w-3xl mx-auto">
             {t('aboutSubtitle')}
           </p>
         </div>
       </div>
 
       {/* Story & Vision Section */}
-      <div className="max-w-6xl mx-auto px-6 py-20 grid grid-cols-1 md:grid-cols-2 gap-12 lg:gap-20">
-        <div className="space-y-6">
-          <div className="flex items-center space-x-3 text-terracotta">
-            <Milestone className="w-6 h-6" />
-            <h2 className="text-2xl font-bold tracking-tight text-charcoal">{t('ourStory')}</h2>
-          </div>
-          <p className="text-charcoal-light leading-relaxed text-base font-medium">
-            {t('storyText')}
-          </p>
-          <div className="p-6 rounded-3xl bg-white border border-sand-200 shadow-premium flex items-start gap-4">
-            <Award className="w-10 h-10 text-[#E0A51B] flex-shrink-0" />
-            <div>
-              <h4 className="font-bold text-charcoal text-sm uppercase tracking-wider mb-1">Golden Rich Financial Group</h4>
-              <p className="text-xs text-charcoal-muted leading-relaxed font-medium">
-                Our parent entity, Golden Rich Financial Solutions and Real Estate Solutions Pvt Ltd, provides institutional backing, regulatory compliance, and market confidence.
-              </p>
+      <div className="bg-white">
+        <div className="max-w-5xl mx-auto px-6 py-20 grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div className="space-y-6">
+            <h2 className="text-3xl font-black tracking-tight text-[#0F4A33] font-sans">{t('ourStory')}</h2>
+            <p className="text-gray-600 leading-relaxed text-lg font-light">
+              {t('storyText')}
+            </p>
+            <div className="pt-4">
+              <div className="p-6 rounded-2xl bg-gray-50 border border-gray-100 flex items-start gap-4">
+                <Award className="w-8 h-8 text-[#6B1934] flex-shrink-0" />
+                <div>
+                  <h4 className="font-bold text-gray-900 text-sm uppercase tracking-wider mb-1">Golden Rich Financial Group</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">
+                    Our parent entity provides institutional backing, regulatory compliance, and market confidence.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="space-y-8 bg-white p-8 rounded-3xl border border-sand-200 shadow-premium">
-          <div className="space-y-3">
-            <h3 className="text-base font-black text-charcoal uppercase tracking-widest flex items-center space-x-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-terracotta" />
-              <span>{t('vision')}</span>
-            </h3>
-            <p className="text-sm text-charcoal-light leading-relaxed font-medium">
-              {t('visionText')}
-            </p>
-          </div>
-          <div className="w-full h-[1px] bg-sand-200" />
-          <div className="space-y-3">
-            <h3 className="text-base font-black text-charcoal uppercase tracking-widest flex items-center space-x-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-sage" />
-              <span>{t('mission')}</span>
-            </h3>
-            <p className="text-sm text-charcoal-light leading-relaxed font-medium">
-              {t('missionText')}
-            </p>
+          <div className="space-y-8 bg-[#F0E5DE] p-8 md:p-10 rounded-3xl">
+            <div className="space-y-3">
+              <h3 className="text-sm font-black text-[#6B1934] uppercase tracking-widest mb-2">
+                {t('vision')}
+              </h3>
+              <p className="text-xl text-gray-900 leading-relaxed font-serif font-medium">
+                "{t('visionText')}"
+              </p>
+            </div>
+            <div className="w-12 h-1 bg-[#0F4A33]/20" />
+            <div className="space-y-3">
+              <h3 className="text-sm font-black text-[#6B1934] uppercase tracking-widest mb-2">
+                {t('mission')}
+              </h3>
+              <p className="text-xl text-gray-900 leading-relaxed font-serif font-medium">
+                "{t('missionText')}"
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Core Values Section */}
-      <div className="bg-white border-y border-stone py-20">
-        <div className="max-w-6xl mx-auto px-6">
+      <div className="bg-[#FBFBFA] border-t border-gray-200 py-24">
+        <div className="max-w-5xl mx-auto px-6">
           <div className="text-center max-w-2xl mx-auto mb-16 space-y-4">
-            <h2 className="text-3xl font-extrabold tracking-tight text-charcoal">{t('coreValues')}</h2>
-            <p className="text-sm text-charcoal-muted font-medium">The foundational pillars that support our curate, lock, and verify operational standards.</p>
+            <h2 className="text-3xl md:text-4xl font-black tracking-tight text-[#0F4A33] font-sans">{t('coreValues')}</h2>
+            <p className="text-lg text-gray-500 font-light">The foundational pillars that support our curate, lock, and verify operational standards.</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-8 rounded-3xl bg-stone/40 border border-stone/60 space-y-4 hover:shadow-premium hover:-translate-y-1 transition-all duration-300">
-              <div className="w-12 h-12 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center">
-                <ShieldCheck className="w-6 h-6" />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            <div className="space-y-4 text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-emerald-50 text-emerald-800 flex items-center justify-center">
+                <ShieldCheck className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-lg text-charcoal">{t('valueTrust')}</h3>
-              <p className="text-sm text-charcoal-muted leading-relaxed font-medium">
+              <h3 className="font-bold text-xl text-gray-900">{t('valueTrust')}</h3>
+              <p className="text-gray-600 leading-relaxed font-light">
                 {t('valueTrustText')}
               </p>
             </div>
 
-            <div className="p-8 rounded-3xl bg-stone/40 border border-stone/60 space-y-4 hover:shadow-premium hover:-translate-y-1 transition-all duration-300">
-              <div className="w-12 h-12 rounded-2xl bg-[#E0A51B]/10 text-[#E0A51B] flex items-center justify-center">
-                <Compass className="w-6 h-6" />
+            <div className="space-y-4 text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                <Compass className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-lg text-charcoal">{t('valueDesign')}</h3>
-              <p className="text-sm text-charcoal-muted leading-relaxed font-medium">
+              <h3 className="font-bold text-xl text-gray-900">{t('valueDesign')}</h3>
+              <p className="text-gray-600 leading-relaxed font-light">
                 {t('valueDesignText')}
               </p>
             </div>
 
-            <div className="p-8 rounded-3xl bg-stone/40 border border-stone/60 space-y-4 hover:shadow-premium hover:-translate-y-1 transition-all duration-300">
-              <div className="w-12 h-12 rounded-2xl bg-sage/10 text-sage flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6" />
+            <div className="space-y-4 text-center">
+              <div className="w-16 h-16 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                <CheckCircle2 className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-lg text-charcoal">{t('valueSeamless')}</h3>
-              <p className="text-sm text-charcoal-muted leading-relaxed font-medium">
+              <h3 className="font-bold text-xl text-gray-900">{t('valueSeamless')}</h3>
+              <p className="text-gray-600 leading-relaxed font-light">
                 {t('valueSeamlessText')}
               </p>
             </div>
@@ -486,130 +483,7 @@ const AboutUs = () => {
       </div>
 
       {/* Footer */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,#0b1b2e_0%,#07111e_48%,#101722_100%)] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-12 md:px-10 lg:px-14 xl:px-20">
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(4,1fr)_1.2fr] lg:gap-12">
-            <div className="max-w-xs">
-              <button
-                type="button"
-                className="mb-6 flex items-center"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-              >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
-              </button>
-              <p className="text-sm font-medium leading-7 text-white/62">
-                {footerData.brand_description || t('footerSub')}
-              </p>
-              <div className="mt-7 flex items-center gap-3">
-                {[
-                  { icon: Facebook, url: footerData.facebook_link, label: 'Facebook' },
-                  { icon: Instagram, url: footerData.instagram_link, label: 'Instagram' },
-                  { icon: Youtube, url: footerData.youtube_link, label: 'Youtube' },
-                ].filter(social => social.url).map((social) => {
-                  const IconComponent = social.icon;
-                  return (
-                    <a
-                      key={social.label}
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={social.label}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/14 bg-white/[0.03] text-white/70 transition hover:border-[#E0A51B] hover:text-[#E0A51B]"
-                    >
-                      <IconComponent className="h-4 w-4" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
-
-            {footerSections.map((section) => (
-              <div key={section.heading} className="min-w-0">
-                <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                  {section.heading}
-                  <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-                </h5>
-                <ul className="space-y-4">
-                  {section.items.map((item) => (
-                    <li key={`${section.heading}-${item.label}`}>
-                      <button
-                        type="button"
-                        onClick={() => handleFooterSectionClick(section, item)}
-                        className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
-                      >
-                        {item.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
-
-            <div className="min-w-0">
-              <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                Contact
-                <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-              </h5>
-              <div className="space-y-5 text-sm font-medium text-white/62">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.location || 'Nashik, Maharashtra'}, India</span>
-                </div>
-                <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Mail className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span className="break-all">{footerData.email || 'support@x-space360.com'}</span>
-                </a>
-                <a href={`tel:${(footerData.phone || '+91 12345 67890').replace(/\s+/g, '')}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Phone className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.phone || '+91 12345 67890'}</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-11 border-t border-white/10 pt-7 text-center">
-            <div className="text-xs font-bold uppercase text-white/52">
-              <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
-              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
-                {footerLegalItems.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                    className="transition hover:text-[#E0A51B]"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      {/* Footer Text Popup Modal */}
-      {footerPopup && (
-        <div className="fixed inset-0 z-[120] bg-charcoal/60 backdrop-blur-sm flex items-center justify-center px-4">
-          <div className="bg-white rounded-3xl shadow-elevated border border-gray-100 w-full max-w-xl max-h-[85vh] overflow-y-auto p-7 md:p-9 animate-scale-in">
-            <div className="flex items-start justify-between gap-6 mb-6">
-              <h3 className="text-2xl font-bold tracking-tight text-charcoal">{footerPopup.title}</h3>
-              <button
-                type="button"
-                onClick={() => setFooterPopup(null)}
-                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center"
-                aria-label="Close footer details"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="max-h-[60vh] overflow-y-auto mt-4 pr-1">
-              <LegalDocument text={footerPopup.text} />
-            </div>
-          </div>
-        </div>
-      )}
+      <Footer cmsContent={cmsContent} />
     </div>
   );
 };

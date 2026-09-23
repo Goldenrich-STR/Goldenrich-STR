@@ -690,7 +690,7 @@ const GuestBookings = () => {
             </div>
             
             <p className="text-[10px] text-charcoal-muted font-bold text-center uppercase tracking-wider bg-stone py-2 px-3 rounded-xl border border-gray-100 mb-3">
-              Contact Support: +91 8484826247
+              Contact Support: +91 919225586010
             </p>
 
             <p className="text-[11px] text-charcoal-muted font-semibold text-center leading-relaxed mb-3">

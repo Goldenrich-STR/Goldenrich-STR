@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Share2, Link, Check, Share } from 'lucide-react';
+import { getPropertySlug } from '../lib/propertySlug';
 
-const ShareDropdown = ({ property, className = "", align = "right" }) => {
+const ShareDropdown = ({ property, className = "", align = "right", trigger = null }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef(null);
@@ -17,7 +18,7 @@ const ShareDropdown = ({ property, className = "", align = "right" }) => {
   }, []);
 
   const getPropertyUrl = () => {
-    return `${window.location.origin}/property/${property.property_id}`;
+    return `${window.location.origin}/property/${getPropertySlug(property)}`;
   };
 
   const getPrice = () => {
@@ -82,16 +83,26 @@ const ShareDropdown = ({ property, className = "", align = "right" }) => {
 
   return (
     <div className={`relative inline-block ${isOpen ? 'z-50' : ''}`} ref={dropdownRef}>
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
-        className={`w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer text-charcoal hover:text-terracotta ${className}`}
-        title="Share property"
-      >
-        <Share2 className="w-3.5 h-3.5" />
-      </button>
+      {trigger ? (
+        React.cloneElement(trigger, {
+          onClick: (e) => {
+            e.stopPropagation();
+            trigger.props.onClick?.(e);
+            setIsOpen(!isOpen);
+          }
+        })
+      ) : (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-subtle hover:bg-white hover:scale-[1.03] transition cursor-pointer text-charcoal hover:text-terracotta ${className}`}
+          title="Share property"
+        >
+          <Share2 className="w-3.5 h-3.5" />
+        </button>
+      )}
 
       {isOpen && (
         <div 

@@ -407,7 +407,7 @@ const GuestBrowse = () => {
 
   useEffect(() => {
     fetchProperties();
-    if (filters) {
+    if (filters && !routePreset) {
       const cleanUrl = getSeoUrlForFilters(filters);
       if (cleanUrl && !cleanUrl.includes('?')) {
         const currentPath = window.location.pathname;
@@ -416,7 +416,7 @@ const GuestBrowse = () => {
         }
       }
     }
-  }, [fetchProperties, filters]);
+  }, [fetchProperties, filters, routePreset]);
 
   const handleSearch = (e) => {
     if (e && e.preventDefault) e.preventDefault();
@@ -569,12 +569,14 @@ const GuestBrowse = () => {
         Skip to main content
       </a>
       <SEO
-        title={routePreset?.title || (filters.city ? `Properties in ${filters.city}` : "Browse Properties")}
-        description={routePreset?.description || "Browse luxury villas, premium offices, event spaces, and short-term rentals on X-Space360."}
+        title={routePreset?.title || (location.pathname === '/guest/browse' ? 'Find & Book Stays, Villas & More | X-Space360' : (filters.city ? `Properties in ${filters.city}` : "Browse Properties"))}
+        description={routePreset?.description || (location.pathname === '/guest/browse' ? 'Browse available villas, homestays, apartments, farmhouses and other stays across Nashik and nearby destinations.' : 'Browse luxury villas, premium offices, event spaces, and short-term rentals on X-Space360.')}
+        path={location.pathname}
+        appendSiteName={false}
         type="listing"
         data={{ properties: displayedProperties }}
         breadcrumbs={seoBreadcrumbs}
-        seo={seoData}
+        seo={routePreset || location.pathname === '/guest/browse' ? null : seoData}
       />
       {/* Header */}
       <header className="relative z-40 glass px-4 md:px-8 py-4 border-b border-gray-100" data-testid="guest-header">
@@ -597,7 +599,7 @@ const GuestBrowse = () => {
             </Link>
 
             <Link
-              to={user ? '/host/list-property' : '/register/host'}
+              to={user ? '/host/list-property' : '/list-your-property'}
               className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
             >
               List your Property
@@ -1068,8 +1070,8 @@ const GuestBrowse = () => {
       {/* Results header */}
       <div className="px-4 md:px-8 py-8 w-full flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
-             {new URLSearchParams(window.location.search).get('signature') === 'true' ? (
+          <h1 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
+             {routePreset?.h1 || (location.pathname === '/guest/browse' ? 'Find Your Perfect Stay' : new URLSearchParams(window.location.search).get('signature') === 'true' ? (
                 "Signature Series"
              ) : loading ? t('searching') : (
                 <>
@@ -1079,8 +1081,8 @@ const GuestBrowse = () => {
                       <>{showWishlistOnly ? displayedProperties.length : totalProperties} {(showWishlistOnly ? displayedProperties.length : totalProperties) === 1 ? t('spaceFound') : t('spacesFound')}</>
                    )}
                 </>
-             )}
-          </h2>
+             ))}
+          </h1>
           <p className="text-charcoal-muted font-medium mt-1">
              {new URLSearchParams(window.location.search).get('signature') === 'true'
                 ? "Indulge in India's most ultra-luxury private villas and premium villa stays."

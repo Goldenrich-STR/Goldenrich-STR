@@ -33,6 +33,11 @@ class Booking(BaseModel):
     check_in_date: date
     check_out_date: date
     number_of_guests: int
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
+    duration_hours: Optional[int] = None
+    daily_hours: Optional[int] = None
+    booking_days: Optional[int] = None
     
     # Pricing
     base_amount: float
@@ -85,6 +90,8 @@ class BookingCreate(BaseModel):
     check_in_date: date
     check_out_date: date
     number_of_guests: int
+    start_time: Optional[str] = None
+    end_time: Optional[str] = None
     selected_slot: Optional[str] = None
     food_preference: Optional[str] = None
     payment_type: Optional[str] = "full"

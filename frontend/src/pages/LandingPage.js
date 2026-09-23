@@ -1,19 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
-import { Crown, Building2, MapPin, Calendar, Star, Zap, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone } from 'lucide-react';
+import { Crown, Building2, MapPin, Calendar, Star, Zap, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone, Headphones, IndianRupee, Smartphone } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import ShareDropdown from '../components/ShareDropdown';
 import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
-import { formatCategoryLabel, formatPropertyTypeLabel } from '../lib/displayLabels';
+import { formatCategoryLabel, formatPropertyTypeLabel, formatAddress } from '../lib/displayLabels';
+import { getPropertySlug, getPropertyUrl } from '../lib/propertySlug';
+import { getSeoUrlForFilters } from '../lib/seoRoutes';
 import { getRecentlyVisitedProperties, RECENTLY_VISITED_PROPERTIES_EVENT } from '../lib/recentlyVisitedProperties';
 import { organizationSchema, websiteSchema } from '../lib/seoSchemas';
 import LegalDocument from '../components/LegalDocument';
 import ScrollReveal from '../components/ui/ScrollReveal';
 import DateRangePicker from '../components/ui/DateRangePicker';
+import DownloadAppButton from '../components/ui/DownloadAppButton';
+import AppPromoSection from '../components/ui/AppPromoSection';
+import { formatContentWithBullets, markdownComponents } from '../lib/formatContent';
+import Footer from '../components/Footer';
+
+const FALLBACK_BLOG_IMAGES = [
+  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200',
+  'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1531415080290-bc98528c165a?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800'
+];
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
 
@@ -51,13 +66,14 @@ const homeSchema = {
 
 const DEFAULT_HERO_SLIDES = [
   {
-    src: '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg',
+    src: '/videos/hero/hero-coworking-hd.jpg',
     mobilePosition: '58% center',
     tag: 'COMMERCIAL SPACES',
-    tagColor: 'text-white',
-    titlePrefix: 'Premium Workspaces in ',
-    titleHighlight: 'Nashik',
-    highlightColor: 'text-white',
+    subTag: 'COMMERCIAL SPACES',
+    titleLine1: 'Premium Workspaces',
+    titleLine2: 'in Nashik',
+    titlePrefix: 'Premium Workspaces ',
+    titleHighlight: 'in Nashik',
     titleSuffix: '',
     badges: ['Corporate rates & flexible leasing available*']
   },
@@ -65,10 +81,11 @@ const DEFAULT_HERO_SLIDES = [
     src: '/videos/hero/hero-villa-mobile-crop.png',
     mobilePosition: 'center 58%',
     tag: 'RESORT VILLAS',
-    tagColor: 'text-white',
-    titlePrefix: "Luxury Villas in India's ",
-    titleHighlight: 'Wine Capital',
-    highlightColor: 'text-white',
+    subTag: 'RESORT VILLAS',
+    titleLine1: 'Luxury Villas',
+    titleLine2: "in India's Wine Capital",
+    titlePrefix: 'Luxury Villas ',
+    titleHighlight: "in India's Wine Capital",
     titleSuffix: '',
     badges: ['Curated luxury stays with private pools*']
   },
@@ -76,10 +93,11 @@ const DEFAULT_HERO_SLIDES = [
     src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
     mobilePosition: '58% center',
     tag: 'WEDDING VENUES',
-    tagColor: 'text-white',
+    subTag: 'WEDDING VENUES',
+    titleLine1: 'Luxury Weddings,',
+    titleLine2: 'Beautiful Memories',
     titlePrefix: 'Luxury Weddings, ',
     titleHighlight: 'Beautiful Memories',
-    highlightColor: 'text-white',
     titleSuffix: '',
     badges: ['Plan your dream celebration with custom setups*']
   },
@@ -87,10 +105,11 @@ const DEFAULT_HERO_SLIDES = [
     src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
     mobilePosition: 'left center',
     tag: 'RESIDENTIAL SPACES',
-    tagColor: 'text-white',
+    subTag: 'RESIDENTIAL SPACES',
+    titleLine1: 'Experience the',
+    titleLine2: 'Comfort of Home',
     titlePrefix: 'Experience the ',
     titleHighlight: 'Comfort of Home',
-    highlightColor: 'text-white',
     titleSuffix: '',
     badges: ['Fully serviced spaces with premium amenities*']
   }
@@ -619,7 +638,7 @@ const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals in India through curation, technology, and superior service.',
   location: 'Nashik, Maharashtra',
   email: 'support@x-space360.com',
-  phone: '+91 8484826247',
+  phone: '+91 919225586010',
   facebook_link: 'https://facebook.com',
   instagram_link: 'https://instagram.com',
   youtube_link: 'https://youtube.com',
@@ -627,11 +646,11 @@ const DEFAULT_FOOTER_DATA = {
     { heading: 'For Guests', items: [
       { label: 'Browse Space', action_type: 'link', link: '/guest/browse', text: '' },
       { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'Short-term Stays', action_type: 'link', link: '/guest/browse', text: '' }
+      { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
     ] },
     { heading: 'For Hosts', items: [
-      { label: 'List Your Space', action_type: 'link', link: '/host/list-property', text: '' },
-      { label: 'Become a Host', action_type: 'link', link: '/register?role=host', text: '' }
+      { label: 'List Your Space', action_type: 'link', link: '/list-your-property', text: '' },
+      { label: 'Become a Host', action_type: 'link', link: '/register/host', text: '' }
     ] },
     { heading: 'Company', items: [
       { label: 'About Us', action_type: 'link', link: '/about-us', text: '' },
@@ -655,6 +674,58 @@ const DEFAULT_FOOTER_DATA = {
 // Custom Stateful & Interactive How It Works Modal Component
 const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
   const [activeStep, setActiveStep] = useState(1);
+  const modalRef = useRef(null);
+  const previousFocusRef = useRef(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    previousFocusRef.current = document.activeElement;
+
+    const timer = setTimeout(() => {
+      const closeBtn = modalRef.current?.querySelector('button[title="Close modal"]') || modalRef.current?.querySelector('button');
+      closeBtn?.focus();
+    }, 50);
+
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+
+      if (e.key === 'Tab' && modalRef.current) {
+        const focusables = modalRef.current.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+        if (focusables.length === 0) return;
+
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      clearTimeout(timer);
+      if (previousFocusRef.current && typeof previousFocusRef.current.focus === 'function') {
+        previousFocusRef.current.focus();
+      }
+    };
+  }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
@@ -729,14 +800,20 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
   const currentStepData = stepsData.find(s => s.id === activeStep) || stepsData[0];
 
   return (
-    <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md flex items-center justify-center z-[99999] p-4 md:p-6 transition-all duration-300 animate-fade-in">
-      <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[85vh] overflow-hidden shadow-elevated border border-gray-100 flex flex-col relative animate-scale-up">
+    <div 
+      className="fixed inset-0 bg-charcoal/60 backdrop-blur-md flex items-center justify-center z-[99999] p-4 md:p-6 transition-all duration-300 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="how-it-works-modal-title"
+    >
+      <div ref={modalRef} className="bg-white rounded-3xl max-w-5xl w-full max-h-[85vh] overflow-hidden shadow-elevated border border-gray-100 flex flex-col relative animate-scale-up">
         
         {/* Close Button */}
         <button
           onClick={onClose}
           className="absolute top-6 right-6 z-10 w-10 h-10 rounded-full bg-gray-50 hover:bg-terracotta hover:text-white flex items-center justify-center transition-all text-charcoal shadow-sm hover:scale-[1.02] active:scale-95"
           title="Close modal"
+          aria-label="Close modal"
         >
           <X className="w-5 h-5" />
         </button>
@@ -747,7 +824,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
           <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-semibold tracking-tight text-[10px] uppercase tracking-[0.2em] mb-4 animate-pulse">
             {t('modalJourney')}
           </span>
-          <h3 className="text-3xl md:text-5xl font-bold tracking-tight text-charcoal tracking-tight mb-4">
+          <h3 id="how-it-works-modal-title" className="text-3xl md:text-5xl font-bold tracking-tight text-charcoal tracking-tight mb-4">
             {t('modalTitle')}
           </h3>
           <p className="text-charcoal-light font-medium text-base md:text-lg leading-relaxed">
@@ -975,7 +1052,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
           <button
             onClick={() => {
               onClose();
-              navigate(user ? '/dashboard' : '/register?role=host');
+              navigate(user ? '/dashboard' : '/register/host');
             }}
             className="btn-premium px-12 py-4 text-base shadow-premium hover:scale-[1.02] active:scale-95 transition-transform duration-300"
           >
@@ -1118,92 +1195,84 @@ const createExploreItem = (label, params) => ({ label, params });
 
 const EXPLORE_MENU_TABS = [
   {
-    key: 'villas',
-    label: 'Villas',
+    key: 'nashik',
+    label: 'Nashik Destinations',
     columns: [
       [
         createExploreItem('Villas in Nashik', { category: 'residential', property_type: 'villa', city: 'Nashik' }),
-        createExploreItem('Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
-        createExploreItem('Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
-        createExploreItem('Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
-      ],
-      [
         createExploreItem('Luxury Villas in Nashik', { category: 'residential', property_type: 'villa', city: 'Nashik', min_price: '50000' }),
-        createExploreItem('Pool Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
-        createExploreItem('Weekend Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
-        createExploreItem('Scenic Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
-      ]
-    ]
-  },
-  {
-    key: 'homestays',
-    label: 'Homestays',
-    columns: [
-      [
         createExploreItem('Homestays in Nashik', { category: 'residential', city: 'Nashik' }),
         createExploreItem('Apartments in Nashik', { category: 'residential', property_type: 'apartment', city: 'Nashik' }),
         createExploreItem('Farmhouses in Nashik', { category: 'residential', property_type: 'farmhouse', city: 'Nashik' }),
-        createExploreItem('Holiday Homes in Igatpuri', { category: 'residential', city: 'Igatpuri' }),
       ],
       [
-        createExploreItem('Family Stays in Trimbak', { category: 'residential', city: 'Trimbakeshwar' }),
-        createExploreItem('Homestays in Igatpuri', { category: 'residential', city: 'Igatpuri' }),
-        createExploreItem('Apartments in Trimbak', { category: 'residential', property_type: 'apartment', city: 'Trimbakeshwar' }),
-        createExploreItem('Nature Stays in Bhandardara', { category: 'residential', city: 'Bhandardara' }),
+        createExploreItem('Wedding Venues in Nashik', { path: '/event-venues/wedding-venues-in-nashik/' }),
+        createExploreItem('Banquet Halls in Nashik', { path: '/event-venues/banquet-halls-in-nashik/' }),
+        createExploreItem('Event Lawns in Nashik', { path: '/event-venues/event-lawns-in-nashik/' }),
+        createExploreItem('Corporate Events in Nashik', { path: '/event-venues/corporate-event-venues-in-nashik/' }),
+      ],
+      [
+        createExploreItem('Workspaces in Nashik', { path: '/property/workspaces/' }),
+        createExploreItem('Private Offices in Nashik', { path: '/property/private-offices-in-nashik/' }),
+        createExploreItem('Team Spaces in Nashik', { path: '/property/team-spaces-in-nashik/' }),
+        createExploreItem('Premium Offices in Nashik', { path: '/property/private-offices/' }),
+        createExploreItem('Co-working in Nashik', { path: '/property/coworking-spaces-in-nashik/' }),
+        createExploreItem('Meeting Rooms in Nashik', { path: '/property/meeting-rooms-in-nashik/' }),
       ]
     ]
   },
   {
-    key: 'weddings',
-    label: 'Wedding Venues',
+    key: 'trimbak',
+    label: 'Trimbakeshwar Stays',
     columns: [
       [
-        createExploreItem('Wedding Venues in Nashik', { category: 'event_venue', city: 'Nashik' }),
-        createExploreItem('Banquet Halls in Nashik', { category: 'event_venue', property_type: 'banquet_hall', city: 'Nashik' }),
-        createExploreItem('Corporate Events in Nashik', { category: 'event_venue', city: 'Nashik' }),
-        createExploreItem('Celebration Venues in Igatpuri', { category: 'event_venue', city: 'Igatpuri' }),
+        createExploreItem('Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
+        createExploreItem('Pool Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
+        createExploreItem('Family Stays in Trimbak', { path: '/property/residential/familystay-in-trimbak' }),
       ],
       [
-        createExploreItem('Resorts & Lawns in Trimbak', { category: 'event_venue', property_type: 'resort', city: 'Trimbakeshwar' }),
-        createExploreItem('Wedding Venues in Igatpuri', { category: 'event_venue', city: 'Igatpuri' }),
-        createExploreItem('Event Lawns in Nashik', { category: 'event_venue', property_type: 'lawn', city: 'Nashik' }),
-        createExploreItem('Resorts in Bhandardara', { category: 'event_venue', property_type: 'resort', city: 'Bhandardara' }),
-      ]
-    ]
-  },
-  {
-    key: 'workspaces',
-    label: 'Workspaces',
-    columns: [
-      [
-        createExploreItem('Workspaces in Nashik', { category: 'commercial', city: 'Nashik' }),
-        createExploreItem('Private Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
-        createExploreItem('Team Spaces in Nashik', { category: 'commercial', city: 'Nashik' }),
-        createExploreItem('Premium Offices in Nashik', { category: 'commercial', property_type: 'private_office', city: 'Nashik' }),
-      ],
-      [
+        createExploreItem('Apartments in Trimbak', { path: '/property/residential/apartment-in-trimbak' }),
+        createExploreItem('Resorts & Lawns in Trimbak', { path: '/event-venues/resorts-and-lawns-in-trimbakeshwar/' }),
         createExploreItem('Office Suites in Trimbak', { category: 'commercial', city: 'Trimbakeshwar' }),
+      ]
+    ]
+  },
+  {
+    key: 'igatpuri_bhandardara',
+    label: 'Igatpuri & Bhandardara',
+    columns: [
+      [
+        createExploreItem('Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
+        createExploreItem('Weekend Villas in Igatpuri', { path: '/property/weekend-villas-in-igatpuri' }),
+        createExploreItem('Homestays in Igatpuri', { path: '/property/residential/homestay-in-igatpuri' }),
+        createExploreItem('Holiday Homes in Igatpuri', { path: '/property/residential/holidayhomes-in-igatpuri' }),
+        createExploreItem('Celebration Venues in Igatpuri', { path: '/event-venues/celebration-venues-in-igatpuri/' }),
+        createExploreItem('Wedding Venues in Igatpuri', { path: '/event-venues/wedding-venues-in-igatpuri/' }),
         createExploreItem('Corporate Spaces in Igatpuri', { category: 'commercial', city: 'Igatpuri' }),
-        createExploreItem('Co-working in Nashik', { category: 'commercial', property_type: 'co_working', city: 'Nashik' }),
-        createExploreItem('Meeting Rooms in Nashik', { category: 'commercial', property_type: 'meeting_room', city: 'Nashik' }),
+      ],
+      [
+        createExploreItem('Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
+        createExploreItem('Scenic Villas in Bhandardara', { path: '/property/scenic-villas-in-bhandardara' }),
+        createExploreItem('Nature Stays in Bhandardara', { path: '/property/residential/naturestay-in-bhandardara' }),
+        createExploreItem('Resorts in Bhandardara', { path: '/event-venues/resorts-in-bhandardara/' }),
       ]
     ]
   },
   {
     key: 'places',
-    label: 'Places To Visit',
+    label: 'Places & Attractions',
     columns: [
       [
-        createExploreItem('Sula Vineyards', { path: '/places/sula-vineyards' }),
-        createExploreItem('Trimbakeshwar', { path: '/places/trimbakeshwar' }),
-        createExploreItem('Pandav Leni', { path: '/places/pandav-leni' }),
-        createExploreItem('Gangapur Dam', { path: '/places/gangapur-dam' }),
+        createExploreItem('Sula Vineyards', { path: '/places/sula-vineyards/' }),
+        createExploreItem('Trimbakeshwar', { path: '/places/trimbakeshwar-temple/' }),
+        createExploreItem('Pandav Leni', { path: '/places/pandav-leni/' }),
+        createExploreItem('Gangapur Dam', { path: '/places/gangapur-dam/' }),
       ],
       [
-        createExploreItem('Anjaneri', { path: '/places/anjaneri' }),
-        createExploreItem('Harihar Fort', { path: '/places/harihar-fort' }),
-        createExploreItem('Bhandardara', { path: '/places/bhandardara' }),
-        createExploreItem('Igatpuri', { path: '/places/igatpuri' }),
+        createExploreItem('Anjaneri', { path: '/places/anjaneri/' }),
+        createExploreItem('Harihar Fort', { path: '/places/harihar-fort/' }),
+        createExploreItem('Bhandardara', { path: '/places/bhandardara/' }),
+        createExploreItem('Igatpuri', { path: '/places/igatpuri/' }),
       ]
     ]
   }
@@ -1845,7 +1914,7 @@ const CollectionsSection = ({
       navigate('/guest/browse');
       return;
     }
-    navigate(`/property/${col.property_id}`);
+    navigate(getPropertyUrl(col));
   };
 
   const scroll = (dir) => {
@@ -1900,13 +1969,12 @@ const CollectionsSection = ({
                     key={col.id}
                     onClick={() => {
                       if (col.id === 'hilltop-retreats') {
-                        navigate('/guest/browse?signature=true');
+                        navigate('/property/villas');
                         return;
                       }
-                      const typeQuery = col.property_type ? `&property_type=${col.property_type}` : '';
-                      navigate(`/guest/browse?category=${col.query}${typeQuery}`);
+                      navigate(getSeoUrlForFilters({ category: col.query, property_type: col.property_type }));
                     }}
-                    className="relative aspect-[3/4] w-[240px] min-w-[240px] snap-start cursor-pointer overflow-hidden rounded-2xl shadow-md transition-all duration-500 hover:shadow-xl md:w-[300px] md:min-w-[300px] group"
+                    className="relative aspect-[3/4] w-[240px] min-w-[240px] snap-start cursor-pointer overflow-hidden rounded-2xl shadow-md transition-all duration-500 hover:shadow-xl md:w-[300px] md:min-w-[300px] group bg-stone-800"
                   >
                     <img
                       src={col.image}
@@ -1982,10 +2050,10 @@ const CollectionsSection = ({
 
               {/* Navigation Arrows */}
               <div className="hidden md:flex space-x-2 pb-2">
-                <button onClick={() => scrollSlider('left', 'slider-getaway')} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm bg-white">
+                <button onClick={() => scrollSlider('left', 'slider-getaway')} className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm bg-white" aria-label="Previous getaway">
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <button onClick={() => scrollSlider('right', 'slider-getaway')} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm bg-white">
+                <button onClick={() => scrollSlider('right', 'slider-getaway')} className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm bg-white" aria-label="Next getaway">
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
@@ -2009,9 +2077,16 @@ const CollectionsSection = ({
                     key={item.property_id || `${item.title}-${index}`}
                     className="group flex w-[280px] min-w-[280px] snap-start flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(15,23,42,0.10)] md:w-[320px] md:min-w-[320px]"
                   >
-                    <button
-                      type="button"
+                    <div
+                      role="button"
+                      tabIndex={0}
                       onClick={() => handleCardClick(item)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') {
+                          event.preventDefault();
+                          handleCardClick(item);
+                        }
+                      }}
                       className="flex h-full flex-col text-left"
                     >
                       <div className="relative aspect-[1.14] overflow-hidden">
@@ -2074,7 +2149,7 @@ const CollectionsSection = ({
                           </div>
                         </div>
                       </div>
-                    </button>
+                    </div>
                   </article>
                 );
               })}
@@ -2106,6 +2181,7 @@ const LandingPage = () => {
     }
   });
   const [searchCategory, setSearchCategory] = useState('residential');
+  const [isExplicitCategorySelected, setIsExplicitCategorySelected] = useState(false);
   const [nearbyHub, setNearbyHub] = useState('Nashik');
   const [isDetectingNearby, setIsDetectingNearby] = useState(false);
 
@@ -2114,6 +2190,37 @@ const LandingPage = () => {
   const [dates, setDates] = useState({ checkIn: '', checkOut: '' });
   const [landingCalendarOpen, setLandingCalendarOpen] = useState(false);
   const [landingCalendarAnchor, setLandingCalendarAnchor] = useState('checkIn');
+
+  const totalGuests = (guestCounts.adults || 0) + (guestCounts.children || 0);
+
+  const handleSearchSubmit = (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    const city = locationQuery.trim();
+    const category = searchCategory && searchCategory !== 'all' ? searchCategory : '';
+    const cleanUrl = getSeoUrlForFilters({
+      city,
+      category,
+      check_in: dates.checkIn,
+      check_out: dates.checkOut,
+      guests: String(totalGuests)
+    });
+    navigate(cleanUrl);
+  };
+
+  const nearbyDestinations = React.useMemo(() => {
+    return CURATED_DESTINATION_ROWS.flat();
+  }, []);
+
+  const openDestinationProperties = (destination) => {
+    const destinationName = typeof destination === 'string' ? destination : destination.name;
+    const category = isExplicitCategorySelected && searchCategory && searchCategory !== 'all' ? searchCategory : '';
+    const cleanUrl = getSeoUrlForFilters({
+      city: destinationName,
+      category
+    });
+    navigate(cleanUrl);
+  };
+
   const todayISO = React.useMemo(() => {
     const today = new Date();
     const yyyy = today.getFullYear();
@@ -2128,6 +2235,13 @@ const LandingPage = () => {
     event_venue: []
   });
   const [signatureProperties, setSignatureProperties] = useState([]);
+  const minSignaturePrice = useMemo(() => {
+    if (!signatureProperties || signatureProperties.length === 0) return 50000;
+    const prices = signatureProperties
+      .map((p) => Number(p.display_price_per_night ?? p.customer_price_per_night ?? p.price_per_night ?? p.price ?? 0))
+      .filter((p) => p > 0);
+    return prices.length > 0 ? Math.min(...prices) : 50000;
+  }, [signatureProperties]);
   const [loading, setLoading] = useState(true);
   const [showHowItWorksModal, setShowHowItWorksModal] = useState(false);
 
@@ -2143,7 +2257,7 @@ const LandingPage = () => {
   const [recentlyVisitedProperties, setRecentlyVisitedProperties] = useState(() => getRecentlyVisitedProperties());
   const [isNavScrolled, setIsNavScrolled] = useState(false);
   const [isExploreMenuOpen, setIsExploreMenuOpen] = useState(false);
-  const [activeExploreTab, setActiveExploreTab] = useState(EXPLORE_MENU_TABS[0]?.key || 'villas');
+  const [activeExploreTab, setActiveExploreTab] = useState(EXPLORE_MENU_TABS[0]?.key || 'nashik');
   const [isMobileExploreOpen, setIsMobileExploreOpen] = useState(false);
 
   const scrollToSlide = (containerId, index) => {
@@ -2314,7 +2428,8 @@ const LandingPage = () => {
   };
 
   const handleShareWhatsApp = (property) => {
-    const url = `${window.location.origin}/property/${property.property_id}`;
+    const slug = getPropertySlug(property);
+    const url = `${window.location.origin}/property/${slug}`;
     const text = `Check out this amazing property *${property.title}* in *${property.city}* on X-Space360:\n${url}`;
     window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
   };
@@ -2372,55 +2487,63 @@ const LandingPage = () => {
   const defaultLandingBlogPosts = [
     {
       id: 'p1',
-      title: 'Guide to hotel rewards programmes, deals and booking strategies',
-      excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
-      date: '20 April 2026',
-      author: 'Skyscanner',
-      img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800',
-      read_time: '6 min read'
+      slug: 'what-is-short-term-rental',
+      title: 'What Should You Check Before Booking a Short-Term Rental?',
+      excerpt: 'Need a place to stay for a few days without booking a hotel? A short-term rental could be the best choice. Learn what to check before booking.',
+      date: '19 September 2026',
+      author: 'STR Insights Desk',
+      img: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+      read_time: '5 min read'
     },
     {
       id: 'p2',
-      title: 'Guide to hotel room types, amenities & policies',
-      excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
-      date: '20 April 2026',
-      author: 'Skyscanner',
-      img: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800',
-      read_time: '5 min read'
+      slug: 'the-future-of-short-term-rentals-in-india',
+      title: 'The Future of Short-Term Rentals in India',
+      excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
+      date: '10 June 2026',
+      author: 'Amit Sharma',
+      img: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
+      read_time: '6 min read'
     },
     {
       id: 'p3',
-      title: 'The Smarter Summer Report Your guide to smarter summer planning',
-      excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
-      date: '27 April 2026',
-      author: 'Skyscanner',
-      img: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800',
-      read_time: '7 min read'
+      slug: 'design-tips-to-maximize-your-property-yield',
+      title: 'Design Tips to Maximize Your Property Yield',
+      excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
+      date: '05 June 2026',
+      author: 'Neha Patel',
+      img: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800',
+      read_time: '5 min read'
     },
     {
       id: 'p4',
-      title: 'Are Indian cricket fans the best cricket fans in the world?',
-      excerpt: 'Exploring the vibrant passion, energy, and dedication of cricket fans across India.',
-      date: '16 October 2023',
-      author: 'Noelia Guinon',
-      img: 'https://images.unsplash.com/photo-1531415080290-bc98528c165a?auto=format&fit=crop&q=80&w=800',
-      read_time: '5 min read'
+      slug: 'top-5-weekend-escapes-near-mumbai-and-nashik',
+      title: 'Top 5 Weekend Escapes Near Mumbai & Nashik',
+      excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
+      date: '28 May 2026',
+      author: 'Vikram Singh',
+      img: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
+      read_time: '7 min read'
     }
   ];
   const cmsLandingBlogPosts = Array.isArray(cmsContent?.blog?.posts)
     ? cmsContent.blog.posts
         .filter(post => post?.is_active !== false)
         .slice(0, 4)
-        .map(post => ({
-          id: post.id,
-          title: post.title,
-          excerpt: post.excerpt,
-          content: post.content,
-          date: post.date,
-          author: post.author,
-          img: post.image_url || post.img || '',
-          read_time: post.read_time || '5 min read'
-        }))
+        .map((post, idx) => {
+          const fallbackImg = FALLBACK_BLOG_IMAGES[idx % FALLBACK_BLOG_IMAGES.length];
+          return {
+            id: post.id || post.slug || `blog-post-${idx}`,
+            slug: post.slug || post.id,
+            title: post.title || 'Untitled',
+            excerpt: post.excerpt || '',
+            content: post.content || '',
+            date: post.date || 'June 2026',
+            author: post.author || 'X-Space360 Desk',
+            img: post.image_url || post.img || post.featuredImage || fallbackImg,
+            read_time: post.read_time || '5 min read'
+          };
+        })
     : [];
   const landingBlogPosts = cmsContent?.blog ? cmsLandingBlogPosts : defaultLandingBlogPosts;
   const footerDisplaySections = footerSections;
@@ -2435,13 +2558,13 @@ const LandingPage = () => {
   };
 
   const handleListSpaceClick = () => {
-    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/register?role=host');
+    navigate(user ? (footerData.host_link_1_url || '/host/list-property') : '/list-your-property');
   };
 
   const handleFooterSectionClick = (section = {}, item = {}) => {
     if (item.action_type === 'link' && item.link) {
-      if (item.link === '/host/list-property') {
-        navigate(user ? item.link : '/register?role=host');
+      if (item.link === '/host/list-property' || item.link === '/list-your-property') {
+        navigate(user ? '/host/list-property' : '/list-your-property');
       } else {
         handleFooterLink(item.link, '/');
       }
@@ -2536,37 +2659,23 @@ const LandingPage = () => {
 
   const handleSearch = () => {
     const totalGuests = guestCounts.adults + guestCounts.children;
-    const params = new URLSearchParams();
-    if (locationQuery.trim()) {
-      params.set('search', locationQuery.trim());
+    const city = locationQuery.trim();
+    if (city) {
       setRecentLocationSearches((current) => {
-        const next = [locationQuery.trim(), ...current.filter((item) => item !== locationQuery.trim())].slice(0, 5);
+        const next = [city, ...current.filter((item) => item !== city)].slice(0, 5);
         localStorage.setItem(RECENT_LOCATION_STORAGE_KEY, JSON.stringify(next));
         return next;
       });
     }
-    if (totalGuests) params.set('guests', String(totalGuests));
-    if (dates.checkIn) params.set('checkIn', dates.checkIn);
-    if (dates.checkOut) params.set('checkOut', dates.checkOut);
-    if (searchCategory && searchCategory !== 'all') params.set('category', searchCategory);
-    navigate(`/guest/browse?${params.toString()}`);
-  };
-
-  const nearbyDestinations = React.useMemo(() => {
-    return CURATED_DESTINATION_ROWS.flat();
-  }, []);
-
-  const openDestinationProperties = (destination) => {
-    const destinationName = typeof destination === 'string' ? destination : destination.name;
-    const params = new URLSearchParams();
-    params.set('city', destinationName);
-    if (destination?.latitude && destination?.longitude) {
-      params.set('latitude', String(destination.latitude));
-      params.set('longitude', String(destination.longitude));
-      params.set('radius_km', '3');
-    }
-    if (searchCategory && searchCategory !== 'all') params.set('category', searchCategory);
-    navigate(`/guest/browse?${params.toString()}`);
+    const category = searchCategory && searchCategory !== 'all' ? searchCategory : '';
+    const cleanUrl = getSeoUrlForFilters({
+      city,
+      category,
+      check_in: dates.checkIn,
+      check_out: dates.checkOut,
+      guests: totalGuests ? String(totalGuests) : '2'
+    });
+    navigate(cleanUrl);
   };
 
   const saveRecentLocation = React.useCallback((value) => {
@@ -2649,10 +2758,10 @@ const LandingPage = () => {
           
           {/* Navigation Arrows */}
           <div className="hidden md:flex space-x-2">
-            <button onClick={() => scrollSlider('left', sectionId)} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
+            <button onClick={() => scrollSlider('left', sectionId)} className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm" aria-label="Previous item">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button onClick={() => scrollSlider('right', sectionId)} className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm">
+            <button onClick={() => scrollSlider('right', sectionId)} className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 hover:border-gray-300 transition text-gray-500 hover:text-charcoal cursor-pointer shadow-sm" aria-label="Next item">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
@@ -2670,12 +2779,12 @@ const LandingPage = () => {
             className="flex overflow-x-auto pb-4 gap-6 no-scrollbar snap-x scroll-smooth"
           >
             {displayItems.map((item, index) => (
-              <div 
+              <Link 
                 key={item.property_id || index} 
-                onClick={() => navigate(`/property/${item.property_id}`)}
+                to={getPropertyUrl(item)}
                 className="bg-transparent cursor-pointer transition-all duration-300 min-w-[240px] md:min-w-[280px] w-[240px] md:w-[280px] snap-start flex flex-col group/card flex-shrink-0"
               >
-                <div className="relative aspect-[4/3] rounded-2xl overflow-hidden mb-3">
+                <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden mb-3 bg-sand-200">
                   <img 
                     src={getPropertyCardImage(item)}
                     alt={item.title} 
@@ -2692,8 +2801,8 @@ const LandingPage = () => {
                   <div className="absolute top-3 right-3 z-20 flex space-x-2">
                     <ShareDropdown property={item} align="right" />
                     <button
-                      onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                      className="w-8 h-8 rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer text-charcoal hover:text-red-500"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleWishlistToggle(item.property_id); }}
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/95 backdrop-blur-md flex items-center justify-center shadow-sm hover:scale-[1.05] transition cursor-pointer text-charcoal hover:text-red-500"
                     >
                       <Heart className={`w-4 h-4 ${wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : ''}`} />
                     </button>
@@ -2726,8 +2835,8 @@ const LandingPage = () => {
                     )}
                   </div>
                   
-                  <p className="text-gray-550 text-xs font-medium mb-1 truncate" title={`${formatPropertyTypeLabel(item.type || item.property_type)} in ${item.address ? `${item.address}, ` : ''}${item.city}`}>
-                    {formatPropertyTypeLabel(item.type || item.property_type) || 'Property'} in {item.address ? `${item.address}, ` : ''}{item.city}
+                  <p className="text-gray-550 text-xs font-medium mb-1 truncate" title={`${formatPropertyTypeLabel(item.type || item.property_type)} in ${formatAddress(item.address, item.city)}`}>
+                    {formatPropertyTypeLabel(item.type || item.property_type) || 'Property'} in {formatAddress(item.address, item.city)}
                   </p>
                   
                   <div className="mt-auto flex items-baseline">
@@ -2739,20 +2848,20 @@ const LandingPage = () => {
                     </span>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
             
             {/* View All Card */}
             {sliderInteracted[sectionId] && (
-              <div 
-                onClick={() => navigate(`/guest/browse?category=${categoryKey}`)}
+              <Link 
+                to={getSeoUrlForFilters({ category: categoryKey })}
                 className="min-w-[160px] md:min-w-[180px] aspect-[4/3] border border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 snap-start group/viewall"
               >
                 <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2 group-hover/viewall:scale-105 transition-transform">
                   <ArrowRight className="w-4 h-4 text-charcoal" />
                 </div>
                 <span className="font-semibold text-charcoal text-xs">View All</span>
-              </div>
+              </Link>
             )}
           </div>
         </div>
@@ -2762,10 +2871,17 @@ const LandingPage = () => {
 
   return (
     <div className="landing-page-container min-h-screen bg-white font-sans text-[#2A2A2A] overflow-x-hidden selection:bg-terracotta/20">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[99999] focus:bg-[#1A1A1A] focus:text-white focus:px-5 focus:py-3 focus:rounded-xl focus:shadow-elevated focus:font-bold focus:outline-none"
+      >
+        Skip to content
+      </a>
       <SEO
-        title="Book Stays, Workspaces and Event Venues"
-        description="Discover and book villas, farmhouses, residential stays, commercial workspaces and event venues across India with X-Space360."
+        title="Short-Term Stays, Event Venues & Workspaces in Nashik"
+        description="Discover villas, stays, event venues and workspaces in Nashik, Igatpuri, Trimbakeshwar and Bhandardara with X-Space360."
         path="/"
+        appendSiteName={false}
         keywords={[
           "villa booking",
           "farmhouse booking",
@@ -2775,7 +2891,6 @@ const LandingPage = () => {
         ]}
         type="home"
         schema={homeSchema}
-        seo={cmsContent?.seo}
         breadcrumbs={[{ name: "Home", url: "/" }]}
       />
       {/* Navbar */}
@@ -2783,8 +2898,8 @@ const LandingPage = () => {
         className={`fixed top-0 left-0 right-0 w-full z-50 h-20 md:h-24 transition-all duration-300 ${
           isNavScrolled
             ? 'bg-white/95 text-charcoal shadow-subtle backdrop-blur-xl border-b border-gray-100'
-            : 'bg-transparent text-white'
-        }`}
+            : 'bg-gradient-to-b from-black/70 via-black/30 to-transparent text-white drop-shadow-sm'
+        } shadow-sm`}
       >
         <div className="max-w-[1440px] mx-auto w-full h-full flex justify-between items-center px-4 md:px-8">
           {/* Left Logo */}
@@ -2798,27 +2913,18 @@ const LandingPage = () => {
 
           {/* Center Menu Links (Flat Style) */}
           <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[17px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); navigate('/guest/browse'); }}
+            <Link
+              to="/guest/browse"
               className="hover:text-terracotta transition-colors duration-200"
             >
               Discover
-            </a>
-
-            <button
-              onClick={() => setShowHowItWorksModal(true)}
-              className="hover:text-terracotta transition-colors duration-200"
-            >
-              How It Works
-            </button>
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); navigate(user ? '/host/list-property' : '/register?role=host'); }}
+            </Link>
+            <Link
+              to={user ? '/host/list-property' : '/list-your-property'}
               className="hover:text-terracotta transition-colors duration-200"
             >
               List your Property
-            </a>
+            </Link>
             <div
               className="relative"
               onMouseEnter={openExploreMenu}
@@ -2841,7 +2947,7 @@ const LandingPage = () => {
 
               {isExploreMenuOpen && (
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[860px] rounded-[28px] bg-white border border-gray-200 shadow-elevated ring-1 ring-black/5 px-5 py-4 z-[999] text-gray-900"
+                  className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[860px] rounded-[28px] bg-white border border-gray-200 shadow-elevated ring-1 ring-black/5 px-6 py-5 z-[999] text-gray-900"
                   onMouseEnter={openExploreMenu}
                   onMouseLeave={closeExploreMenuWithDelay}
                 >
@@ -2856,12 +2962,12 @@ const LandingPage = () => {
                           setActiveExploreTab(tab.key);
                         }}
                         className={`relative whitespace-nowrap text-[15px] font-medium transition-colors duration-200 ${
-                          activeExploreTab === tab.key ? 'text-charcoal' : 'text-gray-500 hover:text-charcoal'
+                          activeExploreTab === tab.key ? 'text-terracotta font-semibold' : 'text-gray-500 hover:text-terracotta'
                         }`}
                       >
                         {tab.label}
                         {activeExploreTab === tab.key && (
-                          <span className="absolute left-0 right-0 -bottom-[17px] h-[2px] bg-charcoal rounded-full" />
+                          <span className="absolute left-0 right-0 -bottom-[17px] h-[2px] bg-terracotta rounded-full" />
                         )}
                       </button>
                     ))}
@@ -2879,7 +2985,7 @@ const LandingPage = () => {
                               key={item.label}
                               type="button"
                               onClick={() => handleExploreNavigate(item.params)}
-                              className="text-left text-[15px] text-gray-500 hover:text-charcoal transition-colors duration-200"
+                              className="text-left text-[15px] text-gray-500 hover:text-terracotta transition-colors duration-200"
                             >
                               {item.label}
                             </button>
@@ -2897,18 +3003,8 @@ const LandingPage = () => {
           <div className="hidden lg:flex items-center space-x-6">
             <LanguageSelector showPropertyTypes />
 
-            {/* Get in Touch Button */}
-            <button 
-              onClick={() => navigate('/support')}
-              className={`flex items-center gap-2 rounded-full px-5 py-2.5 transition font-sans font-semibold text-[17px] tracking-tight shadow-sm border ${
-                isNavScrolled
-                  ? 'border-gray-200 text-charcoal hover:bg-gray-50'
-                  : 'border-white/40 text-white hover:bg-white/10'
-              }`}
-            >
-              <Phone className="w-3.5 h-3.5" />
-              <span>Get in Touch</span>
-            </button>
+            {/* Download App Button with APP badge and QR Scanner Popup */}
+            <DownloadAppButton isNavScrolled={isNavScrolled} />
 
             {/* User/Profile Button */}
             {user ? (
@@ -3001,15 +3097,8 @@ const LandingPage = () => {
             >
               Discover
             </button>
-
             <button
-              onClick={() => { setIsMobileMenuOpen(false); setShowHowItWorksModal(true); }}
-              className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
-            >
-              How It Works
-            </button>
-            <button
-              onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/register?role=host'); }}
+              onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/list-your-property'); }}
               className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
             >
               List your Property
@@ -3060,13 +3149,19 @@ const LandingPage = () => {
                 </div>
               )}
             </div>
-            <button
-              onClick={() => { setIsMobileMenuOpen(false); navigate('/support'); }}
-              className="text-left text-[17px] font-medium flex items-center gap-2 py-4 border-b border-gray-200"
+            <a
+              href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={() => setIsMobileMenuOpen(false)}
+              className="text-left text-[17px] font-medium flex items-center justify-between py-4 border-b border-gray-200 text-charcoal"
             >
-              <Phone className="w-4.5 h-4.5" />
-              <span>Get in Touch</span>
-            </button>
+              <div className="flex items-center gap-2">
+                <Smartphone className="w-5 h-5 text-terracotta" />
+                <span>Download App</span>
+              </div>
+              <span className="bg-[#ff4e6d] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">APP</span>
+            </a>
             <div className="py-4 border-b border-gray-200 flex flex-col items-start">
               <LanguageSelector mode="inline" showPropertyTypes />
             </div>
@@ -3095,7 +3190,7 @@ const LandingPage = () => {
                   Sign In
                 </button>
                 <button
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register?role=host'); }}
+                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register/host'); }}
                   className="mt-6 bg-[#d9b233] hover:bg-[#cda62b] text-white font-semibold py-4 rounded-xl text-center transition"
                 >
                   Become a Host
@@ -3110,75 +3205,89 @@ const LandingPage = () => {
 
       {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
       <section className="relative w-full z-30 bg-white px-0 pt-0 pb-0">
-      <div className="relative h-[68vh] min-h-[620px] max-h-[700px] md:h-[62vh] md:min-h-[560px] md:max-h-[640px] w-full z-30 overflow-visible bg-white shadow-premium">
+      <div className="relative h-[68vh] min-h-[620px] max-h-[700px] md:h-[62vh] md:min-h-[560px] md:max-h-[640px] w-full z-30 overflow-visible bg-[#181818] bg-gradient-to-br from-charcoal via-slate-900 to-black shadow-premium rounded-b-[28px] md:rounded-b-[44px]">
         
-        {/* ── Sliding/Fading Background Images ── */}
-        {heroSlides.map((slide, index) => (
-          <div 
-            key={index}
-            className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out z-0"
-            style={{
-              backgroundImage: index === currentHeroSlide || loadedHeroSlides.has(index)
-                ? `url(${slide.src})`
-                : 'none',
-              backgroundSize: 'cover',
-              backgroundPosition: slide.mobilePosition || 'center',
-              opacity: index === currentHeroSlide ? 1 : 0
-            }}
-          />
-        ))}
+        {/* ── Background Sliding/Fading Images (Clipped with bottom rounded corners) ── */}
+        <div className="absolute inset-0 w-full h-full rounded-b-[28px] md:rounded-b-[44px] overflow-hidden z-0">
+          {heroSlides.map((slide, index) => (
+            <div 
+              key={index}
+              className="absolute inset-0 w-full h-full transition-opacity duration-1000 ease-in-out z-0"
+              style={{
+                backgroundImage: index === currentHeroSlide || loadedHeroSlides.has(index)
+                  ? `url(${slide.src})`
+                  : 'none',
+                backgroundSize: 'cover',
+                backgroundPosition: slide.mobilePosition || 'center',
+                opacity: index === currentHeroSlide ? 1 : 0
+              }}
+            />
+          ))}
 
-        {/* ── 35% dark overlay ── */}
-        <div className="absolute inset-0 bg-black/35 z-10 transition-opacity duration-1000" />
+          {/* ── 35% dark overlay ── */}
+          <div className="absolute inset-0 bg-black/35 z-10 transition-opacity duration-1000" />
+        </div>
+
+        {/* ── Hero Slide Navigation Arrows (Floating Left & Right) ── */}
+        <button
+          type="button"
+          onClick={() => setCurrentHeroSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
+          className="absolute left-2.5 md:left-6 top-[48%] md:top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-11 md:h-11 min-w-[40px] min-h-[40px] rounded-full border border-white/40 bg-black/30 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition shadow-lg shrink-0 cursor-pointer"
+          aria-label="Previous hero slide"
+        >
+          <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setCurrentHeroSlide((prev) => (prev + 1) % heroSlides.length)}
+          className="absolute right-2.5 md:right-6 top-[48%] md:top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-11 md:h-11 min-w-[40px] min-h-[40px] rounded-full border border-white/40 bg-black/30 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition shadow-lg shrink-0 cursor-pointer"
+          aria-label="Next hero slide"
+        >
+          <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
+        </button>
 
         {/* ── Hero Content (Centered with Spacing & font-lufga) ── */}
         <div className="relative z-20 max-w-6xl mx-auto px-4 md:px-12 h-full flex flex-col justify-center md:justify-end items-center text-center pt-24 md:pt-36 pb-5 md:pb-12">
           {(() => {
             const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
             return (
-              <div className="flex flex-col items-center space-y-3 md:space-y-5 w-full mb-0 md:mb-4 -mt-8 md:mt-0">
-                 <div className="flex items-center justify-center gap-2 md:gap-4 w-full px-1 animate-fade-in" key={`title-${currentHeroSlide}`}>
-                   <button
-                     type="button"
-                     onClick={() => setCurrentHeroSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
-                     className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/25 bg-white/10 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/18 transition shrink-0"
-                     aria-label="Previous hero slide"
-                   >
-                     <ChevronLeft className="w-5 h-5" />
-                   </button>
+              <div className="flex flex-col items-center space-y-2.5 sm:space-y-4 w-full mb-0 md:mb-4 -mt-8 md:mt-0 max-w-4xl mx-auto">
+                 
+                 {/* Top Tagline with Side Accent Lines */}
+                 <div className="flex items-center justify-center gap-3 animate-fade-in" key={`tag-${currentHeroSlide}`}>
+                   <span className="h-[1px] w-6 sm:w-10 bg-white/40"></span>
+                   <span className="text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.22em] font-semibold text-white/95 drop-shadow-sm select-none">
+                     {activeHero.subTag || activeHero.tag || 'RESORT VILLAS'}
+                   </span>
+                   <span className="h-[1px] w-6 sm:w-10 bg-white/40"></span>
+                 </div>
 
-                   <h2 className="text-[28px] sm:text-4xl md:text-5xl lg:text-[58px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-[250px] sm:max-w-none">
-                     {activeHero.titlePrefix} {activeHero.titleHighlight} {activeHero.titleSuffix}
-                   </h2>
-
-                   <button
-                     type="button"
-                     onClick={() => setCurrentHeroSlide((prev) => (prev + 1) % heroSlides.length)}
-                     className="w-9 h-9 md:w-11 md:h-11 rounded-full border border-white/25 bg-white/10 backdrop-blur-sm text-white flex items-center justify-center hover:bg-white/18 transition shrink-0"
-                     aria-label="Next hero slide"
-                   >
-                     <ChevronRight className="w-5 h-5" />
-                   </button>
+                 {/* Main Headline (2-Line Headline, font-lufga, font-medium/semibold) */}
+                 <div className="w-full px-2 text-center animate-fade-in" key={`title-${currentHeroSlide}`}>
+                   <h1 className="text-[28px] sm:text-5xl md:text-6xl lg:text-[64px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-4xl text-center mx-auto">
+                     Find Stays, Event Venues & Workspaces in Nashik
+                   </h1>
                  </div>
                  
-                 {/* Custom Badges / Batches instead of Subtitle */}
+                 {/* Custom Badges / Batches */}
                  <div className="flex flex-wrap justify-center gap-2 animate-fade-in" key={`badges-${currentHeroSlide}`}>
                    {activeHero.badges && activeHero.badges.map((badge, idx) => (
-                     <span key={idx} className="border border-white bg-white/10 backdrop-blur-md rounded-full px-4 md:px-6 py-2 text-white font-bold text-[11px] md:text-sm drop-shadow-sm select-none">
+                     <span key={idx} className="border border-white/80 bg-white/10 backdrop-blur-md rounded-full px-4 md:px-6 py-1.5 text-white font-medium text-[11px] md:text-sm drop-shadow-sm select-none">
                        {badge}
                      </span>
                    ))}
                  </div>
 
-                 <div className="w-full mt-3 md:mt-6 relative max-w-5xl text-left">
+                 <div className="w-full mt-3 md:mt-5 relative max-w-4xl text-left mx-auto">
                     {/* Transparent overlay to close active dropdowns on clicking outside */}
-                    {activeDropdown && (
-                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
+                    {(activeDropdown || landingCalendarOpen) && (
+                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => { setActiveDropdown(null); setLandingCalendarOpen(false); }} />
                     )}
 
                     {/* Capsule Search Bar */}
-                    <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-[44px]">
-                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[30px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-3 lg:p-3 relative overflow-visible bg-white">
+                    <div className="relative z-50 overflow-visible rounded-[30px] lg:rounded-[40px]">
+                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[26px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-2 lg:p-2 lg:pl-4 lg:pr-2 relative overflow-visible bg-white">
                         
                         {/* Search Input */}
                         <div className="relative flex-1 w-full min-w-0 z-10">
@@ -3187,11 +3296,12 @@ const LandingPage = () => {
                               const el = document.getElementById('landing-search-query');
                               if (el) el.focus();
                             }}
-                            className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer group rounded-2xl lg:rounded-full hover:bg-stone/50 transition duration-200"
+                            className="flex items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer group rounded-xl lg:rounded-full hover:bg-stone/50 transition duration-200"
                           >
-                            <Search className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                            <Search className="w-4 h-4 text-gray-500 mr-2.5 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Search</p>
+                              <label htmlFor="landing-search-query" className="sr-only">Search properties and destinations</label>
+                              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Search</p>
                               <input
                                 id="landing-search-query"
                                 name="search"
@@ -3201,17 +3311,18 @@ const LandingPage = () => {
                                   setLocationQuery(e.target.value);
                                 }}
                                 placeholder="Search properties..."
-                                className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-400 font-extrabold text-sm focus:ring-0 focus:outline-none p-0 mt-1"
+                                aria-label="Search properties and destinations"
+                                className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-600 font-extrabold text-sm focus:ring-0 focus:outline-none p-0 mt-0.5"
                               />
                             </div>
                           </div>
                         </div>
-                        <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
+                        <div className="hidden lg:block w-[1px] h-7 bg-gray-200" />
                         
                         <div className={`relative flex flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
                           {/* Check-in */}
-                          <div className="relative flex-1 flex items-center px-3 lg:px-6 py-2.5 lg:py-3 hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group shrink-0">
-                            <Calendar className="w-4.5 h-4.5 text-gray-400 mr-2 lg:mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
+                          <div className="relative flex-1 flex items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group shrink-0">
+                            <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
                               onClick={() => {
@@ -3220,31 +3331,20 @@ const LandingPage = () => {
                               }}
                               className="w-full text-left"
                             >
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-in</p>
-                              <p className={`font-extrabold text-xs lg:text-sm mt-1 leading-none ${dates.checkIn ? 'text-charcoal' : 'text-gray-400'}`}>
+                              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Check-in</p>
+                              <p className={`font-extrabold text-xs lg:text-xs mt-0.5 leading-none whitespace-nowrap ${dates.checkIn ? 'text-charcoal' : 'text-gray-600'}`}>
                                 {dates.checkIn || 'Select Date'}
                               </p>
                             </button>
-                            {landingCalendarOpen && landingCalendarAnchor === 'checkIn' && (
-                              <DateRangePicker
-                                open={landingCalendarOpen}
-                                anchor={landingCalendarAnchor}
-                                checkIn={dates.checkIn}
-                                checkOut={dates.checkOut}
-                                minDate={todayISO}
-                                onChange={setDates}
-                                onClose={() => setLandingCalendarOpen(false)}
-                              />
-                            )}
                           </div>
                           
                           {/* Arrow Separator */}
-                          <div className="hidden lg:flex items-center text-gray-300 mx-1 shrink-0">
-                            <ArrowRight className="w-4 h-4" />
+                          <div className="hidden lg:flex items-center text-gray-300 mx-0.5 shrink-0">
+                            <ArrowRight className="w-3.5 h-3.5" />
                           </div>
                           {/* Check-out */}
-                          <div className="relative flex-1 flex items-center px-3 lg:px-6 py-2.5 lg:py-3 hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group shrink-0">
-                            <Calendar className="w-4.5 h-4.5 text-gray-400 mr-2 lg:mr-3 group-hover:text-terracotta transition-colors z-0 shrink-0" />
+                          <div className="relative flex-1 flex items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group shrink-0">
+                            <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
                               onClick={() => {
@@ -3253,35 +3353,37 @@ const LandingPage = () => {
                               }}
                               className="w-full text-left"
                             >
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Check-out</p>
-                              <p className={`font-extrabold text-xs lg:text-sm mt-1 leading-none ${dates.checkOut ? 'text-charcoal' : 'text-gray-400'}`}>
+                              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Check-out</p>
+                              <p className={`font-extrabold text-xs lg:text-xs mt-0.5 leading-none whitespace-nowrap ${dates.checkOut ? 'text-charcoal' : 'text-gray-600'}`}>
                                 {dates.checkOut || 'Select Date'}
                               </p>
                             </button>
-                            {landingCalendarOpen && landingCalendarAnchor === 'checkOut' && (
-                              <DateRangePicker
-                                open={landingCalendarOpen}
-                                anchor={landingCalendarAnchor}
-                                checkIn={dates.checkIn}
-                                checkOut={dates.checkOut}
-                                minDate={todayISO}
-                                onChange={setDates}
-                                onClose={() => setLandingCalendarOpen(false)}
-                              />
-                            )}
                           </div>
                         </div>
-                        <div className="hidden lg:block w-[1px] h-8 bg-gray-200" />
+                        <div className="hidden lg:block w-[1px] h-7 bg-gray-200" />
+
+                        {/* Centered Date Range Picker Popup */}
+                        {landingCalendarOpen && (
+                          <DateRangePicker
+                            open={landingCalendarOpen}
+                            anchor={landingCalendarAnchor}
+                            checkIn={dates.checkIn}
+                            checkOut={dates.checkOut}
+                            minDate={todayISO}
+                            onChange={setDates}
+                            onClose={() => setLandingCalendarOpen(false)}
+                          />
+                        )}
 
                         {/* Guests */}
-                        <div className={`relative flex-1 w-full ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
+                        <div className={`relative shrink-0 w-auto ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                            className="flex items-center px-3 lg:px-6 py-2.5 lg:py-3 w-full cursor-pointer hover:bg-stone/50 rounded-2xl lg:rounded-full transition duration-200 group"
+                            className="flex items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group"
                           >
-                            <User className="w-4.5 h-4.5 text-gray-400 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
+                            <User className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
-                              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider leading-none">Guests</p>
+                              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Guests</p>
                               <p className="text-charcoal font-extrabold text-sm mt-1 leading-none whitespace-nowrap">
                                 {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                               </p>
@@ -3294,7 +3396,7 @@ const LandingPage = () => {
                               <div className="flex items-center justify-between">
                                 <div className="text-left">
                                   <p className="text-sm font-bold text-charcoal">Adults</p>
-                                  <p className="text-xs text-gray-400 font-semibold mt-0.5">Age 13 or above</p>
+                                  <p className="text-xs text-gray-600 font-semibold mt-0.5">Age 13 or above</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <button
@@ -3319,7 +3421,7 @@ const LandingPage = () => {
                               <div className="flex items-center justify-between">
                                 <div className="text-left">
                                   <p className="text-sm font-bold text-charcoal">Children</p>
-                                  <p className="text-xs text-gray-400 font-semibold mt-0.5">Ages 2–12</p>
+                                  <p className="text-xs text-gray-600 font-semibold mt-0.5">Ages 2–12</p>
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <button
@@ -3362,6 +3464,59 @@ const LandingPage = () => {
       </div>
       </section>
 
+      {/* ── TRUST & QUALITY GUARANTEE BADGES STRIP ── */}
+      <div className="w-full bg-white relative z-20 border-b border-sand-200/80 py-5 md:py-6">
+        <div className="max-w-[1440px] mx-auto px-4 md:px-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-sand-200/70">
+            
+            {/* Feature 1: Verified Spaces */}
+            <div className="flex items-center gap-3.5 pb-3 sm:pb-0 sm:px-4 first:px-0">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
+                <CheckCircle2 className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Verified Spaces</h4>
+                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Villas, venues & workspaces inspected</p>
+              </div>
+            </div>
+
+            {/* Feature 2: Direct Host Rates */}
+            <div className="flex items-center gap-3.5 py-3 sm:py-0 sm:px-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
+                <IndianRupee className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Direct Host Rates</h4>
+                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Best prices with transparent quotes</p>
+              </div>
+            </div>
+
+            {/* Feature 3: Instant Confirmation */}
+            <div className="flex items-center gap-3.5 py-3 sm:py-0 sm:px-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
+                <Zap className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Instant Confirmation</h4>
+                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Real-time booking with zero delays</p>
+              </div>
+            </div>
+
+            {/* Feature 4: 24/7 Concierge */}
+            <div className="flex items-center gap-3.5 pt-3 sm:pt-0 sm:px-4">
+              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
+                <Headphones className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
+              </div>
+              <div>
+                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">24/7 Concierge Care</h4>
+                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Dedicated help for stays & event setups</p>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
       {/* ── Category Shortcut Strip ── */}
       <ScrollReveal duration="duration-[800ms]">
         <div className="w-full bg-white relative z-20 py-8 md:py-12 border-b border-sand-100">
@@ -3370,7 +3525,7 @@ const LandingPage = () => {
               <div className="flex items-baseline gap-2 flex-wrap">
                 <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Pick a Destination</h2>
               </div>
-              <div className="flex md:hidden items-center gap-3 text-charcoal self-end">
+              <div className="flex md:hidden items-center gap-3 text-charcoal self-end pr-20 md:pr-0">
                 <span className="text-[11px] font-semibold text-charcoal-muted">Swipe</span>
                 <ChevronRight className="w-4 h-4" />
               </div>
@@ -3451,7 +3606,7 @@ const LandingPage = () => {
                 <button
                   key={item.property_id || index}
                   type="button"
-                  onClick={() => navigate(`/property/${item.property_id}`)}
+                  onClick={() => navigate(getPropertyUrl(item))}
                   className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start flex-shrink-0"
                 >
                   <div className="relative aspect-[16/10] bg-stone overflow-hidden">
@@ -3870,7 +4025,7 @@ const LandingPage = () => {
                   </p>
                 </div>
                 <button 
-                  onClick={() => navigate(user ? '/host/list-property' : '/register?role=host')}
+                  onClick={() => navigate(user ? '/host/list-property' : '/list-your-property')}
                   className="self-start md:self-auto bg-[#FBBF24] hover:bg-[#F59E0B] text-charcoal font-bold px-6 py-3 rounded-full shadow-sm hover:scale-[1.02] active:scale-95 transition-all text-xs md:text-sm flex items-center gap-2 cursor-pointer duration-200"
                 >
                   <span>Post Property</span>
@@ -3992,7 +4147,7 @@ const LandingPage = () => {
                           </span>
                         </div>
                         <p className="text-gray-505 text-gray-500 font-medium text-xs md:text-sm mt-1.5">
-                          Handpicked, ultra-premium villas starting from ₹50,000/night.
+                          Handpicked, ultra-premium villas starting from ₹{minSignaturePrice.toLocaleString('en-IN')}/night.
                         </p>
                       </div>
                       
@@ -4000,14 +4155,14 @@ const LandingPage = () => {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleArrowClick('left')}
-                          className="w-9 h-9 rounded-full border border-gray-250 flex items-center justify-center hover:bg-stone-50 transition cursor-pointer animate-scale-in"
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-250 flex items-center justify-center hover:bg-stone-50 transition cursor-pointer animate-scale-in"
                           aria-label="Previous Properties"
                         >
                           <ChevronLeft className="w-5 h-5 text-charcoal-muted" />
                         </button>
                         <button
                           onClick={() => handleArrowClick('right')}
-                          className="w-9 h-9 rounded-full border border-gray-250 flex items-center justify-center hover:bg-stone-50 transition cursor-pointer animate-scale-in"
+                          className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full border border-gray-250 flex items-center justify-center hover:bg-stone-50 transition cursor-pointer animate-scale-in"
                           aria-label="Next Properties"
                         >
                           <ChevronRight className="w-5 h-5 text-charcoal-muted" />
@@ -4024,10 +4179,10 @@ const LandingPage = () => {
                         signatureProperties.map((item) => (
                           <div
                             key={item.property_id}
-                            onClick={() => navigate(`/property/${item.property_id}`)}
+                            onClick={() => navigate(getPropertyUrl(item))}
                             className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-white rounded-3xl overflow-hidden border border-gray-150 shadow-subtle flex-shrink-0 group cursor-pointer"
                           >
-                            <div className="relative h-48 md:h-52 overflow-hidden">
+                            <div className="relative w-full h-48 md:h-52 overflow-hidden bg-stone-100">
                               <img
                                 src={getPropertyCardImage(item)}
                                 alt={item.title}
@@ -4056,8 +4211,8 @@ const LandingPage = () => {
                               <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">
                                 {item.title}
                               </h4>
-                              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider mb-3 truncate" title={`${formatPropertyTypeLabel(item.property_type || item.type)} in ${item.address ? `${item.address}, ` : ''}${item.city}`}>
-                                {formatPropertyTypeLabel(item.property_type || item.type) || 'Villa'} in {item.address ? `${item.address}, ` : ''}{item.city}
+                              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider mb-3 truncate" title={`${formatPropertyTypeLabel(item.property_type || item.type)} in ${formatAddress(item.address, item.city)}`}>
+                                {formatPropertyTypeLabel(item.property_type || item.type) || 'Villa'} in {formatAddress(item.address, item.city)}
                               </p>
                               <div className="flex items-baseline gap-1">
                                 <span className="font-black text-sm text-charcoal">₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}</span>
@@ -4101,12 +4256,16 @@ const LandingPage = () => {
             );
           })()}
 
-                    {/* Testimonials (Loved by Guests & Hosts) */}
+          {/* ===== Official Mobile App Promo Banner (Nestaway style with 3D iPhone 15 Pro, animated view & clickable Play Store QR Scanner) ===== */}
           <ScrollReveal duration="duration-[900ms]">
-            <div className="mb-12 md:mb-32 text-center">
+            <AppPromoSection />
+          </ScrollReveal>
+
+          {/* Testimonials (Loved by Guests & Hosts) */}
+          <ScrollReveal duration="duration-[900ms]">
+            <div className="mb-12 md:mb-20 text-center">
             <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
-            <h3 className="text-4xl font-bold text-charcoal mt-3 mb-4 tracking-tight">{t('lovedByGuests')}</h3>
-            <p className="text-gray-550 text-gray-500 font-medium max-w-xl mx-auto mb-16">{t('testimonialsSub')}</p>
+            <h3 className="text-3xl md:text-4xl font-bold text-charcoal mt-2 mb-6 tracking-tight">{t('lovedByGuests')}</h3>
             
             <div className="max-w-7xl mx-auto relative px-4 md:px-8">
               <div 
@@ -4193,21 +4352,14 @@ const LandingPage = () => {
             </h3>
 
             <div className="flex gap-6 overflow-x-auto pb-3 no-scrollbar md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-10 md:overflow-visible">
-              {landingBlogPosts.map((post, idx) => (
-                <div 
-                  key={post.id || idx} 
-                  onClick={() => setSelectedPost({
-                    id: post.id,
-                    title: post.title,
-                    excerpt: post.excerpt,
-                    content: post.content,
-                    date: post.date,
-                    author: post.author,
-                    image_url: post.img,
-                    read_time: post.read_time || '5 min read'
-                  })}
-                  className="group cursor-pointer flex min-w-[290px] max-w-[290px] flex-col text-left md:min-w-0 md:max-w-none"
-                >
+              {landingBlogPosts.map((post, idx) => {
+                const slug = post.slug || String(post.title || `post-${idx}`).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                return (
+                  <div 
+                    key={post.id || idx} 
+                    onClick={() => navigate(`/blog/${slug}`)}
+                    className="group cursor-pointer flex min-w-[290px] max-w-[290px] flex-col text-left md:min-w-0 md:max-w-none"
+                  >
                   {/* Rectangular Image */}
                   <div className="aspect-[2/1] overflow-hidden rounded-xl bg-stone relative">
                     <img 
@@ -4225,7 +4377,8 @@ const LandingPage = () => {
                     {post.date} &nbsp;•&nbsp; <span className="text-blue-600 hover:underline">{post.author}</span>
                   </p>
                 </div>
-              ))}
+              );
+            })}
             </div>
           </div>
           </ScrollReveal>
@@ -4312,150 +4465,10 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Main Footer Section */}
-      <footer className="relative overflow-hidden border-t border-white/10 bg-[#081321] text-white shadow-premium">
-        <div className="absolute inset-0 bg-[#081321] pointer-events-none" />
-        <div className="relative z-10 w-full px-6 py-16 md:px-10 md:py-16 lg:px-14 xl:px-20">
-          <div className="grid grid-cols-1 gap-10 lg:grid-cols-[1.45fr_repeat(5,1fr)] lg:gap-12">
-            <div className="max-w-xs">
-              <button
-                type="button"
-                className="mb-6 flex items-center"
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-                aria-label="Back to top"
-              >
-                <img src="/logo.png" alt="X-Space360 Logo" className="h-10 w-auto object-contain logo-white" />
-              </button>
-              <p className="text-sm font-medium leading-7 text-white/62">
-                {footerData.brand_description || t('footerSub')}
-              </p>
-              <div className="mt-7 flex items-center gap-3">
-                {[
-                  { icon: Facebook, url: footerData.facebook_link, label: 'Facebook' },
-                  { icon: Instagram, url: footerData.instagram_link, label: 'Instagram' },
-                  { icon: Youtube, url: footerData.youtube_link, label: 'Youtube' },
-                ].filter(social => social.url).map((social) => {
-                  const IconComponent = social.icon;
-                  return (
-                    <a
-                      key={social.label}
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={social.label}
-                      className="flex h-9 w-9 items-center justify-center rounded-full border border-white/14 bg-white/[0.03] text-white/70 transition hover:border-[#E0A51B] hover:text-[#E0A51B]"
-                    >
-                      <IconComponent className="h-4 w-4" />
-                    </a>
-                  );
-                })}
-              </div>
-            </div>
+      {/* Modern Sleek Dark Footer Section */}
+      <Footer cmsContent={cmsContent} />
 
-            {footerDisplaySections.map((section) => (
-              <div key={section.heading} className="min-w-0">
-                <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                  {section.heading}
-                  <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-                </h5>
-                <ul className="space-y-4">
-                  {section.items.map((item) => (
-                    <li key={`${section.heading}-${item.label}`}>
-                      <button
-                        type="button"
-                        onClick={() => handleFooterSectionClick(section, item)}
-                        className="text-left text-sm font-medium text-white/62 transition hover:text-[#E0A51B]"
-                      >
-                        {item.label}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
 
-            <div className="min-w-0">
-              <h5 className="mb-5 inline-flex flex-col gap-2 text-[11px] font-bold uppercase text-white">
-                Contact
-                <span className="h-0.5 w-7 rounded-full bg-[#E0A51B]" />
-              </h5>
-              <div className="space-y-5 text-sm font-medium text-white/62">
-                <div className="flex items-start gap-3">
-                  <MapPin className="mt-0.5 h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.location || 'Nashik, Maharashtra'}, India</span>
-                </div>
-                <a href={`mailto:${footerData.email || 'support@x-space360.com'}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Mail className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span className="break-all">{footerData.email || 'support@x-space360.com'}</span>
-                </a>
-                <a href={`tel:${(footerData.phone || '+91 12345 67890').replace(/\s+/g, '')}`} className="flex items-center gap-3 transition hover:text-[#E0A51B]">
-                  <Phone className="h-4 w-4 flex-shrink-0 text-[#E0A51B]" />
-                  <span>{footerData.phone || '+91 12345 67890'}</span>
-                </a>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-11 border-t border-white/10 pt-7 text-center">
-            <div className="text-xs font-bold uppercase text-white/52">
-              <p>© 2026 X-SPACE360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd.</p>
-              <div className="mt-2 flex flex-wrap justify-center gap-x-4 gap-y-2">
-                {footerLegalItems.map((item) => (
-                  <button
-                    key={item.label}
-                    type="button"
-                    onClick={() => handleFooterSectionClick({ heading: 'Legal' }, item)}
-                    className="transition hover:text-[#E0A51B]"
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </footer>
-
-      
-      {footerPopup && (
-        <div className="fixed inset-0 z-[120] bg-charcoal/70 backdrop-blur-sm flex items-center justify-center px-4 py-6">
-          <div
-            className="bg-white rounded-2xl shadow-elevated border border-gray-100 w-full max-w-4xl max-h-[88vh] overflow-hidden animate-scale-in"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="footer-legal-title"
-          >
-            <div className="px-6 py-5 md:px-8 border-b border-gray-100 bg-white flex items-start justify-between gap-5">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-terracotta mb-2">
-                  Legal Document
-                </p>
-                <h3 id="footer-legal-title" className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal">
-                  {footerPopup.title}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setFooterPopup(null)}
-                className="w-10 h-10 rounded-full border border-gray-100 text-charcoal-muted hover:text-charcoal hover:bg-stone transition flex items-center justify-center shrink-0"
-                aria-label="Close footer details"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="max-h-[calc(88vh-96px)] overflow-y-auto px-6 py-6 md:px-10 md:py-8">
-              <div className="rounded-xl border border-gray-100 bg-stone/40 px-4 py-3 mb-5">
-                <p className="text-xs leading-relaxed text-charcoal-muted">
-                  Please review this document carefully. These terms explain your rights, responsibilities, and platform usage conditions.
-                </p>
-              </div>
-              <LegalDocument text={footerPopup.text} />
-            </div>
-          </div>
-        </div>
-      )}
-
-      <ChatbotWidget />
 
       {/* Premium How It Works: Step-by-Step Host Onboarding Modal Component */}
       {(() => {

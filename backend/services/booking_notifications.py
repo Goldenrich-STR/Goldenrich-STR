@@ -289,8 +289,8 @@ async def notify_host_booking_confirmed(db: AsyncIOMotorDatabase, booking: dict)
         state = prop_details.get("state") or ""
         pin_code = prop_details.get("pin_code") or ""
         full_address = f"{address}, {city}, {state} - {pin_code}".strip(", -")
-        check_in_time = prop_details.get("check_in_time") or "12:00 PM"
-        check_out_time = prop_details.get("check_out_time") or "11:00 AM"
+        check_in_time = booking.get("start_time") or prop_details.get("check_in_time") or "12:00 PM"
+        check_out_time = booking.get("end_time") or prop_details.get("check_out_time") or "11:00 AM"
         host_phone = host.get("phone") or host.get("mobile") or "N/A"
         check_in_instructions = prop_details.get("check_in_instructions") or "Please contact the host upon arrival."
         payment_id = (

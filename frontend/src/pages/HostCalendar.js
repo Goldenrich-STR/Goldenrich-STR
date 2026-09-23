@@ -31,6 +31,15 @@ const SOURCE_LABELS = {
   external: { label: 'Blocked', color: '#6B7280', bg: 'bg-gray-100', text: 'text-gray-700' },
 };
 
+function extractCalendarUrl(value = '') {
+  let cleaned = value.trim().replace(/&amp;/g, '&').replace(/^["'<]+|[>"')\].,;\s]+$/g, '');
+  const match = cleaned.match(/(webcal:\/\/\S+|https?:\/\/\S+)/i);
+  if (match) {
+    cleaned = match[0].replace(/[>"')\].,;]+$/g, '');
+  }
+  return cleaned;
+}
+
 function toISO(d) {
   return d.toISOString().slice(0, 10);
 }
@@ -258,7 +267,7 @@ const HostCalendar = () => {
   const handleAddExternal = async (e) => {
     e.preventDefault();
     if (!extName || !extUrl) return;
-    let url = extUrl.trim();
+    let url = extractCalendarUrl(extUrl);
     if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('webcal://')) {
       url = 'https://' + url;
     }
@@ -742,6 +751,7 @@ const HostCalendar = () => {
                     />
                     <div className="rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-[11px] leading-relaxed text-blue-900">
                       For two-way sync: paste this property's X-Space360 export link on Airbnb/Vrbo, then paste Airbnb/Vrbo's export iCal link here.
+                      Airbnb export URLs usually look like <span className="font-bold">/calendar/ical/...</span> or end with <span className="font-bold">.ics</span>.
                     </div>
                     <div>
                       <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-1">Calendar Color</label>
@@ -822,7 +832,7 @@ const HostCalendar = () => {
                         )}
                       </div>
                       {c.sync_error && (
-                        <div className="text-[10px] text-red-600 mt-1.5 bg-red-50/50 p-1.5 rounded-lg truncate border border-red-50" title={c.sync_error}>
+                        <div className="text-[10px] leading-snug text-red-600 mt-1.5 bg-red-50/50 p-2 rounded-lg border border-red-50 break-words" title={c.sync_error}>
                           {c.sync_error}
                         </div>
                       )}

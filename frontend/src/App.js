@@ -3,6 +3,8 @@ import "@/App.css";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import SEO from "./components/SEO";
+import ChatbotWidget from "./components/ChatbotWidget";
+import { SEO_BROWSE_PATHS } from "./lib/seoRoutes";
 
 // Pages (Code-splitted with dynamic lazy imports)
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -54,6 +56,7 @@ const Blog = lazy(() => import("./pages/Blog"));
 const BlogPostDetail = lazy(() => import("./pages/BlogPostDetail"));
 const LegalPage = lazy(() => import("./pages/LegalPage"));
 const AccountDeletionPage = lazy(() => import("./pages/AccountDeletionPage"));
+const ListYourPropertyPage = lazy(() => import("./pages/ListYourPropertyPage"));
 
 const ScreenLoading = () => (
   <div className="min-h-screen bg-stone flex items-center justify-center">
@@ -249,37 +252,22 @@ function AppRoutes() {
           }
         />
         {/* SEO Clean Category & City Browse Routes */}
-        <Route path="/property/villas" element={<GuestBrowse />} />
-        <Route path="/property/villas-in-nashik" element={<GuestBrowse />} />
-        <Route path="/property/villas-in-trimbakeshwar" element={<GuestBrowse />} />
-        <Route path="/property/villas-in-igatpuri" element={<GuestBrowse />} />
-        <Route path="/property/villas-in-bhnadardara" element={<GuestBrowse />} />
-        <Route path="/property/laxury-villas-in-nashik" element={<GuestBrowse />} />
-        <Route path="/property/weekend-villas-in-igatpuri" element={<GuestBrowse />} />
-        <Route path="/property/scenic-villas-in-bhnadardara" element={<GuestBrowse />} />
-        <Route path="/property/residential" element={<GuestBrowse />} />
-        <Route path="/property/residential/homestay-in-nashik" element={<GuestBrowse />} />
-        <Route path="/property/residential/apartment-in-nashik" element={<GuestBrowse />} />
-        <Route path="/property/residential/farmhouse-in-nashik" element={<GuestBrowse />} />
-        <Route path="/property/residential/holidayhomes-in-igatpuri" element={<GuestBrowse />} />
-        <Route path="/property/residential/homestay-in-igatpuri" element={<GuestBrowse />} />
-        <Route path="/property/residential/familystay-in-trimbak" element={<GuestBrowse />} />
-        <Route path="/property/residential/apartment-in-trimbak" element={<GuestBrowse />} />
-        <Route path="/property/residential/naturestay-in-bhandardara" element={<GuestBrowse />} />
-        <Route path="/property/residential/banglows" element={<GuestBrowse />} />
-        <Route path="/property/residential/apartment" element={<GuestBrowse />} />
-        <Route path="/property/residential/studio" element={<GuestBrowse />} />
-        <Route path="/property/residential/privatehouse" element={<GuestBrowse />} />
-        <Route path="/property/residential/farmhouse" element={<GuestBrowse />} />
+        {SEO_BROWSE_PATHS.map((path) => (
+          <Route key={path} path={path} element={<GuestBrowse />} />
+        ))}
+        <Route path="/property/villas-in-bhnadardara" element={<Navigate to="/property/villas-in-bhandardara" replace />} />
+        <Route path="/property/laxury-villas-in-nashik" element={<Navigate to="/property/luxury-villas-in-nashik" replace />} />
+        <Route path="/property/scenic-villas-in-bhnadardara" element={<Navigate to="/property/scenic-villas-in-bhandardara" replace />} />
         <Route path="/property/residential/*" element={<GuestBrowse />} />
-        <Route path="/property/event-venues" element={<GuestBrowse />} />
+        <Route path="/property/event-venues" element={<Navigate to="/event-venues/" replace />} />
         <Route path="/property/event-venues/*" element={<GuestBrowse />} />
-        <Route path="/property/commercial-spaces" element={<GuestBrowse />} />
+        <Route path="/property/commercial-spaces" element={<Navigate to="/property/workspaces/" replace />} />
         <Route path="/property/commercial-spaces/*" element={<GuestBrowse />} />
         <Route path="/property/villas/*" element={<GuestBrowse />} />
 
         <Route path="/property/:id" element={<PropertyDetail />} />
         <Route path="/places/:slug" element={<PlaceDetails />} />
+        <Route path="/list-your-property" element={<ListYourPropertyPage />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/about-us" element={<AboutUs />} />
         <Route path="/blog" element={<Blog />} />
@@ -460,6 +448,7 @@ function App() {
         <Suspense fallback={<ScreenLoading />}>
           <AppRoutes />
         </Suspense>
+        <ChatbotWidget />
       </AuthProvider>
     </div>
   );

@@ -1350,12 +1350,44 @@ async def expand_url(url: str = Query(...)):
     """Resolve short URLs (like maps.app.goo.gl) to their full URL."""
     try:
         import urllib.request
+        from urllib.parse import urlparse
+
+        def is_allowed_maps_url(candidate: str) -> bool:
+            parsed = urlparse(candidate)
+            hostname = (parsed.hostname or "").rstrip(".").lower()
+            if parsed.scheme != "https" or parsed.username or parsed.password:
+                return False
+            return (
+                hostname in {"goo.gl", "maps.app.goo.gl", "google.com"}
+                or hostname.endswith(".google.com")
+                or hostname.endswith(".google.co.in")
+            )
+
+        if not is_allowed_maps_url(url):
+            raise HTTPException(status_code=400, detail="Only HTTPS Google Maps links are allowed")
+
+        class MapsRedirectHandler(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                if not is_allowed_maps_url(newurl):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Google Maps link redirected to an unsupported host",
+                    )
+                return super().redirect_request(req, fp, code, msg, headers, newurl)
+
         req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        res = urllib.request.urlopen(req, timeout=10)
-        return {"url": res.geturl()}
+        opener = urllib.request.build_opener(MapsRedirectHandler())
+        # Redirects are constrained by the same Google Maps host allowlist.
+        with opener.open(req, timeout=10) as res:
+            expanded_url = res.geturl()
+        if not is_allowed_maps_url(expanded_url):
+            raise HTTPException(status_code=400, detail="Google Maps link redirected to an unsupported host")
+        return {"url": expanded_url}
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to expand URL: {str(e)}")
-        return {"url": url}
+        raise HTTPException(status_code=400, detail="Could not expand Google Maps URL")
 
 
 
@@ -1496,14 +1528,14 @@ async def submit_review(
     except Exception as e:
         logger.error(f"Error submitting review: {str(e)}")
         raise HTTPException(status_code=500, detail="Failed to submit review")
-
-
 class GenerateDescriptionRequest(BaseModel):
     title: Optional[str] = ""
     category: Optional[str] = ""
     property_type: Optional[str] = ""
     bhk_type: Optional[str] = ""
     city: Optional[str] = ""
+    address: Optional[str] = ""
+    state: Optional[str] = ""
     amenities: Optional[List[str]] = []
     area_sqft: Optional[int] = None
     max_guests: Optional[int] = None
@@ -1519,7 +1551,7 @@ async def generate_description(
         category = data.category or "residential"
         property_type = data.property_type or ""
         bhk_type = data.bhk_type or ""
-        city = data.city or ""
+        city = (data.city or data.address or data.state or "").strip()
         amenities = data.amenities or []
         area_sqft = data.area_sqft
         max_guests = data.max_guests
@@ -1605,7 +1637,7 @@ async def generate_description(
         # Fallback to local smart template generator
         clean_prop_type = property_type.replace("_", " ").title() if property_type else "property"
         clean_bhk = bhk_type.upper() if bhk_type else ""
-        clean_city = city.title() if city else "our location"
+        clean_city = city.title() if city else "a prime location"
         clean_title = title if title else f"Beautiful {clean_bhk} {clean_prop_type}"
         clean_amenities = [a.replace("_", " ").title() for a in amenities]
 

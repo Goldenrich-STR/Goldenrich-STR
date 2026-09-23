@@ -20,7 +20,10 @@ async def check():
     if user:
         print(f'User found! Role: {user.get("role")}, Active: {user.get("is_active")}')
         from utils.auth import verify_password
-        pwd_ok = verify_password('admin@123', user['password_hash'])
+        admin_password = os.environ.get("ADMIN_PASSWORD", "").strip()
+        if not admin_password:
+            raise RuntimeError("ADMIN_PASSWORD must be configured")
+        pwd_ok = verify_password(admin_password, user['password_hash'])
         print(f'Password verified: {pwd_ok}')
     else:
         print('User not found!')
