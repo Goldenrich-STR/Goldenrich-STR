@@ -87,15 +87,48 @@ async def razorpay_webhook(
     event_type = payload.get("event")
     logger.info(f"Received Razorpay webhook event: {event_type}")
 
+    event_data = payload.get("payload", {})
+    payment_entity = event_data.get("payment", {}).get("entity", {})
+    order_entity = event_data.get("order", {}).get("entity", {}) or {}
+
+    if event_type == "payment.failed":
+        order_id = payment_entity.get("order_id")
+        payment_id = payment_entity.get("id") or ""
+        booking = None
+        if order_id:
+            booking = await db.bookings.find_one(
+                {"$or": [{"razorpay_order_id": order_id}, {"remaining_payment_order_id": order_id}]},
+                {"_id": 0},
+            )
+        if booking:
+            already_notified = booking.get("payment_failed_notification_payment_id") == payment_id
+            if not already_notified:
+                is_remaining_payment = booking.get("remaining_payment_order_id") == order_id
+                payment_update = {
+                    "payment_failed_notification_payment_id": payment_id,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+                if is_remaining_payment:
+                    payment_update["remaining_payment_status"] = "failed"
+                else:
+                    payment_update["payment_status"] = "failed"
+                await db.bookings.update_one(
+                    {"booking_id": booking["booking_id"]},
+                    {"$set": payment_update},
+                )
+                from services.booking_notifications import notify_guest_payment_failed
+                notification_booking = dict(booking)
+                if is_remaining_payment:
+                    notification_booking["notification_amount"] = booking.get("remaining_amount")
+                await notify_guest_payment_failed(db, notification_booking, payment_id)
+            return {"status": "processed", "resolved_entity": "booking", "id": booking["booking_id"]}
+        return {"status": "unresolved", "event": event_type}
+
     if event_type not in ("payment.captured", "order.paid"):
         # We acknowledge receipt of other events with 200 OK as required by Razorpay
         return {"status": "ignored", "event": event_type}
 
     # Extract transaction references
-    event_data = payload.get("payload", {})
-    payment_entity = event_data.get("payment", {}).get("entity", {})
-    order_entity = event_data.get("order", {}).get("entity", {}) or {}
-
     payment_id = payment_entity.get("id")
     order_id = payment_entity.get("order_id") or order_entity.get("id")
     amount_paise = payment_entity.get("amount") or order_entity.get("amount")
@@ -328,6 +361,12 @@ async def razorpay_webhook(
                 logger.warning(f"Webhook failed to record subscription transaction: {txn_err}")
 
             logger.info(f"Subscription {subscription_id} successfully activated via webhook.")
+            from routes.subscription_routes import send_subscription_success_whatsapp
+            await send_subscription_success_whatsapp(
+                db,
+                {**subscription, "status": SubscriptionStatus.ACTIVE.value},
+                payment_id or order_id or "",
+            )
             return {"status": "processed", "resolved_entity": "subscription", "id": subscription_id}
         else:
             logger.info(f"Subscription {subscription_id} was already active. No-op.")

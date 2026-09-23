@@ -253,6 +253,8 @@ class MSG91Service:
         parameters: list[str],
         button_url_parameters: Optional[list[str]] = None,
         header_media_url: Optional[str] = None,
+        header_media_type: str = "image",
+        header_filename: Optional[str] = None,
     ) -> Dict:
         """Send WhatsApp template with numbered body variables via MSG91."""
         try:
@@ -286,9 +288,11 @@ class MSG91Service:
             }
             if header_media_url:
                 components["header_1"] = {
-                    "type": "image",
+                    "type": header_media_type,
                     "value": str(header_media_url),
                 }
+                if header_filename and header_media_type == "document":
+                    components["header_1"]["filename"] = header_filename
             for index, value in enumerate(button_url_parameters or [], start=1):
                 components[f"button_{index}"] = {
                     "subtype": "url",
