@@ -7,6 +7,7 @@ from uuid import uuid4
 class PropertyType(str, Enum):
     APARTMENT = "apartment"
     VILLA = "villa"
+    HOMESTAY = "homestay"
     BUNGALOW = "bungalow"
     STUDIO = "studio"
     INDEPENDENT_HOUSE = "independent_house"

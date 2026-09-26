@@ -49,6 +49,7 @@ const ManagingDirectorDashboard = lazy(() => import("./pages/ManagingDirectorDas
 const HostPayouts = lazy(() => import("./pages/HostPayouts"));
 const HostBookings = lazy(() => import("./pages/HostBookings"));
 const HostPerformance = lazy(() => import("./pages/HostPerformance"));
+const HostPricing = lazy(() => import("./pages/HostPricing"));
 const SsoCallback = lazy(() => import("./pages/SsoCallback"));
 const SupportPage = lazy(() => import("./pages/SupportPage"));
 const AboutUs = lazy(() => import("./pages/AboutUs"));
@@ -344,6 +345,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/host/pricing"
+          element={
+            <ProtectedRoute allowedRoles={["host"]}>
+              <HostPricing />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/host/list-property"
           element={
             <ProtectedRoute allowedRoles={["host", "admin"]}>
@@ -399,6 +408,7 @@ function AppRoutes() {
           <Route path="blogs" element={<BlogManagementAdmin />} />
           <Route path="communication" element={<CommunicationCenterAdmin />} />
           <Route path="channel-manager" element={<ChannelManagerAdmin />} />
+          <Route path="channel-manager/price-engine" element={<ChannelManagerAdmin />} />
           <Route path="support" element={<SupportTicketManagementAdmin />} />
           <Route path="settings" element={<PlatformSettingsAdmin />} />
           <Route path="approvals" element={<ApprovalCenterAdmin />} />

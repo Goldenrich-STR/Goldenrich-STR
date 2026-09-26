@@ -6652,7 +6652,7 @@ const CMSManagement = () => {
                             updated[index] = { ...updated[index], action_value: e.target.value };
                             setSupportData({ ...supportData, cards: updated });
                           }}
-                          placeholder="e.g. support@x-space360.com or +91 98765 43210"
+                          placeholder="e.g. support@x-space360.com or +91 919225586010"
                         />
                       </div>
                     </div>

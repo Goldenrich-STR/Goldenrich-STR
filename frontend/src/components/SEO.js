@@ -13,7 +13,7 @@ const DEFAULT_LOCAL_BUSINESS_SCHEMA = {
   "@id": "https://x-space360.in/#localbusiness",
   "name": "X-Space360 Head Office",
   "image": "https://x-space360.in/favicon_rich.jpg",
-  "telephone": "+919876543210",
+  "telephone": "+91919225586010",
   "email": "support@x-space360.in",
   "url": "https://x-space360.in",
   "address": {

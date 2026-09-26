@@ -55,7 +55,7 @@ def _support_phone() -> str:
         or os.getenv("CUSTOMER_SUPPORT_NUMBER", "").strip()
         or os.getenv("HELPLINE_NUMBER", "").strip()
         or os.getenv("SUPPORT_NUMBER", "").strip()
-        or "+91 8484826247"
+        or "+91 919225586010"
     )
 
 
