@@ -28,6 +28,38 @@ def _safe_json_field(value: str) -> str:
         raise ValueError(f"Unsafe JSON field: {value!r}")
     return ".".join(parts)
 
+
+def _apply_mongo_set(target: dict, set_dict: dict):
+    if not isinstance(set_dict, dict):
+        return
+    for key, value in set_dict.items():
+        if "." in key:
+            parts = key.split(".")
+            curr = target
+            for part in parts[:-1]:
+                if part not in curr or not isinstance(curr[part], dict):
+                    curr[part] = {}
+                curr = curr[part]
+            curr[parts[-1]] = value
+        else:
+            target[key] = value
+
+
+def _apply_mongo_unset(target: dict, unset_list):
+    for key in unset_list:
+        if "." in key:
+            parts = key.split(".")
+            curr = target
+            for part in parts[:-1]:
+                if not isinstance(curr, dict) or part not in curr:
+                    break
+                curr = curr[part]
+            else:
+                if isinstance(curr, dict) and parts[-1] in curr:
+                    del curr[parts[-1]]
+        elif key in target:
+            del target[key]
+
 class PGUpdateResult(int):
     def __new__(cls, count, matched_count=None, modified_count=None):
         obj = super(PGUpdateResult, cls).__new__(cls, count)
@@ -421,7 +453,7 @@ class PGCollection:
             if row:
                 data = json.loads(row['data'])
                 if "$set" in update:
-                    data.update(self._prepare_doc(update["$set"]))
+                    _apply_mongo_set(data, self._prepare_doc(update["$set"]))
                 if "$unset" in update:
                     for k in update["$unset"]:
                         if k in data:
@@ -435,9 +467,9 @@ class PGCollection:
                     if not k.startswith("$") and not isinstance(v, dict):
                         new_doc[k] = v
                 if "$set" in update:
-                    new_doc.update(self._prepare_doc(update["$set"]))
+                    _apply_mongo_set(new_doc, self._prepare_doc(update["$set"]))
                 if "$setOnInsert" in update:
-                    new_doc.update(self._prepare_doc(update["$setOnInsert"]))
+                    _apply_mongo_set(new_doc, self._prepare_doc(update["$setOnInsert"]))
                 await self.insert_one(new_doc)
                 return PGUpdateResult(1, matched_count=0, modified_count=1)
         return PGUpdateResult(0, matched_count=0, modified_count=0)
@@ -450,11 +482,9 @@ class PGCollection:
                 for row in rows:
                     data = json.loads(row['data'])
                     if "$set" in update:
-                        data.update(self._prepare_doc(update["$set"]))
+                        _apply_mongo_set(data, self._prepare_doc(update["$set"]))
                     if "$unset" in update:
-                        for k in update["$unset"]:
-                            if k in data:
-                                del data[k]
+                        _apply_mongo_unset(data, update["$unset"])
                     await conn.execute(f"UPDATE {self.table_name} SET data = $1 WHERE id = $2", json.dumps(data), row['id'])
                 return PGUpdateResult(len(rows), matched_count=len(rows), modified_count=len(rows))
             elif upsert:
@@ -463,9 +493,9 @@ class PGCollection:
                     if not k.startswith("$") and not isinstance(v, dict):
                         new_doc[k] = v
                 if "$set" in update:
-                    new_doc.update(self._prepare_doc(update["$set"]))
+                    _apply_mongo_set(new_doc, self._prepare_doc(update["$set"]))
                 if "$setOnInsert" in update:
-                    new_doc.update(self._prepare_doc(update["$setOnInsert"]))
+                    _apply_mongo_set(new_doc, self._prepare_doc(update["$setOnInsert"]))
                 await self.insert_one(new_doc)
                 return PGUpdateResult(1, matched_count=0, modified_count=1)
             return PGUpdateResult(0, matched_count=0, modified_count=0)
@@ -491,11 +521,9 @@ class PGCollection:
                                 del return_doc[k]
                 
                 if "$set" in update:
-                    data.update(self._prepare_doc(update["$set"]))
+                    _apply_mongo_set(data, self._prepare_doc(update["$set"]))
                 if "$unset" in update:
-                    for k in update["$unset"]:
-                        if k in data:
-                            del data[k]
+                    _apply_mongo_unset(data, update["$unset"])
                 await conn.execute(f"UPDATE {self.table_name} SET data = $1 WHERE id = $2", json.dumps(data), row['id'])
                 return return_doc
             elif upsert:
@@ -504,9 +532,9 @@ class PGCollection:
                     if not k.startswith("$") and not isinstance(v, dict):
                         new_doc[k] = v
                 if "$set" in update:
-                    new_doc.update(self._prepare_doc(update["$set"]))
+                    _apply_mongo_set(new_doc, self._prepare_doc(update["$set"]))
                 if "$setOnInsert" in update:
-                    new_doc.update(self._prepare_doc(update["$setOnInsert"]))
+                    _apply_mongo_set(new_doc, self._prepare_doc(update["$setOnInsert"]))
                 await self.insert_one(new_doc)
                 return new_doc
         return None
