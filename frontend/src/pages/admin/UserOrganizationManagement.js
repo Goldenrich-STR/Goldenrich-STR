@@ -526,18 +526,22 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
       setSaving(true);
       const payload = { ...form };
       if (payload.role === 'rm') {
+        payload.role = 'employee';
         payload.designation = 'RM';
         payload.admin_role_key = 'rm';
       }
       if (payload.role === 'branch_manager') {
+        payload.role = 'employee';
         payload.designation = payload.designation || 'Branch Manager';
         payload.admin_role_key = 'branch_manager';
       }
       if (payload.role === 'team_leader') {
+        payload.role = 'employee';
         payload.designation = 'TL';
         payload.admin_role_key = 'team_leader';
       }
       if (payload.role === 'telecaller') {
+        payload.role = 'employee';
         payload.designation = 'Telecaller';
         payload.department = payload.department || 'Verification';
         payload.admin_role_key = 'telecaller';

@@ -70,7 +70,10 @@ const ScreenLoading = () => (
 );
 
 // Protected Route Component
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const normalizeRoleKey = (value) => String(value || '').toLowerCase().replace(/[\s-]+/g, '_');
+const isRoleKey = (user, keys = []) => keys.includes(normalizeRoleKey(user?.admin_role_key || user?.designation));
+
+const ProtectedRoute = ({ children, allowedRoles, allowedRoleKeys }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -91,7 +94,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to={`${loginPath}?next=${encodeURIComponent(next)}`} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  const roleAllowed = !allowedRoles || allowedRoles.includes(user.role);
+  const roleKeyAllowed = allowedRoleKeys && isRoleKey(user, allowedRoleKeys);
+  if (!roleAllowed && !roleKeyAllowed) {
     return <Navigate to="/" replace />;
   }
 
@@ -158,12 +163,13 @@ const RoleBasedRedirect = () => {
       return <Navigate to="/broker/dashboard" replace />;
     case "employee":
       const adminRole = user?.admin_role_key;
+      if (adminRole === 'telecaller') {
+        return <Navigate to="/telecaller/dashboard" replace />;
+      }
       if (adminRole === 'rm' || adminRole === 'relationship_manager') {
         return <Navigate to="/broker/dashboard" replace />;
       }
       return <Navigate to="/employee/dashboard" replace />;
-    case "telecaller":
-      return <Navigate to="/telecaller/dashboard" replace />;
     case "guest":
     default:
       return <Navigate to="/guest/browse" replace />;
@@ -172,7 +178,7 @@ const RoleBasedRedirect = () => {
 
 const RoleAwareVideoVerificationRoom = () => {
   const { user } = useAuth();
-  return <VideoVerificationRoom role={user?.role === "telecaller" ? "telecaller" : "host"} />;
+  return <VideoVerificationRoom role={isRoleKey(user, ["telecaller"]) ? "telecaller" : "host"} />;
 };
 
 const GlobalAlertDialog = () => {
@@ -386,7 +392,7 @@ function AppRoutes() {
         <Route
           path="/telecaller/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["telecaller"]}>
+            <ProtectedRoute allowedRoleKeys={["telecaller"]}>
               <TelecallerDashboard />
             </ProtectedRoute>
           }
@@ -394,7 +400,7 @@ function AppRoutes() {
         <Route
           path="/telecaller/verification/:verificationId"
           element={
-            <ProtectedRoute allowedRoles={["telecaller"]}>
+            <ProtectedRoute allowedRoleKeys={["telecaller"]}>
               <TelecallerDashboard />
             </ProtectedRoute>
           }
@@ -402,7 +408,7 @@ function AppRoutes() {
         <Route
           path="/verification/video/:verificationId"
           element={
-            <ProtectedRoute allowedRoles={["host", "telecaller", "admin"]}>
+            <ProtectedRoute allowedRoles={["host", "admin"]} allowedRoleKeys={["telecaller"]}>
               <RoleAwareVideoVerificationRoom />
             </ProtectedRoute>
           }
@@ -410,7 +416,7 @@ function AppRoutes() {
         <Route
           path="/host/properties/:propertyId/video-verification"
           element={
-            <ProtectedRoute allowedRoles={["host", "telecaller", "admin"]}>
+            <ProtectedRoute allowedRoles={["host", "admin"]} allowedRoleKeys={["telecaller"]}>
               <RoleAwareVideoVerificationRoom />
             </ProtectedRoute>
           }
