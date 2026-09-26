@@ -13,6 +13,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Keep the host Price Engine aligned with the black, white and slate Host Dashboard theme. */
+.host-price-engine {
+  accent-color: #0f172a;
+}
+
+.host-price-engine .text-blue-600,
+.host-price-engine .text-blue-700,
+.host-price-engine .text-blue-800 {
+  color: #0f172a !important;
+}
+
+.host-price-engine .bg-blue-700,
+.host-price-engine .bg-blue-800 {
+  background-color: #0f172a !important;
+}
+
+.host-price-engine .bg-blue-50,
+.host-price-engine .bg-blue-50\/70,
+.host-price-engine .bg-blue-100 {
+  background-color: #f8fafc !important;
+}
+
+.host-price-engine .border-blue-100,
+.host-price-engine .border-blue-200,
+.host-price-engine .border-blue-600,
+.host-price-engine .border-blue-700 {
+  border-color: #cbd5e1 !important;
+}
+
+.host-price-engine .hover\:bg-blue-50:hover {
+  background-color: #f1f5f9 !important;
+}
+
+.host-price-engine .hover\:bg-blue-800:hover {
+  background-color: #000 !important;
+}
+
+.host-price-engine .focus\:border-blue-600:focus {
+  border-color: #0f172a !important;
+}
+
 @layer base {
   * {
     margin: 0;

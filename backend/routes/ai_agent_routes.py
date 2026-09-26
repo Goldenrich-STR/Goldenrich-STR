@@ -234,7 +234,7 @@ _CACHE_TTL_SECONDS = 3600  # 1 hour
 # ── FAQ knowledge base — answers common questions without hitting the API ──
 _FAQ_ANSWERS = [
     (["list property", "add property", "list my property", "apli property kashi takaychi", "property kashi add karavi", "property kashi list karavi", "onboard host", "host kasa whayche", "host registration", "host kaisa bane", "property kaisa list kare", "list karna", "steps to list", "how to list", "apna ghar kaise", "ghar kaisa", "host banavayche"],
-     "To list your property on X-Space360:\n1. Register as a Host\n2. Choose a subscription plan (Standard / Growth / Elite)\n3. Add your property details, photos & amenities\n4. Our Relationship Manager (RM) will visit for a physical verification audit\n5. Once approved, your property goes LIVE with a green trust badge ✅\n\nFor help call +91 8484826247 or email support@x-space360.com"),
+     "To list your property on X-Space360:\n1. Register as a Host\n2. Choose a subscription plan (Standard / Growth / Elite)\n3. Add your property details, photos & amenities\n4. Our Relationship Manager (RM) will visit for a physical verification audit\n5. Once approved, your property goes LIVE with a green trust badge ✅\n\nFor help call +91 919225586010 or email support@x-space360.com"),
 
     (["subscription", "plan", "price", "cost", "standard plan", "growth plan", "elite plan", "kitni fees", "registration fee", "500 rupee"],
      "X-Space360 Host Plans:\n\n📦 Standard — ₹500 refundable registration fee. Single listing.\n📈 Growth — Multiple properties, priority verification, WhatsApp alerts.\n⭐ Elite — Dedicated RM, 24/7 hotline, featured ranking.\n\nAll plans require a ₹500 refundable registration fee to get started."),
@@ -243,13 +243,13 @@ _FAQ_ANSWERS = [
      "Cancellation & Refund Policy:\n• Cancel 7+ days before check-in → 100% refund\n• Cancel 48 hours to 7 days before → 50% refund\n• Cancel within 48 hours → No refund (strict policy)\n\nPayments are processed via Razorpay. Refunds take 5-7 business days."),
 
     (["book", "booking", "kaise book", "how to book", "property book", "reserve", "check-in", "checkout"],
-     "To book a property:\n1. Search by location, dates & guests\n2. Choose a property and click 'Book Now'\n3. A 5-minute soft lock holds the property while you complete payment\n4. Pay securely via Razorpay (UPI, card, netbanking)\n5. You'll receive a booking confirmation instantly!\n\nNeed help? Call +91 8484826247"),
+     "To book a property:\n1. Search by location, dates & guests\n2. Choose a property and click 'Book Now'\n3. A 5-minute soft lock holds the property while you complete payment\n4. Pay securely via Razorpay (UPI, card, netbanking)\n5. You'll receive a booking confirmation instantly!\n\nNeed help? Call +91 919225586010"),
 
     (["verification", "rm", "relationship manager", "physical verification", "audit", "verify", "green badge", "trust badge"],
      "Physical Verification Process:\n• After listing your property, an X-Space360 Relationship Manager (RM) will visit in person\n• The RM verifies GPS coordinates, photos, amenities, safety & quality standards\n• Once approved, your property receives a green ✅ Trust Badge and goes LIVE\n• This ensures guests always get exactly what they see online"),
 
     (["contact", "support", "help", "helpline", "phone", "email", "office", "call", "sampark", "sahayata"],
-     "X-Space360 Support:\n📞 Helpline: +91 8484826247\n📧 Email: support@x-space360.com\n🏢 Office: Nashik, Maharashtra\n\nOur team is available to help you with bookings, listings, verifications, and more!"),
+     "X-Space360 Support:\n📞 Helpline: +91 919225586010\n📧 Email: support@x-space360.com\n🏢 Office: Nashik, Maharashtra\n\nOur team is available to help you with bookings, listings, verifications, and more!"),
 
     (["hello", "hi", "hey", "namaste", "namaskar", "helo", "good morning", "good evening", "kem cho"],
      "Namaste! Welcome to X-Space360 🏡\n\nI'm MAYUR, your AI assistant. I can help you with:\n• Finding & booking properties\n• Listing your property as a host\n• Subscription plans & pricing\n• Cancellation & refund policies\n• Physical verification process\n\nHow can I assist you today?"),
@@ -324,7 +324,7 @@ async def chat_with_ai(payload: ChatRequest):
             all_keys.append(extra)
 
     if not all_keys:
-        return {"response": "Namaste! I am currently in offline mode. For support, please contact us at +91 8484826247 or email support@x-space360.com."}
+        return {"response": "Namaste! I am currently in offline mode. For support, please contact us at +91 919225586010 or email support@x-space360.com."}
 
     # ── 4. Build Gemini request payload ──────────────────────────────────────
     system_instruction = (
@@ -338,7 +338,7 @@ async def chat_with_ai(payload: ChatRequest):
         "- Plans: Standard (single listing, ₹500 refundable registration fee), Growth (multiple properties, priority verification, WhatsApp alerts), Elite (dedicated RM, 24/7 hotline, featured home ranking).\n"
         "- Booking & Refund: 5-minute soft lock during checkout. Payments handled via Razorpay. Refund: 100% refund up to 7 days before check-in, 50% up to 48 hours, strict/no-refund thereafter.\n"
         "- Physical Verification: RM physically audits every property's coordinates, amenities, safety, and quality checks.\n"
-        "- Contact: Support helpline +91 8484826247, email support@x-space360.com, office in Nashik, Maharashtra.\n\n"
+        "- Contact: Support helpline +91 919225586010, email support@x-space360.com, office in Nashik, Maharashtra.\n\n"
         "Be polite, helpful, and concise. Respond in the same language the user uses to chat (English, Hindi, Marathi, etc.)."
     )
 
@@ -408,12 +408,12 @@ async def chat_with_ai(payload: ChatRequest):
         return {
             "response": (
                 "I'm experiencing high demand right now and cannot process your request. "
-                "For immediate help, please call our support helpline at +91 8484826247 "
+                "For immediate help, please call our support helpline at +91 919225586010 "
                 "or email support@x-space360.com. We'll respond within a few hours!"
             )
         }
 
     logger.error(f"All Gemini API keys failed. Last error: {last_error}")
-    return {"response": "I'm experiencing connectivity issues. Please contact our support helpline +91 8484826247."}
+    return {"response": "I'm experiencing connectivity issues. Please contact our support helpline +91 919225586010."}
 
 

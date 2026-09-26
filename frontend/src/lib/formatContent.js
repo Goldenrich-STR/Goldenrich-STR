@@ -53,8 +53,20 @@ export const markdownComponents = {
   ol: ({ node, ...props }) => <ol className="list-decimal list-outside ml-6 mb-6 space-y-2.5 text-charcoal-light" {...props} />,
   li: ({ node, ...props }) => <li className="leading-relaxed text-[14.5px] md:text-[15.5px] text-charcoal-light font-normal pl-1" {...props} />,
   strong: ({ node, ...props }) => <strong className="font-bold text-charcoal" {...props} />,
-  em: ({ node, ...props }) => <em className="italic text-charcoal-muted" {...props} />,
-  a: ({ node, ...props }) => <a className="font-bold text-terracotta hover:underline" {...props} />,
+  a: ({ node, href, children, ...props }) => {
+    const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
+    return (
+      <a
+        href={href}
+        target={isExternal ? '_blank' : '_self'}
+        rel={isExternal ? 'noopener noreferrer' : undefined}
+        className="font-bold text-terracotta underline decoration-terracotta/40 underline-offset-4 hover:decoration-terracotta hover:text-terracotta-dark transition-all cursor-pointer inline-flex items-center gap-0.5"
+        {...props}
+      >
+        {children}
+      </a>
+    );
+  },
   table: ({ node, ...props }) => (
     <div className="overflow-x-auto my-6 border border-gray-300 rounded-xl shadow-sm bg-white">
       <table className="w-full text-left border-collapse text-sm" {...props} />
