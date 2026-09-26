@@ -2540,7 +2540,7 @@ const LandingPage = () => {
             content: post.content || '',
             date: post.date || 'June 2026',
             author: post.author || 'X-Space360 Desk',
-            img: post.image_url || post.img || post.featuredImage || fallbackImg,
+            img: post.image_url || post.imageUrl || post.img || post.featuredImage || fallbackImg,
             read_time: post.read_time || '5 min read'
           };
         })

@@ -22,6 +22,7 @@ from services.nearby_property_service import (
     DEFAULT_RADIUS_METERS,
     find_nearby_properties,
 )
+from services.price_engine_service import base_price as listing_base_price, calculate_price, is_eligible_property, property_rules
 from datetime import datetime, timezone
 import asyncio
 import logging
@@ -165,10 +166,49 @@ def _sanitize_property_media(payload: dict) -> dict:
 
 def _property_host_nightly_price(prop: dict) -> float:
     try:
-        raw_price = prop.get("base_price") if prop.get("base_price") not in (None, "") else prop.get("price_per_night")
+        raw_price = prop.get("effective_price_per_night")
+        if raw_price in (None, ""):
+            raw_price = prop.get("base_price") if prop.get("base_price") not in (None, "") else prop.get("price_per_night")
         return float(raw_price or 0)
     except (TypeError, ValueError):
         return 0.0
+
+
+async def _add_dynamic_property_price(db, prop: dict, target_date=None) -> dict:
+    """Add an effective display price without changing the stored listing price."""
+    original = listing_base_price(prop)
+    prop["base_price_per_night"] = original
+    if not is_eligible_property(prop):
+        prop["effective_price_per_night"] = original
+        return prop
+    try:
+        rules = await property_rules(db, prop.get("property_id"))
+        pricing = calculate_price(prop, target_date or datetime.now(timezone.utc).date(), rules)
+        prop["effective_price_per_night"] = pricing["final_price"]
+        prop["price_per_night"] = pricing["final_price"]
+        prop["active_price_rule"] = pricing
+        today_iso = datetime.now(timezone.utc).date().isoformat()
+        relevant = [
+            rule for rule in rules
+            if rule.get("rule_type") == "WEEKEND" or not rule.get("end_date") or str(rule.get("end_date"))[:10] >= today_iso
+        ]
+        adjustments = []
+        for rule in relevant:
+            values = list((rule.get("day_adjustments") or {}).values()) or [rule.get("adjustment_percentage", 0)]
+            sign = -1 if str(rule.get("adjustment_type") or "INCREASE").upper() == "DECREASE" else 1
+            adjustments.extend(sign * float(value or 0) for value in values)
+        prop["dynamic_pricing_summary"] = {
+            "has_rules": bool(relevant),
+            "has_weekend": any(rule.get("rule_type") == "WEEKEND" for rule in relevant),
+            "has_seasonal": any(rule.get("rule_type") in {"SEASON", "CUSTOM"} for rule in relevant),
+            "minimum_adjustment": min(adjustments) if adjustments else 0,
+            "maximum_adjustment": max(adjustments) if adjustments else 0,
+        }
+    except Exception as exc:
+        logger.warning("Failed to calculate dynamic property price for %s: %s", prop.get("property_id"), exc)
+        prop["effective_price_per_night"] = original
+        prop["price_per_night"] = original
+    return prop
 
 
 def _mapped_value(*values) -> bool:
@@ -809,6 +849,7 @@ async def search_properties(
             _sanitize_property_media(prop)
             if prop.get("base_price") not in (None, ""):
                 prop["price_per_night"] = prop["base_price"]
+            await _add_dynamic_property_price(db, prop, check_in)
             await _add_customer_display_price(db, prop, price_config)
 
         # Log search activity for analytics (admin dashboard)
@@ -923,6 +964,7 @@ async def get_property(
         if property_dict.get("base_price") not in (None, ""):
             property_dict["price_per_night"] = property_dict["base_price"]
         _sanitize_property_media(property_dict)
+        await _add_dynamic_property_price(db, property_dict)
         await _add_customer_display_price(db, property_dict)
 
         # Get optional user from Request headers (Authorization)

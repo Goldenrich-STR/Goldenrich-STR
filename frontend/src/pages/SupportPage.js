@@ -182,7 +182,8 @@ const SupportPage = () => {
           : [];
         setSupportData({
           ...DEFAULT_SUPPORT_DATA,
-          ...res.data.support_content
+          ...res.data.support_content,
+          cards: (res.data.support_content.cards || DEFAULT_SUPPORT_DATA.cards).map(c => c.id === 'call_support' ? { ...c, button_text: '+91 919225586010', action_value: '+91 919225586010' } : c)
         });
         if (cmsFaqs.length > 0) {
           setFaqs(cmsFaqs.map((item, index) => ({
