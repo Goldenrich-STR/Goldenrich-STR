@@ -46,6 +46,8 @@ const ApprovalCenterAdmin = lazy(() => import("./pages/admin/ApprovalCenter"));
 const BrokerDashboard = lazy(() => import("./pages/BrokerDashboard"));
 const EmployeeDashboard = lazy(() => import("./pages/EmployeeDashboard"));
 const ManagingDirectorDashboard = lazy(() => import("./pages/ManagingDirectorDashboard"));
+const TelecallerDashboard = lazy(() => import("./pages/TelecallerDashboard"));
+const VideoVerificationRoom = lazy(() => import("./pages/VideoVerificationRoom"));
 const HostPayouts = lazy(() => import("./pages/HostPayouts"));
 const HostBookings = lazy(() => import("./pages/HostBookings"));
 const HostPerformance = lazy(() => import("./pages/HostPerformance"));
@@ -160,10 +162,17 @@ const RoleBasedRedirect = () => {
         return <Navigate to="/broker/dashboard" replace />;
       }
       return <Navigate to="/employee/dashboard" replace />;
+    case "telecaller":
+      return <Navigate to="/telecaller/dashboard" replace />;
     case "guest":
     default:
       return <Navigate to="/guest/browse" replace />;
   }
+};
+
+const RoleAwareVideoVerificationRoom = () => {
+  const { user } = useAuth();
+  return <VideoVerificationRoom role={user?.role === "telecaller" ? "telecaller" : "host"} />;
 };
 
 const GlobalAlertDialog = () => {
@@ -368,6 +377,41 @@ function AppRoutes() {
           element={
             <ProtectedRoute allowedRoles={["broker", "employee"]}>
               <BrokerDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Telecaller Routes */}
+        <Route path="/telecalling/dashboard" element={<Navigate to="/telecaller/dashboard" replace />} />
+        <Route
+          path="/telecaller/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["telecaller"]}>
+              <TelecallerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/telecaller/verification/:verificationId"
+          element={
+            <ProtectedRoute allowedRoles={["telecaller"]}>
+              <TelecallerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/verification/video/:verificationId"
+          element={
+            <ProtectedRoute allowedRoles={["host", "telecaller", "admin"]}>
+              <RoleAwareVideoVerificationRoom />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/host/properties/:propertyId/video-verification"
+          element={
+            <ProtectedRoute allowedRoles={["host", "telecaller", "admin"]}>
+              <RoleAwareVideoVerificationRoom />
             </ProtectedRoute>
           }
         />

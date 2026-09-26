@@ -4,7 +4,7 @@ import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, requestConfirm, requestInput, requestReason, Pagination } from './shared';
 
 const tabs = [
-  ['all', 'All Users'], ['guest', 'Guests'], ['host', 'Hosts'], ['employee', 'Employees'], ['broker', 'Brokers'], ['admin', 'Administrators'], ['inactive', 'Inactive Users'],
+  ['all', 'All Users'], ['guest', 'Guests'], ['host', 'Hosts'], ['rm', 'RMs'], ['branch_manager', 'Branch Managers'], ['team_leader', 'Team Leaders'], ['telecaller', 'Telecallers'], ['broker', 'Brokers'], ['admin', 'Administrators'], ['inactive', 'Inactive Users'],
 ];
 
 const baseForm = {
@@ -21,14 +21,30 @@ const permissionOptions = ['view', 'create', 'edit', 'approve', 'reject', 'assig
 const roleOptions = [
   { value: 'guest', label: 'Guest' },
   { value: 'host', label: 'Host' },
-  { value: 'employee', label: 'Employee' },
   { value: 'rm', label: 'RM' },
   { value: 'branch_manager', label: 'Branch Manager' },
   { value: 'team_leader', label: 'Team Leader (TL)' },
+  { value: 'telecaller', label: 'Telecaller' },
   { value: 'broker', label: 'Broker' },
   { value: 'admin', label: 'Admin' },
   { value: 'md', label: 'Managing Director' },
 ];
+
+const operationalRole = (user = {}) => {
+  const role = String(user.role || '').toLowerCase();
+  const roleKey = String(user.admin_role_key || '').toLowerCase().replace(/[\s-]+/g, '_');
+  const designation = String(user.designation || '').toLowerCase().replace(/[\s-]+/g, '_');
+  if (role === 'rm' || (role === 'employee' && (['rm', 'relationship_manager'].includes(roleKey) || ['rm', 'relationship_manager'].includes(designation)))) return 'rm';
+  if (role === 'branch_manager' || (role === 'employee' && (roleKey === 'branch_manager' || designation.includes('branch_manager')))) return 'branch_manager';
+  if (role === 'team_leader' || (role === 'employee' && (roleKey === 'team_leader' || designation.includes('team_leader') || designation === 'tl'))) return 'team_leader';
+  if (role === 'telecaller' || (role === 'employee' && (roleKey === 'telecaller' || designation.includes('telecaller')))) return 'telecaller';
+  if (role === 'admin' && (roleKey === 'managing_director' || designation.includes('managing_director'))) return 'md';
+  return role || 'guest';
+};
+
+const operationalRoleLabel = (user = {}) => (
+  roleOptions.find((option) => option.value === operationalRole(user))?.label || compactRole(user.role)
+);
 
 const getApiMessage = (error, fallback) => {
   const detail = error?.response?.data?.detail;
@@ -64,7 +80,10 @@ const primaryUserId = (user) => {
 };
 const roleCodeLabel = (user) => {
   if (user.role === 'broker') return 'Broker Code / User ID';
-  if (user.admin_role_key === 'rm') return 'RM Code / User ID';
+  if (operationalRole(user) === 'rm') return 'RM Code / User ID';
+  if (operationalRole(user) === 'branch_manager') return 'Branch Manager Code / User ID';
+  if (operationalRole(user) === 'team_leader') return 'TL Code / User ID';
+  if (operationalRole(user) === 'telecaller') return 'Telecaller Code / User ID';
   if (user.role === 'admin') return 'Admin User ID';
   return 'Employee Code / User ID';
 };
@@ -228,29 +247,44 @@ const SearchableTextSelect = ({ options, value, onChange, placeholder, emptyLabe
 };
 
 const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { branches: [], franchises: [] }, onCancel, onSaved }) => {
-  const initialRoleKey = String(initialUser?.admin_role_key || '').toLowerCase();
-  const initialRole = initialUser?.role === 'employee' && ['rm', 'relationship_manager'].includes(initialRoleKey)
+  const initialRoleKey = String(initialUser?.admin_role_key || '').toLowerCase().replace(/[\s-]+/g, '_');
+  const initialRole = initialUser?.role === 'rm' || (initialUser?.role === 'employee' && ['rm', 'relationship_manager'].includes(initialRoleKey))
     ? 'rm'
-    : initialUser?.role === 'employee' && initialRoleKey === 'branch_manager'
+    : initialUser?.role === 'branch_manager' || (initialUser?.role === 'employee' && initialRoleKey === 'branch_manager')
       ? 'branch_manager'
-      : initialUser?.role === 'employee' && initialRoleKey === 'team_leader'
+      : initialUser?.role === 'team_leader' || (initialUser?.role === 'employee' && initialRoleKey === 'team_leader')
         ? 'team_leader'
+        : initialUser?.role === 'telecaller' || (initialUser?.role === 'employee' && initialRoleKey === 'telecaller')
+          ? 'telecaller'
     : initialUser?.role === 'admin' && ['managing_director', 'managing director'].includes(String(initialUser?.admin_role_key || initialUser?.designation || '').toLowerCase())
       ? 'md'
       : initialUser?.role;
   const [form, setForm] = useState({ ...baseForm, ...(initialUser || {}), role: initialRole || baseForm.role, password: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const isEmploymentRole = ['employee', 'rm', 'branch_manager', 'team_leader', 'broker', 'admin', 'md'].includes(form.role);
+  const isEmploymentRole = ['rm', 'branch_manager', 'team_leader', 'telecaller', 'broker', 'admin', 'md'].includes(form.role);
   const showOperationalControls = isEmploymentRole && form.role !== 'md';
   const showHostAssignment = form.role === 'host';
-  const brokerRmOptions = managers.filter((m) => ['broker', 'employee'].includes(m.role) && userCode(m));
+  const brokerRmOptions = managers.filter((m) => ['broker', 'employee', 'rm'].includes(m.role) && userCode(m));
+  const rmOptions = managers.filter((m) => operationalRole(m) === 'rm' && m.user_id !== initialUser?.user_id);
+  const teamLeaderOptions = managers.filter((m) => operationalRole(m) === 'team_leader' && m.user_id !== initialUser?.user_id);
   const branchManagerOptions = managers.filter((m) => {
     const designation = String(m.designation || m.admin_role_key || '').toLowerCase();
     const roleKey = String(m.admin_role_key || '').toLowerCase();
     const role = String(m.role || '').toLowerCase();
-    return roleKey === 'branch_manager' || designation.includes('branch manager') || role === 'branch_manager';
+    return (roleKey === 'branch_manager' || designation.includes('branch manager') || role === 'branch_manager') && m.user_id !== initialUser?.user_id;
   });
+  const managerOptions = managers.filter((m) => m.user_id !== initialUser?.user_id);
+  const reportingOptions = form.role === 'rm'
+    ? teamLeaderOptions
+    : form.role === 'team_leader'
+      ? branchManagerOptions
+      : form.role === 'broker'
+        ? rmOptions
+      : managerOptions;
+  const secondaryManagerOptions = form.role === 'rm' ? branchManagerOptions : managerOptions;
+  const reportingPlaceholder = form.role === 'rm' ? 'Select TL code' : form.role === 'team_leader' ? 'Select Branch Manager code' : form.role === 'broker' ? 'Select RM code' : 'Unassigned';
+  const secondaryPlaceholder = form.role === 'rm' ? 'Select Branch Manager code' : 'None';
   const toCodeOptions = (values, prefix) => values
     .filter(Boolean)
     .map((name) => {
@@ -386,6 +420,7 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
         ...current,
         role,
         business_division: '',
+        admin_role_key: '',
       };
     }
     if (role === 'rm') {
@@ -394,8 +429,10 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
         role,
         business_division: '',
         joining_date: '',
-        designation: current.designation || 'Relationship Manager',
-        admin_role_key: current.admin_role_key || 'rm',
+        reports_to: '',
+        secondary_reports_to: '',
+        designation: 'RM',
+        admin_role_key: 'rm',
       };
     }
     if (role === 'branch_manager') {
@@ -405,7 +442,7 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
         business_division: '',
         reports_to: '',
         joining_date: '',
-        designation: current.designation || 'Branch Manager',
+        designation: 'Branch Manager',
         admin_role_key: 'branch_manager',
       };
     }
@@ -414,8 +451,24 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
         ...current,
         role,
         business_division: '',
-        designation: current.designation || 'Team Leader',
+        reports_to: '',
+        secondary_reports_to: '',
+        designation: 'TL',
         admin_role_key: 'team_leader',
+      };
+    }
+    if (role === 'telecaller') {
+      return {
+        ...current,
+        role,
+        business_division: '',
+        reports_to: '',
+        secondary_reports_to: '',
+        joining_date: '',
+        designation: 'Telecaller',
+        department: current.department || 'Verification',
+        admin_role_key: 'telecaller',
+        access_scope: 'assigned_records',
       };
     }
     return { ...current, role };
@@ -437,23 +490,58 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
       setError('Password must be at least 8 characters');
       return;
     }
+    if (form.role === 'rm') {
+      if (!form.reports_to) {
+        setError('Reports To is required for RM. Select a TL code.');
+        return;
+      }
+      if (!form.secondary_reports_to) {
+        setError('Secondary Manager is required for RM. Select a Branch Manager code.');
+        return;
+      }
+      if (!teamLeaderOptions.some((manager) => manager.user_id === form.reports_to)) {
+        setError('Reports To for RM must be a Team Leader.');
+        return;
+      }
+      if (!branchManagerOptions.some((manager) => manager.user_id === form.secondary_reports_to)) {
+        setError('Secondary Manager for RM must be a Branch Manager.');
+        return;
+      }
+    }
+    if (form.role === 'team_leader') {
+      if (!form.reports_to) {
+        setError('Reports To is required for Team Leader. Select a Branch Manager code.');
+        return;
+      }
+      if (!branchManagerOptions.some((manager) => manager.user_id === form.reports_to)) {
+        setError('Reports To for Team Leader must be a Branch Manager.');
+        return;
+      }
+    }
+    if (form.role === 'broker' && form.reports_to && !rmOptions.some((manager) => manager.user_id === form.reports_to)) {
+      setError('Reports To for Broker must be an RM.');
+      return;
+    }
     try {
       setSaving(true);
       const payload = { ...form };
       if (payload.role === 'rm') {
-        payload.role = 'employee';
-        payload.designation = payload.designation || 'Relationship Manager';
-        payload.admin_role_key = payload.admin_role_key || 'rm';
+        payload.designation = 'RM';
+        payload.admin_role_key = 'rm';
       }
       if (payload.role === 'branch_manager') {
-        payload.role = 'employee';
         payload.designation = payload.designation || 'Branch Manager';
         payload.admin_role_key = 'branch_manager';
       }
       if (payload.role === 'team_leader') {
-        payload.role = 'employee';
-        payload.designation = payload.designation || 'Team Leader';
+        payload.designation = 'TL';
         payload.admin_role_key = 'team_leader';
+      }
+      if (payload.role === 'telecaller') {
+        payload.designation = 'Telecaller';
+        payload.department = payload.department || 'Verification';
+        payload.admin_role_key = 'telecaller';
+        payload.access_scope = payload.access_scope || 'assigned_records';
       }
       if (payload.role === 'md') {
         payload.role = 'admin';
@@ -498,7 +586,7 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
       </Panel>
       <Panel className="overflow-visible p-0">
         <div className="border-b border-slate-100 px-4 py-3">
-          <h3 className="font-black">{form.role === 'broker' ? 'Broker Information' : form.role === 'rm' ? 'RM Information' : form.role === 'branch_manager' ? 'Branch Manager Information' : form.role === 'team_leader' ? 'Team Leader Information' : form.role === 'md' ? 'Managing Director Information' : 'Employment Information'}</h3>
+          <h3 className="font-black">{form.role === 'broker' ? 'Broker Information' : form.role === 'rm' ? 'RM Information' : form.role === 'branch_manager' ? 'Branch Manager Information' : form.role === 'team_leader' ? 'Team Leader Information' : form.role === 'telecaller' ? 'Telecaller Information' : form.role === 'md' ? 'Managing Director Information' : 'Employment Information'}</h3>
           <p className="mt-1 text-xs font-semibold text-slate-500">Configure role identity, branch ownership and work location details.</p>
         </div>
         <div className="grid gap-4 p-4 md:grid-cols-3">
@@ -525,7 +613,7 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
             </Field>
           </>}
           {isEmploymentRole && <>
-            {form.role !== 'admin' && form.role !== 'md' && <Field label={form.role === 'broker' ? 'Broker Code' : form.role === 'rm' ? 'RM Code' : form.role === 'branch_manager' ? 'Branch Manager Code' : form.role === 'team_leader' ? 'TL Code' : 'Employee Code'}><input className={inputClass} value={form.employee_code || ''} onChange={(e) => setValue('employee_code', e.target.value)} /></Field>}
+            {form.role !== 'admin' && form.role !== 'md' && <Field label={form.role === 'broker' ? 'Broker Code' : form.role === 'rm' ? 'RM Code' : form.role === 'branch_manager' ? 'Branch Manager Code' : form.role === 'team_leader' ? 'TL Code' : form.role === 'telecaller' ? 'Telecaller Code' : 'Employee Code'}><input className={inputClass} value={form.employee_code || ''} onChange={(e) => setValue('employee_code', e.target.value)} /></Field>}
             {form.role !== 'broker' && <Field label="Designation"><input className={inputClass} value={form.designation || ''} onChange={(e) => setValue('designation', e.target.value)} /></Field>}
             {form.role !== 'broker' && <Field label="Department"><input className={inputClass} value={form.department || ''} onChange={(e) => setValue('department', e.target.value)} /></Field>}
             {form.role !== 'employee' && form.role !== 'rm' && form.role !== 'branch_manager' && form.role !== 'broker' && form.role !== 'admin' && form.role !== 'md' && <Field label="Business Division"><input className={inputClass} value={form.business_division || ''} onChange={(e) => setValue('business_division', e.target.value)} /></Field>}
@@ -538,11 +626,11 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
                 value={form.branch || ''}
               />
             </Field>}
-            {form.role !== 'branch_manager' && form.role !== 'md' && <Field label="Branch Manager">
+            {form.role !== 'rm' && form.role !== 'branch_manager' && form.role !== 'md' && <Field label={form.role === 'broker' ? 'RM Code' : 'Branch Manager'}>
               <SearchableUserSelect
-                emptyLabel="No branch manager found"
+                emptyLabel={form.role === 'broker' ? 'No RM found' : 'No branch manager found'}
                 onChange={(manager) => setValue('reports_to', manager.user_id)}
-                options={branchManagerOptions}
+                options={form.role === 'broker' ? rmOptions : branchManagerOptions}
                 placeholder="Search code or name"
                 selectedDisplay="code"
                 value={form.reports_to || ''}
@@ -565,9 +653,9 @@ const UserForm = ({ initialUser, managers, roles = [], organizationCodes = { bra
       {showOperationalControls && <Panel className="p-4">
         <h3 className="mb-3 font-black">Reporting Structure</h3>
         <div className="grid gap-3 md:grid-cols-3">
-          <Field label="Reports To"><select className={inputClass} value={form.reports_to || ''} onChange={(e) => setValue('reports_to', e.target.value)}><option value="">Unassigned</option>{managers.filter((m) => m.user_id !== initialUser?.user_id).map((m) => <option key={m.user_id} value={m.user_id}>{m.full_name} ({m.role})</option>)}</select></Field>
-          <Field label="Secondary Manager"><select className={inputClass} value={form.secondary_reports_to || ''} onChange={(e) => setValue('secondary_reports_to', e.target.value)}><option value="">None</option>{managers.map((m) => <option key={m.user_id} value={m.user_id}>{m.full_name}</option>)}</select></Field>
-          <Field label="Escalation Manager"><select className={inputClass} value={form.escalation_manager || ''} onChange={(e) => setValue('escalation_manager', e.target.value)}><option value="">None</option>{managers.map((m) => <option key={m.user_id} value={m.user_id}>{m.full_name}</option>)}</select></Field>
+          <Field label="Reports To"><select className={inputClass} value={form.reports_to || ''} onChange={(e) => setValue('reports_to', e.target.value)}><option value="">{reportingPlaceholder}</option>{reportingOptions.map((m) => <option key={m.user_id} value={m.user_id}>{userCode(m)} - {m.full_name} ({operationalRoleLabel(m)})</option>)}</select></Field>
+          <Field label="Secondary Manager"><select className={inputClass} value={form.secondary_reports_to || ''} onChange={(e) => setValue('secondary_reports_to', e.target.value)}><option value="">{secondaryPlaceholder}</option>{secondaryManagerOptions.map((m) => <option key={m.user_id} value={m.user_id}>{userCode(m)} - {m.full_name} ({operationalRoleLabel(m)})</option>)}</select></Field>
+          <Field label="Escalation Manager"><select className={inputClass} value={form.escalation_manager || ''} onChange={(e) => setValue('escalation_manager', e.target.value)}><option value="">None</option>{managerOptions.map((m) => <option key={m.user_id} value={m.user_id}>{userCode(m)} - {m.full_name} ({operationalRoleLabel(m)})</option>)}</select></Field>
         </div>
       </Panel>}
       {showOperationalControls && <Panel className="overflow-visible p-0">
@@ -651,6 +739,7 @@ const UserOrganizationManagement = () => {
   const [tab, setTab] = useState('all');
   const [search, setSearch] = useState('');
   const [state, setState] = useState({ loading: true, error: '', users: [] });
+  const [directoryUsers, setDirectoryUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [organizationCodes, setOrganizationCodes] = useState({ branches: [], franchises: [] });
   const [modal, setModal] = useState(null);
@@ -661,7 +750,11 @@ const UserOrganizationManagement = () => {
     setPage(1);
   }, [tab, search]);
 
-  const managers = useMemo(() => state.users.filter((u) => ['admin', 'employee', 'broker'].includes(u.role) && u.is_active !== false), [state.users]);
+  const managers = useMemo(() => {
+    const source = directoryUsers.length ? directoryUsers : state.users;
+    const assignableRoles = ['admin', 'employee', 'broker', 'rm', 'branch_manager', 'team_leader', 'telecaller'];
+    return source.filter((u) => assignableRoles.includes(String(u.role || '').toLowerCase()) && u.is_active !== false);
+  }, [directoryUsers, state.users]);
 
   const loadUsers = useCallback(async () => {
     setState((s) => ({ ...s, loading: true }));
@@ -678,6 +771,17 @@ const UserOrganizationManagement = () => {
   }, [tab, search]);
 
   useEffect(() => { loadUsers(); }, [loadUsers]);
+
+  const loadDirectoryUsers = useCallback(async () => {
+    try {
+      const res = await adminPhase1API.users({ status: 'active', limit: 500 });
+      setDirectoryUsers(normalizeUsersResponse(res.data));
+    } catch (error) {
+      setDirectoryUsers([]);
+    }
+  }, []);
+
+  useEffect(() => { loadDirectoryUsers(); }, [loadDirectoryUsers]);
 
   useEffect(() => {
     const loadRoles = async () => {
@@ -710,6 +814,7 @@ const UserOrganizationManagement = () => {
     setNotice('User flow saved and audit log created');
     if (!keepOpen) setModal(null);
     loadUsers();
+    loadDirectoryUsers();
   };
 
   const changeStatus = async (user) => {
@@ -893,7 +998,7 @@ const UserOrganizationManagement = () => {
                     </td>
                     <td className="px-4 py-4">
                       <div className="grid min-w-[220px] gap-2">
-                        <DetailLine label="Base Role" value={compactRole(u.role)} capitalize />
+                        <DetailLine label="Base Role" value={operationalRoleLabel(u)} />
                         <DetailLine label={roleCodeLabel(u)} value={u.role === 'admin' ? primaryUserId(u) : u.employee_code} mono />
                         <DetailLine label="Admin Role Key" value={u.admin_role_key} mono />
                       </div>
@@ -944,7 +1049,7 @@ const UserOrganizationManagement = () => {
               <div key={u.user_id} className="p-4">
                 <div className="flex justify-between gap-3"><div><p className="font-black">{u.full_name}</p><p className="text-xs text-slate-500">{u.email}</p></div><StatusBadge value={u.is_active === false ? 'inactive' : 'active'} /></div>
                 <div className="mt-3 grid gap-2 rounded-2xl bg-slate-50 p-3 text-sm">
-                  <DetailLine label="Role / User ID" value={`${compactRole(u.role)} / ${primaryUserId(u) || '-'}`} capitalize />
+                  <DetailLine label="Role / User ID" value={`${operationalRoleLabel(u)} / ${primaryUserId(u) || '-'}`} />
                   <DetailLine label="Phone" value={u.phone} />
                   <DetailLine label="Location" value={[u.city, u.state, u.work_location].filter(Boolean).join(' / ')} />
                   <DetailLine label="Organization" value={u.role === 'broker' ? [u.branch, u.franchise, u.work_location].filter(Boolean).join(' / ') : [u.designation, u.department, u.branch, u.franchise].filter(Boolean).join(' / ')} />

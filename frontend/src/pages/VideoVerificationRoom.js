@@ -88,7 +88,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
                 <span className="rounded-full bg-red-50 px-3 py-1 text-xs font-black text-red-600">Record</span>
                 <button
                   type="button"
-                  onClick={() => navigate(role === 'host' ? '/host/dashboard' : '/telecalling/dashboard')}
+                  onClick={() => navigate(role === 'host' ? '/host/dashboard' : '/telecaller/dashboard')}
                   className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50"
                   title="Back"
                 >

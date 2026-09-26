@@ -62,6 +62,7 @@ from routes.ai_agent_routes import router as ai_agent_router
 from routes.support_ticket_routes import router as support_ticket_router
 from routes.admin_core_routes import router as admin_core_router
 from routes.pricing_routes import router as pricing_router
+from routes.verification_case_routes import router as verification_case_router
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -84,6 +85,7 @@ app.include_router(ai_agent_router, prefix="/api")
 app.include_router(support_ticket_router, prefix="/api")
 app.include_router(admin_core_router, prefix="/api")
 app.include_router(pricing_router, prefix="/api")
+app.include_router(verification_case_router, prefix="/api")
 from routes.seo_routes import router as seo_router
 app.include_router(seo_router)
 
