@@ -88,6 +88,14 @@ DISALLOWED_PROPERTY_MEDIA_HOSTS = {
 }
 
 
+def _supports_guest_count(property_data: dict, requested_guests: int) -> bool:
+    """Compare JSON-backed guest capacity numerically, never lexicographically."""
+    try:
+        return int(property_data.get("max_guests")) >= requested_guests
+    except (TypeError, ValueError):
+        return False
+
+
 async def get_db():
     from server import db_instance
     return db_instance
@@ -595,8 +603,6 @@ async def search_properties(
             query["pet_friendly"] = pet_friendly
 
         requested_guests = guests or max_guests
-        if requested_guests is not None:
-            query["max_guests"] = {"$gte": requested_guests}
 
         # Amenities filter
         if amenities:
@@ -711,6 +717,13 @@ async def search_properties(
             if expired_sub_ids:
                 raw_properties = [p for p in raw_properties if p.get("subscription_id") not in expired_sub_ids]
 
+        # PostgreSQL stores document fields in JSONB. The generic adapter compares
+        # $gte values as text so that it can also support ISO dates, which makes a
+        # capacity such as "10" sort below "2". Guest capacity is numeric, so apply
+        # this filter numerically after fetching the live property rows.
+        if requested_guests is not None:
+            raw_properties = [p for p in raw_properties if _supports_guest_count(p, requested_guests)]
+
         if min_price is not None:
             raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
         if max_price is not None:
@@ -760,6 +773,9 @@ async def search_properties(
                     expired_sub_ids = {s["subscription_id"] for s in expired_subs}
                     if expired_sub_ids:
                         raw_properties = [p for p in raw_properties if p.get("subscription_id") not in expired_sub_ids]
+
+                    if requested_guests is not None:
+                        raw_properties = [p for p in raw_properties if _supports_guest_count(p, requested_guests)]
 
                 if min_price is not None:
                     raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
