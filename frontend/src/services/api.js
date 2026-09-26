@@ -199,16 +199,18 @@ apiClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle token expiration (401 Unauthorized)
+// Handle token expiration. Do not log the user out for ordinary 403/404
+// resource errors such as pincode/location lookup misses.
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     const isAuthAttempt = error.config?.url?.startsWith('/api/auth/');
     const isSilentAuth = error.config?._silentAuth;
-    if (error.response && error.response.status === 401 && isSilentAuth) {
+    const status = error.response?.status;
+    if ([401, 403, 404].includes(status) && isSilentAuth) {
       localStorage.removeItem('propnest_token');
       localStorage.removeItem('propnest_user');
-    } else if (error.response && error.response.status === 401 && !isAuthAttempt) {
+    } else if (status === 401 && !isAuthAttempt) {
       localStorage.removeItem('propnest_token');
       localStorage.removeItem('propnest_user');
       window.location.href = '/login';
@@ -489,6 +491,57 @@ export const calendarAPI = {
 //   under_review (rm_approved=true) -> live (admin approve)
 //   under_review -> rejected (admin reject) | draft (rm reject -> resubmit)
 export const verificationAPI = {
+  dashboardSummary: () =>
+    apiClient.get('/verification-cases/dashboard-summary'),
+
+  listCases: (stage) =>
+    apiClient.get('/verification-cases', { params: stage ? { stage } : {} }),
+
+  myLeads: () =>
+    apiClient.get('/verification-cases/my-leads'),
+
+  listDocumentQueue: (stage) =>
+    apiClient.get('/verification-cases/document-queue', { params: stage ? { stage } : {} }),
+
+  getCase: (verificationId) =>
+    apiClient.get(`/verification-cases/${verificationId}`),
+
+  scheduleCase: (payload) =>
+    apiClient.post('/verification-cases/schedule', payload),
+
+  startCase: (verificationId) =>
+    apiClient.post(`/verification-cases/${verificationId}/start`),
+
+  saveCallOutcome: (verificationId, payload) =>
+    apiClient.post(`/verification-cases/${verificationId}/call`, payload),
+
+  startLocalAdbCall: (payload) =>
+    apiClient.post('/verification-cases/local-adb/dial', payload),
+
+  getCaseActivity: (verificationId) =>
+    apiClient.get(`/verification-cases/${verificationId}/activity`),
+
+  saveTelecallerChecklist: (verificationId, payload) =>
+    apiClient.patch(`/verification-cases/${verificationId}/telecaller-checklist`, payload),
+
+  telecallerDecision: (verificationId, payload) =>
+    apiClient.post(`/verification-cases/${verificationId}/telecaller-decision`, payload),
+
+  saveBmChecklist: (verificationId, payload) =>
+    apiClient.patch(`/verification-cases/${verificationId}/bm-checklist`, payload),
+
+  bmDecision: (verificationId, payload) =>
+    apiClient.post(`/verification-cases/${verificationId}/bm-decision`, payload),
+
+  adminDecision: (verificationId, payload) =>
+    apiClient.post(`/verification-cases/${verificationId}/admin-decision`, payload),
+
+  reviewHostDocument: (hostId, documentType, payload) =>
+    apiClient.post(`/verification-cases/document-queue/${hostId}/documents/${documentType}/decision`, payload),
+
+  submitHostDocumentVerification: (hostId, payload) =>
+    apiClient.post(`/verification-cases/document-queue/${hostId}/submit`, payload),
+
   // Broker
   listBrokerTasks: (status_filter) =>
     apiClient.get('/broker/verifications', {
