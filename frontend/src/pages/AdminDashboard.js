@@ -6076,7 +6076,7 @@ const CMSManagement = () => {
                   className="w-full border border-gray-100 focus:border-terracotta focus:ring-2 focus:ring-terracotta/15 rounded-2xl px-4 py-3 outline-none transition-all font-semibold text-charcoal bg-white text-sm"
                   value={footerData.phone || ''}
                   onChange={e => setFooterData({ ...footerData, phone: e.target.value })}
-                  placeholder="+91 919225586010"
+                  placeholder="+91 9225586010"
                 />
               </div>
 
@@ -6743,7 +6743,7 @@ const CMSManagement = () => {
                             updated[index] = { ...updated[index], action_value: e.target.value };
                             setSupportData({ ...supportData, cards: updated });
                           }}
-                          placeholder="e.g. support@x-space360.com or +91 919225586010"
+                          placeholder="e.g. support@x-space360.com or +91 9225586010"
                         />
                       </div>
                     </div>

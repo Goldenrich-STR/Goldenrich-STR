@@ -1,248 +1,140 @@
-import React, { useState } from 'react';
-import { Smartphone, CheckCircle2, Star, Zap, MapPin, QrCode, ExternalLink } from 'lucide-react';
+import React from 'react';
+import { Bell, Check, MapPin, Menu, Search, Star, Zap } from 'lucide-react';
 
 const PLAY_STORE_URL = 'https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share';
-const QR_CODE_API = `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(PLAY_STORE_URL)}`;
+
+const benefits = [
+  'Discover newly listed stays, workspaces and venues as soon as they go live',
+  'Manage your bookings with ease and get instant updates from hosts'
+];
+
+function StoreBadges() {
+  return (
+    <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+      <a href={PLAY_STORE_URL} target="_blank" rel="noopener noreferrer" aria-label="Get X-Space360 on Google Play">
+        <img
+          src="https://static.99acres.com/universalapp/img/Play.png"
+          alt="Get it on Google Play"
+          className="h-[34px] sm:h-[38px] w-auto rounded-[5px] transition-opacity hover:opacity-85"
+        />
+      </a>
+      <button
+        type="button"
+        onClick={() => window.alert('X-Space360 iOS App is launching soon on Apple App Store!')}
+        aria-label="X-Space360 Apple App Store launch information"
+      >
+        <img
+          src="https://static.99acres.com/universalapp/img/ios.png"
+          alt="Download on the App Store"
+          className="h-[34px] sm:h-[38px] w-auto rounded-[5px] transition-opacity hover:opacity-85"
+        />
+      </button>
+    </div>
+  );
+}
+
+function PhonePreview() {
+  return (
+    <div className="relative mx-auto h-[315px] w-[196px] rounded-[28px] border-[3px] border-[#4b5668] bg-white p-[9px] shadow-[0_13px_28px_rgba(24,39,60,0.24)] sm:h-[330px] sm:w-[205px]">
+      <div className="absolute left-1/2 top-[5px] z-20 h-[13px] w-[50px] -translate-x-1/2 rounded-full bg-[#182334]" />
+      <div className="h-full overflow-hidden rounded-[19px] border border-[#e1e6ec] bg-[#f7f8f9] text-[#17243b]">
+        <div className="bg-white px-3 pb-2 pt-5">
+          <div className="mb-2 flex items-center justify-between">
+            <Menu className="h-3 w-3 text-[#8490a0]" />
+            <img src="/logo.png" alt="X-Space360" className="h-[17px] w-[92px] object-contain" />
+            <Search className="h-3.5 w-3.5 text-[#8490a0]" />
+          </div>
+          <div className="flex items-center gap-1 rounded-full border border-[#e5e8ec] bg-[#fafafa] px-2 py-1.5 text-[6px] text-[#8994a3]">
+            <MapPin className="h-2.5 w-2.5 text-[#b18417]" />
+            Search stays, workspaces &amp; venues
+          </div>
+        </div>
+
+        <div className="space-y-2 p-2.5">
+          <div className="flex gap-1 text-[6px] font-bold">
+            <span className="rounded-full bg-[#162238] px-2 py-1 text-white">Villas</span>
+            <span className="rounded-full bg-white px-2 py-1">Workspaces</span>
+            <span className="rounded-full bg-white px-2 py-1">Venues</span>
+          </div>
+          <p className="text-[8px] font-bold">Recommended for you</p>
+          <div className="overflow-hidden rounded-lg bg-white shadow-sm ring-1 ring-black/5">
+            <div className="relative h-[83px] overflow-hidden">
+              <img
+                src="/videos/Discover our collection/Villas/Bellissimo Villa4 (1).jpg"
+                alt="Featured X-Space360 villa"
+                className="h-full w-full object-cover"
+              />
+              <span className="absolute left-1.5 top-1.5 rounded bg-[#17243b] px-1.5 py-0.5 text-[5px] font-bold uppercase tracking-wide text-white">Signature stay</span>
+              <span className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 rounded-full bg-white px-1.5 py-0.5 text-[6px] font-extrabold">
+                <Star className="h-2 w-2 fill-[#e3ae1a] text-[#e3ae1a]" /> 4.9
+              </span>
+            </div>
+            <div className="p-2">
+              <p className="truncate text-[7px] font-bold">Bellissimo Private Villa</p>
+              <div className="mt-1 flex items-end justify-between">
+                <span className="text-[7px] font-extrabold">₹12,500 <small className="font-normal text-[#8490a0]">/night</small></span>
+                <span className="flex items-center gap-0.5 text-[5px] font-bold text-emerald-700"><Zap className="h-2 w-2 fill-current" /> Instant</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="absolute -right-[31px] top-[75px] flex h-11 w-11 items-center justify-center rounded-full bg-[#087f5b] text-white shadow-[0_6px_16px_rgba(8,127,91,0.35)] ring-[5px] ring-white/85">
+        <Bell className="h-5 w-5 fill-white" />
+        <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-[#e32727] ring-2 ring-white" />
+      </div>
+    </div>
+  );
+}
+
+function CitySilhouette() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 h-[75px] overflow-hidden text-[#f6d999] opacity-55">
+      <svg viewBox="0 0 1200 75" preserveAspectRatio="none" className="h-full w-full fill-current">
+        <path d="M0 75V60h34V45h13v15h18V32h28v43h22V53h14v22h44V44h30v31h41V56h22v19h38V36h20v39h52V51h13v24h35V43h27v32h45V58h25v17h55V39h25v36h26V55h17v20h37V31h34v44h48V49h21v26h50V41h29v34h23V52h17v23h54V45h34v30h42V57h18v18h52V37h28v38h20V55h19v20h47V47h28v28h40V59h19v16Z" />
+        <path d="M75 49h5v6h-5zm12 0h5v6h-5zm101 3h5v6h-5zm11 0h5v6h-5zm302-2h5v6h-5zm12 0h5v6h-5zm372 3h5v6h-5zm12 0h5v6h-5zm204-5h5v6h-5z" className="fill-white/80" />
+      </svg>
+    </div>
+  );
+}
 
 export default function AppPromoSection() {
-  const [activeTab, setActiveTab] = useState('villas');
-
   return (
-    <section className="w-full bg-[#F6F5F0] border-t border-b border-sand-200/80 py-6 sm:py-8 my-4 overflow-hidden">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-8 lg:px-12">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-10 items-center">
-          
-          {/* ================= LEFT SIDE: REALISTIC IPHONE MOCKUP & SOFT BACKGROUND ================= */}
-          <div className="lg:col-span-6 relative flex justify-center items-center py-2">
-            
-            {/* Soft decorative background circles */}
-            <div className="absolute w-[280px] sm:w-[360px] h-[280px] sm:h-[360px] rounded-full bg-[#EAE5D9]/60 pointer-events-none -z-0" />
-            <div className="absolute w-[220px] sm:w-[270px] h-[220px] sm:h-[270px] rounded-full bg-white/60 pointer-events-none -z-0 blur-xl" />
+    <section className="app-promo-open-sans mx-auto my-8 w-full max-w-[1216px] px-4 sm:my-10 sm:px-6 lg:px-0">
+      <div className="relative min-h-[310px] overflow-hidden rounded-[14px] bg-[#fff5e6] px-6 py-8 sm:px-10 lg:h-[332px] lg:px-12 lg:py-0">
+        <CitySilhouette />
 
-            {/* Slim Profile Phone Frame */}
-            <div className="relative w-[260px] sm:w-[280px] flex justify-center items-center z-10 group hover:scale-[1.01] transition-transform duration-500">
-              
-              {/* Phone Frame Body */}
-              <div className="relative w-full h-[510px] sm:h-[550px] bg-[#121215] rounded-[42px] sm:rounded-[48px] p-2.5 shadow-[0_25px_50px_-12px_rgba(0,0,0,0.25)] border-[2.5px] border-[#3a3840] shrink-0 overflow-hidden">
-                
-                {/* Hardware Side Volume Buttons */}
-                <div className="absolute -left-[1.5px] top-24 w-[2px] h-7 bg-[#48474e] rounded-l-sm" />
-                <div className="absolute -left-[1.5px] top-34 w-[2px] h-10 bg-[#48474e] rounded-l-sm" />
-                <div className="absolute -right-[1.5px] top-30 w-[2px] h-14 bg-[#48474e] rounded-r-sm" />
-
-                {/* iPhone Inner App Screen */}
-                <div className="w-full h-full bg-[#FAF9F5] rounded-[34px] sm:rounded-[40px] overflow-hidden relative flex flex-col justify-between text-charcoal">
-                  
-                  {/* Status Bar & Punchhole */}
-                  <div className="bg-white px-5 pt-2.5 pb-1 flex items-center justify-between text-[9px] font-bold text-gray-800">
-                    <span>9:41</span>
-                    <div className="w-3.5 h-3.5 rounded-full bg-black flex items-center justify-center">
-                      <div className="w-1.5 h-1.5 rounded-full bg-[#12121a]" />
-                    </div>
-                    <div className="flex items-center gap-1 text-[8px]">
-                      <span>5G</span>
-                      <div className="w-3 h-1.5 border border-black rounded-xs p-0.5 flex items-center">
-                        <div className="w-full h-full bg-black" />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* App Screen Header */}
-                  <div className="bg-white px-3.5 py-2 border-b border-gray-100 text-left">
-                    <div className="flex items-center justify-between mb-1.5">
-                      <img src="/logo.png" alt="X-Space360" className="h-4.5 max-w-[130px] object-contain" />
-                      <span className="bg-[#875F00] text-white text-[7px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider shrink-0">
-                        PRO
-                      </span>
-                    </div>
-
-                    {/* App Search Bar inside phone screen */}
-                    <div className="bg-stone/80 rounded-full px-2.5 py-1 flex items-center gap-1.5 border border-sand-200">
-                      <MapPin className="w-2.5 h-2.5 text-[#875F00]" />
-                      <span className="text-[8.5px] font-bold text-gray-500 truncate">Search luxury villas &amp; venues...</span>
-                    </div>
-                  </div>
-
-                  {/* App Screen Content Body */}
-                  <div className="flex-1 p-2.5 overflow-hidden space-y-2 text-left bg-stone/30">
-                    
-                    {/* Category Filter Pills */}
-                    <div className="flex gap-1 overflow-x-auto no-scrollbar py-0.5">
-                      {['Villas', 'Commercial', 'Venues'].map((cat, i) => (
-                        <span
-                          key={cat}
-                          onClick={() => setActiveTab(cat.toLowerCase())}
-                          className={`text-[8.5px] font-bold px-2.5 py-0.5 rounded-full whitespace-nowrap cursor-pointer transition ${
-                            i === 0 ? 'bg-charcoal text-white shadow-sm' : 'bg-white text-gray-600 border border-gray-100'
-                          }`}
-                        >
-                          {cat}
-                        </span>
-                      ))}
-                    </div>
-
-                    {/* Property Card 1 */}
-                    <div className="bg-white rounded-xl overflow-hidden border border-gray-150 shadow-subtle">
-                      <div className="relative h-24 sm:h-26 bg-gray-200 overflow-hidden">
-                        <img
-                          src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&q=80&w=800"
-                          alt="Elysium Glasshouse Villa"
-                          className="w-full h-full object-cover"
-                        />
-                        <div className="absolute top-1.5 left-1.5 bg-black/80 text-[#D4AF37] px-1.5 py-0.5 rounded text-[7.5px] font-bold uppercase tracking-wider">
-                          Signature Series
-                        </div>
-                        <div className="absolute bottom-1.5 right-1.5 bg-white/95 text-charcoal px-1.5 py-0.5 rounded-full text-[8.5px] font-extrabold shadow-sm">
-                          ⭐ 4.98
-                        </div>
-                      </div>
-                      <div className="p-2">
-                        <h6 className="font-bold text-[10px] text-charcoal truncate">Elysium Glasshouse Villa</h6>
-                        <p className="text-[8px] text-gray-500 font-semibold truncate">Nashik Hills · Private Pool</p>
-                        <div className="mt-1 pt-1 border-t border-gray-100 flex items-center justify-between">
-                          <span className="text-[10px] font-extrabold text-charcoal">₹12,500 <span className="text-[7.5px] font-normal text-gray-500">/night</span></span>
-                          <span className="bg-emerald-50 text-emerald-700 text-[7.5px] font-bold px-1.5 py-0.5 rounded-full flex items-center gap-0.5">
-                            <Zap className="w-2 h-2 fill-current" /> Instant
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Property Card 2 */}
-                    <div className="bg-white rounded-xl p-2 border border-gray-150 shadow-subtle flex items-center gap-2">
-                      <img
-                        src="https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&q=80&w=400"
-                        alt="Royal Lakefront Estate"
-                        className="w-10 h-10 rounded-lg object-cover shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <h6 className="font-bold text-[9.5px] text-charcoal truncate">Royal Lakefront Estate</h6>
-                        <p className="text-[7.5px] text-gray-500 font-medium truncate">Udaipur · 5 BHK Villa</p>
-                        <span className="text-[9.5px] font-extrabold text-charcoal mt-0.5 block">₹18,000 /night</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Bottom App Bar */}
-                  <div className="bg-white py-1.5 px-3 border-t border-gray-100 flex justify-between items-center text-[7.5px] font-bold text-gray-400">
-                    <div className="flex flex-col items-center text-[#875F00]">
-                      <div className="w-1 h-1 rounded-full bg-[#875F00] mb-0.5" />
-                      <span>Discover</span>
-                    </div>
-                    <div className="flex flex-col items-center"><span>Explore</span></div>
-                    <div className="flex flex-col items-center"><span>Wishlist</span></div>
-                    <div className="flex flex-col items-center"><span>Bookings</span></div>
-                  </div>
-
-                </div>
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* ================= RIGHT SIDE: CLEAN SIMPLE SANS FONT & STORE DOWNLOADS ================= */}
-          <div className="lg:col-span-6 text-left space-y-4 lg:pl-2">
-            
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white border border-sand-300 text-[#875F00] text-[10px] font-extrabold uppercase tracking-[0.18em] shadow-subtle">
-              <Smartphone className="w-3 h-3 text-[#875F00]" />
-              <span>OFFICIAL MOBILE APP</span>
-            </div>
-
-            {/* Title - Clean Simple Sans-Serif Typography */}
-            <h2 className="text-2xl sm:text-3xl lg:text-[36px] font-extrabold text-charcoal tracking-tight leading-[1.16] font-sans">
-              Start Your Next Chapter with X-Space360
+        <div className="relative z-10 grid h-full grid-cols-1 items-center gap-7 lg:grid-cols-[62%_38%]">
+          <div className="max-w-[710px] py-1 text-left lg:py-0">
+            <h2 className="text-[22px] font-bold leading-tight text-[#142844] sm:text-[24px]">
+              Download X-Space360 Mobile App
             </h2>
-
-            {/* Description */}
-            <p className="text-charcoal-muted text-xs sm:text-sm font-medium leading-relaxed max-w-xl">
-              Your journey to hassle-free luxury stays begins here. Download the X-Space360 app to discover handpicked villas, co-working spaces, and event venues with direct host connectivity.
+            <p className="mt-2 text-[13px] font-normal text-[#526174] sm:text-sm">
+              and never miss out on the perfect space
             </p>
 
-            {/* Feature Bullets Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-              {[
-                'Exclusive app-only deals up to 30%',
-                'Direct host contact & instant chat',
-                '100% verified properties & pricing',
-                '24/7 dedicated concierge care'
-              ].map((feat, i) => (
-                <div key={i} className="flex items-center gap-2 text-xs font-semibold text-charcoal">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#875F00] shrink-0" />
-                  <span>{feat}</span>
+            <div className="mt-5 space-y-3.5 sm:mt-6">
+              {benefits.map((benefit) => (
+                <div key={benefit} className="flex items-start gap-3 text-[13px] font-normal leading-5 text-[#172b45] sm:text-[15px]">
+                  <Check className="mt-0.5 h-[19px] w-[19px] shrink-0 stroke-[2.5] text-[#0795c9]" />
+                  <span>{benefit}</span>
                 </div>
               ))}
             </div>
 
-            {/* ── STORE DOWNLOAD BUTTONS & CLICKABLE QR SCANNER ROW ── */}
-            <div className="pt-4 border-t border-sand-200 flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-              
-              {/* Clickable QR Code Scanner Box */}
-              <a
-                href={PLAY_STORE_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-white p-2.5 rounded-2xl border border-sand-200 shadow-subtle flex items-center gap-3 group cursor-pointer hover:border-sand-400 hover:shadow-md transition-all duration-200 shrink-0"
-                title="Click to open Play Store link"
-              >
-                <div className="relative bg-stone/60 p-1 rounded-xl border border-sand-200 shrink-0 overflow-hidden">
-                  <img
-                    src={QR_CODE_API}
-                    alt="Scan QR code to Download X-Space360 App"
-                    className="w-14 h-14 sm:w-16 sm:h-16 object-contain rounded-lg"
-                  />
-                  <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <ExternalLink className="w-3.5 h-3.5 text-charcoal bg-white rounded-full p-0.5 shadow" />
-                  </div>
-                </div>
-                <div className="text-left pr-1">
-                  <div className="flex items-center gap-1 text-[8.5px] font-extrabold text-[#875F00] uppercase tracking-widest">
-                    <QrCode className="w-2.5 h-2.5" />
-                    <span>SCAN TO DOWNLOAD</span>
-                  </div>
-                  <h5 className="text-xs font-bold text-charcoal mt-0.5 leading-tight group-hover:text-[#875F00] transition-colors">
-                    Scan with Phone
-                  </h5>
-                  <p className="text-[9.5px] text-gray-500 font-semibold mt-0.5">
-                    Opens Play Store directly
-                  </p>
-                </div>
-              </a>
-
-              {/* Store Download Buttons - Exact 99acres HD Images */}
-              <div className="flex flex-row items-center gap-2.5 shrink-0">
-                <a
-                  href={PLAY_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block transition hover:opacity-90"
-                >
-                  <img
-                    src="https://static.99acres.com/universalapp/img/Play.png"
-                    alt="Get it on Google Play"
-                    className="h-[40px] w-[135px] object-contain rounded-md"
-                  />
-                </a>
-
-                <a
-                  href={PLAY_STORE_URL}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block transition hover:opacity-90"
-                >
-                  <img
-                    src="https://static.99acres.com/universalapp/img/ios.png"
-                    alt="Download on the App Store"
-                    className="h-[40px] w-[135px] object-contain rounded-md"
-                  />
-                </a>
-              </div>
-
+            <div className="mt-5 sm:mt-6">
+              <StoreBadges />
             </div>
-
           </div>
 
+          <div className="relative hidden h-full items-end justify-center lg:flex">
+            <PhonePreview />
+            <div className="absolute bottom-[20px] left-1/2 z-30 flex -translate-x-[24%] items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-[#24364f] shadow-[0_4px_15px_rgba(25,47,75,0.17)]">
+              <span className="text-[#0795c9]">↓</span>
+              Thousands of happy guests
+            </div>
+          </div>
         </div>
       </div>
     </section>

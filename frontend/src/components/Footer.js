@@ -13,7 +13,7 @@ const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals and spaces in India through technology, curation, and verified service.',
   location: 'Nashik, Maharashtra',
   email: 'support@x-space360.com',
-  phone: '+91 919225586010',
+  phone: '+91 9225586010',
   facebook_link: 'https://www.facebook.com/share/1H3z56BJu4/',
   linkedin_link: 'https://www.linkedin.com/company/139624194/admin/dashboard/',
   instagram_link: 'https://www.instagram.com/xspace360.in?stkn=aHVpY25wem5rN2V6',
@@ -176,9 +176,9 @@ export default function Footer({ cmsContent }) {
                   <Mail className="h-4 w-4 text-gray-400 shrink-0" />
                   <span>{footerData.email || 'support@x-space360.com'}</span>
                 </a>
-                <a href="tel:+91919225586010" className="flex items-center gap-2.5 hover:text-white transition">
+                <a href="tel:+919225586010" className="flex items-center gap-2.5 hover:text-white transition">
                   <Phone className="h-4 w-4 text-gray-400 shrink-0" />
-                  <span>+91 919225586010</span>
+                  <span>+91 9225586010</span>
                 </a>
                 <div className="pt-2 text-xs text-gray-400">
                   <span>Operating Hours: 9:30 AM to 6:30 PM (Mon-Sat)</span>
