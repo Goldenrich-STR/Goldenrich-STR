@@ -18,6 +18,38 @@
   accent-color: #0f172a;
 }
 
+@font-face {
+  font-family: 'Open Sans';
+  src: url('./assets/fonts/open-sans/OpenSans-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  src: url('./assets/fonts/open-sans/OpenSans-Semibold.ttf') format('truetype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  src: url('./assets/fonts/open-sans/OpenSans-Bold.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Open Sans';
+  src: url('./assets/fonts/open-sans/OpenSans-ExtraBold.ttf') format('truetype');
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 .host-price-engine .text-blue-600,
 .host-price-engine .text-blue-700,
 .host-price-engine .text-blue-800 {
@@ -125,6 +157,11 @@
 }
 
 @layer utilities {
+  .app-promo-open-sans,
+  .app-promo-open-sans h2 {
+    font-family: 'Open Sans', Arial, sans-serif;
+  }
+
   .font-lufga {
     font-family: 'Lufga', 'Playfair Display', serif;
   }
