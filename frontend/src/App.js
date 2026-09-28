@@ -182,6 +182,14 @@ const RoleAwareVideoVerificationRoom = () => {
   return <VideoVerificationRoom role={isRoleKey(user, ["telecaller"]) ? "telecaller" : "host"} />;
 };
 
+const EmployeeDashboardRoute = () => {
+  const { user } = useAuth();
+  if (isRoleKey(user, ["telecaller"])) {
+    return <Navigate to="/telecaller/dashboard" replace />;
+  }
+  return <EmployeeDashboard />;
+};
+
 const GlobalAlertDialog = () => {
   const [message, setMessage] = React.useState('');
   const [open, setOpen] = React.useState(false);
@@ -381,7 +389,7 @@ function AppRoutes() {
           path="/employee/dashboard"
           element={
             <ProtectedRoute allowedRoles={["employee"]}>
-              <EmployeeDashboard />
+              <EmployeeDashboardRoute />
             </ProtectedRoute>
           }
         />
