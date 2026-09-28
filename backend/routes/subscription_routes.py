@@ -511,7 +511,35 @@ async def create_subscription(
                     await _activate_property_after_subscription_payment(db, existing_subscription, existing_subscription["subscription_id"])
                     return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code, already_active=True)
                 if has_open_order:
-                    return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code)
+                    expected_amount = int(round(amount * 100))
+                    order_result = razorpay_service.fetch_order(existing_subscription["razorpay_order_id"])
+                    order = order_result.get("order") or {}
+                    order_is_reusable = (
+                        order_result.get("success")
+                        and (razorpay_service.is_mock or (
+                            order.get("status") in {"created", "attempted"}
+                            and int(order.get("amount") or 0) == expected_amount
+                            and (order.get("currency") or "INR").upper() == "INR"
+                        ))
+                    )
+                    if order_is_reusable:
+                        return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code)
+
+                    # A key rotation/test-to-live switch makes old order IDs
+                    # invalid for the current Checkout key. Retire that row so
+                    # the request below creates a fresh order on this account.
+                    logger.warning(
+                        "Retiring stale Razorpay order %s for subscription %s",
+                        existing_subscription.get("razorpay_order_id"),
+                        existing_subscription.get("subscription_id"),
+                    )
+                    await db.subscriptions.update_one(
+                        {"subscription_id": existing_subscription["subscription_id"]},
+                        {"$set": {
+                            "payment_status": "order_invalid",
+                            "updated_at": datetime.now(timezone.utc),
+                        }},
+                    )
         
         # Calculate dates
         start_date = date.today()
