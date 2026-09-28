@@ -71,7 +71,7 @@ const ScreenLoading = () => (
 
 // Protected Route Component
 const normalizeRoleKey = (value) => String(value || '').toLowerCase().replace(/[\s-]+/g, '_');
-const isRoleKey = (user, keys = []) => keys.includes(normalizeRoleKey(user?.admin_role_key || user?.designation));
+const isRoleKey = (user, keys = []) => keys.includes(normalizeRoleKey(user?.admin_role_key || user?.designation || user?.role));
 
 const ProtectedRoute = ({ children, allowedRoles, allowedRoleKeys }) => {
   const { user, loading } = useAuth();
@@ -162,7 +162,8 @@ const RoleBasedRedirect = () => {
     case "broker":
       return <Navigate to="/broker/dashboard" replace />;
     case "employee":
-      const adminRole = user?.admin_role_key;
+    case "telecaller":
+      const adminRole = normalizeRoleKey(user?.admin_role_key || user?.designation || user?.role);
       if (adminRole === 'telecaller') {
         return <Navigate to="/telecaller/dashboard" replace />;
       }
@@ -179,6 +180,16 @@ const RoleBasedRedirect = () => {
 const RoleAwareVideoVerificationRoom = () => {
   const { user } = useAuth();
   return <VideoVerificationRoom role={isRoleKey(user, ["telecaller"]) ? "telecaller" : "host"} />;
+};
+
+const EmployeeDashboardRouter = () => {
+  const { user } = useAuth();
+
+  if (isRoleKey(user, ["telecaller"])) {
+    return <Navigate to="/telecaller/dashboard" replace />;
+  }
+
+  return <EmployeeDashboard />;
 };
 
 const GlobalAlertDialog = () => {
@@ -372,7 +383,7 @@ function AppRoutes() {
           path="/employee/dashboard"
           element={
             <ProtectedRoute allowedRoles={["employee"]}>
-              <EmployeeDashboard />
+              <EmployeeDashboardRouter />
             </ProtectedRoute>
           }
         />

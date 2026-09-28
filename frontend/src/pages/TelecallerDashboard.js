@@ -158,13 +158,19 @@ const sourceRoleOf = (lead) => {
   return human(raw || 'source');
 };
 const hostIdOf = (lead) => lead?.host?.user_id || caseOf(lead)?.host_id || '';
+const leadHostId = (lead) => (
+  lead?.host?.user_id
+  || lead?.host_id
+  || lead?.owner_id
+  || caseOf(lead)?.host_id
+  || caseOf(lead)?.owner_id
+  || lead?.user_id
+  || (!String(lead?.lead_id || '').includes('::') ? lead?.lead_id : '')
+  || ''
+);
 const phoneHref = (lead) => {
   const phone = String(leadPhone(lead)).replace(/[^\d+]/g, '');
   return phone && phone !== '-' ? `tel:${phone}` : '';
-};
-const dialAdbCommand = (lead) => {
-  const phone = String(leadPhone(lead)).replace(/[^\d+]/g, '');
-  return phone && phone !== '-' ? `adb shell am start -a android.intent.action.DIAL -d tel:${phone}` : '';
 };
 const whatsappHref = (lead, message = '') => {
   const phone = String(leadPhone(lead)).replace(/[^\d]/g, '');
@@ -671,6 +677,7 @@ const TelecallerDashboard = () => {
   };
 
   const openCallModal = (lead) => {
+    setNotice('');
     setSelected(lead);
     setCallModalLead(lead);
     setCallForm({ outcome: 'CONNECTED', remarks: '', scheduled_date: '', scheduled_time: '' });
@@ -739,31 +746,13 @@ const TelecallerDashboard = () => {
       setNotice('Host phone number not found.');
       return;
     }
-    const callUrl = `tel:${phone}`;
     try {
-      window.location.href = callUrl;
-      setNotice('Phone Link/desktop calling app opened. If prompted, confirm the call there, then mark Host Received.');
+      window.location.href = `tel:${phone}`;
+      setNotice('Phone Link call opened. Confirm in Phone Link if Windows asks, then mark Host Received after the host answers.');
       setCallStatus('ringing');
       setCallForm((current) => ({ ...current, outcome: 'CONNECTED' }));
     } catch (err) {
-      setNotice(getApiErrorMessage(err, 'Unable to open desktop calling app. Check Phone Link calling setup.'));
-    }
-  };
-
-  const startUsbCallFlow = async () => {
-    if (callStatus === 'ringing' || callStatus === 'connected') return;
-    const phone = String(leadPhone(callModalLead)).replace(/[^\d+]/g, '');
-    if (!phone || phone === '-') {
-      setNotice('Host phone number not found.');
-      return;
-    }
-    try {
-      await verificationAPI.startLocalAdbCall({ phone, action: 'CALL', auto_record: true, record_delay_seconds: 6 });
-      setNotice('USB/ADB call command sent. Mark Host Received after the host answers.');
-      setCallStatus('ringing');
-      setCallForm((current) => ({ ...current, outcome: 'CONNECTED' }));
-    } catch (err) {
-      setNotice(getApiErrorMessage(err, 'Unable to start USB call. Check ADB device connection.'));
+      setNotice(getApiErrorMessage(err, 'Unable to open Phone Link calling. Check Phone Link Calls setup.'));
     }
   };
 
@@ -776,20 +765,6 @@ const TelecallerDashboard = () => {
     setCallSeconds(0);
     setRecordingState('idle');
     setRecordingUrl('');
-  };
-
-  const copyAdbDialCommand = async () => {
-    const command = dialAdbCommand(callModalLead);
-    if (!command) {
-      setNotice('Host phone number not found for USB call command.');
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(command);
-      setNotice('USB/ADB dial command copied.');
-    } catch (err) {
-      setNotice(command);
-    }
   };
 
   const toggleMoreMenu = (event, lead) => {
@@ -851,8 +826,9 @@ const TelecallerDashboard = () => {
 
   const saveCallOutcome = async () => {
     const targetCaseId = caseOf(callModalLead)?.verification_id;
-    if (!targetCaseId) {
-      setNotice('This lead does not have a verification case yet.');
+    const targetHostId = leadHostId(callModalLead);
+    if (!targetCaseId && !targetHostId) {
+      setNotice('This lead does not have a verification case or host id yet.');
       return;
     }
     setSaving(true);
@@ -873,49 +849,28 @@ const TelecallerDashboard = () => {
         call_duration_seconds: callSeconds,
         recording_status: recordingState,
       };
-      await verificationAPI.saveCallOutcome(targetCaseId, payload);
       if (scheduleVideoFromCall && scheduleForm.scheduled_date && scheduleForm.scheduled_start_time) {
         if (scheduleForm.scheduled_date < today()) {
           throw new Error('Past dates cannot be selected for video verification.');
         }
-        await verificationAPI.scheduleCase({ verification_id: targetCaseId, ...scheduleForm });
+        payload.video_scheduled_date = scheduleForm.scheduled_date;
+        payload.video_scheduled_start_time = scheduleForm.scheduled_start_time;
+        payload.video_scheduled_end_time = scheduleForm.scheduled_end_time;
+        payload.video_schedule_notes = scheduleForm.notes;
+      }
+      if (targetCaseId) {
+        await verificationAPI.saveCallOutcome(targetCaseId, payload);
+        if (scheduleVideoFromCall && scheduleForm.scheduled_date && scheduleForm.scheduled_start_time) {
+          await verificationAPI.scheduleCase({ verification_id: targetCaseId, ...scheduleForm });
+        }
+      } else {
+        await verificationAPI.saveHostLeadCallOutcome(targetHostId, payload);
       }
       setNotice('Call outcome saved successfully.');
       closeCallModal();
       await loadData();
     } catch (err) {
       setNotice(getApiErrorMessage(err, err.message || 'Call outcome failed.'));
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const scheduleVideoCallFromModal = async () => {
-    const targetCaseId = caseOf(callModalLead)?.verification_id;
-    if (!targetCaseId) {
-      setNotice('This lead does not have a verification case yet.');
-      return;
-    }
-    if (!scheduleForm.scheduled_date || !scheduleForm.scheduled_start_time) {
-      setNotice('Video verification date and start time are required.');
-      return;
-    }
-    if (scheduleForm.scheduled_date < today()) {
-      setNotice('Past dates cannot be selected for video verification.');
-      setScheduleForm((current) => ({ ...current, scheduled_date: today() }));
-      return;
-    }
-    setSaving(true);
-    setNotice('');
-    try {
-      await verificationAPI.scheduleCase({ verification_id: targetCaseId, ...scheduleForm });
-      setNotice('Video verification call scheduled successfully.');
-      setActiveNav('video');
-      setActiveTab('video');
-      closeCallModal();
-      await loadData();
-    } catch (err) {
-      setNotice(getApiErrorMessage(err, err.message || 'Video schedule failed.'));
     } finally {
       setSaving(false);
     }
@@ -1682,7 +1637,7 @@ const TelecallerDashboard = () => {
               </button>
             </div>
             <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-800">
-              Start Call opens Phone Link/desktop calling. Keep default SIM selected on phone, and keep Windows input/output set to desktop headset.
+              Start Call opens Phone Link using the host number. Keep Phone Link connected, default SIM selected, and Windows input/output set to your headset.
             </div>
             <div className="mt-2 grid gap-2 sm:grid-cols-3">
               <button
@@ -1708,20 +1663,6 @@ const TelecallerDashboard = () => {
                 Open Dialer
               </a>
             </div>
-            <details className="mt-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-              <summary className="cursor-pointer text-[11px] font-black uppercase tracking-widest text-slate-500">Phone Link Setup & USB Fallback</summary>
-              <div className="mt-2 rounded-md bg-white px-3 py-2 text-xs font-semibold text-slate-600">
-                <p>1. Phone madhye default calling SIM select kara.</p>
-                <p>2. Phone Link Calls tab madhun PC headset audio test kara.</p>
-                <p>3. Website Start Call nantar prompt aala tar Phone Link/Windows madhye confirm kara.</p>
-                <p>4. Host answer kelyavar Host Received click kara. Timer ani web mic recording tevha start hotil.</p>
-              </div>
-              <div className="mt-2 flex flex-col gap-2 sm:flex-row">
-                <code className="min-w-0 flex-1 overflow-x-auto rounded-md bg-white px-3 py-2 text-xs font-semibold text-slate-700">{dialAdbCommand(callModalLead) || 'Host phone number unavailable'}</code>
-                <button type="button" onClick={copyAdbDialCommand} className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-black uppercase tracking-wider">Copy</button>
-                <button type="button" onClick={startUsbCallFlow} className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-black uppercase tracking-wider text-blue-700">Run USB</button>
-              </div>
-            </details>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               <StatusChip className={callStatus === 'connected' ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : callStatus === 'ringing' ? 'border-amber-200 bg-amber-50 text-amber-700' : ''}>
                 {callStatus === 'ringing' ? 'Ringing' : callStatus === 'connected' ? 'Connected' : 'Not started'}
@@ -1755,9 +1696,9 @@ const TelecallerDashboard = () => {
                 <input type="time" lang="en-GB" step="60" pattern="[0-2][0-9]:[0-5][0-9]" value={scheduleForm.scheduled_start_time} onChange={(e) => setScheduleForm({ ...scheduleForm, scheduled_start_time: normalizeTime24(e.target.value) })} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" />
                 <input type="time" lang="en-GB" step="60" pattern="[0-2][0-9]:[0-5][0-9]" value={scheduleForm.scheduled_end_time} onChange={(e) => setScheduleForm({ ...scheduleForm, scheduled_end_time: normalizeTime24(e.target.value) })} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" />
                 <input value={scheduleForm.notes} onChange={(e) => setScheduleForm({ ...scheduleForm, notes: e.target.value })} placeholder="Video schedule notes" className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none md:col-span-3" />
-                <button type="button" disabled={saving} onClick={scheduleVideoCallFromModal} className="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50 md:col-span-3">
-                  <Video className="h-4 w-4" /> Schedule Video Call
-                </button>
+                <div className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs font-black uppercase tracking-wider text-blue-700 md:col-span-3">
+                  <Video className="h-4 w-4" /> Video call will schedule when call outcome is saved
+                </div>
               </div>
             )}
             <textarea value={callForm.remarks} onChange={(e) => setCallForm({ ...callForm, remarks: e.target.value })} placeholder="Disposition notes / reason" className="mt-3 min-h-[90px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" />

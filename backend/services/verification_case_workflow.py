@@ -23,7 +23,7 @@ PUBLISHING = "PUBLISHING"
 LIVE = "LIVE"
 COMPLETED = "COMPLETED"
 
-TELECALLER_ASSIGNMENT_BATCH_SIZE = 10
+TELECALLER_ASSIGNMENT_BATCH_SIZE = 5
 TELECALLER_ASSIGNMENT_COUNTER_ID = "verification_telecaller_batch_sequence"
 
 SELF_HOST = "SELF_HOST"
@@ -54,23 +54,11 @@ TELECALLER_CHECKLIST_KEYS = [
 
 BM_CHECKLIST_KEYS = [
     "host_name_verified",
-    "host_kyc_verified",
-    "mobile_verified",
-    "property_proof_valid",
-    "property_name_checked",
-    "address_checked",
-    "ownership_authorisation_checked",
-    "bank_details_reviewed",
     "telecaller_checklist_completed",
     "video_verification_completed",
-    "telecaller_remarks_acceptable",
     "no_critical_discrepancy",
-    "category_correct",
-    "property_information_correct",
-    "location_correct",
-    "pricing_checked",
-    "amenities_checked",
-    "images_description_reviewed",
+    "documents_reviewed",
+    "property_details_reviewed",
 ]
 
 
@@ -86,11 +74,12 @@ def normalize_registration_source(user: dict | None, host: dict | None = None) -
     if host and host.get("registration_source"):
         return str(host["registration_source"]).upper()
     role = str((user or {}).get("role") or "").lower()
+    role_key = str((user or {}).get("admin_role_key") or "").lower()
     if role == "broker":
         return BROKER
-    if role == "rm":
+    if role == "rm" or (role == "employee" and role_key in {"rm", "relationship_manager"}):
         return RM
-    if role == "telecaller":
+    if role == "telecaller" or (role == "employee" and role_key == "telecaller"):
         return TELECALLER
     return SELF_HOST
 
@@ -157,7 +146,7 @@ def _telecaller_sort_value(user: dict):
 
 
 async def resolve_verification_telecaller(db, prop: dict, host: dict | None = None, existing: dict | None = None):
-    """Assign verification cases to active telecallers in registration order, 10 cases per telecaller."""
+    """Assign verification cases to active telecallers in registration-order batches."""
     active_reassignable_stages = {
         PROPERTY_SUBMITTED,
         TELECALLER_CALL_PENDING,
@@ -196,7 +185,7 @@ async def resolve_verification_telecaller(db, prop: dict, host: dict | None = No
 
 
 async def assign_next_verification_telecaller(db, prop: dict | None = None, host: dict | None = None):
-    """Return the next active telecaller using the 10-record registration-order batch policy."""
+    """Return the next active telecaller using the 5-record registration-order batch policy."""
     prop = prop or {}
     host = host or {}
     ensure_table = getattr(db, "ensure_table", None)
@@ -204,8 +193,12 @@ async def assign_next_verification_telecaller(db, prop: dict | None = None, host
         await ensure_table("platform_settings")
     telecallers = await db.users.find(
         {
-            "role": "telecaller",
             "is_active": {"$ne": False},
+            "$or": [
+                {"role": "telecaller"},
+                {"role": "employee", "admin_role_key": "telecaller"},
+                {"role": "employee", "designation": {"$regex": "telecaller", "$options": "i"}},
+            ],
         },
         {"_id": 0, "user_id": 1, "uid": 1, "employee_code": 1, "lg_code": 1, "full_name": 1, "created_at": 1, "timestamp": 1, "createdAt": 1},
     ).to_list(length=1000)
@@ -248,11 +241,11 @@ async def assign_next_verification_telecaller(db, prop: dict | None = None, host
 async def resolve_host_document_telecaller(db, host: dict):
     """Assign host document verification to the same telecaller queue used for property verification."""
     existing = host.get("verification_telecaller_id") or host.get("document_telecaller_id")
-    if existing:
-        return existing, {
-            "policy": "preserved_host_verification_assignment",
-            "source": "host_document_queue",
-        }
+    existing_policy = host.get("document_telecaller_assignment_policy") or {}
+    if existing and existing_policy.get("policy") == "registration_order_batch":
+        preserved_policy = dict(existing_policy)
+        preserved_policy["source"] = preserved_policy.get("source") or "host_document_queue"
+        return existing, preserved_policy
     return await assign_next_verification_telecaller(db, {}, host)
 
 
@@ -335,3 +328,4 @@ async def upsert_verification_case(db, prop: dict, host: dict, actor: dict | Non
 
 def all_required_done(checklist: dict, keys: list[str]) -> bool:
     return all(str(checklist.get(key, "")).lower() in {"yes", "true", "na", "not_applicable"} for key in keys)
+

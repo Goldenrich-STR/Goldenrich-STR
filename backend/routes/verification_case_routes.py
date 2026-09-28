@@ -29,8 +29,10 @@ from services.verification_case_workflow import (
     COMPLETED,
     LIVE,
     PUBLISHING,
+    PROPERTY_SUBMITTED,
     TELECALLER_CALL_PENDING,
     TELECALLER_CHECKLIST_KEYS,
+    TELECALLER_ASSIGNMENT_BATCH_SIZE,
     TELECALLER_REWORK_REQUIRED,
     TELECALLER_VERIFICATION_FAILED,
     TELECALLER_VERIFICATION_IN_PROGRESS,
@@ -109,6 +111,10 @@ class CallPayload(BaseModel):
     call_checklist: Optional[dict] = None
     call_duration_seconds: Optional[int] = 0
     recording_status: Optional[str] = ""
+    video_scheduled_date: Optional[str] = ""
+    video_scheduled_start_time: Optional[str] = ""
+    video_scheduled_end_time: Optional[str] = ""
+    video_schedule_notes: Optional[str] = ""
 
 
 class AdbDialPayload(BaseModel):
@@ -144,16 +150,25 @@ def _case_deadline(case: dict):
     return start + timedelta(hours=SLA_HOURS)
 
 
+def _adb_candidate_paths() -> list[Path]:
+    user_profile = Path(os.environ.get("USERPROFILE", "") or str(Path.home()))
+    local_app_data = Path(os.environ.get("LOCALAPPDATA", "") or user_profile / "AppData" / "Local")
+    return [
+        user_profile / "Downloads" / "platform-tools-latest-windows" / "platform-tools" / "adb.exe",
+        user_profile / "Downloads" / "platform-tools" / "adb.exe",
+        user_profile / "AppData" / "Local" / "Android" / "Sdk" / "platform-tools" / "adb.exe",
+        local_app_data / "Android" / "Sdk" / "platform-tools" / "adb.exe",
+        Path("C:/Android/platform-tools/adb.exe"),
+        Path("C:/platform-tools/adb.exe"),
+        Path("D:/platform-tools/adb.exe"),
+    ]
+
+
 def _find_adb_executable() -> str:
     adb_path = shutil.which("adb") or shutil.which("adb.exe")
     if adb_path:
         return adb_path
-    candidates = [
-        Path(os.environ.get("USERPROFILE", "")) / "Downloads" / "platform-tools-latest-windows" / "platform-tools" / "adb.exe",
-        Path(os.environ.get("USERPROFILE", "")) / "Downloads" / "platform-tools" / "adb.exe",
-        Path("C:/Android/platform-tools/adb.exe"),
-    ]
-    for candidate in candidates:
+    for candidate in _adb_candidate_paths():
         if candidate.exists():
             return str(candidate)
     return ""
@@ -193,6 +208,18 @@ def _start_recording_after_delay(adb_path: str, delay_seconds: int):
             pass
 
     threading.Thread(target=worker, daemon=True).start()
+
+
+def _adb_connected_devices(adb_path: str) -> list[str]:
+    result = subprocess.run([adb_path, "devices", "-l"], capture_output=True, text=True, timeout=8, check=False)
+    if result.returncode != 0:
+        return []
+    lines = [line.strip() for line in (result.stdout or "").splitlines()]
+    return [
+        line
+        for line in lines
+        if line and not line.lower().startswith("list of devices") and "\tdevice" in line
+    ]
 
 
 def _sla_snapshot(case: dict) -> dict:
@@ -258,11 +285,17 @@ def _is_admin(user: dict) -> bool:
 
 
 def _is_telecaller(user: dict) -> bool:
-    return user.get("role") == "telecaller" or user.get("admin_role_key") == "telecaller"
+    role = str(user.get("role") or "").lower()
+    role_key = str(user.get("admin_role_key") or "").lower()
+    designation = str(user.get("designation") or "").lower()
+    return role == "telecaller" or (role == "employee" and (role_key == "telecaller" or "telecaller" in designation))
 
 
 def _is_branch_manager(user: dict) -> bool:
-    return user.get("role") == "branch_manager" or user.get("admin_role_key") == "branch_manager"
+    role = str(user.get("role") or "").lower()
+    role_key = str(user.get("admin_role_key") or "").lower()
+    designation = str(user.get("designation") or "").lower()
+    return role == "branch_manager" or role_key == "branch_manager" or "branch manager" in designation
 
 
 def _telecaller_identity_terms(user: dict) -> list[str]:
@@ -280,6 +313,124 @@ def _telecaller_identity_terms(user: dict) -> list[str]:
             seen.add(value)
             clean.append(value)
     return clean
+
+
+def _employee_identity_terms(user: dict) -> list[str]:
+    terms = [
+        user.get("user_id"),
+        user.get("uid"),
+        user.get("employee_code"),
+        user.get("lg_code"),
+        user.get("rm_code"),
+        user.get("branch_manager_code"),
+        user.get("email"),
+        user.get("phone"),
+    ]
+    seen = set()
+    clean = []
+    for term in terms:
+        value = str(term or "").strip()
+        if value and value not in seen:
+            seen.add(value)
+            clean.append(value)
+    return clean
+
+
+def _branch_scope_values(user: dict) -> list[str]:
+    values = [
+        user.get("branch"),
+        user.get("branch_id"),
+        user.get("branch_code"),
+        user.get("territory"),
+        user.get("city"),
+        user.get("employee_region"),
+        user.get("region"),
+    ]
+    seen = set()
+    clean = []
+    for value in values:
+        text = str(value or "").strip().lower()
+        if text and text not in seen:
+            seen.add(text)
+            clean.append(text)
+    return clean
+
+
+def _matches_any_identity(value, identities: list[str]) -> bool:
+    text = str(value or "").strip().lower()
+    return bool(text) and text in {str(item or "").strip().lower() for item in identities if str(item or "").strip()}
+
+
+def _matches_branch_scope(record: dict, scope_values: list[str]) -> bool:
+    if not scope_values:
+        return False
+    fields = ("branch", "branch_id", "branch_code", "territory", "city", "employee_region", "region", "work_location")
+    for field in fields:
+        if str(record.get(field) or "").strip().lower() in scope_values:
+            return True
+    return False
+
+
+def _case_matches_branch_manager_scope(case: dict, current_user: dict) -> bool:
+    identities = _employee_identity_terms(current_user)
+    scope_values = _branch_scope_values(current_user)
+    prop = case.get("property") or {}
+    host = case.get("host") or {}
+    telecaller = case.get("telecaller") or {}
+    source_owner = case.get("source_owner") or {}
+    bm = case.get("branch_manager") or {}
+    identity_fields = (
+        "branch_manager_id",
+        "branch_manager_code",
+        "bm_id",
+        "assigned_bm_id",
+    )
+    for record in (case, prop, host, telecaller, source_owner, bm):
+        if any(_matches_any_identity(record.get(field), identities) for field in identity_fields):
+            return True
+        if _matches_branch_scope(record, scope_values):
+            return True
+    return False
+
+
+BM_PENDING_REVIEW_STAGES = {BM_REVIEW_PENDING, BM_REVIEW_IN_PROGRESS, BM_REWORK_REQUIRED}
+
+
+def _truthy_flag(value) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"true", "yes", "1", "approved", "verified"}
+
+
+def _is_branch_manager_pending_case(case: dict) -> bool:
+    if _truthy_flag(case.get("branch_manager_reviewed")):
+        return False
+    stage = (
+        case.get("current_stage")
+        or case.get("current_status")
+        or case.get("workflow_status")
+        or case.get("verification_stage")
+    )
+    if stage in BM_PENDING_REVIEW_STAGES:
+        return True
+    if str(case.get("telecaller_result") or "").strip().upper() == "VERIFIED":
+        return True
+    return False
+
+
+def _normalize_branch_manager_pending_case(case: dict) -> dict:
+    stage = (
+        case.get("current_stage")
+        or case.get("current_status")
+        or case.get("workflow_status")
+        or case.get("verification_stage")
+    )
+    if stage not in BM_PENDING_REVIEW_STAGES:
+        case["current_stage"] = BM_REVIEW_PENDING
+        case["current_status"] = BM_REVIEW_PENDING
+        case["workflow_status"] = BM_REVIEW_PENDING
+    case["review_stage"] = "branch_manager"
+    return case
 
 
 def _telecaller_owned_query(user: dict) -> dict:
@@ -375,6 +526,18 @@ async def _case_or_404(db, verification_id: str):
     return case
 
 
+async def _case_belongs_to_user(db, case: dict, user_id: str | None) -> bool:
+    if not user_id:
+        return False
+    if case.get("host_id") == user_id or case.get("owner_id") == user_id:
+        return True
+    property_id = case.get("property_id")
+    if not property_id:
+        return False
+    prop = await db.properties.find_one({"property_id": property_id}, {"_id": 0, "owner_id": 1})
+    return (prop or {}).get("owner_id") == user_id
+
+
 async def _enrich_case(db, case: dict):
     prop = await db.properties.find_one({"property_id": case.get("property_id")}, {"_id": 0}) or {}
     host = await db.users.find_one({"user_id": case.get("host_id") or case.get("owner_id")}, {"_id": 0, "password_hash": 0}) or {}
@@ -384,7 +547,18 @@ async def _enrich_case(db, case: dict):
         telecaller = await db.users.find_one({"user_id": case["telecaller_id"]}, {"_id": 0, "password_hash": 0}) or {}
     if case.get("branch_manager_id"):
         bm = await db.users.find_one({"user_id": case["branch_manager_id"]}, {"_id": 0, "password_hash": 0}) or {}
-    return {**case, "property": prop, "host": host, "telecaller": telecaller, "branch_manager": bm}
+    source_owner = await _registration_source_owner(db, host=host, prop=prop, case=case)
+    source_owner_user = {}
+    if source_owner.get("owner_id"):
+        source_owner_user = await db.users.find_one({"user_id": source_owner["owner_id"]}, {"_id": 0, "password_hash": 0}) or {}
+    return {
+        **case,
+        "property": prop,
+        "host": host,
+        "telecaller": telecaller,
+        "source_owner": {**source_owner, **source_owner_user},
+        "branch_manager": bm,
+    }
 
 
 async def _history(db, case: dict, user: dict, action: str, details: dict | None = None):
@@ -488,45 +662,113 @@ async def _assign_unassigned_telecaller_cases(db):
             )
 
 
+async def _active_telecaller_profiles(db):
+    telecallers = await db.users.find(
+        {
+            "is_active": {"$ne": False},
+            "$or": [
+                {"role": "telecaller"},
+                {"role": "employee", "admin_role_key": "telecaller"},
+                {"role": "employee", "designation": {"$regex": "telecaller", "$options": "i"}},
+            ],
+        },
+        {"_id": 0, "user_id": 1, "uid": 1, "employee_code": 1, "lg_code": 1, "full_name": 1, "created_at": 1, "timestamp": 1, "createdAt": 1},
+    ).to_list(length=1000)
+    telecallers = [row for row in telecallers if row.get("user_id")]
+    telecallers.sort(key=lambda row: (
+        str(row.get("created_at") or row.get("timestamp") or row.get("createdAt") or ""),
+        str(row.get("user_id") or row.get("uid") or ""),
+    ))
+    return telecallers
+
+
+def _batch_assignment_meta(telecaller: dict, sequence: int, telecaller_index: int) -> dict:
+    return {
+        "policy": "registration_order_batch",
+        "sequence": sequence,
+        "batch_size": TELECALLER_ASSIGNMENT_BATCH_SIZE,
+        "telecaller_index": telecaller_index,
+        "telecaller_name": telecaller.get("full_name") or "",
+        "telecaller_code": telecaller.get("lg_code") or telecaller.get("employee_code") or telecaller.get("uid") or telecaller.get("user_id") or "",
+        "source": "host_registration_batch_reconcile",
+    }
+
+
+async def _sync_host_telecaller_assignment(db, host: dict, telecaller_id: str, meta: dict):
+    host_id = host.get("user_id")
+    if not host_id or not telecaller_id:
+        return
+    now = now_utc()
+    await db.users.update_one(
+        {"user_id": host_id},
+        {"$set": {
+            "verification_telecaller_id": telecaller_id,
+            "document_telecaller_id": telecaller_id,
+            "document_telecaller_assignment_policy": meta,
+            "updated_at": now,
+        }},
+    )
+    await db.properties.update_many(
+        {"owner_id": host_id},
+        {"$set": {
+            "telecaller_id": telecaller_id,
+            "verification_telecaller_id": telecaller_id,
+            "telecaller_assignment_policy": meta,
+            "updated_at": now,
+        }},
+    )
+    active_case_stages = [
+        TELECALLER_CALL_PENDING,
+        VERIFICATION_SCHEDULED,
+        TELECALLER_VERIFICATION_IN_PROGRESS,
+        TELECALLER_REWORK_REQUIRED,
+        TELECALLER_VERIFICATION_FAILED,
+        BM_REVIEW_PENDING,
+    ]
+    await db.property_verifications.update_many(
+        {
+            "$or": [{"host_id": host_id}, {"owner_id": host_id}],
+            "current_stage": {"$in": active_case_stages},
+        },
+        {"$set": {
+            "telecaller_id": telecaller_id,
+            "telecaller_assignment_policy": meta,
+            "updated_at": now,
+        }},
+    )
+
+
 async def _assign_host_document_telecallers(db):
-    actionable_statuses = ["pending", "pending_review", "submitted", "under_review", "rejected", "approved"]
+    actionable_statuses = ["unverified", "pending", "pending_review", "submitted", "under_review", "rejected", "approved"]
+    telecallers = await _active_telecaller_profiles(db)
     hosts = await db.users.find(
-        {"role": "host", "kyc_status": {"$in": actionable_statuses}},
+        {
+            "role": "host",
+            "$or": [
+                {"kyc_status": {"$in": actionable_statuses}},
+                {"kyc_status": {"$exists": False}},
+                {"kyc_status": ""},
+                {"kyc_status": None},
+            ],
+        },
         {"_id": 0, "password_hash": 0},
-    ).sort("created_at", 1).to_list(length=1000)
-    for host in hosts:
-        docs = host.get("kyc_documents") or []
-        has_document_signal = bool(docs or host.get("agreement_signature") or host.get("pan_number"))
-        if not has_document_signal:
-            continue
+    ).sort("created_at", 1).to_list(length=5000)
+    if not telecallers:
+        return
+
+    for index, host in enumerate(hosts):
         host_id = host.get("user_id")
         if not host_id:
             continue
+        telecaller_index = (index // TELECALLER_ASSIGNMENT_BATCH_SIZE) % len(telecallers)
+        telecaller = telecallers[telecaller_index]
+        telecaller_id = telecaller.get("user_id")
+        meta = _batch_assignment_meta(telecaller, index + 1, telecaller_index)
         existing_assignment = host.get("verification_telecaller_id") or host.get("document_telecaller_id")
-        if not existing_assignment:
-            host_cases = await db.property_verifications.find(
-                {"host_id": host_id},
-                {"_id": 0, "telecaller_id": 1, "telecaller_assignment_policy": 1, "created_at": 1},
-            ).sort("created_at", -1).to_list(length=10)
-            assigned_case = next((case for case in host_cases if case.get("telecaller_id")), None)
-            if assigned_case:
-                telecaller_id = assigned_case.get("telecaller_id")
-                meta = assigned_case.get("telecaller_assignment_policy") or {"policy": "preserved_property_verification_assignment"}
-            else:
-                telecaller_id, meta = await resolve_host_document_telecaller(db, host)
-            if not telecaller_id:
-                continue
-            now = now_utc()
-            await db.users.update_one(
-                {"user_id": host_id},
-                {"$set": {
-                    "verification_telecaller_id": telecaller_id,
-                    "document_telecaller_id": telecaller_id,
-                    "document_telecaller_assignment_policy": meta,
-                    "updated_at": now,
-                }},
-            )
-
+        existing_policy = host.get("document_telecaller_assignment_policy") or {}
+        if existing_assignment == telecaller_id and existing_policy.get("sequence") == meta.get("sequence"):
+            continue
+        await _sync_host_telecaller_assignment(db, host, telecaller_id, meta)
 
 def _kyc_required_documents(host: dict) -> list[dict]:
     host_type = str(host.get("host_association_type") or "property_owner").lower()
@@ -560,6 +802,9 @@ def _merge_document_requirement(documents: list[dict], requirement: dict) -> dic
         "property_proof": ["property_proof", "property", "utility_bill", "electricity_bill"],
         "cancelled_cheque": ["cancelled_cheque", "cheque", "bank_proof", "bank_document"],
         "pan_host_kyc": ["pan_host_kyc", "pan_kyc", "host_kyc", "aadhar_card"],
+        "representative_kyc": ["representative_kyc", "host_representative_kyc", "host_kyc", "aadhar_card"],
+        "authorization_letter": ["authorization_letter", "authority_letter", "authorization"],
+        "owner_noc": ["owner_noc", "society_noc", "noc"],
         "pan_number": ["pan_number", "pan"],
     }
     candidate_types = aliases.get(document_type, [document_type])
@@ -705,23 +950,40 @@ async def list_cases(stage: Optional[str] = None, current_user: dict = Depends(g
             query["current_stage"] = {"$in": telecaller_stages}
         query["telecaller_id"] = {"$in": _telecaller_identity_terms(current_user)}
     elif _is_branch_manager(current_user):
-        query["current_stage"] = {"$in": [BM_REVIEW_PENDING, BM_REVIEW_IN_PROGRESS, BM_REWORK_REQUIRED]}
-        branch_scope = current_user.get("branch") or current_user.get("branch_id") or ""
-        query["$or"] = [
-            {"branch_manager_id": current_user["user_id"]},
-            {"branch_manager_id": current_user.get("employee_code", "")},
-        ]
-        if branch_scope:
-            query["$or"].append({"branch_manager_id": {"$in": ["", "None"]}, "branch_id": branch_scope})
+        if stage and stage in BM_PENDING_REVIEW_STAGES:
+            query = {
+                "$or": [
+                    {"current_stage": stage},
+                    {"current_status": stage},
+                    {"workflow_status": stage},
+                    {"verification_stage": stage},
+                ]
+            }
+        else:
+            query = {
+                "$or": [
+                    {"current_stage": {"$in": list(BM_PENDING_REVIEW_STAGES)}},
+                    {"current_status": {"$in": list(BM_PENDING_REVIEW_STAGES)}},
+                    {"workflow_status": {"$in": list(BM_PENDING_REVIEW_STAGES)}},
+                    {"verification_stage": {"$in": list(BM_PENDING_REVIEW_STAGES)}},
+                    {"telecaller_result": "VERIFIED"},
+                ]
+            }
     elif not _is_admin(current_user):
         query["host_id"] = current_user["user_id"]
     rows = await db.property_verifications.find(query, {"_id": 0}).sort("updated_at", -1).to_list(length=500)
     enriched = []
     for row in rows:
         item = await _enrich_case(db, row)
+        if _is_branch_manager(current_user):
+            if not _case_matches_branch_manager_scope(item, current_user):
+                continue
+            if not _is_branch_manager_pending_case(item):
+                continue
+            item = _normalize_branch_manager_pending_case(item)
         item["sla"] = _sla_snapshot(item)
         enriched.append(item)
-    return {"cases": enriched, "total": len(rows)}
+    return {"cases": enriched, "total": len(enriched)}
 
 
 @router.get("/my-leads")
@@ -773,7 +1035,13 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
     host_ids = [host.get("user_id") for host in hosts if host.get("user_id")]
     properties = []
     if _is_telecaller(current_user):
-        properties = await db.properties.find({"property_id": {"$in": list(set(assigned_case_property_ids))}}, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
+        property_query: dict = {"$or": []}
+        if assigned_case_property_ids:
+            property_query["$or"].append({"property_id": {"$in": list(set(assigned_case_property_ids))}})
+        if host_ids:
+            property_query["$or"].append({"owner_id": {"$in": host_ids}})
+        if property_query["$or"]:
+            properties = await db.properties.find(property_query, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
     elif host_ids:
         properties = await db.properties.find({"owner_id": {"$in": host_ids}}, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
 
@@ -815,6 +1083,19 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
             })
             continue
         for prop in host_props:
+            if not cases_by_property.get(prop.get("property_id")):
+                prop_status = str(prop.get("status") or "").lower()
+                prop_workflow = str(prop.get("workflow_status") or "").upper()
+                if prop_status in {"pending_verification", "under_review"} or prop_workflow in {
+                    PROPERTY_SUBMITTED,
+                    TELECALLER_CALL_PENDING,
+                    VERIFICATION_SCHEDULED,
+                    TELECALLER_VERIFICATION_IN_PROGRESS,
+                }:
+                    await upsert_verification_case(db, prop, host, current_user)
+                    fresh_case = await db.property_verifications.find_one({"property_id": prop.get("property_id")}, {"_id": 0})
+                    if fresh_case:
+                        cases_by_property[prop.get("property_id")] = fresh_case
             case = cases_by_property.get(prop.get("property_id"))
             source_owner = await _registration_source_owner(db, host=host, prop=prop, case=case)
             rows.append({
@@ -1083,7 +1364,8 @@ async def review_host_document(
         if not requirement:
             raise HTTPException(status_code=404, detail="Document not found on host profile")
         has_submitted_value = bool(requirement.get("document_url") or requirement.get("text_value"))
-        if result in {"approve", "approved"} and not has_submitted_value:
+        is_required = bool(requirement.get("required"))
+        if result in {"approve", "approved"} and is_required and not has_submitted_value:
             raise HTTPException(status_code=400, detail="Document file is required before approval")
         if result in {"approve", "approved"}:
             status_value = "approved"
@@ -1099,9 +1381,11 @@ async def review_host_document(
         documents.append({
             "document_type": document_type,
             "document_name": requirement["label"],
+            "required": is_required,
             "status": status_value,
             "document_url": requirement.get("document_url") or "",
-            "text_value": requirement.get("text_value") or "",
+            "text_value": requirement.get("text_value") or ("" if is_required else "NOT_APPLICABLE"),
+            "verification_method": "" if is_required else "optional_not_applicable",
             "rejection_reason": rejection_reason,
             "review_remarks": payload.remarks or "",
             "reviewed_by": current_user.get("user_id"),
@@ -1198,7 +1482,12 @@ async def submit_host_document_verification(
 @router.get("/{verification_id}")
 async def get_case(verification_id: str, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):
     case = await _case_or_404(db, verification_id)
-    if not (_is_admin(current_user) or _is_telecaller(current_user) or _is_branch_manager(current_user) or case.get("host_id") == current_user.get("user_id")):
+    if not (
+        _is_admin(current_user)
+        or _is_telecaller(current_user)
+        or _is_branch_manager(current_user)
+        or await _case_belongs_to_user(db, case, current_user.get("user_id"))
+    ):
         raise HTTPException(status_code=403, detail="Not authorized")
     if case.get("current_stage") == VERIFICATION_SCHEDULED and not case.get("jitsi_room_name"):
         room_name = workflow_id("XSPACE-VER")
@@ -1213,7 +1502,11 @@ async def get_case(verification_id: str, current_user: dict = Depends(get_curren
 @router.post("/schedule")
 async def schedule_case(payload: SchedulePayload, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):
     case = await _case_or_404(db, payload.verification_id)
-    if not (_is_admin(current_user) or _is_telecaller(current_user) or case.get("host_id") == current_user.get("user_id")):
+    if not (
+        _is_admin(current_user)
+        or _is_telecaller(current_user)
+        or await _case_belongs_to_user(db, case, current_user.get("user_id"))
+    ):
         raise HTTPException(status_code=403, detail="Not authorized to schedule this verification")
     try:
         scheduled_day = datetime.strptime(payload.scheduled_date, "%Y-%m-%d").date()
@@ -1263,15 +1556,19 @@ async def schedule_case(payload: SchedulePayload, current_user: dict = Depends(g
             }},
         )
     try:
-        if case.get("host_id"):
+        recipient_id = case.get("host_id") or case.get("owner_id")
+        if not recipient_id and case.get("property_id"):
+            prop = await db.properties.find_one({"property_id": case.get("property_id")}, {"_id": 0, "owner_id": 1})
+            recipient_id = (prop or {}).get("owner_id")
+        if recipient_id:
             await db.notifications.insert_one({
                 "notification_id": workflow_id("NOTIF"),
-                "user_id": case.get("host_id"),
-                "type": "verification_assigned",
+                "user_id": recipient_id,
+                "type": "video_verification_scheduled",
                 "channel": "in_app",
                 "title": "Video verification scheduled",
                 "message": f"Your video verification call has been scheduled for {payload.scheduled_date} at {payload.scheduled_start_time}. Please join from your property card at the scheduled time.",
-                "recipient": case.get("host_id"),
+                "recipient": recipient_id,
                 "status": "pending",
                 "data": {
                     "verification_id": payload.verification_id,
@@ -1319,7 +1616,21 @@ async def local_adb_dial(payload: AdbDialPayload, current_user: dict = Depends(g
         raise HTTPException(status_code=400, detail="Phone number is required")
     adb_path = _find_adb_executable()
     if not adb_path:
-        raise HTTPException(status_code=400, detail="ADB not found. Install platform-tools or add adb.exe to PATH.")
+        searched = ", ".join(str(path) for path in _adb_candidate_paths())
+        raise HTTPException(
+            status_code=400,
+            detail=f"ADB not found. Install platform-tools/add adb.exe to PATH. Searched: {searched}",
+        )
+    connected_devices = _adb_connected_devices(adb_path)
+    if not connected_devices:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "ADB is installed but no authorized Android device is connected. "
+                "Connect phone by USB data cable, enable Developer options > USB debugging, "
+                "select File Transfer/Android Auto USB mode, and tap Allow on the phone's RSA prompt."
+            ),
+        )
     action = "android.intent.action.CALL" if str(payload.action or "CALL").upper() == "CALL" else "android.intent.action.DIAL"
     command = [adb_path, "shell", "am", "start", "-a", action, "-d", f"tel:{phone}"]
     try:
@@ -1340,6 +1651,98 @@ async def local_adb_dial(payload: AdbDialPayload, current_user: dict = Depends(g
         "record_delay_seconds": int(payload.record_delay_seconds or 6),
         "output": output,
     }
+
+
+@router.post("/host-leads/{host_id}/call")
+async def save_host_lead_call_outcome(host_id: str, payload: CallPayload, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):
+    if not (_is_admin(current_user) or _is_telecaller(current_user)):
+        raise HTTPException(status_code=403, detail="Telecaller access required")
+    host = await db.users.find_one({"user_id": host_id, "role": "host"}, {"_id": 0, "password_hash": 0})
+    if not host:
+        raise HTTPException(status_code=404, detail="Host lead not found")
+    outcome = payload.outcome.strip().upper().replace(" ", "_")
+    valid = {"CONNECTED", "NO_ANSWER", "BUSY", "WRONG_NUMBER", "CALLBACK_REQUESTED", "HOST_NOT_INTERESTED", "COMPLETED", "SCHEDULED", "RESCHEDULED"}
+    if outcome not in valid:
+        raise HTTPException(status_code=400, detail="Invalid call outcome")
+    now = now_utc()
+    call_event = {
+        "outcome": outcome,
+        "remarks": payload.remarks or "",
+        "scheduled_date": payload.scheduled_date or "",
+        "scheduled_time": payload.scheduled_time or "",
+        "next_follow_up": payload.next_follow_up or "",
+        "caller_number": payload.caller_number or "",
+        "caller_user_id": payload.caller_user_id or current_user.get("user_id"),
+        "call_type": payload.call_type or "",
+        "call_checklist": payload.call_checklist or {},
+        "call_duration_seconds": payload.call_duration_seconds or 0,
+        "recording_status": payload.recording_status or "",
+        "video_scheduled_date": payload.video_scheduled_date or "",
+        "video_scheduled_start_time": payload.video_scheduled_start_time or "",
+        "video_scheduled_end_time": payload.video_scheduled_end_time or "",
+        "video_schedule_notes": payload.video_schedule_notes or "",
+        "performed_by": current_user.get("user_id"),
+        "performed_at": now.isoformat(),
+    }
+    updates = {
+        "last_call_outcome": outcome,
+        "last_call_details": call_event,
+        "telecaller_call_type": payload.call_type or "",
+        "telecaller_call_checklist": payload.call_checklist or {},
+        "telecaller_call_remarks": payload.remarks or "",
+        "telecaller_call_duration_seconds": payload.call_duration_seconds or 0,
+        "telecaller_call_recording_status": payload.recording_status or "",
+        "updated_at": now,
+    }
+    if payload.scheduled_date:
+        updates["scheduled_call_date"] = payload.scheduled_date
+    if payload.scheduled_time:
+        updates["scheduled_call_time"] = payload.scheduled_time
+    if payload.video_scheduled_date and payload.video_scheduled_start_time:
+        updates["video_verification"] = {
+            "scheduled_date": payload.video_scheduled_date,
+            "scheduled_start_time": payload.video_scheduled_start_time,
+            "scheduled_end_time": payload.video_scheduled_end_time or "",
+            "notes": payload.video_schedule_notes or "",
+            "status": "scheduled",
+        }
+    await db.users.update_one(
+        {"user_id": host_id},
+        {"$set": updates, "$push": {"call_history": call_event}},
+    )
+    if payload.video_scheduled_date and payload.video_scheduled_start_time:
+        try:
+            await db.notifications.insert_one({
+                "notification_id": workflow_id("NOTIF"),
+                "user_id": host_id,
+                "type": "video_verification_scheduled",
+                "channel": "in_app",
+                "title": "Video verification scheduled",
+                "message": f"Your video verification call has been scheduled for {payload.video_scheduled_date} at {payload.video_scheduled_start_time}.",
+                "recipient": host_id,
+                "status": "pending",
+                "data": {
+                    "host_id": host_id,
+                    "scheduled_date": payload.video_scheduled_date,
+                    "scheduled_start_time": payload.video_scheduled_start_time,
+                    "scheduled_end_time": payload.video_scheduled_end_time or "",
+                    "notes": payload.video_schedule_notes or "",
+                    "action_url": "/host/dashboard",
+                },
+                "created_at": now,
+                "updated_at": now,
+            })
+        except Exception:
+            pass
+    await write_audit_log(
+        db,
+        user_id=current_user.get("user_id"),
+        module="verification_cases",
+        action=f"host_lead_call_{outcome.lower()}",
+        record_id=host_id,
+        new_value=call_event,
+    )
+    return {"message": "Host lead call outcome saved", "workflow_status": host.get("workflow_status") or "HOST_REGISTERED"}
 
 
 @router.post("/{verification_id}/call")
@@ -1377,6 +1780,12 @@ async def save_call_outcome(verification_id: str, payload: CallPayload, current_
     updates = {
         "call_status": outcome,
         "last_call_outcome": outcome,
+        "last_call_details": call_event,
+        "telecaller_call_type": payload.call_type or "",
+        "telecaller_call_checklist": payload.call_checklist or {},
+        "telecaller_call_remarks": payload.remarks or "",
+        "telecaller_call_duration_seconds": payload.call_duration_seconds or 0,
+        "telecaller_call_recording_status": payload.recording_status or "",
         "current_stage": next_stage,
         "current_status": next_stage,
         "workflow_status": next_stage,
@@ -1593,3 +2002,5 @@ async def admin_decision(verification_id: str, payload: DecisionPayload, current
     await db.properties.update_one({"property_id": case["property_id"]}, {"$set": {"status": property_status, "workflow_status": next_stage, "approved_at": now_utc() if result == "APPROVE" else None, "updated_at": now_utc()}})
     await _history(db, case, current_user, PUBLISHING if result == "APPROVE" else next_stage, updates)
     return {"message": "Admin decision saved", "workflow_status": next_stage, "property_status": property_status}
+
+

@@ -515,8 +515,45 @@ const EmployeeDashboard = () => {
 };
 
 // Verification Review Section
+const BM_REVIEW_STAGES = ['BM_REVIEW_PENDING', 'BM_REVIEW_IN_PROGRESS', 'BM_REWORK_REQUIRED'];
+const BM_APPROVAL_CHECKLIST = [
+  'host_name_verified',
+  'telecaller_checklist_completed',
+  'video_verification_completed',
+  'no_critical_discrepancy',
+  'documents_reviewed',
+  'property_details_reviewed',
+];
+
+const BM_APPROVAL_CHECKLIST_LABELS = {
+  host_name_verified: 'Host profile and KYC name verified',
+  telecaller_checklist_completed: 'Telecaller checklist and remarks reviewed',
+  video_verification_completed: 'Video verification evidence reviewed',
+  no_critical_discrepancy: 'No critical mismatch found',
+  documents_reviewed: 'Mandatory documents reviewed',
+  property_details_reviewed: 'Property details, address and listing info reviewed',
+};
+
+const normalizeVerificationCaseForReview = (item = {}) => ({
+  ...item,
+  review_stage: 'branch_manager',
+  status: item.branch_manager_reviewed ? (item.branch_manager_approved ? 'approved' : 'rejected') : 'pending',
+  checklist: item.telecaller_checklist || item.checklist || {},
+  property_details: item.property || item.property_details || {},
+  broker_details: item.telecaller || item.broker_details || {},
+  owner_id: item.owner_id || item.host_id,
+});
+
+const isBmPendingVerificationCase = (item = {}) => {
+  if (item.branch_manager_reviewed) return false;
+  const stage = item.current_stage || item.current_status || item.workflow_status || item.verification_stage || '';
+  return BM_REVIEW_STAGES.includes(stage)
+    || String(item.telecaller_result || '').toUpperCase() === 'VERIFIED';
+};
+
 const VerificationReviewSection = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [verifications, setVerifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [historyVerifications, setHistoryVerifications] = useState([]);
@@ -527,10 +564,13 @@ const VerificationReviewSection = () => {
   const [rejectReason, setRejectReason] = useState('');
   const [approveRemarks, setApproveRemarks] = useState('');
   const [approveError, setApproveError] = useState('');
+  const [bmChecklist, setBmChecklist] = useState({});
   const [approving, setApproving] = useState(false);
   const [reviewNotice, setReviewNotice] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const isBranchManager = user?.admin_role_key === 'branch_manager'
+    || String(user?.designation || '').toLowerCase().includes('branch manager');
   const canReviewVerification = (verification) => {
     if (!verification || verification.status === 'approved' || verification.status === 'rejected') {
       return false;
@@ -551,6 +591,10 @@ const VerificationReviewSection = () => {
   const fetchHistoryVerifications = async () => {
     setLoadingHistory(true);
     try {
+      if (isBranchManager) {
+        setHistoryVerifications([]);
+        return;
+      }
       const response = await verificationAPI.listReviewHistory();
       setHistoryVerifications(response.data.verifications || []);
     } catch (error) {
@@ -563,9 +607,13 @@ const VerificationReviewSection = () => {
   const handleOpenDetails = async (verification) => {
     setSelectedVerification(verification);
     try {
-      const response = await verificationAPI.getVerificationDetails(verification.verification_id);
+      const response = isBranchManager
+        ? await verificationAPI.getCase(verification.verification_id)
+        : await verificationAPI.getVerificationDetails(verification.verification_id);
       if (response.data) {
-        setSelectedVerification(response.data);
+        const detail = isBranchManager ? normalizeVerificationCaseForReview(response.data) : response.data;
+        setSelectedVerification(detail);
+        if (isBranchManager) setBmChecklist(detail.bm_checklist || {});
       }
     } catch (error) {
       console.error('Error fetching verification details:', error);
@@ -574,8 +622,16 @@ const VerificationReviewSection = () => {
 
   const fetchPendingVerifications = async () => {
     try {
-      const response = await verificationAPI.listPendingReviews();
-      setVerifications(response.data.verifications || []);
+      if (isBranchManager) {
+        const response = await verificationAPI.listCases();
+        const rows = (response.data?.cases || [])
+          .filter(isBmPendingVerificationCase)
+          .map(normalizeVerificationCaseForReview);
+        setVerifications(rows);
+      } else {
+        const response = await verificationAPI.listPendingReviews();
+        setVerifications(response.data.verifications || []);
+      }
     } catch (error) {
       console.error('Error fetching verifications:', error);
     } finally {
@@ -588,8 +644,26 @@ const VerificationReviewSection = () => {
     setApproving(true);
     setApproveError('');
     try {
-      await verificationAPI.rmApprove(selectedVerification.verification_id, approveRemarks.trim());
-      setReviewNotice('Verification approved and forwarded to admin for final approval.');
+      if (isBranchManager) {
+        if (!approveRemarks.trim()) {
+          setApproveError('Branch Manager remarks are required before approval.');
+          setApproving(false);
+          return;
+        }
+        const checklist = BM_APPROVAL_CHECKLIST.reduce((acc, key) => ({ ...acc, [key]: true }), {});
+        await verificationAPI.saveBmChecklist(selectedVerification.verification_id, {
+          checklist,
+          remarks: approveRemarks.trim(),
+        });
+        await verificationAPI.bmDecision(selectedVerification.verification_id, {
+          result: 'APPROVE',
+          remarks: approveRemarks.trim(),
+        });
+        setReviewNotice('Branch Manager review approved and forwarded to admin for final approval.');
+      } else {
+        await verificationAPI.rmApprove(selectedVerification.verification_id, approveRemarks.trim());
+        setReviewNotice('Verification approved and forwarded to admin for final approval.');
+      }
       fetchPendingVerifications();
       fetchHistoryVerifications();
       setShowApproveModal(false);
@@ -611,8 +685,16 @@ const VerificationReviewSection = () => {
     }
 
     try {
-      await verificationAPI.rmReject(selectedVerification.verification_id, rejectReason);
-      alert('Verification rejected. Host will be notified.');
+      if (isBranchManager) {
+        await verificationAPI.bmDecision(selectedVerification.verification_id, {
+          result: 'REJECT',
+          remarks: rejectReason,
+        });
+        alert('Verification rejected by Branch Manager.');
+      } else {
+        await verificationAPI.rmReject(selectedVerification.verification_id, rejectReason);
+        alert('Verification rejected. Host will be notified.');
+      }
       setShowRejectReasonModal(false);
       setRejectReason('');
       setSelectedVerification(null);
@@ -644,8 +726,12 @@ const VerificationReviewSection = () => {
   return (
     <div data-testid="verifications-section">
       <div className="dashboard-card mb-6">
-        <h3 className="text-2xl font-bold text-charcoal mb-2">Pending Verification Reviews</h3>
-        <p className="text-charcoal-light">Remote review of broker-submitted verification reports</p>
+        <h3 className="text-2xl font-bold text-charcoal mb-2">
+          {isBranchManager ? 'Pending BM Verification Reviews' : 'Pending Verification Reviews'}
+        </h3>
+        <p className="text-charcoal-light">
+          {isBranchManager ? 'Review telecaller-verified host and property cases before admin approval.' : 'Remote review of broker-submitted verification reports'}
+        </p>
       </div>
 
       {reviewNotice && (
@@ -684,7 +770,7 @@ const VerificationReviewSection = () => {
                     )}
                     <div className="flex-1 min-w-0">
                       <span className="inline-flex rounded-full bg-amber-50 border border-amber-100 px-3 py-1 text-[9px] font-bold text-amber-700 uppercase tracking-widest mb-2">
-                        Pending RM Review
+                        {isBranchManager ? 'Pending BM Review' : 'Pending RM Review'}
                       </span>
                       <h4 className="font-bold text-charcoal text-lg leading-tight">
                         {verification.property_details?.title || 'Property'}
@@ -696,7 +782,7 @@ const VerificationReviewSection = () => {
                         {verification.property_details?.city} | {verification.property_details?.bhk_type}
                       </p>
                       <p className="text-xs text-charcoal-muted mt-2 break-words">
-                        {verification.broker_id ? 'Broker' : 'RM'}: {verification.broker_details?.full_name} ({verification.broker_details?.lg_code})
+                    {isBranchManager ? 'Telecaller' : verification.broker_id ? 'Broker' : 'RM'}: {verification.broker_details?.full_name || 'N/A'} ({verification.broker_details?.lg_code || verification.broker_details?.employee_code || 'N/A'})
                       </p>
                       
                       {/* Checklist Summary */}
@@ -773,7 +859,9 @@ const VerificationReviewSection = () => {
       ) : (
         <div className="dashboard-card text-center py-12">
           <FileCheck className="w-16 h-16 text-charcoal-light mx-auto mb-4" />
-          <p className="text-charcoal-light">No verifications pending review</p>
+          <p className="text-charcoal-light">
+            {isBranchManager ? 'No telecaller-approved cases pending BM review' : 'No verifications pending review'}
+          </p>
         </div>
       )}
 
@@ -781,7 +869,9 @@ const VerificationReviewSection = () => {
       <div className="mt-12 pt-8 border-t border-gray-100">
         <div className="dashboard-card mb-6">
           <h3 className="text-2xl font-bold text-charcoal mb-2">Reviewed & Resolved Verifications</h3>
-          <p className="text-charcoal-light">History of all verification reports approved or rejected</p>
+          <p className="text-charcoal-light">
+            {isBranchManager ? 'History of Branch Manager verification decisions' : 'History of all verification reports approved or rejected'}
+          </p>
         </div>
 
         {loadingHistory ? (
@@ -867,7 +957,7 @@ const VerificationReviewSection = () => {
       {/* Verification Details Modal */}
       {selectedVerification && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 max-w-5xl w-full shadow-premium animate-slide-up max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-2xl font-bold tracking-tight text-charcoal">Verification Report</h3>
@@ -922,6 +1012,71 @@ const VerificationReviewSection = () => {
                 </div>
               </div>
 
+              {isBranchManager && (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="p-5 rounded-2xl border border-slate-200 bg-white">
+                      <h4 className="text-xs font-bold text-charcoal uppercase tracking-widest mb-4">Host Details</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Host Name</p><p className="font-bold text-charcoal">{selectedVerification.host?.full_name || selectedVerification.host?.name || 'N/A'}</p></div>
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mobile</p><p className="font-bold text-charcoal">{selectedVerification.host?.phone || selectedVerification.host?.mobile || 'N/A'}</p></div>
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Email</p><p className="font-bold text-charcoal break-all">{selectedVerification.host?.email || 'N/A'}</p></div>
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">KYC Status</p><p className="font-bold text-charcoal capitalize">{String(selectedVerification.host?.kyc_status || 'pending').replace(/_/g, ' ')}</p></div>
+                      </div>
+                    </div>
+                    <div className="p-5 rounded-2xl border border-slate-200 bg-white">
+                      <h4 className="text-xs font-bold text-charcoal uppercase tracking-widest mb-4">Telecaller Verification</h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Telecaller</p><p className="font-bold text-charcoal">{selectedVerification.telecaller?.full_name || selectedVerification.telecaller_assignment_policy?.telecaller_name || 'N/A'}</p></div>
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Result</p><p className="font-bold text-green-700">{selectedVerification.telecaller_result || 'VERIFIED'}</p></div>
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Verified At</p><p className="font-bold text-charcoal">{selectedVerification.telecaller_verified_at ? new Date(selectedVerification.telecaller_verified_at).toLocaleString('en-IN') : 'N/A'}</p></div>
+                        <div><p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Stage</p><p className="font-bold text-charcoal">{String(selectedVerification.current_stage || selectedVerification.workflow_status || 'BM_REVIEW_PENDING').replace(/_/g, ' ')}</p></div>
+                      </div>
+                      {selectedVerification.telecaller_remarks && <p className="mt-4 text-sm text-charcoal-light leading-relaxed">{selectedVerification.telecaller_remarks}</p>}
+                    </div>
+                  </div>
+
+                  <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/60">
+                    <h4 className="text-xs font-bold text-charcoal uppercase tracking-widest mb-4">Host Documents</h4>
+                    {(selectedVerification.host?.kyc_documents || []).length ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {(selectedVerification.host?.kyc_documents || []).map((doc, index) => {
+                          const docUrl = doc.document_url || doc.url || doc.file_url || '';
+                          return (
+                            <div key={`${doc.document_type || index}-${index}`} className="rounded-xl border border-slate-200 bg-white p-4 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-bold text-sm text-charcoal truncate">{formatDisplayLabel(doc.document_type || doc.label || `Document ${index + 1}`)}</p>
+                                <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{String(doc.status || 'pending').replace(/_/g, ' ')}</p>
+                              </div>
+                              {docUrl && (
+                                <button type="button" onClick={() => window.open(getImageUrl(docUrl), '_blank')} className="px-3 py-2 rounded-lg bg-slate-900 text-white text-[10px] font-bold uppercase tracking-wider shrink-0">
+                                  Open
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-charcoal-light">No host documents found for this case.</p>
+                    )}
+                  </div>
+
+                  <div className="p-5 rounded-2xl border border-blue-100 bg-blue-50/60">
+                    <h4 className="text-xs font-bold text-blue-900 uppercase tracking-widest mb-3">Video Verification</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                      <div><p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Scheduled Date</p><p className="font-bold text-charcoal">{selectedVerification.scheduled_date || 'N/A'}</p></div>
+                      <div><p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Time</p><p className="font-bold text-charcoal">{selectedVerification.scheduled_start_time || 'N/A'}{selectedVerification.scheduled_end_time ? ` - ${selectedVerification.scheduled_end_time}` : ''}</p></div>
+                      <div><p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Status</p><p className="font-bold text-charcoal">{selectedVerification.telecaller_checklist?.video_completed ? 'Completed' : 'Pending / Not marked'}</p></div>
+                    </div>
+                    {(selectedVerification.telecaller_video_url || selectedVerification.video_url) && (
+                      <button type="button" onClick={() => window.open(selectedVerification.telecaller_video_url || selectedVerification.video_url, '_blank')} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white">
+                        <Eye className="w-4 h-4" /> Watch Video
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
               {/* Property Details Info Section */}
               {selectedVerification.property_details && (
                 <div className="p-6 bg-stone/50 rounded-2xl border border-gray-100/60 space-y-4">
@@ -1047,56 +1202,72 @@ const VerificationReviewSection = () => {
                   )}
                 </div>
               )}
-
-              {/* Checklist */}
-              <div>
-                <h4 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest mb-4">Verification Checklist Audit</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {Object.entries(selectedVerification.checklist || {}).map(([key, value]) => (
-                    <div key={key} className="flex flex-col p-4 bg-white border border-gray-100 rounded-2xl hover:shadow-subtle transition">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-bold text-charcoal">{formatDisplayLabel(key)}</span>
-                        {value ? (
-                          <div className="flex items-center space-x-1 text-green-600">
-                            <CheckCircle className="w-3 h-3" />
-                            <span className="text-[8px] font-bold tracking-tight uppercase">Broker Verified</span>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-1 text-red-600">
-                            <XCircle className="w-3 h-3" />
-                            <span className="text-[8px] font-bold tracking-tight uppercase">Broker Failed</span>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {canReviewVerification(selectedVerification) && (
-                        <div className="flex space-x-2">
-                          <button 
-                            onClick={() => {
-                              setReviewNotice(`${formatDisplayLabel(key)} marked as approved for this review.`);
-                            }}
-                            className="flex-1 py-2 bg-green-50 text-green-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-green-100 transition flex items-center justify-center space-x-1"
-                          >
-                            <CheckCircle className="w-3 h-3" />
-                            <span>Approve</span>
-                          </button>
-                          <button 
-                            onClick={() => {
-                              setRejectReason(`Rejected Point: ${formatDisplayLabel(key).toUpperCase()} - `);
-                              setShowRejectReasonModal(true);
-                            }}
-                            className="flex-1 py-2 bg-red-50 text-red-700 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded-xl hover:bg-red-100 transition flex items-center justify-center space-x-1"
-                          >
-                            <XCircle className="w-3 h-3" />
-                            <span>Reject</span>
-                          </button>
-                        </div>
-                      )}
+              {/* Review Checklists */}
+              {isBranchManager ? (
+                <div className="p-5 rounded-2xl border border-slate-200 bg-white">
+                  <div className="flex items-center justify-between gap-4 mb-4">
+                    <div>
+                      <h4 className="text-sm font-bold text-charcoal uppercase tracking-widest">Branch Manager Review Checklist</h4>
+                      <p className="text-xs text-charcoal-light mt-1">Complete these checks before approving the case for admin final approval.</p>
                     </div>
-                  ))}
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
+                      {BM_APPROVAL_CHECKLIST.filter((key) => bmChecklist[key]).length}/{BM_APPROVAL_CHECKLIST.length} done
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {BM_APPROVAL_CHECKLIST.map((key) => (
+                      <label key={key} className={`flex items-center gap-3 rounded-xl border p-4 cursor-pointer transition ${bmChecklist[key] ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
+                        <input
+                          type="checkbox"
+                          checked={Boolean(bmChecklist[key])}
+                          onChange={(event) => setBmChecklist((prev) => ({ ...prev, [key]: event.target.checked }))}
+                          className="w-4 h-4 accent-green-600"
+                          disabled={!canReviewVerification(selectedVerification)}
+                        />
+                        <span className="text-sm font-bold text-charcoal">{BM_APPROVAL_CHECKLIST_LABELS[key] || formatDisplayLabel(key)}</span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <div>
+                  <h4 className="text-sm font-bold tracking-tight text-charcoal uppercase tracking-widest mb-4">Verification Checklist Audit</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {Object.entries(selectedVerification.checklist || {}).map(([key, value]) => (
+                      <div key={key} className="flex flex-col p-4 bg-white border border-gray-100 rounded-2xl hover:shadow-subtle transition">
+                        <div className="flex items-center justify-between mb-3">
+                          <span className="text-sm font-bold text-charcoal">{formatDisplayLabel(key)}</span>
+                          {value ? (
+                            <div className="flex items-center space-x-1 text-green-600">
+                              <CheckCircle className="w-3 h-3" />
+                              <span className="text-[8px] font-bold tracking-tight uppercase">Broker Verified</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-1 text-red-600">
+                              <XCircle className="w-3 h-3" />
+                              <span className="text-[8px] font-bold tracking-tight uppercase">Broker Failed</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
+              {isBranchManager && Object.keys(selectedVerification.checklist || {}).length > 0 && (
+                <div className="p-5 rounded-2xl border border-green-100 bg-green-50/60">
+                  <h4 className="text-xs font-bold text-green-900 uppercase tracking-widest mb-4">Telecaller Checklist Audit</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {Object.entries(selectedVerification.checklist || {}).map(([key, value]) => (
+                      <div key={key} className="flex items-center justify-between gap-3 rounded-xl bg-white border border-green-100 p-3">
+                        <span className="text-xs font-bold text-charcoal">{formatDisplayLabel(key)}</span>
+                        <span className={`text-[10px] font-black uppercase ${value ? 'text-green-700' : 'text-red-600'}`}>{value ? 'Verified' : 'Not verified'}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               {/* Broker Remarks */}
               {selectedVerification.broker_remarks && (
                 <div className="p-6 bg-terracotta/5 rounded-2xl border border-terracotta/10">
@@ -1187,7 +1358,7 @@ const VerificationReviewSection = () => {
               </div>
               <h3 className="text-2xl font-bold tracking-tight text-charcoal">Approve Report</h3>
               <p className="text-charcoal-light text-sm mt-1">
-                Add optional RM remarks before forwarding this verification to admin.
+                {isBranchManager ? 'Add mandatory Branch Manager remarks before forwarding this verification to admin.' : 'Add optional RM remarks before forwarding this verification to admin.'}
               </p>
             </div>
 
@@ -1275,6 +1446,7 @@ const VerificationReviewSection = () => {
 
 // Brokers Section
 const BrokersSection = () => {
+  const { user } = useAuth();
   const [brokers, setBrokers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedBrokerForOwners, setSelectedBrokerForOwners] = useState(null);
@@ -1289,6 +1461,12 @@ const BrokersSection = () => {
   const formatDateTime = (value) => value ? new Date(value).toLocaleString('en-IN', {
     day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
   }) : 'No activity';
+  const isBranchManager = user?.admin_role_key === 'branch_manager'
+    || String(user?.designation || '').toLowerCase().includes('branch manager');
+  const scopeLabel = isBranchManager ? 'Branch Broker CRM' : 'RM Broker CRM';
+  const scopeDescription = isBranchManager
+    ? 'Monitor branch brokers with host, property, booking, revenue, commission and escalation performance.'
+    : 'Monitor assigned brokers with host, property, booking, revenue, commission and escalation performance.';
 
   useEffect(() => {
     fetchBrokers();
@@ -1338,9 +1516,9 @@ const BrokersSection = () => {
   return (
     <div data-testid="brokers-section">
       <div className="bg-white rounded-3xl border border-gray-100 shadow-premium p-6 mb-6">
-        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Broker CRM</p>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">{scopeLabel}</p>
         <h3 className="text-2xl font-bold text-charcoal mb-2">Broker Management</h3>
-        <p className="text-charcoal-muted text-sm">Monitor assigned brokers with host, property, booking, revenue, commission and escalation performance.</p>
+        <p className="text-charcoal-muted text-sm">{scopeDescription}</p>
       </div>
 
       {loading ? (
@@ -1442,7 +1620,7 @@ const BrokersSection = () => {
       {/* Assigned Hosts Details Modal */}
       {selectedBrokerForOwners && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[85vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 max-w-5xl w-full shadow-premium animate-slide-up max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-2xl font-bold tracking-tight text-charcoal">Assigned Hosts</h3>
@@ -1527,7 +1705,7 @@ const BrokersSection = () => {
       {/* Broker's Property Portfolio Modal */}
       {selectedBrokerForProperties && (
         <div className="fixed inset-0 bg-charcoal/50 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-8 max-w-2xl w-full shadow-premium animate-slide-up max-h-[85vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl p-8 max-w-5xl w-full shadow-premium animate-slide-up max-h-[85vh] overflow-y-auto">
             <div className="flex justify-between items-start mb-6">
               <div>
                 <h3 className="text-2xl font-bold tracking-tight text-charcoal">Property Portfolio</h3>
@@ -1858,6 +2036,7 @@ const RMDocumentReviewPanel = ({ host, docs, formatDate }) => {
 };
 
 const RMHostsSection = () => {
+  const { user } = useAuth();
   const [hosts, setHosts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedHostDetails, setSelectedHostDetails] = useState(null);
@@ -1882,6 +2061,12 @@ const RMHostsSection = () => {
 
   const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
+  const isBranchManager = user?.admin_role_key === 'branch_manager'
+    || String(user?.designation || '').toLowerCase().includes('branch manager');
+  const scopeLabel = isBranchManager ? 'Branch Host CRM' : 'RM Host CRM';
+  const scopeDescription = isBranchManager
+    ? 'Branch hosts from RMs, brokers and self-registration with KYC, property, booking and revenue ownership.'
+    : 'All hosts under assigned brokers with KYC, property, booking and revenue ownership.';
 
   const openHostDetails = async (host, focus = 'properties') => {
     setSelectedHostDetails({ host, focus, loading: true });
@@ -1901,9 +2086,9 @@ const RMHostsSection = () => {
     <div data-testid="rm-hosts-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Host CRM</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">{scopeLabel}</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Host Management</h3>
-          <p className="text-sm text-charcoal-muted mt-2">All hosts under assigned brokers with KYC, property, booking and revenue ownership.</p>
+          <p className="text-sm text-charcoal-muted mt-2">{scopeDescription}</p>
         </div>
         <div className="grid grid-cols-3 gap-3 w-full lg:w-auto">
           {[
@@ -1990,7 +2175,7 @@ const RMHostsSection = () => {
       ) : (
         <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 text-center py-16">
           <Briefcase className="w-16 h-16 text-charcoal-muted mx-auto mb-4" />
-          <p className="text-charcoal-muted font-bold uppercase tracking-widest text-xs">No hosts found under assigned brokers</p>
+          <p className="text-charcoal-muted font-bold uppercase tracking-widest text-xs">{isBranchManager ? 'No hosts found in this branch scope' : 'No hosts found under assigned brokers'}</p>
         </div>
       )}
 
@@ -2185,6 +2370,7 @@ const RMPropertyTracker = ({ stages = [] }) => {
 };
 
 const RMPropertiesSection = () => {
+  const { user } = useAuth();
   const [properties, setProperties] = useState([]);
   const [summary, setSummary] = useState({});
   const [loading, setLoading] = useState(true);
@@ -2215,6 +2401,12 @@ const RMPropertiesSection = () => {
 
   const formatMoney = (value) => `Rs. ${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
   const formatDate = (value) => value ? new Date(value).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Not available';
+  const isBranchManager = user?.admin_role_key === 'branch_manager'
+    || String(user?.designation || '').toLowerCase().includes('branch manager');
+  const scopeLabel = isBranchManager ? 'Branch Property Operations' : 'RM Property Operations';
+  const scopeDescription = isBranchManager
+    ? 'Branch property pipeline across RMs, brokers, self-registered hosts and verification cases.'
+    : 'RM-scoped property pipeline across assigned brokers and hosts.';
 
   const openPropertyDetails = async (property) => {
     setSelectedPropertyDetails({ property, loading: true });
@@ -2234,9 +2426,9 @@ const RMPropertiesSection = () => {
     <div data-testid="rm-properties-section" className="animate-slide-up">
       <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4 mb-8">
         <div>
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">RM Property Operations</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] mb-2">{scopeLabel}</p>
           <h3 className="text-2xl font-bold tracking-tight text-charcoal">Property Management</h3>
-          <p className="text-sm text-charcoal-muted mt-2">RM-scoped property pipeline across assigned brokers and hosts.</p>
+          <p className="text-sm text-charcoal-muted mt-2">{scopeDescription}</p>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3 w-full lg:w-auto">
           {[
@@ -2349,7 +2541,7 @@ const RMPropertiesSection = () => {
       ) : (
         <div className="bg-white rounded-3xl border-2 border-dashed border-gray-200 text-center py-16">
           <Building2 className="w-16 h-16 text-charcoal-muted mx-auto mb-4" />
-          <p className="text-charcoal-muted font-bold uppercase tracking-widest text-xs">No properties found in this RM scope</p>
+          <p className="text-charcoal-muted font-bold uppercase tracking-widest text-xs">{isBranchManager ? 'No properties found in this branch scope' : 'No properties found in this RM scope'}</p>
         </div>
       )}
 
@@ -3304,3 +3496,8 @@ const ReportsSection = () => {
 };
 
 export default EmployeeDashboard;
+
+
+
+
+

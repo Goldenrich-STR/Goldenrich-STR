@@ -81,11 +81,37 @@ def _is_branch_manager_profile(profile: dict) -> bool:
     return role_key == "branch_manager" or "branch manager" in designation
 
 
+def _branch_scope_values(profile: dict) -> list[str]:
+    values = {
+        _clean_identifier(profile.get("branch")),
+        _clean_identifier(profile.get("branch_id")),
+        _clean_identifier(profile.get("branch_code")),
+        _clean_identifier(profile.get("territory")),
+        _clean_identifier(profile.get("city")),
+        _clean_identifier(profile.get("employee_region")),
+        _clean_identifier(profile.get("region")),
+    }
+    return [value for value in values if value]
+
+
+def _branch_scope_or(profile: dict) -> list[dict]:
+    values = _branch_scope_values(profile)
+    if not values:
+        return []
+    fields = ["branch", "branch_id", "branch_code", "territory", "city", "employee_region", "region"]
+    scope_or = []
+    for field in fields:
+        scope_or.extend(_field_matches_identifiers(field, values))
+    return scope_or
+
+
 async def _get_branch_manager_rm_users(db: AsyncIOMotorDatabase, branch_manager_profile: dict):
     branch_manager_identifiers = await _get_rm_identifiers(db, branch_manager_profile)
     rm_lookup_or = [
         *_field_matches_identifiers("reports_to", branch_manager_identifiers),
         *_field_matches_identifiers("branch_manager_id", branch_manager_identifiers),
+        *_field_matches_identifiers("branch_manager_code", branch_manager_identifiers),
+        *_branch_scope_or(branch_manager_profile),
     ]
     if not rm_lookup_or:
         return []
@@ -190,12 +216,59 @@ async def _get_rm_scope(db: AsyncIOMotorDatabase, current_user_or_id):
 
         direct_bm_host_or = _field_matches_identifiers("branch_manager_id", branch_manager_identifiers)
         direct_bm_host_or.extend(_field_matches_identifiers("branch_manager_code", branch_manager_identifiers))
+        direct_bm_host_or.extend(_branch_scope_or(employee_profile))
         bm_hosts = await db.users.find(
             {"role": "host", "$or": direct_bm_host_or},
             {"_id": 0, "user_id": 1, "broker_id": 1}
         ).to_list(length=3000)
         all_host_ids.update(host.get("user_id") for host in bm_hosts if host.get("user_id"))
         all_broker_ids.update(host.get("broker_id") for host in bm_hosts if host.get("broker_id"))
+
+        broker_or = [
+            *_field_matches_identifiers("branch_manager_id", branch_manager_identifiers),
+            *_field_matches_identifiers("branch_manager_code", branch_manager_identifiers),
+            *_branch_scope_or(employee_profile),
+        ]
+        if all_broker_ids:
+            broker_or.append({"user_id": {"$in": list(all_broker_ids)}})
+        bm_brokers = await db.users.find(
+            {"role": "broker", "$or": broker_or},
+            {"_id": 0, "user_id": 1}
+        ).to_list(length=1000) if broker_or else []
+        all_broker_ids.update(broker.get("user_id") for broker in bm_brokers if broker.get("user_id"))
+
+        property_or = [
+            *_field_matches_identifiers("branch_manager_id", branch_manager_identifiers),
+            *_field_matches_identifiers("branch_manager_code", branch_manager_identifiers),
+            *_branch_scope_or(employee_profile),
+        ]
+        if all_broker_ids:
+            property_or.append({"broker_id": {"$in": list(all_broker_ids)}})
+        if all_host_ids:
+            property_or.append({"owner_id": {"$in": list(all_host_ids)}})
+        bm_properties = await db.properties.find(
+            {"$or": property_or},
+            {"_id": 0, "owner_id": 1, "broker_id": 1, "property_id": 1}
+        ).to_list(length=5000) if property_or else []
+        all_host_ids.update(prop.get("owner_id") for prop in bm_properties if prop.get("owner_id"))
+        all_broker_ids.update(prop.get("broker_id") for prop in bm_properties if prop.get("broker_id"))
+
+        verification_or = [
+            *_field_matches_identifiers("branch_manager_id", branch_manager_identifiers),
+            *_field_matches_identifiers("branch_manager_code", branch_manager_identifiers),
+        ]
+        if bm_properties:
+            verification_or.append({"property_id": {"$in": [p["property_id"] for p in bm_properties if p.get("property_id")]}})
+        bm_verifications = await db.property_verifications.find(
+            {"$or": verification_or},
+            {"_id": 0, "owner_id": 1, "host_id": 1, "broker_id": 1}
+        ).to_list(length=5000) if verification_or else []
+        all_host_ids.update(
+            verification.get("owner_id") or verification.get("host_id")
+            for verification in bm_verifications
+            if verification.get("owner_id") or verification.get("host_id")
+        )
+        all_broker_ids.update(verification.get("broker_id") for verification in bm_verifications if verification.get("broker_id"))
 
         return list(all_broker_ids), list(all_host_ids)
 

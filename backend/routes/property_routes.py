@@ -1083,6 +1083,17 @@ async def get_host_properties(
     try:
         cursor = db.properties.find({"owner_id": current_user["user_id"]}, {"_id": 0}).sort("created_at", -1)
         properties = await cursor.to_list(length=100)
+        property_ids = [p.get("property_id") for p in properties if p.get("property_id")]
+        verification_by_property = {}
+        if property_ids:
+            verification_rows = await db.property_verifications.find(
+                {"property_id": {"$in": property_ids}},
+                {"_id": 0},
+            ).sort("updated_at", -1).to_list(length=len(property_ids) * 3)
+            for row in verification_rows:
+                prop_id = row.get("property_id")
+                if prop_id and prop_id not in verification_by_property:
+                    verification_by_property[prop_id] = row
         sub_ids = [p.get("subscription_id") for p in properties if p.get("subscription_id")]
         subscriptions = {}
         plans = {}
@@ -1103,6 +1114,20 @@ async def get_host_properties(
         for prop in properties:
             _normalize_booking_mode(prop)
             _sanitize_property_media(prop)
+            verification = verification_by_property.get(prop.get("property_id")) or {}
+            if verification:
+                prop["verification_case"] = verification
+                if verification.get("scheduled_date") and verification.get("scheduled_start_time"):
+                    prop["video_verification"] = {
+                        **(prop.get("video_verification") or {}),
+                        "verification_id": verification.get("verification_id"),
+                        "scheduled_date": verification.get("scheduled_date"),
+                        "scheduled_start_time": verification.get("scheduled_start_time"),
+                        "scheduled_end_time": verification.get("scheduled_end_time") or "",
+                        "notes": verification.get("schedule_notes") or "",
+                        "status": "scheduled",
+                        "action_url": f"/host/properties/{prop.get('property_id')}/video-verification?verificationId={verification.get('verification_id')}",
+                    }
             sub = subscriptions.get(prop.get("subscription_id")) or {}
             plan = plans.get(sub.get("plan_id")) or {}
             prop["subscription_plan_name"] = plan.get("plan_name") or sub.get("plan_type") or "Trial"

@@ -165,6 +165,32 @@ def _property_operations_stage(prop: dict, assignment: dict, verification: Optio
     if not is_reviewable:
         return status_value or "all"
 
+    verification_stage = (
+        verification.get("current_stage")
+        or verification.get("current_status")
+        or verification.get("workflow_status")
+        or verification.get("verification_stage")
+        or ""
+    )
+    telecaller_stages = {
+        "PROPERTY_SUBMITTED",
+        "TELECALLER_CALL_PENDING",
+        "VERIFICATION_SCHEDULED",
+        "TELECALLER_VERIFICATION_IN_PROGRESS",
+        "TELECALLER_REWORK_REQUIRED",
+        "TELECALLER_VERIFICATION_FAILED",
+    }
+    bm_stages = {"BM_REVIEW_PENDING", "BM_REVIEW_IN_PROGRESS", "BM_REWORK_REQUIRED"}
+    admin_stages = {"BM_APPROVED", "ADMIN_REVIEW_PENDING", "ADMIN_CORRECTION_REQUIRED", "ADMIN_ON_HOLD"}
+    if verification_stage in telecaller_stages:
+        return "telecaller_verification"
+    if verification_stage in bm_stages:
+        return "branch_manager_review"
+    if verification_stage in admin_stages:
+        return "admin_review"
+    if not verification.get("verification_id"):
+        return "telecaller_verification"
+
     broker_assigned = bool(assignment.get("broker"))
     rm_assigned = bool(assignment.get("rm"))
     bm_assigned = bool(assignment.get("branch_manager") or assignment.get("branch_manager_code"))
@@ -187,6 +213,53 @@ def _property_operations_stage(prop: dict, assignment: dict, verification: Optio
         return "admin_review"
     return "admin_review" if is_reviewable else status_value or "all"
 
+
+def _verification_stage_value(verification: Optional[dict]) -> str:
+    verification = verification or {}
+    return str(
+        verification.get("current_stage")
+        or verification.get("current_status")
+        or verification.get("workflow_status")
+        or verification.get("verification_stage")
+        or ""
+    ).strip().upper()
+
+
+def _verification_review_priority(verification: Optional[dict]) -> tuple:
+    verification = verification or {}
+    stage = _verification_stage_value(verification)
+    stage_priority = {
+        "ADMIN_APPROVED": 90,
+        "LIVE": 90,
+        "ADMIN_REVIEW_PENDING": 80,
+        "BM_APPROVED": 80,
+        "ADMIN_CORRECTION_REQUIRED": 80,
+        "ADMIN_ON_HOLD": 80,
+        "BM_REVIEW_PENDING": 70,
+        "BM_REVIEW_IN_PROGRESS": 70,
+        "BM_REWORK_REQUIRED": 70,
+        "VERIFICATION_SCHEDULED": 60,
+        "TELECALLER_VERIFICATION_IN_PROGRESS": 60,
+        "TELECALLER_CALL_PENDING": 50,
+        "PROPERTY_SUBMITTED": 40,
+        "TELECALLER_REWORK_REQUIRED": 30,
+        "TELECALLER_VERIFICATION_FAILED": 20,
+    }.get(stage, 0)
+    if str(verification.get("telecaller_result") or "").upper() == "VERIFIED":
+        stage_priority = max(stage_priority, 70)
+    updated_value = str(
+        verification.get("updated_at")
+        or verification.get("telecaller_decision_at")
+        or verification.get("created_at")
+        or ""
+    )
+    return stage_priority, updated_value
+
+
+def _select_property_verification(verifications: list[dict]) -> dict:
+    if not verifications:
+        return {}
+    return sorted(verifications, key=_verification_review_priority, reverse=True)[0]
 
 async def _resolve_broker_or_rm(db: AsyncIOMotorDatabase, value: Optional[str]):
     broker = await _resolve_assignee_user(db, value, "broker")
@@ -818,9 +891,21 @@ def _normalise_property_review(prop: dict, owner: dict | None = None, verificati
     bm_rejected = verification.get("branch_manager_reviewed") and verification.get("branch_manager_approved") is False
     admin_approved = prop.get("status") == "live" or (verification.get("admin_reviewed") and verification.get("admin_approved") is True)
     admin_rejected = verification.get("admin_reviewed") and verification.get("admin_approved") is False
+    verification_stage = (
+        verification.get("current_stage")
+        or verification.get("current_status")
+        or verification.get("workflow_status")
+        or verification.get("verification_stage")
+        or ""
+    )
     document_status = "approved" if documents_approved else "pending"
     broker_status = "not_required" if not has_broker_step else "approved" if broker_completed else "pending"
     rm_status = "rejected" if rm_rejected else "approved" if rm_approved or rm_first_completed else "pending"
+    telecaller_status = (
+        "rejected" if verification_stage == "TELECALLER_VERIFICATION_FAILED"
+        else "approved" if verification_stage in {"BM_REVIEW_PENDING", "BM_REVIEW_IN_PROGRESS", "BM_APPROVED", "ADMIN_REVIEW_PENDING", "ADMIN_APPROVED", "LIVE", "COMPLETED"} or str(verification.get("telecaller_result") or "").upper() == "VERIFIED"
+        else "pending"
+    )
     bm_status = "rejected" if bm_rejected else "approved" if bm_approved else "pending"
     admin_status = "rejected" if admin_rejected else "approved" if admin_approved else "pending"
     return {
@@ -829,6 +914,7 @@ def _normalise_property_review(prop: dict, owner: dict | None = None, verificati
             "document_check": stage_value("document_check", document_status),
             "broker_verification": stage_value("broker_verification", broker_status, "No broker step required" if not has_broker_step else ""),
             "rm_verification": stage_value("rm_verification", rm_status),
+            "telecaller_verification": stage_value("telecaller_verification", telecaller_status, verification.get("telecaller_remarks") or verification.get("telecaller_decision_remarks") or ""),
             "branch_manager_review": stage_value("branch_manager_review", bm_status, "No Branch Manager assigned" if not (assignment["branch_manager"] or assignment["branch_manager_code"]) else ""),
             "admin_review": stage_value("admin_review", admin_status),
         },
@@ -1488,8 +1574,50 @@ async def users(
 ):
     active_record_query = {"is_deleted": {"$ne": True}}
     query = dict(active_record_query)
+    role_filter = None
     if role and role != "all":
-        query["role"] = role
+        normalized_role = str(role).lower().strip()
+        employee_role_filters = {
+            "rm": {
+                "$or": [
+                    {"role": "rm"},
+                    {"role": "employee", "admin_role_key": {"$in": ["rm", "relationship_manager"]}},
+                    {"role": "employee", "designation": {"$regex": r"^(rm|relationship[\s_-]*manager)$", "$options": "i"}},
+                ]
+            },
+            "branch_manager": {
+                "$or": [
+                    {"role": "branch_manager"},
+                    {"role": "employee", "admin_role_key": "branch_manager"},
+                    {"role": "employee", "designation": {"$regex": r"branch[\s_-]*manager", "$options": "i"}},
+                ]
+            },
+            "team_leader": {
+                "$or": [
+                    {"role": "team_leader"},
+                    {"role": "employee", "admin_role_key": "team_leader"},
+                    {"role": "employee", "designation": {"$regex": r"^(tl|team[\s_-]*leader)$", "$options": "i"}},
+                ]
+            },
+            "telecaller": {
+                "$or": [
+                    {"role": "telecaller"},
+                    {"role": "employee", "admin_role_key": "telecaller"},
+                    {"role": "employee", "designation": {"$regex": r"tele[\s_-]*caller", "$options": "i"}},
+                ]
+            },
+            "md": {
+                "$or": [
+                    {"role": "md"},
+                    {"role": "admin", "admin_role_key": {"$in": ["md", "managing_director"]}},
+                    {"role": "admin", "designation": {"$regex": r"managing[\s_-]*director", "$options": "i"}},
+                ]
+            },
+        }
+        if normalized_role in employee_role_filters:
+            role_filter = employee_role_filters[normalized_role]
+        else:
+            query["role"] = normalized_role
     if status_filter == "inactive":
         query["is_active"] = False
     elif status_filter == "active":
@@ -1497,7 +1625,7 @@ async def users(
     else:
         query["is_active"] = {"$ne": False}
     if search:
-        query["$or"] = [
+        search_filter = {"$or": [
             {"full_name": {"$regex": search, "$options": "i"}},
             {"email": {"$regex": search, "$options": "i"}},
             {"phone": {"$regex": search, "$options": "i"}},
@@ -1514,7 +1642,13 @@ async def users(
             {"state": {"$regex": search, "$options": "i"}},
             {"pin_code": {"$regex": search, "$options": "i"}},
             {"admin_role_key": {"$regex": search, "$options": "i"}},
-        ]
+        ]}
+        if role_filter:
+            query["$and"] = [role_filter, search_filter]
+        else:
+            query.update(search_filter)
+    elif role_filter:
+        query.update(role_filter)
     items = await db.users.find(query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).skip(skip).limit(limit).to_list(length=limit)
     total = await db.users.count_documents(query)
     return api_response("Users loaded", {"users": items}, {"total": total, "limit": limit, "skip": skip})
@@ -2718,10 +2852,12 @@ async def property_operations(
         query["status"] = status_map[tab]
     elif tab == "boosted":
         query["is_boosted"] = True
-    elif tab in {"broker_verification", "rm_verification", "branch_manager_review"}:
-        query["status"] = {"$in": ["pending_verification", "under_review"]}
-    elif tab == "admin_review":
-        query["status"] = {"$in": ["pending_verification", "under_review"]}
+    elif tab in {"broker_verification", "rm_verification", "telecaller_verification", "branch_manager_review", "admin_review"}:
+        # Workflow tabs are classified from the latest property_verifications row
+        # below. Do not pre-filter by properties.status here: older or partially
+        # migrated records can have a stale property status even when the
+        # verification case has moved to BM/Admin review.
+        pass
     if category:
         query["category"] = category
     if property_type:
@@ -2797,7 +2933,7 @@ async def property_operations(
     sort_fields = [("created_at", -1)]
     if tab == "boosted":
         sort_fields = [("boost_rank", 1), ("created_at", -1)]
-    workflow_tabs = {"broker_verification", "rm_verification", "branch_manager_review", "admin_review"}
+    workflow_tabs = {"broker_verification", "rm_verification", "telecaller_verification", "branch_manager_review", "admin_review"}
     fetch_skip = 0 if tab in workflow_tabs else skip
     fetch_limit = 10000 if tab in workflow_tabs else limit
     props = await db.properties.find(query, {"_id": 0}).sort(sort_fields).skip(fetch_skip).limit(fetch_limit).to_list(length=fetch_limit)
@@ -2834,8 +2970,27 @@ async def property_operations(
         prop["rm_code"] = _team_code(rm_user, prop.get("assigned_rm"))
         prop["branch_manager_name"] = branch_manager_user.get("full_name")
         prop["branch_manager_code"] = _team_code(branch_manager_user, assignment["branch_manager_code"] or prop.get("assigned_branch_manager"))
-        verification = await db.property_verifications.find_one({"property_id": prop.get("property_id")}, {"_id": 0})
+        verification_options = await db.property_verifications.find(
+            {"property_id": prop.get("property_id")},
+            {"_id": 0},
+        ).sort([("updated_at", -1), ("created_at", -1)]).limit(20).to_list(length=20)
+        verification = _select_property_verification(verification_options)
         prop["verification"] = verification or {}
+        telecaller = {}
+        telecaller_id = (verification or {}).get("telecaller_id") or prop.get("verification_telecaller_id") or prop.get("telecaller_id")
+        if telecaller_id:
+            telecaller = await db.users.find_one({"user_id": telecaller_id}, {"_id": 0, "password_hash": 0}) or {}
+        prop["telecaller_id"] = telecaller_id or ""
+        prop["telecaller_name"] = telecaller.get("full_name") or ""
+        prop["telecaller_code"] = _team_code(telecaller, telecaller_id)
+        prop["telecaller_stage"] = (
+            (verification or {}).get("current_stage")
+            or (verification or {}).get("current_status")
+            or (verification or {}).get("workflow_status")
+            or (verification or {}).get("verification_stage")
+            or ""
+        )
+        prop["telecaller_result"] = (verification or {}).get("telecaller_result") or ""
         prop["workflow_stage"] = _property_operations_stage(prop, assignment, verification)
         prop["operations_review"] = _normalise_property_review(prop, owner, verification)
     if tab in workflow_tabs:
@@ -2853,7 +3008,11 @@ async def property_operation_detail(property_id: str, current_user: dict = Depen
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
     owner = await db.users.find_one({"user_id": prop.get("owner_id")}, {"_id": 0, "password_hash": 0}) or {}
-    verification = await db.property_verifications.find_one({"property_id": property_id}, {"_id": 0}) or {}
+    verification_options = await db.property_verifications.find(
+        {"property_id": property_id},
+        {"_id": 0},
+    ).sort([("updated_at", -1), ("created_at", -1)]).limit(20).to_list(length=20)
+    verification = _select_property_verification(verification_options)
     prop["host"] = owner
     assignment = _property_team_assignment(prop, owner)
     prop["assigned_broker"] = assignment["broker"]
@@ -2871,6 +3030,23 @@ async def property_operation_detail(property_id: str, current_user: dict = Depen
     branch_manager_user = team_map.get(prop.get("assigned_branch_manager"), {})
     prop["branch_manager_name"] = branch_manager_user.get("full_name")
     prop["branch_manager_code"] = _team_code(branch_manager_user, assignment["branch_manager_code"] or prop.get("assigned_branch_manager"))
+    telecaller = {}
+    telecaller_id = verification.get("telecaller_id") or prop.get("verification_telecaller_id") or prop.get("telecaller_id")
+    if telecaller_id:
+        telecaller = await db.users.find_one({"user_id": telecaller_id}, {"_id": 0, "password_hash": 0}) or {}
+    prop["verification"] = verification
+    prop["telecaller_id"] = telecaller_id or ""
+    prop["telecaller_name"] = telecaller.get("full_name") or ""
+    prop["telecaller_code"] = _team_code(telecaller, telecaller_id)
+    prop["telecaller_stage"] = (
+        verification.get("current_stage")
+        or verification.get("current_status")
+        or verification.get("workflow_status")
+        or verification.get("verification_stage")
+        or ""
+    )
+    prop["telecaller_result"] = verification.get("telecaller_result") or ""
+    prop["workflow_stage"] = _property_operations_stage(prop, assignment, verification)
     prop["operations_review"] = _normalise_property_review(prop, owner, verification)
     return api_response("Property operation detail loaded", {"property": prop})
 
@@ -2931,7 +3107,7 @@ async def update_property_checklist(property_id: str, payload: PropertyChecklist
 
 @router.patch("/properties-operations/{property_id}/stage")
 async def update_property_stage(property_id: str, payload: PropertyStagePayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
-    allowed_stages = {"document_check", "broker_verification", "rm_verification", "branch_manager_review", "admin_review"}
+    allowed_stages = {"document_check", "broker_verification", "rm_verification", "telecaller_verification", "branch_manager_review", "admin_review"}
     if payload.stage not in allowed_stages:
         raise HTTPException(status_code=400, detail="Invalid review stage")
     if payload.status not in {"approved", "rejected", "pending"}:
@@ -2942,7 +3118,7 @@ async def update_property_stage(property_id: str, payload: PropertyStagePayload,
     stage = {"status": payload.status, "remarks": payload.remarks or "", "reviewed_by": current_user["user_id"], "reviewed_at": _now().isoformat()}
     updates = {f"stages.{payload.stage}": stage, "updated_at": _now()}
     property_updates = {"updated_at": _now()}
-    if payload.status == "approved" and payload.stage in {"broker_verification", "rm_verification", "branch_manager_review", "admin_review"}:
+    if payload.status == "approved" and payload.stage in {"broker_verification", "rm_verification", "telecaller_verification", "branch_manager_review", "admin_review"}:
         property_updates["status"] = "under_review"
     if payload.status == "rejected":
         property_updates["status"] = "rejected"
@@ -4649,3 +4825,5 @@ async def assign_support_ticket(ticket_id: str, payload: SupportTicketAssignment
     await db.support_tickets.update_one({"ticket_id": ticket_id}, {"$set": updates, "$push": {"assignment_history": {"$each": [history_item], "$slice": -50}}})
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="support_ticket_management", action="ticket_assigned", record_id=ticket_id, old_value={"assigned_admin_id": ticket.get("assigned_admin_id"), "priority": ticket.get("priority"), "sla_due_at": ticket.get("sla_due_at")}, new_value=updates, reason=payload.reason)
     return api_response("Support ticket assigned", {"assignment": history_item})
+
+
