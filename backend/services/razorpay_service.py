@@ -110,6 +110,28 @@ class RazorpayService:
             logger.error(f"Failed to create Razorpay order: {str(e)}")
             return {"success": False, "error": str(e)}
 
+    def fetch_order(self, order_id: str) -> Dict:
+        """Fetch an order using the currently configured Razorpay account.
+
+        This is also an ownership check: an order made with an old/different
+        Razorpay key cannot be fetched by the current client and must not be
+        sent to Checkout with the current public key.
+        """
+        if self.is_mock:
+            return {
+                "success": True,
+                "order": {"id": order_id, "status": "created", "mock": True},
+            }
+
+        if not self.client:
+            return {"success": False, "error": "Razorpay live keys are not configured"}
+
+        try:
+            return {"success": True, "order": self.client.order.fetch(order_id)}
+        except Exception as e:
+            logger.warning("Unable to fetch Razorpay order %s: %s", order_id, str(e))
+            return {"success": False, "error": str(e)}
+
     # --------------- Verify ----------------
 
     def verify_payment_signature(
