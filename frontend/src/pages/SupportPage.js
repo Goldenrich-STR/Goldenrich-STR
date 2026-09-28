@@ -42,8 +42,8 @@ const DEFAULT_SUPPORT_DATA = {
       id: "call_support",
       title: "Call Support",
       description: "Speak directly with our support team.",
-      button_text: "+91 919225586010",
-      action_value: "+91 919225586010"
+      button_text: "+91 9225586010",
+      action_value: "+91 9225586010"
     }
   ],
   popular_topics: [
@@ -183,7 +183,7 @@ const SupportPage = () => {
         setSupportData({
           ...DEFAULT_SUPPORT_DATA,
           ...res.data.support_content,
-          cards: (res.data.support_content.cards || DEFAULT_SUPPORT_DATA.cards).map(c => c.id === 'call_support' ? { ...c, button_text: '+91 919225586010', action_value: '+91 919225586010' } : c)
+          cards: (res.data.support_content.cards || DEFAULT_SUPPORT_DATA.cards).map(c => c.id === 'call_support' ? { ...c, button_text: '+91 9225586010', action_value: '+91 9225586010' } : c)
         });
         if (cmsFaqs.length > 0) {
           setFaqs(cmsFaqs.map((item, index) => ({
