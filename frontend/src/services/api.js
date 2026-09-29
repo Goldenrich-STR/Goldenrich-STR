@@ -526,6 +526,9 @@ export const verificationAPI = {
   saveCallOutcome: (verificationId, payload) =>
     apiClient.post(`/verification-cases/${verificationId}/call`, payload),
 
+  saveHostLeadCallOutcome: (hostId, payload) =>
+    apiClient.post(`/verification-cases/host-leads/${hostId}/call`, payload),
+
   startLocalAdbCall: (payload) =>
     apiClient.post('/verification-cases/local-adb/dial', payload),
 

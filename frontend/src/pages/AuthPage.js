@@ -8,6 +8,7 @@ import SEO from '../components/SEO';
 import { INDIAN_CITIES } from '../lib/indianCities';
 
 const OTP_VALIDITY_SECONDS = 120;
+const normalizeRoleKey = (value) => String(value || '').toLowerCase().replace(/[\s-]+/g, '_');
 
 const AssignmentSearchSelect = ({ label, value, onChange, options, codeKey, placeholder, emptyLabel }) => {
   const [open, setOpen] = useState(false);
@@ -125,32 +126,15 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
   const [availableEmployees, setAvailableEmployees] = useState([]);
   const [cityDropdownOpen, setCityDropdownOpen] = useState(false);
 
-  const selectedHostPrimaryAssignment = useMemo(
-    () => availableBrokers.find((item) => item?.lg_code === registerData.lg_code),
-    [availableBrokers, registerData.lg_code]
-  );
   const hostSecondaryOptions = useMemo(() => {
-    if (selectedHostPrimaryAssignment?.assignment_type === 'broker') {
-      return availableBrokers.filter((item) => item?.assignment_type === 'rm');
-    }
-    if (selectedHostPrimaryAssignment?.assignment_type === 'rm') {
-      return availableEmployees;
-    }
-    return [];
-  }, [availableBrokers, availableEmployees, selectedHostPrimaryAssignment]);
-  const hostSecondaryCopy = selectedHostPrimaryAssignment?.assignment_type === 'broker'
-    ? {
-      label: 'Branch Manager / RM Code',
-      placeholder: 'Search RM code or name',
-      emptyLabel: 'No RM code found',
-      codeKey: 'lg_code',
-    }
-    : {
-      label: 'Branch Manager / RM Code',
-      placeholder: selectedHostPrimaryAssignment ? 'Search branch manager code or name' : 'Select broker/RM first',
-      emptyLabel: selectedHostPrimaryAssignment ? 'No branch manager code found' : 'Select broker/RM first',
-      codeKey: 'employee_code',
-    };
+    return availableEmployees;
+  }, [availableEmployees]);
+  const hostSecondaryCopy = {
+    label: 'Telecaller LG Code',
+    placeholder: 'Search telecaller code or name',
+    emptyLabel: 'No telecaller code found',
+    codeKey: 'employee_code',
+  };
 
   const getGuestPostAuthPath = () => {
     try {
@@ -341,7 +325,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
     
     if (result.success) {
       let authenticatedUser = result.user;
-      if (isMdLogin && refreshUser) {
+      if (refreshUser) {
         const refreshedUser = await refreshUser();
         authenticatedUser = refreshedUser || result.user;
       }
@@ -395,10 +379,17 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
         );
       } else if (userRole === 'broker') {
         navigate('/broker/dashboard');
+fix/telecaller-role-wiring
+      } else if (userRole === 'employee' || userRole === 'telecaller') {
+        const adminRole = normalizeRoleKey(
+          authenticatedUser?.admin_role_key || authenticatedUser?.designation || authenticatedUser?.role
+        );
+
       } else if (userRole === 'employee') {
         const adminRole = String(result.user?.admin_role_key || result.user?.designation || '')
           .toLowerCase()
           .replace(/[\s-]+/g, '_');
+          at
         if (adminRole === 'telecaller') {
           navigate('/telecaller/dashboard');
         } else if (adminRole === 'rm' || adminRole === 'relationship_manager') {
@@ -853,7 +844,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                       </div>
                     </div>
  
-                    {/* Broker/RM dropdowns for Host role */}
+                    {/* Broker/RM and telecaller dropdowns for Host role */}
                     {registerData.role === 'host' && (
                       <div className="grid grid-cols-2 gap-3 text-left animate-fade-in">
                         <AssignmentSearchSelect
