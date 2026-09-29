@@ -1873,7 +1873,8 @@ async def update_admin_user(user_id: str, payload: AdminUserPayload, current_use
     existing = await db.users.find_one({"user_id": user_id}, {"_id": 0})
     if not existing:
         raise HTTPException(status_code=404, detail="User not found")
-    await _assert_unique_user_fields(db, email=payload.email, phone=payload.phone, employee_code=payload.employee_code or "", user_id=user_id)
+    unique_employee_code = (payload.employee_code or "") if payload.role in {"employee", "broker"} else ""
+    await _assert_unique_user_fields(db, email=payload.email, phone=payload.phone, employee_code=unique_employee_code, user_id=user_id)
     updates = payload.model_dump()
     updates.pop("password", None)
     if payload.role == "admin" and not (updates.get("department") or "").strip():
@@ -4825,5 +4826,7 @@ async def assign_support_ticket(ticket_id: str, payload: SupportTicketAssignment
     await db.support_tickets.update_one({"ticket_id": ticket_id}, {"$set": updates, "$push": {"assignment_history": {"$each": [history_item], "$slice": -50}}})
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="support_ticket_management", action="ticket_assigned", record_id=ticket_id, old_value={"assigned_admin_id": ticket.get("assigned_admin_id"), "priority": ticket.get("priority"), "sla_due_at": ticket.get("sla_due_at")}, new_value=updates, reason=payload.reason)
     return api_response("Support ticket assigned", {"assignment": history_item})
+
+
 
 
