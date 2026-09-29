@@ -418,28 +418,41 @@ def _matches_branch_scope(record: dict, scope_values: list[str]) -> bool:
             return True
     return False
 
+def _has_branch_manager_assignment(record: dict | None) -> bool:
+    if not record:
+        return False
+    fields = (
+        'branch_manager_id',
+        'branch_manager_code',
+        'bm_id',
+        'assigned_bm_id',
+    )
+    return any(str(record.get(field) or '').strip() for field in fields)
+
 
 def _case_matches_branch_manager_scope(case: dict, current_user: dict) -> bool:
     identities = _employee_identity_terms(current_user)
     scope_values = _branch_scope_values(current_user)
-    prop = case.get("property") or {}
-    host = case.get("host") or {}
-    telecaller = case.get("telecaller") or {}
-    source_owner = case.get("source_owner") or {}
-    bm = case.get("branch_manager") or {}
+    prop = case.get('property') or {}
+    host = case.get('host') or {}
+    telecaller = case.get('telecaller') or {}
+    source_owner = case.get('source_owner') or {}
+    bm = case.get('branch_manager') or {}
     identity_fields = (
-        "branch_manager_id",
-        "branch_manager_code",
-        "bm_id",
-        "assigned_bm_id",
+        'branch_manager_id',
+        'branch_manager_code',
+        'bm_id',
+        'assigned_bm_id',
     )
-    for record in (case, prop, host, telecaller, source_owner, bm):
+    records = (case, prop, host, telecaller, source_owner, bm)
+    for record in records:
         if any(_matches_any_identity(record.get(field), identities) for field in identity_fields):
             return True
         if _matches_branch_scope(record, scope_values):
             return True
+    if not any(_has_branch_manager_assignment(record) for record in records) and _is_branch_manager_pending_case(case):
+        return True
     return False
-
 
 BM_PENDING_REVIEW_STAGES = {BM_REVIEW_PENDING, BM_REVIEW_IN_PROGRESS, BM_REWORK_REQUIRED}
 
