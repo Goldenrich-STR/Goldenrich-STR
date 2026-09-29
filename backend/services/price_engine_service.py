@@ -5,8 +5,33 @@ from decimal import Decimal, ROUND_HALF_UP
 from typing import Iterable, Optional
 
 
-ELIGIBLE_PROPERTY_TYPES = {"villa", "homestay", "home_stay", "home stay"}
+SUPPORTED_PROPERTY_CATEGORIES = {"residential", "commercial", "event_venue"}
+PROPERTY_TYPE_CATEGORIES = {
+    "apartment": "residential",
+    "villa": "residential",
+    "homestay": "residential",
+    "home_stay": "residential",
+    "bungalow": "residential",
+    "studio": "residential",
+    "independent_house": "residential",
+    "farmhouse": "residential",
+    "private_office": "commercial",
+    "co_working": "commercial",
+    "meeting_room": "commercial",
+    "conference_room": "commercial",
+    "shop": "commercial",
+    "warehouse": "commercial",
+    "banquet_hall": "event_venue",
+    "hotel_ballroom": "event_venue",
+    "wedding_venue": "event_venue",
+    "rooftop": "event_venue",
+    "resort": "event_venue",
+}
 DATE_RULE_TYPES = {"SEASON", "CUSTOM"}
+
+
+def normalize_key(value) -> str:
+    return str(value or "").strip().lower().replace("-", "_").replace(" ", "_")
 
 
 def property_type_key(property_dict: dict) -> str:
@@ -17,14 +42,21 @@ def property_type_key(property_dict: dict) -> str:
         property_dict.get("configuration"),
     ]
     for value in values:
-        key = str(value or "").strip().lower().replace("-", "_")
-        if key in ELIGIBLE_PROPERTY_TYPES:
-            return "homestay" if key in {"homestay", "home_stay", "home stay"} else "villa"
+        key = normalize_key(value)
+        if key in PROPERTY_TYPE_CATEGORIES:
+            return "homestay" if key == "home_stay" else key
     return ""
 
 
+def property_category_key(property_dict: dict) -> str:
+    category = normalize_key(property_dict.get("category"))
+    if category in SUPPORTED_PROPERTY_CATEGORIES:
+        return category
+    return PROPERTY_TYPE_CATEGORIES.get(property_type_key(property_dict), "")
+
+
 def is_eligible_property(property_dict: dict) -> bool:
-    return bool(property_type_key(property_dict))
+    return bool(property_category_key(property_dict))
 
 
 def base_price(property_dict: dict) -> float:
@@ -106,17 +138,47 @@ async def calculate_property_price(db, property_dict: dict, target_date) -> dict
     return calculate_price(property_dict, target_date, rules)
 
 
-async def calculate_stay_price(db, property_dict: dict, check_in, check_out) -> dict:
+async def calculate_stay_price(db, property_dict: dict, check_in, check_out, include_end: bool = False) -> dict:
     start = parse_date(check_in)
     end = parse_date(check_out)
     rules = await property_rules(db, property_dict.get("property_id"))
     nights = []
     cursor = start
-    while cursor < end:
+    while cursor < end or (include_end and cursor == end):
         nights.append(calculate_price(property_dict, cursor, rules))
         cursor += timedelta(days=1)
     total = round(sum(item["final_price"] for item in nights), 2)
     return {"total": total, "nights": nights, "average_nightly_price": round(total / len(nights), 2) if nights else base_price(property_dict)}
+
+
+async def calculate_booking_base_price(db, property_dict: dict, check_in, check_out, units: float | None = None) -> dict:
+    """Calculate the dynamic base charge using the listing's booking unit."""
+    category = property_category_key(property_dict)
+    cycle = normalize_key(property_dict.get("pricing_cycle") or "day")
+    if category == "commercial" and cycle == "hourly":
+        count = max(1.0, float(units or 1))
+        start, end = parse_date(check_in), parse_date(check_out)
+        day_count = max(1, (end - start).days + 1)
+        units_per_day = count / day_count
+        rules = await property_rules(db, property_dict.get("property_id"))
+        prices = []
+        cursor = start
+        while cursor <= end:
+            prices.append(calculate_price(property_dict, cursor, rules))
+            cursor += timedelta(days=1)
+        total = round(sum(item["final_price"] * units_per_day for item in prices), 2)
+        return {
+            "total": total,
+            "nights": prices,
+            "average_nightly_price": round(total / count, 2),
+        }
+    return await calculate_stay_price(
+        db,
+        property_dict,
+        check_in,
+        check_out,
+        include_end=category == "event_venue",
+    )
 
 
 def overlapping_date_rules(candidate: dict, existing_rules: Iterable[dict], ignore_rule_id: str | None = None) -> list[dict]:
@@ -135,4 +197,3 @@ def overlapping_date_rules(candidate: dict, existing_rules: Iterable[dict], igno
         except (TypeError, ValueError):
             continue
     return overlaps
-
