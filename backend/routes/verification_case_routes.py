@@ -297,6 +297,54 @@ def _is_branch_manager(user: dict) -> bool:
     designation = str(user.get("designation") or "").lower()
     return role == "branch_manager" or role_key == "branch_manager" or "branch manager" in designation
 
+def _active_user_filter(extra: dict | None = None) -> dict:
+    query = {
+        "is_active": {"$ne": False},
+        "is_deleted": {"$ne": True},
+        "deleted_at": {"$exists": False},
+    }
+    if extra:
+        query.update(extra)
+    return query
+
+
+def _active_host_filter(extra: dict | None = None) -> dict:
+    return _active_user_filter({"role": "host", **(extra or {})})
+
+
+def _active_property_filter(extra: dict | None = None) -> dict:
+    query = {
+        "is_deleted": {"$ne": True},
+        "deleted_at": {"$exists": False},
+        "status": {"$nin": ["deleted", "deleted_by_account_request"]},
+    }
+    if extra:
+        query.update(extra)
+    return query
+
+
+def _is_active_record(record: dict | None) -> bool:
+    if not record:
+        return False
+    if record.get("is_active") is False or record.get("is_deleted") is True or record.get("deleted_at"):
+        return False
+    if str(record.get("status") or "").lower() in {"deleted", "deleted_by_account_request"}:
+        return False
+    return True
+
+
+
+def _case_has_active_entities(case: dict | None) -> bool:
+    if not case:
+        return False
+    host_id = case.get("host_id") or case.get("owner_id")
+    property_id = case.get("property_id")
+    if host_id and not _is_active_record(case.get("host")):
+        return False
+    if property_id and not _is_active_record(case.get("property")):
+        return False
+    return True
+
 
 def _telecaller_identity_terms(user: dict) -> list[str]:
     terms = [
@@ -539,18 +587,18 @@ async def _case_belongs_to_user(db, case: dict, user_id: str | None) -> bool:
 
 
 async def _enrich_case(db, case: dict):
-    prop = await db.properties.find_one({"property_id": case.get("property_id")}, {"_id": 0}) or {}
-    host = await db.users.find_one({"user_id": case.get("host_id") or case.get("owner_id")}, {"_id": 0, "password_hash": 0}) or {}
+    prop = await db.properties.find_one(_active_property_filter({"property_id": case.get("property_id")}), {"_id": 0}) or {}
+    host = await db.users.find_one(_active_host_filter({"user_id": case.get("host_id") or case.get("owner_id")}), {"_id": 0, "password_hash": 0}) or {}
     telecaller = {}
     bm = {}
     if case.get("telecaller_id"):
-        telecaller = await db.users.find_one({"user_id": case["telecaller_id"]}, {"_id": 0, "password_hash": 0}) or {}
+        telecaller = await db.users.find_one(_active_user_filter({"user_id": case["telecaller_id"]}), {"_id": 0, "password_hash": 0}) or {}
     if case.get("branch_manager_id"):
-        bm = await db.users.find_one({"user_id": case["branch_manager_id"]}, {"_id": 0, "password_hash": 0}) or {}
+        bm = await db.users.find_one(_active_user_filter({"user_id": case["branch_manager_id"]}), {"_id": 0, "password_hash": 0}) or {}
     source_owner = await _registration_source_owner(db, host=host, prop=prop, case=case)
     source_owner_user = {}
     if source_owner.get("owner_id"):
-        source_owner_user = await db.users.find_one({"user_id": source_owner["owner_id"]}, {"_id": 0, "password_hash": 0}) or {}
+        source_owner_user = await db.users.find_one(_active_user_filter({"user_id": source_owner["owner_id"]}), {"_id": 0, "password_hash": 0}) or {}
     return {
         **case,
         "property": prop,
@@ -593,14 +641,14 @@ async def _ensure_missing_cases_for_submitted_properties(db, current_user: dict)
     }
     if not _is_admin(current_user) and not _is_telecaller(current_user) and not _is_branch_manager(current_user):
         query["owner_id"] = current_user.get("user_id")
-    props = await db.properties.find(query, {"_id": 0}).sort("updated_at", -1).to_list(length=100)
+    props = await db.properties.find(_active_property_filter(query), {"_id": 0}).sort("updated_at", -1).to_list(length=100)
     for prop in props:
         if not prop.get("property_id"):
             continue
         existing = await db.property_verifications.find_one({"property_id": prop["property_id"]}, {"_id": 0})
         if existing:
             continue
-        host = await db.users.find_one({"user_id": prop.get("owner_id")}, {"_id": 0, "password_hash": 0}) or {}
+        host = await db.users.find_one(_active_host_filter({"user_id": prop.get("owner_id")}), {"_id": 0, "password_hash": 0}) or {}
         await upsert_verification_case(db, prop, host, current_user)
 
 
@@ -617,8 +665,8 @@ async def _assign_unassigned_telecaller_cases(db):
         policy = case.get("telecaller_assignment_policy") or {}
         if case.get("telecaller_id") and policy.get("policy") == "registration_order_batch":
             continue
-        prop = await db.properties.find_one({"property_id": case.get("property_id")}, {"_id": 0}) or {}
-        host = await db.users.find_one({"user_id": case.get("host_id") or case.get("owner_id") or prop.get("owner_id")}, {"_id": 0, "password_hash": 0}) or {}
+        prop = await db.properties.find_one(_active_property_filter({"property_id": case.get("property_id")}), {"_id": 0}) or {}
+        host = await db.users.find_one(_active_host_filter({"user_id": case.get("host_id") or case.get("owner_id") or prop.get("owner_id")}), {"_id": 0, "password_hash": 0}) or {}
         telecaller_id, meta = await resolve_verification_telecaller(db, prop, host, case)
         if not telecaller_id and case.get("telecaller_id"):
             telecaller_id = case.get("telecaller_id")
@@ -742,15 +790,14 @@ async def _assign_host_document_telecallers(db):
     actionable_statuses = ["unverified", "pending", "pending_review", "submitted", "under_review", "rejected", "approved"]
     telecallers = await _active_telecaller_profiles(db)
     hosts = await db.users.find(
-        {
-            "role": "host",
+        _active_host_filter({
             "$or": [
                 {"kyc_status": {"$in": actionable_statuses}},
                 {"kyc_status": {"$exists": False}},
                 {"kyc_status": ""},
                 {"kyc_status": None},
             ],
-        },
+        }),
         {"_id": 0, "password_hash": 0},
     ).sort("created_at", 1).to_list(length=5000)
     if not telecallers:
@@ -975,6 +1022,8 @@ async def list_cases(stage: Optional[str] = None, current_user: dict = Depends(g
     enriched = []
     for row in rows:
         item = await _enrich_case(db, row)
+        if not _case_has_active_entities(item):
+            continue
         if _is_branch_manager(current_user):
             if not _case_matches_branch_manager_scope(item, current_user):
                 continue
@@ -1016,7 +1065,7 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
             if case.get("host_id") or case.get("owner_id")
         ]
         assigned_document_hosts = await db.users.find(
-            {"role": "host", **_host_document_assignment_query(telecaller_terms)},
+            _active_host_filter(_host_document_assignment_query(telecaller_terms)),
             {"_id": 0, "user_id": 1},
         ).to_list(length=1000)
         assigned_case_host_ids.extend([
@@ -1025,7 +1074,7 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
             if host.get("user_id")
         ])
 
-    host_query = {"role": "host"}
+    host_query = _active_host_filter()
     if _is_telecaller(current_user):
         if not assigned_case_host_ids:
             return {"leads": [], "total": 0, "stats": {"total_leads": 0, "hosts_registered": 0, "properties_listed": 0, "verification_cases": 0}}
@@ -1041,9 +1090,9 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
         if host_ids:
             property_query["$or"].append({"owner_id": {"$in": host_ids}})
         if property_query["$or"]:
-            properties = await db.properties.find(property_query, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
+            properties = await db.properties.find(_active_property_filter(property_query), {"_id": 0}).sort("created_at", -1).to_list(length=1000)
     elif host_ids:
-        properties = await db.properties.find({"owner_id": {"$in": host_ids}}, {"_id": 0}).sort("created_at", -1).to_list(length=1000)
+        properties = await db.properties.find(_active_property_filter({"owner_id": {"$in": host_ids}}), {"_id": 0}).sort("created_at", -1).to_list(length=1000)
 
     property_by_host: dict[str, list[dict]] = {}
     property_ids = []
@@ -1137,7 +1186,15 @@ async def dashboard_summary(current_user: dict = Depends(get_current_user), db: 
         telecaller_terms = _telecaller_identity_terms(current_user)
         case_query["telecaller_id"] = {"$in": telecaller_terms}
     cases = await db.property_verifications.find(case_query, {"_id": 0}).to_list(length=1000)
-    enriched = [await _enrich_case(db, case) for case in cases]
+    visible_cases = []
+    enriched = []
+    for case in cases:
+        item = await _enrich_case(db, case)
+        if not _case_has_active_entities(item):
+            continue
+        visible_cases.append(case)
+        enriched.append(item)
+    cases = visible_cases
     today = now_utc().date().isoformat()
     docs = await list_document_queue(current_user=current_user, db=db)
     doc_items = docs.get("items", [])
@@ -1237,7 +1294,7 @@ async def list_document_queue(stage: Optional[str] = None, current_user: dict = 
     await _assign_host_document_telecallers(db)
     if not (_is_admin(current_user) or _is_telecaller(current_user) or _is_branch_manager(current_user)):
         raise HTTPException(status_code=403, detail="Document queue access required")
-    query: dict = {"role": "host"}
+    query: dict = _active_host_filter()
     if stage and stage != "all":
         query["kyc_status"] = stage
     else:
@@ -1254,7 +1311,7 @@ async def list_document_queue(stage: Optional[str] = None, current_user: dict = 
             if case.get("host_id") or case.get("owner_id")
         })
         assigned_document_hosts = await db.users.find(
-            {"role": "host", **_host_document_assignment_query(telecaller_terms)},
+            _active_host_filter(_host_document_assignment_query(telecaller_terms)),
             {"_id": 0, "user_id": 1},
         ).to_list(length=1000)
         assigned_host_ids = list(set(assigned_host_ids + [
@@ -1267,7 +1324,7 @@ async def list_document_queue(stage: Optional[str] = None, current_user: dict = 
         query["user_id"] = {"$in": assigned_host_ids}
     hosts = await db.users.find(query, {"_id": 0, "password_hash": 0}).sort("updated_at", -1).to_list(length=500)
     properties = await db.properties.find(
-        {"owner_id": {"$in": [host.get("user_id") for host in hosts if host.get("user_id")] }},
+        _active_property_filter({"owner_id": {"$in": [host.get("user_id") for host in hosts if host.get("user_id")] }}),
         {"_id": 0, "property_id": 1, "title": 1, "city": 1, "address": 1, "category": 1, "property_type": 1, "status": 1, "workflow_status": 1, "verification_stage": 1, "owner_id": 1, "registration_source": 1, "lg_code": 1},
     ).to_list(length=1000)
     property_map: dict[str, list[dict]] = {}
@@ -1324,7 +1381,7 @@ async def review_host_document(
 ):
     if not (_is_admin(current_user) or _is_telecaller(current_user) or _is_branch_manager(current_user)):
         raise HTTPException(status_code=403, detail="Document review access required")
-    host = await db.users.find_one({"user_id": host_id, "role": "host"}, {"_id": 0})
+    host = await db.users.find_one(_active_host_filter({"user_id": host_id}), {"_id": 0})
     if not host:
         raise HTTPException(status_code=404, detail="Host not found")
 
@@ -1425,7 +1482,7 @@ async def submit_host_document_verification(
 ):
     if not (_is_admin(current_user) or _is_telecaller(current_user) or _is_branch_manager(current_user)):
         raise HTTPException(status_code=403, detail="Document review access required")
-    host = await db.users.find_one({"user_id": host_id, "role": "host"}, {"_id": 0})
+    host = await db.users.find_one(_active_host_filter({"user_id": host_id}), {"_id": 0})
     if not host:
         raise HTTPException(status_code=404, detail="Host not found")
 
@@ -1657,7 +1714,7 @@ async def local_adb_dial(payload: AdbDialPayload, current_user: dict = Depends(g
 async def save_host_lead_call_outcome(host_id: str, payload: CallPayload, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):
     if not (_is_admin(current_user) or _is_telecaller(current_user)):
         raise HTTPException(status_code=403, detail="Telecaller access required")
-    host = await db.users.find_one({"user_id": host_id, "role": "host"}, {"_id": 0, "password_hash": 0})
+    host = await db.users.find_one(_active_host_filter({"user_id": host_id}), {"_id": 0, "password_hash": 0})
     if not host:
         raise HTTPException(status_code=404, detail="Host lead not found")
     outcome = payload.outcome.strip().upper().replace(" ", "_")
@@ -1869,8 +1926,8 @@ async def telecaller_decision(verification_id: str, payload: DecisionPayload, cu
         }},
     )
     if result == "FAILED" and case.get("host_id"):
-        host = await db.users.find_one({"user_id": case.get("host_id")}, {"_id": 0})
-        property_doc = await db.properties.find_one({"property_id": case.get("property_id")}, {"_id": 0})
+        host = await db.users.find_one(_active_host_filter({"user_id": case.get("host_id")}), {"_id": 0})
+        property_doc = await db.properties.find_one(_active_property_filter({"property_id": case.get("property_id")}), {"_id": 0})
         message = (
             "Your property video verification was rejected because these checklist points were not verified: "
             + ", ".join(failed_checks)
@@ -2002,5 +2059,12 @@ async def admin_decision(verification_id: str, payload: DecisionPayload, current
     await db.properties.update_one({"property_id": case["property_id"]}, {"$set": {"status": property_status, "workflow_status": next_stage, "approved_at": now_utc() if result == "APPROVE" else None, "updated_at": now_utc()}})
     await _history(db, case, current_user, PUBLISHING if result == "APPROVE" else next_stage, updates)
     return {"message": "Admin decision saved", "workflow_status": next_stage, "property_status": property_status}
+
+
+
+
+
+
+
 
 
