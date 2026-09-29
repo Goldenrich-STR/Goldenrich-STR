@@ -20,18 +20,18 @@ export const SEO_ROUTE_MAP = {
   '/property/villas-in-trimbakeshwar': {
     category: 'residential',
     property_type: 'villa',
-    city: 'Igatpuri',
-    title: 'Villas in Igatpuri for Weekend Getaways',
-    description: 'Find villas in Igatpuri for weekend getaways, family trips and group stays. Explore available properties and plan your next escape.',
-    h1: 'Villas in Igatpuri'
-  },
-  '/property/villas-in-igatpuri': {
-    category: 'residential',
-    property_type: 'villa',
     city: 'Trimbakeshwar',
     title: 'Villas in Trimbakeshwar for Family & Group Stays',
     description: 'Explore villas in Trimbakeshwar for family trips, group stays and peaceful getaways near Nashik. Find and book your ideal stay.',
     h1: 'Villas in Trimbakeshwar'
+  },
+  '/property/villas-in-igatpuri': {
+    category: 'residential',
+    property_type: 'villa',
+    city: 'Igatpuri',
+    title: 'Villas in Igatpuri for Weekend Getaways',
+    description: 'Find villas in Igatpuri for weekend getaways, family trips and group stays. Explore available properties and plan your next escape.',
+    h1: 'Villas in Igatpuri'
   },
   '/property/villas-in-bhandardara': {
     category: 'residential',
