@@ -8,7 +8,7 @@ from middleware.auth_middleware import get_current_user
 from models.price_engine import BulkPriceUpdate, PriceCalculationRequest, PriceRuleCreate, PriceRuleUpdate, PropertyPriceRule
 from services.price_engine_service import (
     base_price, calculate_price, calculate_property_price, is_eligible_property,
-    overlapping_date_rules, property_rules, property_type_key,
+    overlapping_date_rules, property_category_key, property_rules, property_type_key,
 )
 
 router = APIRouter(prefix="/v1/price-engine", tags=["Price Engine"])
@@ -40,7 +40,7 @@ async def ensure_property_access(db, user: dict, property_id: str) -> dict:
         query["owner_id"] = user.get("user_id")
     prop = await db.properties.find_one(query, {"_id": 0})
     if not prop or not is_eligible_property(prop):
-        raise HTTPException(status_code=404, detail="Eligible property not found")
+        raise HTTPException(status_code=404, detail="Property not found or unavailable for pricing")
     return prop
 
 
@@ -77,7 +77,9 @@ async def list_properties(current_user: dict = Depends(get_current_user), db=Dep
         seasonal = next((rule for rule in active + upcoming if rule.get("rule_type") in {"SEASON", "CUSTOM"}), None)
         output.append({
             "property_id": prop.get("property_id"), "title": prop.get("title") or "Untitled property",
-            "category": property_type_key(prop), "city": prop.get("city") or "", "state": prop.get("state") or "",
+            "category": property_category_key(prop), "property_type": property_type_key(prop),
+            "pricing_cycle": prop.get("pricing_cycle") or "day",
+            "city": prop.get("city") or "", "state": prop.get("state") or "",
             "base_price": base_price(prop), "today_price": current["final_price"], "current_rule": current,
             "weekend_adjustment": (weekend or {}).get("adjustment_percentage", 0),
             "season_adjustment": (seasonal or {}).get("adjustment_percentage", 0),
@@ -111,7 +113,7 @@ async def validate_targets(db, property_ids: list[str], user: dict) -> list[dict
     records = await db.properties.find(query, {"_id": 0}).to_list(length=5000)
     records = [item for item in records if is_eligible_property(item)]
     if len(records) != len(unique_ids):
-        raise HTTPException(status_code=400, detail="Price Engine is available only for Villas and Homestays")
+        raise HTTPException(status_code=400, detail="One or more properties are unavailable for Price Engine")
     return records
 
 
