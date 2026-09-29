@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, Loader2, BookOpen, Save, X, Table as TableIcon } from 'lucide-react';
-import { cmsAPI } from '../../services/api';
+import { Plus, Trash2, Edit3, Loader2, BookOpen, Save, X, ImagePlus } from 'lucide-react';
+import { cmsAPI, getApiErrorMessage, getImageUrl, uploadAPI } from '../../services/api';
 import SimpleMarkdownEditor from '../../components/SimpleMarkdownEditor';
 
 const DEFAULT_BLOG = {
@@ -51,13 +51,19 @@ const BlogManagementAdmin = () => {
     setSaving(true);
     try {
       let updatedPosts = [...posts];
-      const isNew = !postToSave.id;
+      const normalizedImageUrl = postToSave.imageUrl || postToSave.image_url || '';
+      const normalizedPost = {
+        ...postToSave,
+        imageUrl: normalizedImageUrl,
+        image_url: normalizedImageUrl,
+      };
+      const isNew = !normalizedPost.id;
       
       if (isNew) {
-        postToSave.id = 'p' + Date.now();
-        updatedPosts.push(postToSave);
+        normalizedPost.id = 'p' + Date.now();
+        updatedPosts.push(normalizedPost);
       } else {
-        updatedPosts = updatedPosts.map(p => p.id === postToSave.id ? postToSave : p);
+        updatedPosts = updatedPosts.map(p => p.id === normalizedPost.id ? normalizedPost : p);
       }
 
       const res = await cmsAPI.getAdminContent();
@@ -168,8 +174,8 @@ const BlogManagementAdmin = () => {
               {posts.map(post => (
                 <div key={post.id} className="p-4 flex items-center justify-between hover:bg-gray-50 transition">
                   <div className="flex items-center gap-4">
-                    {post.imageUrl ? (
-                      <img src={post.imageUrl} alt={post.title} className="w-16 h-16 object-cover rounded-lg border border-gray-100" />
+                    {(post.imageUrl || post.image_url) ? (
+                      <img src={getImageUrl(post.imageUrl || post.image_url)} alt={post.title} className="w-16 h-16 object-cover rounded-lg border border-gray-100" />
                     ) : (
                       <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center">
                         <BookOpen size={24} className="text-gray-400" />
@@ -212,15 +218,46 @@ const BlogManagementAdmin = () => {
 };
 
 const BlogForm = ({ post: initialPost, onSave, onCancel, isSaving, generateSlug }) => {
-  const [post, setPost] = useState(initialPost);
+  const [post, setPost] = useState(() => ({
+    ...initialPost,
+    imageUrl: initialPost.imageUrl || initialPost.image_url || initialPost.featuredImage || '',
+  }));
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [imageUploadError, setImageUploadError] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setPost(prev => ({
       ...prev,
       [name]: value,
+      ...(name === 'imageUrl' ? { image_url: value } : {}),
       ...(name === 'title' && !prev.id ? { slug: generateSlug(value) } : {})
     }));
+  };
+
+  const handleImageUpload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    if (!file.type?.startsWith('image/') && !/\.(jpe?g|png|webp|gif|bmp|tiff?|heic|heif|avif)$/i.test(file.name)) {
+      setImageUploadError('Please select a valid image file.');
+      return;
+    }
+
+    setUploadingImage(true);
+    setImageUploadError('');
+    try {
+      const uploaded = await uploadAPI.uploadCMSImage(file);
+      setPost(prev => ({
+        ...prev,
+        imageUrl: uploaded.url,
+        image_url: uploaded.url,
+      }));
+    } catch (error) {
+      setImageUploadError(getApiErrorMessage(error, 'Image upload failed. Please try another image.'));
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleFaqChange = (index, field, value) => {
@@ -499,8 +536,30 @@ const BlogForm = ({ post: initialPost, onSave, onCancel, isSaving, generateSlug 
               placeholder="https://..."
               className="w-full p-2.5 text-sm border border-gray-200 rounded-xl outline-none focus:border-terracotta"
             />
+            <div className="my-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+              <span className="h-px flex-1 bg-gray-200" /> or upload from device <span className="h-px flex-1 bg-gray-200" />
+            </div>
+            <label className={`flex min-h-20 cursor-pointer items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-3 text-sm font-semibold transition ${uploadingImage ? 'cursor-wait border-amber-300 bg-amber-50 text-amber-700' : 'border-gray-300 bg-white text-gray-600 hover:border-terracotta hover:text-terracotta'}`}>
+              {uploadingImage ? <Loader2 size={18} className="animate-spin" /> : <ImagePlus size={18} />}
+              {uploadingImage ? 'Uploading image...' : 'Upload Cover Image'}
+              <input
+                type="file"
+                accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp,.tif,.tiff,.heic,.heif,.avif"
+                onChange={handleImageUpload}
+                disabled={uploadingImage}
+                className="sr-only"
+              />
+            </label>
+            <p className="mt-1 text-[10px] text-gray-500">Any standard image format, up to 25 MB. It will be optimized automatically.</p>
+            {imageUploadError && <p className="mt-1 text-xs font-medium text-red-600">{imageUploadError}</p>}
             {post.imageUrl && (
-              <img src={post.imageUrl} alt="Preview" className="w-full h-24 object-cover mt-2 rounded-lg border border-gray-200" />
+              <div className="mt-3 overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <img src={getImageUrl(post.imageUrl)} alt="Cover preview" className="h-32 w-full object-cover" />
+                <div className="flex items-center justify-between gap-2 px-3 py-2">
+                  <span className="truncate text-[10px] text-gray-500">Blog cover preview</span>
+                  <button type="button" onClick={() => setPost(prev => ({ ...prev, imageUrl: '', image_url: '' }))} className="text-xs font-bold text-red-600 hover:text-red-700">Remove</button>
+                </div>
+              </div>
             )}
           </div>
           <div>

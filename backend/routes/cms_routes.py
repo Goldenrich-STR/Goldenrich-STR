@@ -350,7 +350,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "brand_description": "Redefining short-term rentals in India through curation, technology, and superior service.",
                     "location": "Nashik, Maharashtra",
                     "email": "support@x-space360.com",
-                    "phone": "+91 8484826247",
+                    "phone": "+91 919225586010",
                     "facebook_link": "https://facebook.com",
                     "instagram_link": "https://instagram.com",
                     "youtube_link": "https://youtube.com",
@@ -453,7 +453,7 @@ async def _ensure_seeded_landing_content(db: AsyncIOMotorDatabase):
                     "brand_description": "Redefining short-term rentals in India through curation, technology, and superior service.",
                     "location": "Nashik, Maharashtra",
                     "email": "support@x-space360.com",
-                    "phone": "+91 8484826247",
+                    "phone": "+91 919225586010",
                     "facebook_link": "https://facebook.com",
                     "instagram_link": "https://instagram.com",
                     "youtube_link": "https://youtube.com",
@@ -671,8 +671,8 @@ async def _ensure_seeded_support_content(db: AsyncIOMotorDatabase):
                             "id": "call_support",
                             "title": "Call Support",
                             "description": "Speak directly with our support team.",
-                            "button_text": "+91 98765 43210",
-                            "action_value": "+91 98765 43210"
+                            "button_text": "+91 919225586010",
+                            "action_value": "+91 919225586010"
                         }
                     ],
                     "popular_topics": [
@@ -704,7 +704,26 @@ async def _ensure_seeded_support_content(db: AsyncIOMotorDatabase):
             {"page": "support", "section": "support_content"}
         )
         support_data = (support_doc or {}).get("content_data") or {}
-        if support_doc and "faq_items" not in support_data:
+        if support_doc:
+            cards = support_data.get("cards") or []
+            cards_updated = False
+            for card in cards:
+                if card.get("id") == "call_support":
+                    if card.get("button_text") != "+91 919225586010" or card.get("action_value") != "+91 919225586010":
+                        card["button_text"] = "+91 919225586010"
+                        card["action_value"] = "+91 919225586010"
+                        cards_updated = True
+            if cards_updated or "faq_items" not in support_data:
+                if "faq_items" not in support_data:
+                    support_data["faq_items"] = default_faq_items
+                await db.cms_content.update_one(
+                    {"content_id": support_doc["content_id"]},
+                    {"$set": {
+                        "content_data": support_data,
+                        "updated_at": datetime.now(timezone.utc)
+                    }}
+                )
+        if False:
             await db.cms_content.update_one(
                 {"content_id": support_doc["content_id"]},
                 {

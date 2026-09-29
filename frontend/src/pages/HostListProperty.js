@@ -91,6 +91,7 @@ const CATEGORY_DATA = {
     propertyTypes: [
       { value: 'apartment', label: 'Apartment' },
       { value: 'villa', label: 'Villa' },
+      { value: 'homestay', label: 'Homestay' },
       { value: 'bungalow', label: 'Bungalow' },
       { value: 'studio', label: 'Studio' },
       { value: 'independent_house', label: 'Private House' },

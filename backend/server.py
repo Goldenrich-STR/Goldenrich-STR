@@ -63,6 +63,7 @@ from routes.support_ticket_routes import router as support_ticket_router
 from routes.admin_core_routes import router as admin_core_router
 from routes.pricing_routes import router as pricing_router
 from routes.verification_case_routes import router as verification_case_router
+from routes.price_engine_routes import router as price_engine_router
 
 # Include routers with /api prefix
 app.include_router(auth_router, prefix="/api")
@@ -86,6 +87,7 @@ app.include_router(support_ticket_router, prefix="/api")
 app.include_router(admin_core_router, prefix="/api")
 app.include_router(pricing_router, prefix="/api")
 app.include_router(verification_case_router, prefix="/api")
+app.include_router(price_engine_router, prefix="/api")
 from routes.seo_routes import router as seo_router
 app.include_router(seo_router)
 
@@ -349,7 +351,7 @@ async def startup_sequence():
             "payout_job_runs", "admin_roles", "roles", "permissions", "role_permissions", "user_permissions", "departments",
             "business_divisions", "branches", "franchises", "teams", "reporting_relations",
             "reporting_history", "escalation_rules", "sla_policies", "escalation_instances", "notification_rules",
-            "property_status_history", "audit_logs", "crm_leads", "pricing_rules", "price_history"
+            "property_status_history", "audit_logs", "crm_leads", "pricing_rules", "property_price_rules", "price_history"
         ]
         for table in tables:
             await db_instance.ensure_table(table)

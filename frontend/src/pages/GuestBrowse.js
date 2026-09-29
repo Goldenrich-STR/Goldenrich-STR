@@ -424,6 +424,16 @@ const GuestBrowse = () => {
     fetchProperties();
   };
 
+  const toggleAmenity = (amenity) => {
+    setFilters((prev) => ({
+      ...prev,
+      amenities: prev.amenities.includes(amenity)
+        ? prev.amenities.filter((item) => item !== amenity)
+        : [...prev.amenities, amenity],
+    }));
+    setPage(1);
+  };
+
   const clearFilters = () => {
     setFilters({
       search: '',

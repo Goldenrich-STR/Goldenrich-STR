@@ -51,6 +51,7 @@ import {
   Heart,
   Share2,
   Phone,
+  Percent,
 } from 'lucide-react';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
@@ -1291,6 +1292,8 @@ const PropertyDetail = () => {
         : hostAmount,
       pricing_units: Math.max(1, Number(bookingUnits) || 1),
       extra_guest_amount: extraGuestTotal,
+      check_in_date: checkIn || null,
+      check_out_date: checkOut || null,
     })
       .then((res) => {
         if (!cancelled) {
@@ -1314,7 +1317,7 @@ const PropertyDetail = () => {
           });
       });
     return () => { cancelled = true; };
-  }, [baseAmount, taxSlabBaseAmount, bookingUnits, extraGuestTotal, id, nights, property?.category, property?.price_per_night, property?.property_id]);
+  }, [baseAmount, taxSlabBaseAmount, bookingUnits, checkIn, checkOut, extraGuestTotal, id, nights, property?.category, property?.price_per_night, property?.property_id]);
 
   const quoteNumber = (value, fallback = 0) => {
     const parsed = Number(value);
@@ -1331,7 +1334,22 @@ const PropertyDetail = () => {
     ? readPercent(parsedPolicies?.advance, 50)
     : 50;
   const finalNightlyPrice = quoteNumber(bookingQuote?.final_nightly_price, displayPricePerNight);
-  const roundedDisplayPricePerNight = Math.round(displayPricePerNight || 0);
+  const selectedDatePriceReady = Boolean(checkIn && checkOut && bookingQuote);
+  const shownNightlyPrice = selectedDatePriceReady ? finalNightlyPrice : displayPricePerNight;
+  const roundedDisplayPricePerNight = Math.round(shownNightlyPrice || 0);
+  const dynamicSummary = property?.dynamic_pricing_summary || {};
+  const selectedRuleNights = Array.isArray(bookingQuote?.nightly_prices)
+    ? bookingQuote.nightly_prices.filter((night) => night?.rule_type && night.rule_type !== 'BASE')
+    : [];
+  const selectedAdjustments = selectedRuleNights.map((night) => Number(night.adjustment_percentage || 0));
+  const currentPriceRule = property?.active_price_rule;
+  const pricingBadgeText = selectedRuleNights.length
+    ? `${selectedRuleNights.some((night) => night.rule_type === 'SEASON' || night.rule_type === 'CUSTOM') ? 'Seasonal' : 'Weekend'} rate applied · ${Math.max(...selectedAdjustments)}% adjustment for selected dates`
+    : currentPriceRule?.rule_type && currentPriceRule.rule_type !== 'BASE'
+      ? `${currentPriceRule.rule_type === 'WEEKEND' ? 'Weekend' : 'Seasonal'} rate applied · ${Math.abs(Number(currentPriceRule.adjustment_percentage || 0))}% ${Number(currentPriceRule.adjustment_percentage || 0) < 0 ? 'lower' : 'higher'} today`
+    : dynamicSummary.has_rules
+      ? `${dynamicSummary.has_weekend && dynamicSummary.has_seasonal ? 'Weekend & seasonal' : dynamicSummary.has_weekend ? 'Saturday & Sunday' : 'Seasonal'} rates may ${Number(dynamicSummary.minimum_adjustment) < 0 ? 'vary' : 'increase'} by ${Math.abs(Number(dynamicSummary.minimum_adjustment || 0)) === Math.abs(Number(dynamicSummary.maximum_adjustment || 0)) ? `${Math.abs(Number(dynamicSummary.maximum_adjustment || 0))}%` : `${Math.abs(Number(dynamicSummary.minimum_adjustment || 0))}–${Math.abs(Number(dynamicSummary.maximum_adjustment || 0))}%`}`
+      : '';
   const roundedPerPersonPrice = Math.round(Number(property?.per_person_price || 0));
   const nightlySubtotal = Math.round(finalNightlyPrice * bookingUnits);
   const eventVenueRate = displayPricePerNight;
@@ -2674,7 +2692,7 @@ const PropertyDetail = () => {
           {/* Sticky Booking Widget */}
           <div className="lg:col-span-1">
             <div ref={bookingCardRef} className="card-premium sticky top-28 p-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar animate-slide-up" style={{ animationDelay: '400ms' }}>
-              <div className="flex items-baseline justify-between mb-8">
+              <div className="flex items-baseline justify-between mb-3">
                 <div>
                   {property.category === 'event_venue' ? (
                     <>
@@ -2707,6 +2725,12 @@ const PropertyDetail = () => {
                    </div>
                 )}
               </div>
+              {['villa', 'homestay', 'home_stay'].includes(String(property.property_type || property.property_subtype || '').toLowerCase()) && pricingBadgeText && (
+                <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-emerald-800">
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500 text-white"><Percent className="h-3.5 w-3.5" strokeWidth={3} /></span>
+                  <span className="text-[10px] font-bold leading-4 tracking-wide">{pricingBadgeText}</span>
+                </div>
+              )}
 
               <div className="bg-stone/80 rounded-2xl border border-gray-100 mb-6">
                 {isHourlyCommercial && (

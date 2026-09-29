@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Building2, Calendar, FileText, IndianRupee, Star } from 'lucide-react';
+import { Building2, Calendar, FileText, IndianRupee, Percent, Star } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { NotificationBell } from './NotificationCenter';
 
@@ -10,6 +10,7 @@ const hostNavigation = [
   { label: 'Payouts', group: 'Finance', path: '/host/payouts', icon: IndianRupee },
   { label: 'Bookings', group: 'Reservations', path: '/host/bookings', icon: FileText },
   { label: 'Performance', group: 'Insights', path: '/host/performance', icon: Star },
+  { label: 'Pricing', group: 'Rates', path: '/host/pricing', icon: Percent },
 ];
 
 const HostWorkspaceShell = ({
@@ -20,6 +21,7 @@ const HostWorkspaceShell = ({
   heroTitle,
   heroDescription,
   heroActions = null,
+  showHero = true,
   sidebarSnapshot = [],
   children,
 }) => {
@@ -118,16 +120,18 @@ const HostWorkspaceShell = ({
           </aside>
 
           <main className="min-w-0">
-            <section className="mb-8 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:p-8">
-              <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-                <div className="max-w-3xl">
-                  <p className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">{heroEyebrow}</p>
-                  <h1 className="text-[32px] font-black tracking-[-0.05em] text-slate-950 md:text-[42px]">{heroTitle}</h1>
-                  <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">{heroDescription}</p>
+            {showHero ? (
+              <section className="mb-8 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:p-8">
+                <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="max-w-3xl">
+                    <p className="mb-2 text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">{heroEyebrow}</p>
+                    <h1 className="text-[32px] font-black tracking-[-0.05em] text-slate-950 md:text-[42px]">{heroTitle}</h1>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">{heroDescription}</p>
+                  </div>
+                  {heroActions ? <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto">{heroActions}</div> : null}
                 </div>
-                {heroActions ? <div className="flex w-full flex-col gap-3 sm:flex-row xl:w-auto">{heroActions}</div> : null}
-              </div>
-            </section>
+              </section>
+            ) : null}
 
             {children}
           </main>

@@ -10,6 +10,8 @@ from pydantic import BaseModel, HttpUrl
 from middleware.auth_middleware import get_current_user
 from pathlib import Path
 from uuid import uuid4
+from PIL import Image, ImageOps, UnidentifiedImageError
+import io
 import logging
 import os
 import ipaddress
@@ -31,10 +33,19 @@ UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 ALLOWED_EXT = {"png", "jpg", "jpeg", "webp", "gif"}
 MAX_IMAGE_UPLOAD_MB = int(os.getenv("MAX_IMAGE_UPLOAD_MB", "25"))
 MAX_BYTES = MAX_IMAGE_UPLOAD_MB * 1024 * 1024
+MAX_CMS_IMAGE_DIMENSION = 3000
 
 
 class ImageUrlPayload(BaseModel):
     url: HttpUrl
+
+
+def _require_cms_admin(current_user: dict) -> None:
+    if current_user.get("role") not in {"admin", "managing_director"}:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required for CMS image uploads",
+        )
 
 
 def _detect_image_kind(data: bytes) -> str | None:
@@ -297,6 +308,81 @@ async def upload_image(
         "content_type": file.content_type,
         "detected_kind": detected,
         "watermark_applied": watermark_applied,
+    }
+
+
+@router.post("/cms-image")
+async def upload_cms_image(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user),
+):
+    """Upload a blog/CMS image and normalize any Pillow-readable raster format to WebP."""
+    _require_cms_admin(current_user)
+    if not file.filename:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No filename")
+
+    contents = await file.read()
+    if not contents:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Image file is empty")
+    if len(contents) > MAX_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"File too large (max {MAX_BYTES // (1024*1024)} MB)",
+        )
+
+    try:
+        with Image.open(io.BytesIO(contents)) as source:
+            source.verify()
+        with Image.open(io.BytesIO(contents)) as source:
+            source.seek(0)
+            image = ImageOps.exif_transpose(source).copy()
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported or invalid image. Upload a standard raster image such as JPG, PNG, WebP, GIF, BMP, TIFF, HEIF or AVIF.",
+        ) from exc
+
+    if max(image.size) > MAX_CMS_IMAGE_DIMENSION:
+        image.thumbnail(
+            (MAX_CMS_IMAGE_DIMENSION, MAX_CMS_IMAGE_DIMENSION),
+            Image.Resampling.LANCZOS,
+        )
+
+    has_transparency = image.mode in {"RGBA", "LA"} or (
+        image.mode == "P" and "transparency" in image.info
+    )
+    normalized = image.convert("RGBA" if has_transparency else "RGB")
+    output = io.BytesIO()
+    try:
+        normalized.save(output, format="WEBP", quality=88, method=6)
+    except OSError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Server could not convert this image format to WebP",
+        ) from exc
+
+    normalized_contents = output.getvalue()
+    filename = f"{uuid4().hex}.webp"
+    object_key = store_upload(
+        normalized_contents,
+        filename,
+        "cms",
+        "image/webp",
+    )
+    logger.info(
+        "CMS image uploaded by %s: source=%s output=%s (%s -> %s bytes)",
+        current_user.get("user_id"),
+        file.filename,
+        filename,
+        len(contents),
+        len(normalized_contents),
+    )
+    return {
+        "filename": filename,
+        "url": _public_url(object_key),
+        "size": len(normalized_contents),
+        "content_type": "image/webp",
+        "source_filename": file.filename,
     }
 
 

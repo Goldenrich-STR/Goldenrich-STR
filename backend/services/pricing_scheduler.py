@@ -7,8 +7,8 @@ logger = logging.getLogger(__name__)
 
 async def start_pricing_scheduler(db):
     """
-    Background job to run daily (or periodically) to recalculate price_per_night 
-    for properties that have active rules status.
+    Legacy-rule preview refresh. Dynamic rules are evaluated at request time by
+    price_engine_service and never overwrite a property's base nightly price.
     """
     await asyncio.sleep(15)  # Wait for startup sequences to finalize
     while True:
@@ -21,11 +21,11 @@ async def start_pricing_scheduler(db):
                 p_rules = p.get("pricing_rules")
                 if p_rules:
                     new_price = await calculate_dynamic_price(p, p_rules, db)
-                    if new_price != p.get("price_per_night"):
+                    if new_price != p.get("suggested_price"):
                         await db.properties.update_one(
                             {"property_id": p["property_id"]},
                             {"$set": {
-                                "price_per_night": new_price,
+                                "suggested_price": new_price,
                                 "updated_at": datetime.now(timezone.utc)
                             }}
                         )

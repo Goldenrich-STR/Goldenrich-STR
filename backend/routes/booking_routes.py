@@ -11,6 +11,7 @@ from services.booking_notifications import (
     schedule_soft_lock_reminder,
 )
 from services.audit_service import write_audit_log
+from services.price_engine_service import calculate_stay_price, is_eligible_property
 from services.booking_calculation_service import (
     BOOKING_PAYMENT_CONFIG_KEY,
     DEFAULT_BOOKING_GST_PERCENT,
@@ -549,7 +550,13 @@ async def _build_booking_quote(
         num_units = max(1, num_units + 1)
 
     unit_price = float(property_dict.get("base_price") or property_dict.get("price_per_night") or 0)
-    base_amount = unit_price * max(1, num_units)
+    dynamic_stay = None
+    if not is_hourly and is_eligible_property(property_dict):
+        dynamic_stay = await calculate_stay_price(db, property_dict, check_in, check_out)
+        unit_price = dynamic_stay["average_nightly_price"]
+        base_amount = dynamic_stay["total"]
+    else:
+        base_amount = unit_price * max(1, num_units)
     tax_slab_base_amount = unit_price
     extra_guest_amount = 0.0
 
@@ -628,6 +635,7 @@ async def _build_booking_quote(
         "coupon_code": coupon_code,
         "currency": "INR",
         "unit_price": unit_price,
+        "nightly_prices": (dynamic_stay or {}).get("nights", []),
         "customer_unit_price": customer_unit_price,
         "customer_rate_amount": customer_rate_amount,
         "base_amount": pricing["base_amount"],
@@ -827,7 +835,13 @@ async def create_booking(
         if nightly_price in (None, ""):
             nightly_price = property_dict.get("price_per_night", 0)
         nightly_price = float(nightly_price or 0)
-        base_amount = nightly_price * num_nights
+        dynamic_stay = None
+        if not is_hourly and is_eligible_property(property_dict):
+            dynamic_stay = await calculate_stay_price(db, property_dict, check_in, check_out)
+            nightly_price = dynamic_stay["average_nightly_price"]
+            base_amount = dynamic_stay["total"]
+        else:
+            base_amount = nightly_price * num_nights
         tax_slab_base_amount = nightly_price
         extra_guest_amount = 0.0
         
@@ -942,6 +956,7 @@ async def create_booking(
         booking_dict["charges"] = pricing["charges"]
         booking_dict["platform_fee_context"] = platform_fee_context
         booking_dict["pricing_breakdown"] = pricing
+        booking_dict["nightly_prices"] = (dynamic_stay or {}).get("nights", [])
         booking_dict["payment_gateway_charge"] = pricing["payment_gateway_charge"]
         booking_dict["convenience_fee"] = pricing["convenience_fee"]
         booking_dict["insurance_fee"] = pricing["insurance_fee"]
@@ -2261,6 +2276,8 @@ class BookingPricingQuoteRequest(BaseModel):
     extra_guest_amount: Optional[float] = 0
     coupon_discount: Optional[float] = 0
     coupon_code: Optional[str] = None
+    check_in_date: Optional[str] = None
+    check_out_date: Optional[str] = None
 
 
 @router.post("/pricing/quote", response_model=dict)
@@ -2270,6 +2287,11 @@ async def booking_pricing_quote(
 ):
     """Return the central booking pricing breakdown used by checkout and payment."""
     platform_fee_context = PLATFORM_FEE_CONTEXT_DEFAULT
+    host_amount = payload.host_amount
+    tax_slab_base_amount = payload.tax_slab_base_amount
+    charge_base_amount = payload.charge_base_amount
+    pricing_units = payload.pricing_units
+    nightly_prices = []
     if payload.property_id:
         property_dict = await db.properties.find_one({"property_id": payload.property_id}, {"_id": 0})
         owner = None
@@ -2277,17 +2299,26 @@ async def booking_pricing_quote(
         if owner_id:
             owner = await db.users.find_one({"user_id": owner_id}, {"_id": 0})
         platform_fee_context = await _resolve_platform_fee_context(db, property_dict, owner)
-    return await _calculate_booking_pricing(
+        if property_dict and payload.check_in_date and payload.check_out_date and is_eligible_property(property_dict):
+            dynamic_stay = await calculate_stay_price(db, property_dict, payload.check_in_date, payload.check_out_date)
+            host_amount = dynamic_stay["total"]
+            tax_slab_base_amount = dynamic_stay["average_nightly_price"]
+            charge_base_amount = dynamic_stay["total"]
+            pricing_units = max(1, len(dynamic_stay["nights"]))
+            nightly_prices = dynamic_stay["nights"]
+    result = await _calculate_booking_pricing(
         db,
-        payload.host_amount,
-        tax_slab_base_amount=payload.tax_slab_base_amount,
-        charge_base_amount=payload.charge_base_amount,
-        pricing_units=payload.pricing_units,
+        host_amount,
+        tax_slab_base_amount=tax_slab_base_amount,
+        charge_base_amount=charge_base_amount,
+        pricing_units=pricing_units,
         extra_guest_amount=payload.extra_guest_amount or 0,
         coupon_discount=payload.coupon_discount or 0,
         coupon_code=payload.coupon_code,
         platform_fee_context=platform_fee_context,
     )
+    result["nightly_prices"] = nightly_prices
+    return result
 
 
 @router.post("/{booking_id}/apply-coupon", response_model=dict)

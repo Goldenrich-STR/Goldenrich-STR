@@ -180,11 +180,14 @@ const SimpleMarkdownEditor = ({ value = '', onChange, placeholder = 'Write your 
         }
         break;
 
-      case 'link':
-        const url = prompt('Enter URL (e.g. https://example.com):', 'https://');
-        if (!url) return;
-        replacement = `[${selectedText || 'Link text'}](${url})`;
+      case 'link': {
+        const displayLabel = selectedText || 'Link text';
+        const rawUrl = prompt(`Insert Hyperlink for "${displayLabel}":\nEnter destination URL (e.g. https://x-space360.in or /guest/browse):`, 'https://');
+        if (!rawUrl || rawUrl.trim() === '' || rawUrl === 'https://') return;
+        const cleanUrl = rawUrl.trim();
+        replacement = `[${displayLabel}](${cleanUrl})`;
         break;
+      }
 
       case 'image':
         const imgUrl = prompt('Enter Image URL:', 'https://');
@@ -216,6 +219,13 @@ const SimpleMarkdownEditor = ({ value = '', onChange, placeholder = 'Write your 
 
   const handleTextareaChange = (e) => {
     updateContent(e.target.value);
+  };
+
+  const handleKeyDown = (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+      e.preventDefault();
+      handleFormat('link');
+    }
   };
 
   const wordCount = (value || '').trim() ? (value || '').trim().split(/\s+/).length : 0;
@@ -374,10 +384,11 @@ const SimpleMarkdownEditor = ({ value = '', onChange, placeholder = 'Write your 
             <button
               type="button"
               onClick={() => handleFormat('link')}
-              className="p-1.5 hover:bg-gray-100 rounded text-gray-700 hover:text-terracotta transition"
-              title="Insert Link"
+              className="p-1.5 px-2 hover:bg-terracotta/10 hover:text-terracotta rounded text-gray-700 font-semibold text-xs flex items-center gap-1.5 transition border border-transparent hover:border-terracotta/20"
+              title="Add Hyperlink to selected text (Ctrl+K)"
             >
-              <LinkIcon size={16} />
+              <LinkIcon size={15} />
+              <span>Link</span>
             </button>
             <button
               type="button"
@@ -448,6 +459,7 @@ const SimpleMarkdownEditor = ({ value = '', onChange, placeholder = 'Write your 
           name="content"
           value={value}
           onChange={handleTextareaChange}
+          onKeyDown={handleKeyDown}
           rows={rows}
           placeholder={placeholder}
           className="w-full p-4 text-sm font-sans text-gray-800 leading-relaxed outline-none resize-y min-h-[300px]"
@@ -461,6 +473,7 @@ const SimpleMarkdownEditor = ({ value = '', onChange, placeholder = 'Write your 
             name="content"
             value={value}
             onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
             rows={rows}
             placeholder={placeholder}
             className="w-full p-4 text-sm font-sans text-gray-800 leading-relaxed outline-none resize-y"

@@ -3329,7 +3329,7 @@ const LeadsSection = () => {
                   required
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="e.g. +91 9876543210"
+                  placeholder="e.g. +91 919225586010"
                   className="input-field w-full"
                   data-testid="lead-phone-input"
                 />

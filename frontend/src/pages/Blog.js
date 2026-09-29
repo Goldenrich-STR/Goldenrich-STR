@@ -246,7 +246,7 @@ const Blog = () => {
       const visibleCmsBlogPosts = cmsContent.blog.posts.filter(post => post?.is_active !== false);
       return visibleCmsBlogPosts.map((post, idx) => {
         const fallbackImg = FALLBACK_BLOG_IMAGES[idx % FALLBACK_BLOG_IMAGES.length];
-        const postImg = post.image_url || post.img || post.featuredImage || fallbackImg;
+        const postImg = post.image_url || post.imageUrl || post.img || post.featuredImage || fallbackImg;
         return {
           id: post.id || `cms-post-${idx}`,
           title: post.title || 'Untitled',
@@ -512,7 +512,103 @@ const Blog = () => {
       </div>
 
       {/* Blog Posts Grid - Clean Minimalist Style */}
-      <div className="max-w-5xl mx-auto px-6 py-16">
+      {selectedPost ? (
+        <div className="max-w-4xl mx-auto px-6 py-12">
+          <button
+            onClick={closePost}
+            className="inline-flex items-center gap-2 text-sm font-bold text-charcoal-muted hover:text-terracotta transition mb-8 group cursor-pointer"
+          >
+            <span className="group-hover:-translate-x-1 transition-transform">←</span> Back to All Articles
+          </button>
+
+          <div className="space-y-4 mb-8">
+            <div className="flex items-center gap-3 text-xs font-bold uppercase tracking-wider text-terracotta">
+              <span>{selectedPost.category || 'Journal'}</span>
+              <span>•</span>
+              <span className="text-gray-500">{selectedPost.date}</span>
+              {selectedPost.read_time && (
+                <>
+                  <span>•</span>
+                  <span className="text-gray-500">{selectedPost.read_time}</span>
+                </>
+              )}
+            </div>
+            <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight font-serif text-charcoal leading-tight">
+              {selectedPost.title}
+            </h1>
+            <div className="flex items-center gap-3 pt-2">
+              <div className="w-10 h-10 rounded-full bg-terracotta/10 text-terracotta font-bold flex items-center justify-center text-sm border border-terracotta/20">
+                {selectedPost.author?.[0] || 'A'}
+              </div>
+              <div>
+                <p className="text-sm font-bold text-charcoal">{selectedPost.author}</p>
+                <p className="text-xs text-gray-400">X-Space360 Editorial</p>
+              </div>
+            </div>
+          </div>
+
+          {selectedPost.image_url && (
+            <div className="relative aspect-[16/9] overflow-hidden rounded-3xl bg-stone border border-stone-200 shadow-sm mb-10">
+              <img
+                src={getImageUrl(selectedPost.image_url)}
+                alt={selectedPost.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
+
+          <div className="prose prose-lg max-w-none text-charcoal-light leading-relaxed">
+            {selectedPost.content ? (
+              <ReactMarkdown components={markdownComponents}>
+                {formatContentWithBullets(selectedPost.content)}
+              </ReactMarkdown>
+            ) : selectedPost.excerpt ? (
+              <p className="text-lg text-gray-700 leading-relaxed">{selectedPost.excerpt}</p>
+            ) : null}
+          </div>
+
+          {selectedPost.tableData && selectedPost.tableData.headers && (
+            <div className="my-10 overflow-x-auto border border-gray-200 rounded-2xl shadow-sm bg-white p-5">
+              {selectedPost.tableData.title && (
+                <h3 className="text-lg font-bold text-charcoal mb-4">{selectedPost.tableData.title}</h3>
+              )}
+              <table className="w-full text-left border-collapse text-sm">
+                <thead>
+                  <tr className="bg-gray-100 text-charcoal font-bold">
+                    {selectedPost.tableData.headers.map((h, i) => (
+                      <th key={i} className="p-3 border-b border-gray-200">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {(selectedPost.tableData.rows || []).map((r, ri) => (
+                    <tr key={ri} className="hover:bg-amber-50/40">
+                      {r.map((c, ci) => (
+                        <td key={ci} className="p-3">{c}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {Array.isArray(selectedPost.faqs) && selectedPost.faqs.length > 0 && (
+            <div className="mt-12 pt-8 border-t border-gray-200 space-y-4">
+              <h3 className="text-2xl font-bold text-charcoal font-serif mb-6">Frequently Asked Questions</h3>
+              <div className="space-y-4">
+                {selectedPost.faqs.map((faq, fIdx) => (
+                  <div key={fIdx} className="bg-stone/50 border border-stone-200 rounded-2xl p-5">
+                    <h4 className="font-bold text-charcoal text-base mb-2">{faq.question}</h4>
+                    <p className="text-sm text-charcoal-light leading-relaxed">{faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="max-w-5xl mx-auto px-6 py-16">
         <div className="space-y-4 mb-10">
           <h2 className="text-3xl font-bold tracking-tight text-charcoal font-sans">
             Plan smart, explore more
@@ -544,7 +640,8 @@ const Blog = () => {
             </div>
           ))}
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Modern Sleek Dark Footer Section */}
       <Footer cmsContent={cmsContent} />

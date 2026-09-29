@@ -222,7 +222,7 @@ const BlogPostDetail = () => {
     if (cmsContent?.blog && Array.isArray(cmsContent.blog.posts)) {
       const visibleCmsBlogPosts = cmsContent.blog.posts.filter(post => post?.is_active !== false);
       return visibleCmsBlogPosts.map((post, idx) => {
-        const postImg = post.image_url || post.img || post.featuredImage || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200';
+        const postImg = post.image_url || post.imageUrl || post.img || post.featuredImage || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200';
         
         // Auto-generate FAQs from blog title/content if no explicit FAQs are saved
         let autoFaqs = Array.isArray(post.faqs) && post.faqs.length ? post.faqs : [];

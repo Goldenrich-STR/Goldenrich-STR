@@ -379,10 +379,17 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
         );
       } else if (userRole === 'broker') {
         navigate('/broker/dashboard');
+fix/telecaller-role-wiring
       } else if (userRole === 'employee' || userRole === 'telecaller') {
         const adminRole = normalizeRoleKey(
           authenticatedUser?.admin_role_key || authenticatedUser?.designation || authenticatedUser?.role
         );
+
+      } else if (userRole === 'employee') {
+        const adminRole = String(result.user?.admin_role_key || result.user?.designation || '')
+          .toLowerCase()
+          .replace(/[\s-]+/g, '_');
+          at
         if (adminRole === 'telecaller') {
           navigate('/telecaller/dashboard');
         } else if (adminRole === 'rm' || adminRole === 'relationship_manager') {
