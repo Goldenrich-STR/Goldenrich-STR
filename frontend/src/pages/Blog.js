@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   Building2, MapPin, Mail, Phone, ShieldCheck, CheckCircle2, Sparkles, 
   Facebook, Instagram, Youtube, Menu, X, ArrowRight, BookOpen, Clock, User
@@ -11,7 +12,7 @@ import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 import LegalDocument from '../components/LegalDocument';
 import Footer from '../components/Footer';
-import { formatContentWithBullets, markdownComponents } from '../lib/formatContent';
+import { extractFaqsFromMarkdown, formatContentWithBullets, markdownComponents } from '../lib/formatContent';
 
 const FALLBACK_BLOG_IMAGES = [
   'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
@@ -245,13 +246,14 @@ const Blog = () => {
     if (cmsContent?.blog && Array.isArray(cmsContent.blog.posts)) {
       const visibleCmsBlogPosts = cmsContent.blog.posts.filter(post => post?.is_active !== false);
       return visibleCmsBlogPosts.map((post, idx) => {
+        const parsedContent = extractFaqsFromMarkdown(post.content || '');
         const fallbackImg = FALLBACK_BLOG_IMAGES[idx % FALLBACK_BLOG_IMAGES.length];
         const postImg = post.image_url || post.imageUrl || post.img || post.featuredImage || fallbackImg;
         return {
           id: post.id || `cms-post-${idx}`,
           title: post.title || 'Untitled',
           excerpt: post.excerpt || '',
-          content: post.content || '',
+          content: parsedContent.content,
           date: post.date || 'June 2026',
           author: post.author || 'Editorial Desk',
           authorName: post.authorName || post.author || 'Editorial Desk',
@@ -264,7 +266,8 @@ const Blog = () => {
           publishedAt: post.publishedAt || post.date || new Date().toISOString(),
           updatedAt: post.updatedAt || post.updated_at || post.publishedAt || post.date,
           slug: post.slug,
-          read_time: post.read_time || '5 min read'
+          read_time: post.read_time || '5 min read',
+          faqs: parsedContent.faqs.length ? parsedContent.faqs : (post.faqs || [])
         };
       });
     }
@@ -559,7 +562,7 @@ const Blog = () => {
 
           <div className="prose prose-lg max-w-none text-charcoal-light leading-relaxed">
             {selectedPost.content ? (
-              <ReactMarkdown components={markdownComponents}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {formatContentWithBullets(selectedPost.content)}
               </ReactMarkdown>
             ) : selectedPost.excerpt ? (

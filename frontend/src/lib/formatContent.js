@@ -44,6 +44,50 @@ export const formatContentWithBullets = (text) => {
   return formattedLines.join('\n\n');
 };
 
+/**
+ * Pulls a Markdown FAQ section out of article content so it can be displayed
+ * as the site's FAQ accordion, while authors only need to paste one document.
+ *
+ * Supported authoring format:
+ * ## Frequently Asked Questions
+ * ### Question?
+ * Answer.
+ */
+export const extractFaqsFromMarkdown = (text) => {
+  const source = String(text || '');
+  const headingPattern = /^(#{1,6})\s+(?:\d+[.)]?\s*)?(?:frequently asked questions|faqs?)\s*$/im;
+  const sectionMatch = headingPattern.exec(source);
+
+  if (!sectionMatch) return { content: source, faqs: [] };
+
+  const sectionStart = sectionMatch.index;
+  const sectionHeadingLevel = sectionMatch[1].length;
+  const afterHeadingStart = sectionStart + sectionMatch[0].length;
+  const remaining = source.slice(afterHeadingStart);
+  const nextTopLevelHeading = new RegExp(`^#{1,${sectionHeadingLevel}}\\s+`, 'm').exec(remaining);
+  const sectionEnd = nextTopLevelHeading
+    ? afterHeadingStart + nextTopLevelHeading.index
+    : source.length;
+  const faqSection = source.slice(afterHeadingStart, sectionEnd).trim();
+  const questionPattern = /^#{1,6}\s+(.+?)\s*$/gm;
+  const questions = [...faqSection.matchAll(questionPattern)];
+  const faqs = questions
+    .map((match, index) => {
+      const answerStart = match.index + match[0].length;
+      const answerEnd = index + 1 < questions.length ? questions[index + 1].index : faqSection.length;
+      return {
+        question: match[1].trim(),
+        answer: faqSection.slice(answerStart, answerEnd).trim(),
+      };
+    })
+    .filter(faq => faq.question && faq.answer);
+
+  if (!faqs.length) return { content: source, faqs: [] };
+
+  const content = `${source.slice(0, sectionStart).trim()}\n\n${source.slice(sectionEnd).trim()}`.trim();
+  return { content, faqs };
+};
+
 export const markdownComponents = {
   h1: ({ node, ...props }) => <h1 className="text-2xl md:text-3xl font-extrabold text-charcoal mb-4 tracking-tight" {...props} />,
   h2: ({ node, ...props }) => <h2 className="text-xl md:text-2xl font-bold text-charcoal mt-6 mb-3 border-b pb-2 border-slate-100" {...props} />,

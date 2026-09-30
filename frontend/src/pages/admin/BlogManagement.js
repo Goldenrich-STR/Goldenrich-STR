@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, Loader2, BookOpen, Save, X, ImagePlus } from 'lucide-react';
+import { Plus, Trash2, Edit3, Loader2, BookOpen, Save, ImagePlus } from 'lucide-react';
 import { cmsAPI, getApiErrorMessage, getImageUrl, uploadAPI } from '../../services/api';
 import SimpleMarkdownEditor from '../../components/SimpleMarkdownEditor';
 
@@ -15,8 +15,6 @@ const DEFAULT_BLOG = {
   content: '',
   seoTitle: '',
   seoDescription: '',
-  tableData: null,
-  faqs: []
 };
 
 const BlogManagementAdmin = () => {
@@ -260,6 +258,8 @@ const BlogForm = ({ post: initialPost, onSave, onCancel, isSaving, generateSlug 
     }
   };
 
+  // Kept for backward compatibility with older posts that already contain
+  // dedicated table/FAQ data. New posts use Content Editor Markdown only.
   const handleFaqChange = (index, field, value) => {
     const newFaqs = [...(post.faqs || [])];
     newFaqs[index] = { ...newFaqs[index], [field]: value };
@@ -271,14 +271,7 @@ const BlogForm = ({ post: initialPost, onSave, onCancel, isSaving, generateSlug 
   };
 
   const removeFaq = (index) => {
-    const newFaqs = [...(post.faqs || [])];
-    newFaqs.splice(index, 1);
-    setPost(prev => ({ ...prev, faqs: newFaqs }));
-  };
-
-  const insertTableTemplate = () => {
-    const tableTemplate = `\n\n| Column 1 | Column 2 | Column 3 |\n| :--- | :--- | :--- |\n| Data A | Data B | Data C |\n| Data X | Data Y | Data Z |\n\n`;
-    setPost(prev => ({ ...prev, content: (prev.content || '') + tableTemplate }));
+    setPost(prev => ({ ...prev, faqs: (prev.faqs || []).filter((_, faqIndex) => faqIndex !== index) }));
   };
 
   return (
@@ -327,7 +320,7 @@ const BlogForm = ({ post: initialPost, onSave, onCancel, isSaving, generateSlug 
             />
           </div>
           
-          <div className="pt-4 border-t border-gray-100">
+          {false && <div className="pt-4 border-t border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <label className="block text-sm font-semibold text-gray-700">Dedicated Table</label>
               <button 
@@ -448,9 +441,9 @@ const BlogForm = ({ post: initialPost, onSave, onCancel, isSaving, generateSlug 
                 </div>
               </div>
             )}
-          </div>
+          </div>}
           
-          <div className="pt-4 border-t border-gray-100">
+          {false && <div className="pt-4 border-t border-gray-100">
             <div className="flex items-center justify-between mb-4">
               <label className="block text-sm font-semibold text-gray-700">Frequently Asked Questions (FAQs)</label>
               <button 
@@ -493,7 +486,7 @@ const BlogForm = ({ post: initialPost, onSave, onCancel, isSaving, generateSlug 
                 ))
               )}
             </div>
-          </div>
+          </div>}
         </div>
 
         <div className="space-y-5 bg-gray-50 p-5 rounded-2xl border border-gray-100 h-fit">

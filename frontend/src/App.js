@@ -4,7 +4,7 @@ import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import SEO from "./components/SEO";
 import ChatbotWidget from "./components/ChatbotWidget";
-import { SEO_BROWSE_PATHS } from "./lib/seoRoutes";
+import { LEGACY_SEO_REDIRECTS, SEO_BROWSE_PATHS } from "./lib/seoRoutes";
 
 // Pages (Code-splitted with dynamic lazy imports)
 const LandingPage = lazy(() => import("./pages/LandingPage"));
@@ -277,6 +277,9 @@ function AppRoutes() {
           }
         />
         {/* SEO Clean Category & City Browse Routes */}
+        {Object.entries(LEGACY_SEO_REDIRECTS).map(([from, to]) => (
+          <Route key={from} path={from} element={<Navigate to={to} replace />} />
+        ))}
         {SEO_BROWSE_PATHS.map((path) => (
           <Route key={path} path={path} element={<GuestBrowse />} />
         ))}
