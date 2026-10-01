@@ -92,11 +92,19 @@ def rule_applies(rule: dict, target_date: date) -> bool:
     return False
 
 
-def adjustment_for(rule: dict, target_date: date) -> float:
+def adjustment_for(rule: dict, target_date: date) -> tuple[float, str, float]:
+    """Return (signed_percentage, adjustment_unit, signed_flat_amount)."""
     day_values = rule.get("day_adjustments") or {}
-    raw = day_values.get(str(target_date.weekday()), rule.get("adjustment_percentage", 0))
-    value = float(raw or 0)
-    return -value if str(rule.get("adjustment_type") or "INCREASE").upper() == "DECREASE" else value
+    unit = str(rule.get("adjustment_unit") or rule.get("value_type") or "PERCENTAGE").upper()
+    adj_type = str(rule.get("adjustment_type") or "INCREASE").upper()
+    sign = -1.0 if adj_type == "DECREASE" else 1.0
+
+    if unit in {"FLAT", "AMOUNT", "RUPEES", "FIXED"}:
+        raw_amt = float(day_values.get(str(target_date.weekday()), rule.get("adjustment_amount", 0)))
+        return 0.0, "FLAT", sign * max(0.0, raw_amt)
+    else:
+        raw_pct = float(day_values.get(str(target_date.weekday()), rule.get("adjustment_percentage", 0)))
+        return sign * max(0.0, raw_pct), "PERCENTAGE", 0.0
 
 
 def select_rule(rules: Iterable[dict], target_date: date) -> Optional[dict]:
@@ -112,18 +120,49 @@ def calculate_price(property_dict: dict, target_date, rules: Iterable[dict]) -> 
     on_date = parse_date(target_date)
     original = base_price(property_dict)
     rule = select_rule(rules, on_date)
-    percentage = adjustment_for(rule, on_date) if rule else 0.0
-    amount = Decimal(str(original)) * (Decimal("1") + Decimal(str(percentage)) / Decimal("100"))
-    final = max(Decimal("0"), amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    return {
-        "date": on_date.isoformat(),
-        "base_price": original,
-        "final_price": float(final),
-        "adjustment_percentage": percentage,
-        "rule_id": rule.get("rule_id") if rule else None,
-        "rule_name": rule.get("rule_name") if rule else "Base",
-        "rule_type": rule.get("rule_type") if rule else "BASE",
-    }
+    if not rule:
+        return {
+            "date": on_date.isoformat(),
+            "base_price": original,
+            "final_price": original,
+            "adjustment_percentage": 0.0,
+            "adjustment_amount": 0.0,
+            "adjustment_unit": "PERCENTAGE",
+            "rule_id": None,
+            "rule_name": "Base",
+            "rule_type": "BASE",
+        }
+
+    pct, unit, flat_amt = adjustment_for(rule, on_date)
+    if unit == "FLAT":
+        final = max(Decimal("0"), Decimal(str(original)) + Decimal(str(flat_amt))).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        eff_pct = round((flat_amt / original * 100), 2) if original > 0 else 0.0
+        return {
+            "date": on_date.isoformat(),
+            "base_price": original,
+            "final_price": float(final),
+            "adjustment_percentage": eff_pct,
+            "adjustment_amount": flat_amt,
+            "adjustment_unit": "FLAT",
+            "rule_id": rule.get("rule_id"),
+            "rule_name": rule.get("rule_name") if rule.get("rule_name") else "Seasonal Rule",
+            "rule_type": rule.get("rule_type") if rule.get("rule_type") else "SEASON",
+        }
+    else:
+        amount = Decimal(str(original)) * (Decimal("1") + Decimal(str(pct)) / Decimal("100"))
+        final = max(Decimal("0"), amount).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        diff = float(final - Decimal(str(original)))
+        return {
+            "date": on_date.isoformat(),
+            "base_price": original,
+            "final_price": float(final),
+            "adjustment_percentage": pct,
+            "adjustment_amount": diff,
+            "adjustment_unit": "PERCENTAGE",
+            "rule_id": rule.get("rule_id"),
+            "rule_name": rule.get("rule_name") if rule.get("rule_name") else "Seasonal Rule",
+            "rule_type": rule.get("rule_type") if rule.get("rule_type") else "SEASON",
+        }
 
 
 async def property_rules(db, property_id: str, include_inactive: bool = False) -> list[dict]:
