@@ -3,16 +3,19 @@ from datetime import date
 import asyncio
 
 from routes.property_routes import _add_dynamic_property_price
-from services.price_engine_service import calculate_price, is_eligible_property, overlapping_date_rules
+from services.price_engine_service import calculate_booking_base_price, calculate_price, is_eligible_property, overlapping_date_rules
 
 
 PROPERTY = {"property_id": "p1", "property_type": "villa", "price_per_night": 8000}
 
 
-def test_only_villas_and_homestays_are_eligible():
+def test_all_supported_property_categories_are_eligible():
     assert is_eligible_property({"property_type": "Villa"})
     assert is_eligible_property({"property_subtype": "Homestay"})
-    assert not is_eligible_property({"property_type": "apartment", "category": "residential"})
+    assert is_eligible_property({"property_type": "apartment", "category": "residential"})
+    assert is_eligible_property({"property_type": "meeting_room", "category": "commercial"})
+    assert is_eligible_property({"property_type": "banquet_hall", "category": "event_venue"})
+    assert not is_eligible_property({"property_type": "vehicle", "category": "transport"})
 
 
 def test_season_has_priority_over_weekend_and_base_is_unchanged():
@@ -63,3 +66,39 @@ def test_property_api_projection_uses_effective_price_without_mutating_base():
     assert response_property["effective_price_per_night"] == 9600
     assert response_property["price_per_night"] == 9600
     assert PROPERTY["price_per_night"] == 8000
+
+
+def test_event_venue_pricing_includes_both_selected_dates():
+    class Cursor:
+        async def to_list(self, length=None):
+            return [{"rule_id": "event", "property_id": "e1", "rule_type": "SEASON", "rule_name": "Wedding Season", "start_date": "2026-10-01", "end_date": "2026-10-31", "adjustment_type": "INCREASE", "adjustment_percentage": 25, "is_active": True}]
+
+    class Rules:
+        def find(self, query, projection=None):
+            return Cursor()
+
+    class DB:
+        property_price_rules = Rules()
+
+    venue = {"property_id": "e1", "category": "event_venue", "property_type": "banquet_hall", "price_per_night": 10000}
+    result = asyncio.run(calculate_booking_base_price(DB(), venue, "2026-10-10", "2026-10-11", 2))
+    assert result["total"] == 25000
+    assert len(result["nights"]) == 2
+
+
+def test_hourly_commercial_pricing_adjusts_unit_rate_before_multiplying_hours():
+    class Cursor:
+        async def to_list(self, length=None):
+            return [{"rule_id": "busy", "property_id": "c1", "rule_type": "CUSTOM", "rule_name": "Busy Hours", "start_date": "2026-10-10", "end_date": "2026-10-10", "adjustment_type": "INCREASE", "adjustment_percentage": 20, "is_active": True}]
+
+    class Rules:
+        def find(self, query, projection=None):
+            return Cursor()
+
+    class DB:
+        property_price_rules = Rules()
+
+    office = {"property_id": "c1", "category": "commercial", "property_type": "meeting_room", "pricing_cycle": "hourly", "price_per_night": 1000}
+    result = asyncio.run(calculate_booking_base_price(DB(), office, "2026-10-10", "2026-10-10", 3))
+    assert result["average_nightly_price"] == 1200
+    assert result["total"] == 3600

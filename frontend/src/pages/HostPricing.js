@@ -14,7 +14,7 @@ const HostPricing = () => {
     <HostWorkspaceShell
       activePath="/host/pricing"
       sidebarTitle="Pricing"
-      sidebarDescription="Property-wise weekend and seasonal pricing for your Villas and Homestays."
+      sidebarDescription="Property-wise weekend and seasonal pricing for residential stays, commercial spaces, and event venues."
       showHero={false}
     >
       {notice ? (
