@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import {
   Bold, Italic, Strikethrough, Heading1, Heading2, Heading3,
   List, ListOrdered, Quote, Code, Link as LinkIcon, Image as ImageIcon,
@@ -482,7 +483,7 @@ const SimpleMarkdownEditor = ({ value = '', onChange, placeholder = 'Write your 
             <div className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Live Formatted Preview</div>
             <div className="prose prose-sm max-w-none">
               {value ? (
-                <ReactMarkdown components={markdownComponents}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                   {formatContentWithBullets(value)}
                 </ReactMarkdown>
               ) : (
@@ -501,7 +502,7 @@ const SimpleMarkdownEditor = ({ value = '', onChange, placeholder = 'Write your 
           </div>
           <div className="prose prose-lg max-w-none text-gray-800">
             {value ? (
-              <ReactMarkdown components={markdownComponents}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {formatContentWithBullets(value)}
               </ReactMarkdown>
             ) : (

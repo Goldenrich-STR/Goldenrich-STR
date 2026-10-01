@@ -1206,17 +1206,17 @@ const EXPLORE_MENU_TABS = [
         createExploreItem('Farmhouses in Nashik', { category: 'residential', property_type: 'farmhouse', city: 'Nashik' }),
       ],
       [
-        createExploreItem('Wedding Venues in Nashik', { path: '/event-venues/wedding-venues-in-nashik/' }),
-        createExploreItem('Banquet Halls in Nashik', { path: '/event-venues/banquet-halls-in-nashik/' }),
+        createExploreItem('Wedding Venues in Nashik', { path: '/property/wedding-venues' }),
+        createExploreItem('Banquet Halls in Nashik', { path: '/property/banquet-halls' }),
         createExploreItem('Event Lawns in Nashik', { path: '/event-venues/event-lawns-in-nashik/' }),
         createExploreItem('Corporate Events in Nashik', { path: '/event-venues/corporate-event-venues-in-nashik/' }),
       ],
       [
-        createExploreItem('Workspaces in Nashik', { path: '/property/workspaces/' }),
-        createExploreItem('Private Offices in Nashik', { path: '/property/private-offices-in-nashik/' }),
+        createExploreItem('Workspaces in Nashik', { path: '/property/workspaces-in-nashik' }),
+        createExploreItem('Private Offices in Nashik', { path: '/property/private-offices-in-nashik' }),
         createExploreItem('Team Spaces in Nashik', { path: '/property/team-spaces-in-nashik/' }),
-        createExploreItem('Premium Offices in Nashik', { path: '/property/private-offices/' }),
-        createExploreItem('Co-working in Nashik', { path: '/property/coworking-spaces-in-nashik/' }),
+        createExploreItem('Premium Offices in Nashik', { path: '/property/private-offices' }),
+        createExploreItem('Co-working in Nashik', { path: '/property/coworking-desk' }),
         createExploreItem('Meeting Rooms in Nashik', { path: '/property/meeting-rooms-in-nashik/' }),
       ]
     ]
@@ -1227,8 +1227,8 @@ const EXPLORE_MENU_TABS = [
     columns: [
       [
         createExploreItem('Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
-        createExploreItem('Pool Villas in Trimbak', { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar' }),
-        createExploreItem('Family Stays in Trimbak', { path: '/property/residential/familystay-in-trimbak' }),
+        createExploreItem('Pool Villas in Trimbak', { path: '/property/pool-villas-in-trimbakeshwar' }),
+        createExploreItem('Family Stays in Trimbak', { path: '/property/residential/family-stay-in-trimbak' }),
       ],
       [
         createExploreItem('Apartments in Trimbak', { path: '/property/residential/apartment-in-trimbak' }),
@@ -1245,7 +1245,7 @@ const EXPLORE_MENU_TABS = [
         createExploreItem('Villas in Igatpuri', { category: 'residential', property_type: 'villa', city: 'Igatpuri' }),
         createExploreItem('Weekend Villas in Igatpuri', { path: '/property/weekend-villas-in-igatpuri' }),
         createExploreItem('Homestays in Igatpuri', { path: '/property/residential/homestay-in-igatpuri' }),
-        createExploreItem('Holiday Homes in Igatpuri', { path: '/property/residential/holidayhomes-in-igatpuri' }),
+        createExploreItem('Holiday Homes in Igatpuri', { path: '/property/residential/holiday-homes-in-igatpuri' }),
         createExploreItem('Celebration Venues in Igatpuri', { path: '/event-venues/celebration-venues-in-igatpuri/' }),
         createExploreItem('Wedding Venues in Igatpuri', { path: '/event-venues/wedding-venues-in-igatpuri/' }),
         createExploreItem('Corporate Spaces in Igatpuri', { category: 'commercial', city: 'Igatpuri' }),
@@ -1253,7 +1253,7 @@ const EXPLORE_MENU_TABS = [
       [
         createExploreItem('Villas in Bhandardara', { category: 'residential', property_type: 'villa', city: 'Bhandardara' }),
         createExploreItem('Scenic Villas in Bhandardara', { path: '/property/scenic-villas-in-bhandardara' }),
-        createExploreItem('Nature Stays in Bhandardara', { path: '/property/residential/naturestay-in-bhandardara' }),
+        createExploreItem('Nature Stays in Bhandardara', { path: '/property/residential/nature-stay-in-bhandardara' }),
         createExploreItem('Resorts in Bhandardara', { path: '/event-venues/resorts-in-bhandardara/' }),
       ]
     ]

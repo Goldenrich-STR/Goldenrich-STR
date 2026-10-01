@@ -102,3 +102,18 @@ def test_hourly_commercial_pricing_adjusts_unit_rate_before_multiplying_hours():
     result = asyncio.run(calculate_booking_base_price(DB(), office, "2026-10-10", "2026-10-10", 3))
     assert result["average_nightly_price"] == 1200
     assert result["total"] == 3600
+
+
+def test_flat_amount_adjustment_supported():
+    rules_increase = [{"rule_id": "flat_inc", "rule_type": "SEASON", "rule_name": "Flat Peak", "start_date": "2026-10-01", "end_date": "2026-10-05", "adjustment_type": "INCREASE", "adjustment_unit": "FLAT", "adjustment_amount": 2000, "is_active": True}]
+    res_inc = calculate_price(PROPERTY, "2026-10-02", rules_increase)
+    assert res_inc["final_price"] == 10000
+    assert res_inc["adjustment_amount"] == 2000
+    assert res_inc["adjustment_unit"] == "FLAT"
+
+    rules_decrease = [{"rule_id": "flat_dec", "rule_type": "SEASON", "rule_name": "Flat Off", "start_date": "2026-10-01", "end_date": "2026-10-05", "adjustment_type": "DECREASE", "adjustment_unit": "FLAT", "adjustment_amount": 1500, "is_active": True}]
+    res_dec = calculate_price(PROPERTY, "2026-10-02", rules_decrease)
+    assert res_dec["final_price"] == 6500
+    assert res_dec["adjustment_amount"] == -1500
+    assert res_dec["adjustment_unit"] == "FLAT"
+

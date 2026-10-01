@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { 
   Building2, MapPin, Mail, Phone, ShieldCheck, CheckCircle2, Sparkles, 
   Facebook, Instagram, Youtube, Menu, X, ArrowLeft, Clock, User, Share2, 
@@ -12,7 +13,7 @@ import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
 import Footer from '../components/Footer';
-import { formatContentWithBullets, markdownComponents } from '../lib/formatContent';
+import { extractFaqsFromMarkdown, formatContentWithBullets, markdownComponents } from '../lib/formatContent';
 
 const SITE_URL = "https://x-space360.in";
 
@@ -224,8 +225,11 @@ const BlogPostDetail = () => {
       return visibleCmsBlogPosts.map((post, idx) => {
         const postImg = post.image_url || post.imageUrl || post.img || post.featuredImage || 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200';
         
-        // Auto-generate FAQs from blog title/content if no explicit FAQs are saved
-        let autoFaqs = Array.isArray(post.faqs) && post.faqs.length ? post.faqs : [];
+        const parsedContent = extractFaqsFromMarkdown(post.content || '');
+        // Prefer FAQs written in the Content Editor. Legacy saved FAQs remain supported.
+        let autoFaqs = parsedContent.faqs.length
+          ? parsedContent.faqs
+          : (Array.isArray(post.faqs) && post.faqs.length ? post.faqs : []);
         if (autoFaqs.length === 0) {
           const title = post.title || 'Short-Term Rental';
           autoFaqs = [
@@ -248,7 +252,7 @@ const BlogPostDetail = () => {
           id: post.id || `cms-post-${idx}`,
           title: post.title || 'Untitled Article',
           excerpt: post.excerpt || '',
-          content: post.content || '',
+          content: parsedContent.content,
           date: post.date || 'September 2026',
           author: post.author || 'X-Space360 Desk',
           read_time: post.read_time || '5 min read',
@@ -462,7 +466,7 @@ const BlogPostDetail = () => {
           {/* Main Body Markdown Content */}
           <div className="prose prose-lg max-w-none text-gray-800 font-normal leading-relaxed space-y-6 pt-4">
             {currentPost.content ? (
-              <ReactMarkdown components={markdownComponents}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                 {formatContentWithBullets(currentPost.content)}
               </ReactMarkdown>
             ) : (
