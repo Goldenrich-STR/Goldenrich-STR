@@ -11,7 +11,7 @@ from services.booking_notifications import (
     schedule_soft_lock_reminder,
 )
 from services.audit_service import write_audit_log
-from services.price_engine_service import calculate_stay_price, is_eligible_property
+from services.price_engine_service import base_price as listing_base_price, calculate_booking_base_price, is_eligible_property
 from services.booking_calculation_service import (
     BOOKING_PAYMENT_CONFIG_KEY,
     DEFAULT_BOOKING_GST_PERCENT,
@@ -551,8 +551,8 @@ async def _build_booking_quote(
 
     unit_price = float(property_dict.get("base_price") or property_dict.get("price_per_night") or 0)
     dynamic_stay = None
-    if not is_hourly and is_eligible_property(property_dict):
-        dynamic_stay = await calculate_stay_price(db, property_dict, check_in, check_out)
+    if is_eligible_property(property_dict):
+        dynamic_stay = await calculate_booking_base_price(db, property_dict, check_in, check_out, num_units)
         unit_price = dynamic_stay["average_nightly_price"]
         base_amount = dynamic_stay["total"]
     else:
@@ -836,8 +836,8 @@ async def create_booking(
             nightly_price = property_dict.get("price_per_night", 0)
         nightly_price = float(nightly_price or 0)
         dynamic_stay = None
-        if not is_hourly and is_eligible_property(property_dict):
-            dynamic_stay = await calculate_stay_price(db, property_dict, check_in, check_out)
+        if is_eligible_property(property_dict):
+            dynamic_stay = await calculate_booking_base_price(db, property_dict, check_in, check_out, num_nights)
             nightly_price = dynamic_stay["average_nightly_price"]
             base_amount = dynamic_stay["total"]
         else:
@@ -2300,11 +2300,20 @@ async def booking_pricing_quote(
             owner = await db.users.find_one({"user_id": owner_id}, {"_id": 0})
         platform_fee_context = await _resolve_platform_fee_context(db, property_dict, owner)
         if property_dict and payload.check_in_date and payload.check_out_date and is_eligible_property(property_dict):
-            dynamic_stay = await calculate_stay_price(db, property_dict, payload.check_in_date, payload.check_out_date)
-            host_amount = dynamic_stay["total"]
-            tax_slab_base_amount = dynamic_stay["average_nightly_price"]
+            units = max(1, float(payload.pricing_units or 1))
+            dynamic_stay = await calculate_booking_base_price(
+                db, property_dict, payload.check_in_date, payload.check_out_date, units
+            )
+            original_unit_price = listing_base_price(property_dict)
+            quoted_base_total = float(charge_base_amount or (original_unit_price * units))
+            quoted_unit_price = quoted_base_total / units
+            # Preserve event food, guest, and other amounts already included by
+            # the client; replace only the base charge already shown in the UI.
+            host_amount = max(0, float(host_amount or 0) - quoted_base_total) + dynamic_stay["total"]
+            current_tax_base = float(tax_slab_base_amount or 0)
+            tax_slab_base_amount = max(0, current_tax_base - quoted_unit_price) + dynamic_stay["average_nightly_price"]
             charge_base_amount = dynamic_stay["total"]
-            pricing_units = max(1, len(dynamic_stay["nights"]))
+            pricing_units = units
             nightly_prices = dynamic_stay["nights"]
     result = await _calculate_booking_pricing(
         db,

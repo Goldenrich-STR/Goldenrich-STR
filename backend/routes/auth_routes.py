@@ -166,7 +166,28 @@ async def get_db():
     from server import db_instance
     return db_instance
 
+def _normalize_legacy_employee_role(user_dict: dict) -> dict:
+    """Map legacy stored staff roles into the current employee/admin_role_key model."""
+    if not user_dict:
+        return user_dict
+    normalized = dict(user_dict)
+    role = str(normalized.get("role") or "").strip().lower()
+    legacy_role_map = {
+        "telecaller": ("telecaller", "Telecaller"),
+        "rm": ("rm", "RM"),
+        "relationship_manager": ("rm", "RM"),
+        "branch_manager": ("branch_manager", "Branch Manager"),
+        "team_leader": ("team_leader", "TL"),
+    }
+    if role in legacy_role_map:
+        admin_role_key, designation = legacy_role_map[role]
+        normalized["role"] = UserRole.EMPLOYEE.value
+        normalized["admin_role_key"] = normalized.get("admin_role_key") or admin_role_key
+        normalized["designation"] = normalized.get("designation") or designation
+    return normalized
+
 def _user_token_response(user_dict: dict) -> TokenResponse:
+    user_dict = _normalize_legacy_employee_role(user_dict)
     access_token = create_access_token(data={
         "user_id": user_dict["user_id"],
         "email": user_dict["email"],
@@ -188,6 +209,29 @@ def _user_token_response(user_dict: dict) -> TokenResponse:
         access_scope=user_dict.get("access_scope") or user_dict.get("admin_scope"),
         profile_image=user_dict.get("profile_image"),
         kyc_status=user_dict.get("kyc_status"),
+        kyc_documents=user_dict.get("kyc_documents") or [],
+        host_association_type=user_dict.get("host_association_type") or "property_owner",
+        pan_number=user_dict.get("pan_number"),
+        agreement_owner_name=user_dict.get("agreement_owner_name"),
+        agreement_owner_address=user_dict.get("agreement_owner_address"),
+        agreement_signature=user_dict.get("agreement_signature"),
+        lg_code=user_dict.get("lg_code"),
+        employee_code=user_dict.get("employee_code"),
+        broker_id=user_dict.get("broker_id"),
+        rm_id=user_dict.get("rm_id"),
+        branch_manager_id=user_dict.get("branch_manager_id"),
+        branch_manager_code=user_dict.get("branch_manager_code"),
+        telecaller_id=user_dict.get("telecaller_id"),
+        telecaller_code=user_dict.get("telecaller_code"),
+        telecaller_name=user_dict.get("telecaller_name"),
+        assignment_primary_type=user_dict.get("assignment_primary_type"),
+        assignment_primary_id=user_dict.get("assignment_primary_id"),
+        assignment_primary_code=user_dict.get("assignment_primary_code"),
+        assignment_primary_name=user_dict.get("assignment_primary_name"),
+        assignment_secondary_type=user_dict.get("assignment_secondary_type"),
+        assignment_secondary_id=user_dict.get("assignment_secondary_id"),
+        assignment_secondary_code=user_dict.get("assignment_secondary_code"),
+        assignment_secondary_name=user_dict.get("assignment_secondary_name"),
         is_active=user_dict.get("is_active", True),
         created_at=user_dict.get("created_at") or datetime.now(timezone.utc),
     )
@@ -675,7 +719,7 @@ async def goldenrich_sso_callback(
 
 @router.get("/public/brokers-and-employees")
 async def get_public_brokers_and_employees(db: AsyncIOMotorDatabase = Depends(get_db)):
-    """Fetch active broker/RM and branch manager codes for public host registration."""
+    """Fetch active broker/RM and telecaller codes for public host registration."""
     brokers = await db.users.find(
         {"role": "broker", "is_active": True},
         {"user_id": 1, "full_name": 1, "lg_code": 1, "employee_code": 1, "uid": 1}
@@ -693,13 +737,13 @@ async def get_public_brokers_and_employees(db: AsyncIOMotorDatabase = Depends(ge
         {"user_id": 1, "full_name": 1, "employee_code": 1, "uid": 1}
     ).to_list(length=1000)
 
-    branch_managers = await db.users.find(
+    telecallers = await db.users.find(
         {
             "role": "employee",
             "is_active": True,
             "$or": [
-                {"admin_role_key": "branch_manager"},
-                {"designation": {"$regex": "branch manager", "$options": "i"}},
+                {"admin_role_key": "telecaller"},
+                {"designation": {"$regex": "tele[\\s_-]*caller", "$options": "i"}},
             ],
         },
         {"user_id": 1, "full_name": 1, "employee_code": 1, "uid": 1}
@@ -727,13 +771,13 @@ async def get_public_brokers_and_employees(db: AsyncIOMotorDatabase = Depends(ge
         ],
         "employees": [
             {
-                "user_id": emp["user_id"],
-                "full_name": emp["full_name"],
-                "employee_code": emp.get("employee_code") or emp.get("uid") or emp["user_id"],
-                "assignment_type": "branch_manager",
+                "user_id": telecaller["user_id"],
+                "full_name": telecaller["full_name"],
+                "employee_code": telecaller.get("employee_code") or telecaller.get("uid") or telecaller["user_id"],
+                "assignment_type": "telecaller",
             }
-            for emp in branch_managers
-            if emp.get("employee_code") or emp.get("uid") or emp.get("user_id")
+            for telecaller in telecallers
+            if telecaller.get("employee_code") or telecaller.get("uid") or telecaller.get("user_id")
         ]
     }
 
@@ -825,33 +869,22 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                 primary_assignment_role = "rm"
                 rm_id = broker_or_rm["user_id"]
             
-        # Resolve the dependent second assignment:
-        # Broker selected first -> second code must be an RM.
-        # RM selected first -> second code must be a Branch Manager.
+        # Resolve the telecaller selected during host registration.
         branch_manager_id = None
         branch_manager_code = None
+        telecaller_id = None
+        telecaller_code = None
+        telecaller_name = None
         if role_str.lower() == "host" and user_data.employee_code and user_data.employee_code.strip():
             employee_code_clean = user_data.employee_code.strip()
-            expected_admin_keys = (
-                ["rm", "relationship_manager"]
-                if primary_assignment_role == "broker"
-                else ["branch_manager"]
-            )
             employee = await db.users.find_one(
                 {
                     "role": "employee",
                     "$and": [
                         {
                             "$or": [
-                                {"admin_role_key": {"$in": expected_admin_keys}},
-                                {
-                                    "designation": {
-                                        "$regex": "relationship manager|\\brm\\b"
-                                        if primary_assignment_role == "broker"
-                                        else "branch manager",
-                                        "$options": "i",
-                                    }
-                                },
+                                {"admin_role_key": "telecaller"},
+                                {"designation": {"$regex": "tele[\\s_-]*caller", "$options": "i"}},
                             ],
                         },
                         {
@@ -865,16 +898,13 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
                 }
             )
             if not employee:
-                expected_label = "RM" if primary_assignment_role == "broker" else "Branch Manager"
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Invalid {expected_label} Code. No {expected_label.lower()} found with this code."
+                    detail="Invalid Telecaller LG Code. No telecaller found with this code."
                 )
-            if primary_assignment_role == "broker":
-                rm_id = employee["user_id"]
-            else:
-                branch_manager_id = employee["user_id"]
-                branch_manager_code = employee.get("employee_code") or employee.get("uid") or employee["user_id"]
+            telecaller_id = employee["user_id"]
+            telecaller_code = employee.get("employee_code") or employee.get("uid") or employee["user_id"]
+            telecaller_name = employee.get("full_name") or ""
             
         assignment_employee_code = user_data.employee_code.strip() if user_data.employee_code else None
         if role_str.lower() == "host" and primary_assignment_role == "rm":
@@ -922,6 +952,8 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
             rm_id=rm_id,
             branch_manager_id=branch_manager_id,
             branch_manager_code=branch_manager_code,
+            telecaller_id=telecaller_id,
+            telecaller_code=telecaller_code,
             employee_code=assignment_employee_code,
             terms_accepted=user_data.terms_accepted,
             is_phone_verified=True  # Assuming OTP was verified before registration
@@ -929,6 +961,8 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         
         # Insert into database
         user_dict = user.model_dump()
+        if telecaller_name:
+            user_dict["telecaller_name"] = telecaller_name
         await db.users.insert_one(user_dict)
 
         try:
@@ -985,35 +1019,7 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         except Exception as email_err:
             logger.warning("Registration email failed for %s: %s", user.email, email_err)
         
-        # Create access token
-        access_token = create_access_token(data={
-            "user_id": user.user_id,
-            "email": user.email,
-            "role": user.role.value
-        })
-        
-        # Return response
-        user_response = UserResponse(
-            user_id=user.user_id,
-            email=user.email,
-            phone=user.phone,
-            full_name=user.full_name,
-            role=user.role,
-            city=user.city,
-            designation=getattr(user, "designation", None),
-            department=getattr(user, "department", None),
-            admin_role_key=getattr(user, "admin_role_key", None),
-            access_scope=getattr(user, "access_scope", None) or getattr(user, "admin_scope", None),
-            profile_image=user.profile_image,
-            kyc_status=user.kyc_status,
-            is_active=user.is_active,
-            created_at=user.created_at
-        )
-        
-        return TokenResponse(
-            access_token=access_token,
-            user=user_response
-        )
+        return _user_token_response(await _enrich_host_assignment_profile(user_dict, db))
     
     except HTTPException:
         raise
@@ -1057,6 +1063,19 @@ async def login(credentials: UserLogin, db: AsyncIOMotorDatabase = Depends(get_d
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Account is deactivated"
             )
+
+        normalized_user = _normalize_legacy_employee_role(user_dict)
+        if normalized_user.get("role") != user_dict.get("role") or normalized_user.get("admin_role_key") != user_dict.get("admin_role_key"):
+            await db.users.update_one(
+                {"user_id": user_dict["user_id"]},
+                {"$set": {
+                    "role": normalized_user.get("role"),
+                    "admin_role_key": normalized_user.get("admin_role_key"),
+                    "designation": normalized_user.get("designation"),
+                    "updated_at": datetime.now(timezone.utc),
+                }},
+            )
+            user_dict = normalized_user
 
         return _user_token_response(user_dict)
     
@@ -1118,7 +1137,7 @@ async def _enrich_host_assignment_profile(user: dict, db: AsyncIOMotorDatabase) 
         return user
 
     assignment_ids = [
-        value for value in (user.get("broker_id"), user.get("rm_id"), user.get("branch_manager_id"))
+        value for value in (user.get("broker_id"), user.get("rm_id"), user.get("branch_manager_id"), user.get("telecaller_id"))
         if value
     ]
     assignees = {}
@@ -1142,10 +1161,10 @@ async def _enrich_host_assignment_profile(user: dict, db: AsyncIOMotorDatabase) 
     primary_type = "Broker" if user.get("broker_id") else ("RM" if user.get("rm_id") else "Broker / RM")
     primary_code = user.get("lg_code") or display_code(primary_row, primary_id)
 
-    secondary_id = user.get("rm_id") if user.get("broker_id") else user.get("branch_manager_id")
+    secondary_id = user.get("telecaller_id") or (user.get("rm_id") if user.get("broker_id") else user.get("branch_manager_id"))
     secondary_row = assignees.get(secondary_id) if secondary_id else None
-    secondary_type = "RM" if user.get("broker_id") else ("Branch Manager" if user.get("branch_manager_id") else "Branch Manager / RM")
-    secondary_code = user.get("employee_code") or display_code(secondary_row, secondary_id)
+    secondary_type = "Telecaller" if user.get("telecaller_id") else ("RM" if user.get("broker_id") else ("Branch Manager" if user.get("branch_manager_id") else "Telecaller"))
+    secondary_code = user.get("telecaller_code") or display_code(secondary_row, secondary_id)
 
     user.update({
         "assignment_primary_type": primary_type,
@@ -1155,7 +1174,7 @@ async def _enrich_host_assignment_profile(user: dict, db: AsyncIOMotorDatabase) 
         "assignment_secondary_type": secondary_type,
         "assignment_secondary_id": secondary_id or "",
         "assignment_secondary_code": secondary_code or "Not assigned",
-        "assignment_secondary_name": display_name(secondary_row),
+        "assignment_secondary_name": user.get("telecaller_name") or display_name(secondary_row),
     })
     return user
 

@@ -8,6 +8,7 @@ const tabs = [
   ['all', 'All Properties'],
   ['broker_verification', 'Broker Verification'],
   ['rm_verification', 'RM Verification'],
+  ['telecaller_verification', 'Telecaller Verification'],
   ['branch_manager_review', 'Branch Manager Review'],
   ['admin_review', 'Admin Review'],
   ['live', 'Live'],
@@ -227,7 +228,7 @@ const PropertyOperations = () => {
         showNotice({ title: 'Export Empty', description: 'No properties available in this view to export.', eyebrow: 'Action Aborted' });
         return;
       }
-      const headers = ['Property Title', 'Property ID', 'Host Name', 'Owner ID', 'Property Type', 'Category', 'City', 'Broker Name', 'Broker Code', 'RM Name', 'RM Code', 'Branch Manager Name', 'Branch Manager Code', 'Status', 'Workflow Stage', 'Subscription', 'Price Per Night'];
+      const headers = ['Property Title', 'Property ID', 'Host Name', 'Owner ID', 'Property Type', 'Category', 'City', 'Broker Name', 'Broker Code', 'RM Name', 'RM Code', 'Telecaller Name', 'Telecaller Code', 'Telecaller Stage', 'Branch Manager Name', 'Branch Manager Code', 'Status', 'Workflow Stage', 'Subscription', 'Price Per Night'];
       
       const escapeCsv = (val) => {
         if (val === undefined || val === null) return '""';
@@ -247,6 +248,9 @@ const PropertyOperations = () => {
         property.broker_code || property.assigned_broker || '',
         property.rm_name || '',
         property.rm_code || property.assigned_rm || '',
+        property.telecaller_name || '',
+        property.telecaller_code || property.telecaller_id || '',
+        property.telecaller_stage || property.telecaller_result || '',
         property.branch_manager_name || '',
         property.branch_manager_code || property.assigned_branch_manager || '',
         property.status || '',
@@ -321,12 +325,12 @@ const PropertyOperations = () => {
         <div className="grid gap-4">
         <Panel className="overflow-hidden">
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[1200px] text-left text-sm">
-              <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400"><tr>{['Property', 'Host Name', 'Property Type', 'Category', 'City', 'Broker Name', 'RM Name', 'Branch Manager', 'Stage', 'Subscription', 'Price', 'Actions'].map((h) => <th key={h} className="px-4 py-4 font-bold">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{property.subscription_status || '-'}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td></tr>)}</tbody>
+            <table className="w-full min-w-[1360px] text-left text-sm">
+              <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400"><tr>{['Property', 'Host Name', 'Property Type', 'Category', 'City', 'Broker Name', 'RM Name', 'Telecaller', 'Branch Manager', 'Stage', 'Subscription', 'Price', 'Actions'].map((h) => <th key={h} className="px-4 py-4 font-bold">{h}</th>)}</tr></thead>
+              <tbody className="divide-y divide-slate-100">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.telecaller_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.telecaller_code || property.telecaller_id || '-'}</p><p className="mt-1 text-[10px] font-black uppercase tracking-wide text-[#2f6df6]">{String(property.telecaller_stage || property.telecaller_result || '-').replace(/_/g, ' ')}</p></td><td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{property.subscription_status || '-'}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td></tr>)}</tbody>
             </table>
           </div>
-          <div className="grid gap-3 p-4 md:hidden">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <Panel key={property.property_id} className="p-4"><div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="text-xs text-slate-500">{property.property_id}</p></div><StatusBadge value={property.status} /></div><p className="mt-2 text-sm">{property.city} / {property.category}</p><div className="mt-3 grid gap-1 text-xs text-slate-500"><p><b>Broker:</b> {property.broker_name || '-'} / {property.broker_code || '-'}</p><p><b>RM:</b> {property.rm_name || '-'} / {property.rm_code || '-'}</p><p><b>BM:</b> {property.branch_manager_name || '-'} / {property.branch_manager_code || '-'}</p></div><div className="mt-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></div></Panel>)}</div>
+          <div className="grid gap-3 p-4 md:hidden">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <Panel key={property.property_id} className="p-4"><div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="text-xs text-slate-500">{property.property_id}</p></div><StatusBadge value={property.status} /></div><p className="mt-2 text-sm">{property.city} / {property.category}</p><div className="mt-3 grid gap-1 text-xs text-slate-500"><p><b>Broker:</b> {property.broker_name || '-'} / {property.broker_code || '-'}</p><p><b>RM:</b> {property.rm_name || '-'} / {property.rm_code || '-'}</p><p><b>Telecaller:</b> {property.telecaller_name || '-'} / {property.telecaller_code || property.telecaller_id || '-'}</p><p><b>Telecaller Stage:</b> {String(property.telecaller_stage || property.telecaller_result || '-').replace(/_/g, ' ')}</p><p><b>BM:</b> {property.branch_manager_name || '-'} / {property.branch_manager_code || '-'}</p></div><div className="mt-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></div></Panel>)}</div>
         </Panel>
         <Pagination currentPage={page} totalItems={state.properties.length} itemsPerPage={10} onPageChange={setPage} />
         </div>
@@ -461,10 +465,11 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal,
   const isLive = property.status === 'live';
   const images = property.images || [];
   const stages = review.stages || {};
-  const brokerStages = Object.entries(stages).filter(([stage]) => stage.includes('broker'));
-  const rmStages = Object.entries(stages).filter(([stage]) => stage.includes('rm'));
+  const telecallerStages = Object.entries(stages).filter(([stage]) => stage.includes('telecaller'));
   const branchManagerStages = Object.entries(stages).filter(([stage]) => stage.includes('branch_manager'));
-  const otherStages = Object.entries(stages).filter(([stage]) => !stage.includes('broker') && !stage.includes('rm') && !stage.includes('branch_manager'));
+  const adminReviewStages = new Set(['admin_review', 'BM_APPROVED', 'ADMIN_REVIEW_PENDING', 'ADMIN_CORRECTION_REQUIRED', 'ADMIN_ON_HOLD']);
+  const currentWorkflowStage = property.workflow_stage || property.telecaller_stage || property.verification?.current_stage || property.verification?.workflow_status || property.verification?.verification_stage || '';
+  const canPublishLive = !isLive && (review.summary?.ready_for_live || adminReviewStages.has(currentWorkflowStage));
   const heroImage = images[0];
   return (
     <div className="space-y-5">
@@ -522,6 +527,8 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal,
                 ['Base Price', formatMoney(property.price_per_night || 0)],
                 ['Broker', `${property.broker_name || '-'} / ${property.broker_code || property.assigned_broker || '-'}`],
                 ['RM', `${property.rm_name || '-'} / ${property.rm_code || property.assigned_rm || '-'}`],
+                ['Telecaller', `${property.telecaller_name || '-'} / ${property.telecaller_code || property.telecaller_id || '-'}`],
+                ['Telecaller Stage', String(property.telecaller_stage || property.telecaller_result || '-').replace(/_/g, ' ')],
                 ['Branch Manager', `${property.branch_manager_name || '-'} / ${property.branch_manager_code || property.assigned_branch_manager || '-'}`],
                 ['Subscription', property.subscription_status || '-'],
                 ['Verification Status', cleanLabel(property.status)],
@@ -616,25 +623,17 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal,
           </div>
           <div className="grid gap-4 xl:grid-cols-2">
             <Panel className="p-4">
-              <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">Broker Checklist</p>
-              <div className="space-y-2">{brokerStages.length ? brokerStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No broker checklist found.</p>}</div>
-            </Panel>
-            <Panel className="p-4">
-              <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">RM Checklist</p>
-              <div className="space-y-2">{rmStages.length ? rmStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No RM checklist found.</p>}</div>
+              <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">Telecaller Verification</p>
+              <div className="space-y-2">{telecallerStages.length ? telecallerStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No telecaller verification found.</p>}</div>
             </Panel>
             <Panel className="p-4">
               <p className="mb-3 text-xs font-black uppercase tracking-widest text-slate-500">Branch Manager Review</p>
               <div className="space-y-2">{branchManagerStages.length ? branchManagerStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No Branch Manager review found.</p>}</div>
             </Panel>
           </div>
-          <div className="space-y-2">
-            <p className="text-xs font-black uppercase text-slate-500">Other Workflow Stages</p>
-            {otherStages.length ? otherStages.map(([stage, data]) => <StageRow key={stage} stage={stage} data={data} onStage={onStage} />) : <p className="rounded-2xl bg-slate-50 p-3 text-sm font-semibold text-slate-500">No additional workflow stages.</p>}
-          </div>
           <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
             <button onClick={() => onFinal('under_review')} className="rounded-lg bg-slate-100 px-3 py-2 text-xs font-black">Move Under Review</button>
-            <button onClick={() => onFinal('live')} disabled={isLive || !review.summary?.ready_for_live} className="rounded-xl bg-[#2f6df6] px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{isLive ? 'Already Live' : 'Publish Live'}</button>
+            <button onClick={() => onFinal('live')} disabled={!canPublishLive} className="rounded-xl bg-[#2f6df6] px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">{isLive ? 'Already Live' : 'Publish Live'}</button>
             <button onClick={() => onFinal('rejected')} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-black text-white">Reject</button>
           </div>
           <div className="space-y-2">

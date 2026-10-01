@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI, loadRazorpaySdk, cmsAPI } from '../services/api';
 import ReactMarkdown from 'react-markdown';
-import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User, Star, Percent } from 'lucide-react';
+import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User, Star, Percent, Video } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 import LegalLinks from '../components/LegalLinks';
 import HostSupportWidget from '../components/HostSupportWidget';
@@ -55,6 +55,45 @@ By entering the Host's legal details and drawing/signing electronically, the Hos
 const isLegacyAgreementText = (text = '') =>
   text.includes('1. Listing Permission') && text.includes('4. Host Standards');
 
+const AUTHORIZATION_LETTER_FORMAT_URL = '/documents/xspace360-authorization-letter-format.pdf';
+const AUTHORIZATION_LETTER_EMAIL_TO = 'admin@x-space360.in';
+
+const buildAuthorizationLetterEmailUrl = (user = {}) => {
+  const formatUrl = `${window.location.origin}${AUTHORIZATION_LETTER_FORMAT_URL}`;
+  const hostName = user?.full_name || user?.name || 'Host';
+  const hostEmail = user?.email || '';
+  const hostMobile = user?.mobile || user?.phone || '';
+  const subject = 'X-Space360 Authorization Letter Verification';
+  const body = [
+    'To,',
+    'X-Space360 Verification Team',
+    '',
+    'Subject: Property Owner / Host Authorization Declaration Verification',
+    '',
+    'I am submitting the authorization declaration for X-Space360 host onboarding and verification.',
+    '',
+    'Host Details:',
+    `Host Name: ${hostName}`,
+    `Registered Email: ${hostEmail}`,
+    `Registered Mobile: ${hostMobile}`,
+    '',
+    'Declaration Content:',
+    'This Property Owner / Host Declaration confirms that the property owner or authorized representative has permitted the host/property manager to submit the property details, KYC, ownership/supporting documents, authorization letter, NOC and related verification information to X-Space360 / Golden Rich Financial & Real Estate Solutions Private Limited for host onboarding, property verification and listing review.',
+    '',
+    'The submitted information and documents are true and valid to the best of my knowledge. X-Space360 is authorized to verify the submitted details through internal review, phone/video verification, document checks and lawful third-party verification channels as required for onboarding.',
+    '',
+    'Authorization Letter Format:',
+    formatUrl,
+    '',
+    'Please verify this authorization request and update the host verification record.',
+    '',
+    'Regards,',
+    hostName
+  ].join('\n');
+
+  return `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(AUTHORIZATION_LETTER_EMAIL_TO)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+};
+
 const HostDashboard = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
@@ -90,12 +129,17 @@ const HostDashboard = () => {
   const [cancelledCheque, setCancelledCheque] = useState('');
   const [societyNoc, setSocietyNoc] = useState('');
   const [shopAct, setShopAct] = useState('');
+  const [authorizationLetter, setAuthorizationLetter] = useState('');
+  const [ownerNoc, setOwnerNoc] = useState('');
+  const [representativeKyc, setRepresentativeKyc] = useState('');
   const [gstCertificate, setGstCertificate] = useState('');
   const [gstNumber, setGstNumber] = useState('');
   const [panNumber, setPanNumber] = useState('');
+  const [hostAssociationType, setHostAssociationType] = useState('property_owner');
   const [agreementOwnerName, setAgreementOwnerName] = useState('');
   const [agreementOwnerAddress, setAgreementOwnerAddress] = useState('');
   const [agreementSignature, setAgreementSignature] = useState('');
+  const [agreementExpanded, setAgreementExpanded] = useState(false);
   const [verificationConsent, setVerificationConsent] = useState(false);
   
     // File uploading states
@@ -105,20 +149,24 @@ const HostDashboard = () => {
     cheque: false,
     gst: false,
     society: false,
-    shop_act: false
+    shop_act: false,
+    authorization_letter: false,
+    owner_noc: false,
+    representative_kyc: false
   });
 
   const profilePrimaryAssignmentType = user?.assignment_primary_type || (user?.broker_id ? 'Broker' : user?.rm_id ? 'RM' : 'Broker / RM');
-  const profileSecondaryAssignmentType = user?.assignment_secondary_type || (user?.broker_id ? 'RM' : user?.branch_manager_id ? 'Branch Manager' : 'Branch Manager / RM');
+  const profileSecondaryAssignmentType = user?.assignment_secondary_type || (user?.telecaller_id ? 'Telecaller' : user?.broker_id ? 'RM' : user?.branch_manager_id ? 'Branch Manager' : 'Telecaller');
   const profilePrimaryAssignmentId = user?.assignment_primary_id || user?.broker_id || user?.rm_id || '';
   const profileSecondaryAssignmentId = user?.assignment_secondary_id || (user?.broker_id ? user?.rm_id : user?.branch_manager_id) || '';
   const profilePrimaryAssignmentCode = user?.assignment_primary_code || user?.lg_code || user?.broker_lg_code || user?.rm_code || profilePrimaryAssignmentId || 'Not assigned';
-  const profileSecondaryAssignmentCode = user?.assignment_secondary_code || user?.employee_code || user?.branch_manager_code || profileSecondaryAssignmentId || 'Not assigned';
+  const profileSecondaryAssignmentCode = user?.assignment_secondary_code || user?.telecaller_code || user?.employee_code || user?.branch_manager_code || profileSecondaryAssignmentId || 'Not assigned';
   const profilePrimaryAssignmentName = user?.assignment_primary_name || '';
   const profileSecondaryAssignmentName = user?.assignment_secondary_name || '';
 
   // Canvas drawing states
   const canvasRef = useRef(null);
+  const hasAutoOpenedVerification = useRef(false);
   const [isDrawing, setIsDrawing] = useState(false);
   const [penWidth, setPenWidth] = useState(3);
   const [canvasHeight, setCanvasHeight] = useState(120);
@@ -126,6 +174,16 @@ const HostDashboard = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (loading || !user || hasAutoOpenedVerification.current) return;
+    const needsVerification = !user?.kyc_status || user.kyc_status === 'unverified' || user.kyc_status === 'rejected';
+    const hasAnyDraftDocument = Array.isArray(user?.kyc_documents) && user.kyc_documents.some(doc => doc?.document_url || doc?.text_value || doc?.value);
+    if (needsVerification && !hasAnyDraftDocument) {
+      hasAutoOpenedVerification.current = true;
+      setShowVerificationModal(true);
+    }
+  }, [loading, user]);
 
   // Pre-populate KYC fields from user data if they exist
   useEffect(() => {
@@ -135,6 +193,9 @@ const HostDashboard = () => {
       const cheque = user.kyc_documents.find(d => d.document_type === 'cancelled_cheque')?.document_url || '';
             const society = user.kyc_documents.find(d => d.document_type === 'society_noc')?.document_url || '';
       const shopActVal = user.kyc_documents.find(d => d.document_type === 'shop_act')?.document_url || '';
+      const authorization = user.kyc_documents.find(d => d.document_type === 'authorization_letter')?.document_url || '';
+      const noc = user.kyc_documents.find(d => d.document_type === 'owner_noc')?.document_url || '';
+      const repKyc = user.kyc_documents.find(d => d.document_type === 'representative_kyc')?.document_url || '';
       const gstCert = user.kyc_documents.find(d => d.document_type === 'gst_certificate')?.document_url || '';
       const gstDoc = user.kyc_documents.find(d => d.document_type === 'gst_number') || {};
       const gstNum = gstDoc.text_value || gstDoc.value || gstDoc.document_url || user.gst_number || '';
@@ -146,9 +207,13 @@ const HostDashboard = () => {
       setCancelledCheque(cheque);
       setSocietyNoc(society);
       setShopAct(shopActVal);
+      setAuthorizationLetter(authorization);
+      setOwnerNoc(noc);
+      setRepresentativeKyc(repKyc);
       setGstCertificate(gstCert);
       setGstNumber(gstNum);
       setPanNumber(panNum);
+      setHostAssociationType(user.host_association_type || 'property_owner');
       
       if (user.agreement_owner_name) setAgreementOwnerName(user.agreement_owner_name);
       if (user.agreement_owner_address) setAgreementOwnerAddress(user.agreement_owner_address);
@@ -213,11 +278,15 @@ const HostDashboard = () => {
       else if (docType === 'gst') setGstCertificate(res.url);
       else if (docType === 'society') setSocietyNoc(res.url);
       else if (docType === 'shop_act') setShopAct(res.url);
+      else if (docType === 'authorization_letter') setAuthorizationLetter(res.url);
+      else if (docType === 'owner_noc') setOwnerNoc(res.url);
+      else if (docType === 'representative_kyc') setRepresentativeKyc(res.url);
       
       // Save draft immediately to backend database
       await accountAPI.saveDraftDocument({
         document_type: docType,
-        document_url: res.url
+        document_url: res.url,
+        host_association_type: hostAssociationType
       });
       
       // Refresh user context to sync state
@@ -248,6 +317,51 @@ const HostDashboard = () => {
   const getPanSubmitValue = () => isPanNotApplicable(panNumber) ? 'NOT_APPLICABLE' : normalizePanNumber(panNumber);
   const isValidPanNumber = (value) => isPanNotApplicable(value) || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(normalizePanNumber(value));
 
+  const associationOptions = [
+    { value: 'property_owner', label: 'Property Owner' },
+    { value: 'property_manager', label: 'Property Manager' },
+    { value: 'authorized_representative', label: 'Authorized Representative' },
+  ];
+
+  const getDocumentValue = (docType) => {
+    if (docType === 'aadhar') return aadharCard;
+    if (docType === 'property') return propertyProof;
+    if (docType === 'cheque') return cancelledCheque;
+    if (docType === 'shop_act') return shopAct;
+    if (docType === 'authorization_letter') return authorizationLetter;
+    if (docType === 'owner_noc') return ownerNoc;
+    if (docType === 'representative_kyc') return representativeKyc;
+    if (docType === 'society') return societyNoc;
+    if (docType === 'gst') return gstCertificate;
+    return '';
+  };
+
+  const getAssociationDocuments = () => {
+    const commonAccept = 'image/*,application/pdf';
+    if (hostAssociationType === 'property_manager') {
+      return [
+        { number: '01', title: 'Property Proof', description: 'Electricity Bill / Property Tax Receipt', docType: 'property', required: true, icon: Building2, accept: commonAccept },
+        { number: '02', title: 'Authorization Letter', description: 'Signed authorization from owner.', docType: 'authorization_letter', required: true, icon: FileText, accept: commonAccept, showDownload: true, showEmail: true },
+        { number: '03', title: 'Host / Representative KYC', description: 'PAN, Aadhaar, passport, or representative identity proof.', docType: 'representative_kyc', required: true, icon: User, accept: commonAccept },
+        { number: '04', title: 'Cancelled Cheque / Bank Proof', description: 'Cancelled cheque, passbook, or bank statement.', docType: 'cheque', required: true, icon: Landmark, accept: commonAccept },
+      ];
+    }
+    if (hostAssociationType === 'authorized_representative') {
+      return [
+        { number: '01', title: 'Property Proof', description: 'Electricity Bill / Property Tax Receipt', docType: 'property', required: true, icon: Building2, accept: commonAccept },
+        { number: '02', title: 'Authorization Letter', description: 'Signed authorization from owner.', docType: 'authorization_letter', required: true, icon: FileText, accept: commonAccept, showDownload: true, showEmail: true },
+        { number: '03', title: 'Owner NOC', description: 'Owner consent or NOC for representative onboarding.', docType: 'owner_noc', required: true, icon: Users, accept: commonAccept },
+        { number: '04', title: 'Host / Representative KYC', description: 'PAN, Aadhaar, passport, or representative identity proof.', docType: 'representative_kyc', required: true, icon: User, accept: commonAccept },
+      ];
+    }
+    return [
+      { number: '01', title: 'PAN / Host KYC', description: 'PAN, Aadhaar, passport, or owner KYC proof.', docType: 'aadhar', required: true, icon: User, accept: commonAccept },
+      { number: '02', title: 'Property Proof', description: 'Electricity Bill / Property Tax Receipt', docType: 'property', required: true, icon: Building2, accept: commonAccept },
+      { number: '03', title: 'Shop Act / Udyam Certificate', description: 'If applicable.', docType: 'shop_act', required: false, icon: FileText, accept: commonAccept },
+      { number: '04', title: 'Cancelled Cheque / Bank Proof', description: 'Cancelled cheque, passbook, or bank statement.', docType: 'cheque', required: true, icon: Landmark, accept: commonAccept },
+    ];
+  };
+
   const savePanNumberDraft = async (nextValue = panNumber) => {
     const value = isPanNotApplicable(nextValue) ? 'NOT_APPLICABLE' : normalizePanNumber(nextValue);
     if (!value) return;
@@ -275,6 +389,9 @@ const HostDashboard = () => {
     else if (docType === 'gst') setGstCertificate('');
     else if (docType === 'society') setSocietyNoc('');
     else if (docType === 'shop_act') setShopAct('');
+    else if (docType === 'authorization_letter') setAuthorizationLetter('');
+    else if (docType === 'owner_noc') setOwnerNoc('');
+    else if (docType === 'representative_kyc') setRepresentativeKyc('');
   };
 
   const handleRejectedDocRemove = async (docType) => {
@@ -413,15 +530,17 @@ const HostDashboard = () => {
 
   const handleVerifySubmit = async (e) => {
     e.preventDefault();
-    if (!aadharCard || !propertyProof || !cancelledCheque || !shopAct || !agreementSignature) {
-      alert('Please upload all mandatory documents and sign the agreement.');
+    const requiredDocuments = getAssociationDocuments().filter(doc => doc.required);
+    const missingDocuments = requiredDocuments.filter(doc => !getDocumentValue(doc.docType));
+    if (missingDocuments.length || !agreementSignature) {
+      alert(`Please upload all mandatory documents and sign the agreement.${missingDocuments.length ? ` Missing: ${missingDocuments.map(doc => doc.title).join(', ')}` : ''}`);
       return;
     }
-    if (!panNumber.trim()) {
+    if (hostAssociationType === 'property_owner' && !panNumber.trim()) {
       alert('Please enter PAN Card Number or select Not Applicable.');
       return;
     }
-    if (!isValidPanNumber(panNumber)) {
+    if (hostAssociationType === 'property_owner' && !isValidPanNumber(panNumber)) {
       alert('Invalid PAN Card Number. Use format ABCDE1234F or select Not Applicable.');
       return;
     }
@@ -437,17 +556,23 @@ const HostDashboard = () => {
           text_value: gstNumber.trim()
         });
       }
-      await accountAPI.saveDraftDocument({
-        document_type: 'pan_number',
-        text_value: getPanSubmitValue()
-      });
-            await accountAPI.submitHostVerification({
+      if (hostAssociationType === 'property_owner') {
+        await accountAPI.saveDraftDocument({
+          document_type: 'pan_number',
+          text_value: getPanSubmitValue()
+        });
+      }
+      await accountAPI.submitHostVerification({
+        host_association_type: hostAssociationType,
         aadhar_card: aadharCard,
-        pan_number: getPanSubmitValue(),
+        pan_number: hostAssociationType === 'property_owner' ? getPanSubmitValue() : 'NOT_APPLICABLE',
         property_proof: propertyProof,
         cancelled_cheque: cancelledCheque,
         society_noc: societyNoc || null,
         shop_act: shopAct || null,
+        authorization_letter: authorizationLetter || null,
+        owner_noc: ownerNoc || null,
+        representative_kyc: representativeKyc || null,
         gst_certificate: gstCertificate || null,
         gst_number: gstNumber || null,
         agreement_owner_name: agreementOwnerName,
@@ -482,7 +607,7 @@ const HostDashboard = () => {
   };
 
   const renderDocCard = (number, title, description, docType, value, accept, isMandatory, Icon) => {
-        const backendDocTypeMap = {
+    const backendDocTypeMap = {
       aadhar: 'aadhar_card',
       property: 'property_proof',
       cheque: 'cancelled_cheque',
@@ -496,25 +621,43 @@ const HostDashboard = () => {
     const canReplaceDocument = docStatus === 'rejected' || user?.kyc_status === 'rejected';
 
     return (
-            <div className="bg-white rounded-none border border-sand-200 p-6 shadow-sm flex flex-col justify-between min-h-[18rem] h-auto relative overflow-hidden transition-all duration-300 hover:shadow-premium hover:border-terracotta group">
-        {/* Corner Badge */}
-        <div className="absolute top-0 left-0 bg-terracotta text-white font-black text-[10px] tracking-wider px-3.5 py-1.5 rounded-none shadow-sm">
-          {number}
+      <div className="bg-white rounded-xl border border-sand-200 p-4 shadow-sm flex flex-col min-h-[13rem] h-auto relative overflow-hidden transition-all duration-300 hover:shadow-premium hover:border-terracotta group">
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-lg bg-sand-50 border border-sand-200 flex items-center justify-center flex-shrink-0 group-hover:bg-terracotta/5 transition-colors">
+              <Icon className="w-4 h-4 text-terracotta" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-[9px] font-black text-terracotta uppercase tracking-widest mb-1">Document {number}</div>
+              <h4 className="text-sm font-black text-charcoal leading-tight">
+                {title} {isMandatory && <span className="text-red-500 font-bold ml-1">*</span>}
+              </h4>
+              <p className="text-[11px] text-charcoal-muted font-bold leading-normal mt-1">{description}</p>
+            </div>
+          </div>
+          
+          {value ? (
+            docStatus === 'approved' ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-green-50 text-green-600 border border-green-200 rounded-full text-[9px] font-black uppercase tracking-wider flex-shrink-0">
+                <Check className="w-3 h-3" />
+                Verified
+              </span>
+            ) : docStatus === 'rejected' ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full text-[9px] font-black uppercase tracking-wider flex-shrink-0">
+                <AlertCircle className="w-3 h-3" />
+                Rejected
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-wider flex-shrink-0">
+                <Clock className="w-3 h-3" />
+                Pending
+              </span>
+            )
+          ) : null}
         </div>
 
-        <div className="flex flex-col items-center flex-1 w-full">
-          {/* Square Icon Container */}
-          <div className="w-14 h-14 rounded-none bg-sand-50 border border-sand-200 flex items-center justify-center mb-4 group-hover:bg-terracotta/5 transition-colors">
-            <Icon className="w-6 h-6 text-terracotta" />
-          </div>
-
-          <h4 className="text-sm font-black text-charcoal text-center mb-1">
-            {title} {isMandatory && <span className="text-red-500 font-bold ml-1">*</span>}
-          </h4>
-          <p className="text-[11px] text-charcoal-muted font-bold text-center mb-4 leading-normal max-w-[90%]">{description}</p>
-          
-          {/* Optional GST Input for GST Card */}
-                              {docType === 'gst' && (
+        <div className="flex flex-col flex-1 w-full">
+          {docType === 'gst' && (
             <div className="w-full mb-3 text-left">
               <label className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">
                 GST Number (Optional)
@@ -530,44 +673,43 @@ const HostDashboard = () => {
             </div>
           )}
 
-          {/* Status badge */}
-          {value ? (
-            <div className="flex flex-col items-center mb-4 space-y-1">
-              {docStatus === 'approved' ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-green-50 text-green-600 border border-green-200 rounded-full text-[9px] font-black uppercase tracking-wider">
-                  <Check className="w-3 h-3" />
-                  Verified
-                </span>
-              ) : docStatus === 'rejected' ? (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-full text-[9px] font-black uppercase tracking-wider">
-                  <AlertCircle className="w-3 h-3" />
-                  Rejected
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-wider animate-pulse">
-                  <Clock className="w-3 h-3" />
-                  Pending
-                </span>
-              )}
-              {docStatus === 'rejected' && rejectionReason && (
-                <span className="text-[9px] text-red-600 font-bold max-w-[220px] text-center leading-relaxed" title={rejectionReason}>
-                  {rejectionReason}
-                </span>
-              )}
+          {docStatus === 'rejected' && rejectionReason && (
+            <span className="mb-3 text-[10px] text-red-600 font-bold leading-relaxed" title={rejectionReason}>
+              {rejectionReason}
+            </span>
+          )}
+          {docType === 'authorization_letter' && (
+            <div className="mb-3 flex flex-wrap gap-2">
+              <a
+                href={AUTHORIZATION_LETTER_FORMAT_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                download="X-Space360_Property_Owner_Host_Declaration.pdf"
+                className="inline-flex items-center justify-center px-3 py-2 border border-sand-200 bg-white text-[9px] font-black uppercase tracking-wider text-charcoal hover:border-terracotta transition-colors rounded-lg"
+              >
+                Download Format
+              </a>
+              <a
+                href={buildAuthorizationLetterEmailUrl(user)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-3 py-2 border border-blue-200 bg-blue-50 text-[9px] font-black uppercase tracking-wider text-blue-700 hover:border-blue-500 transition-colors rounded-lg"
+              >
+                Email Verification
+              </a>
             </div>
-          ) : null}
+          )}
         </div>
 
-                  {/* Bottom Upload/Attachment area */}
         {value ? (
           <>
-            <div className="bg-sand-50/80 border border-sand-200 rounded-none p-3 flex items-center justify-between mt-auto w-full">
+            <div className="bg-sand-50/80 border border-sand-200 rounded-lg p-3 flex items-center justify-between mt-auto w-full">
             <div className="flex items-center space-x-2 min-w-0">
-              <div className="bg-red-50 text-red-500 p-2 rounded-none flex-shrink-0">
-                <FileText className="w-5 h-5" />
+              <div className="bg-white text-terracotta p-2 rounded-lg border border-sand-200 flex-shrink-0">
+                <FileText className="w-4 h-4" />
               </div>
               <div className="text-left min-w-0">
-                <p className="text-[11px] font-black text-charcoal truncate max-w-[100px] sm:max-w-[120px]" title={getFileName(value)}>
+                <p className="text-[11px] font-black text-charcoal truncate max-w-[130px] sm:max-w-[180px]" title={getFileName(value)}>
                   {getFileName(value)}
                 </p>
                 <p className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider">
@@ -580,13 +722,13 @@ const HostDashboard = () => {
                 href={getImageUrl(value)}
                 target="_blank"
                 rel="noreferrer"
-                className="p-1.5 hover:bg-sand-200 rounded-none text-charcoal-muted hover:text-terracotta transition-colors"
+                className="p-1.5 hover:bg-sand-200 rounded-lg text-charcoal-muted hover:text-terracotta transition-colors"
                 title="View File"
               >
                 <Eye className="w-4 h-4" />
               </a>
               
-              <label className="p-1.5 hover:bg-sand-200 rounded-none text-charcoal-muted hover:text-terracotta cursor-pointer transition-colors" title="Change File">
+              <label className="p-1.5 hover:bg-sand-200 rounded-lg text-charcoal-muted hover:text-terracotta cursor-pointer transition-colors" title="Change File">
                 <Upload className="w-4 h-4" />
                 <input
                   type="file"
@@ -625,8 +767,8 @@ const HostDashboard = () => {
             )}
           </>
         ) : (
-          <label className="w-full border-2 border-dashed border-sand-300 hover:border-terracotta bg-white hover:bg-sand-50/50 rounded-none p-5 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 min-h-[7rem] mt-auto">
-            <div className="bg-sand-50 p-2.5 rounded-none mb-2 flex items-center justify-center">
+          <label className="w-full border-2 border-dashed border-sand-300 hover:border-terracotta bg-white hover:bg-sand-50/50 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all duration-300 min-h-[6rem] mt-auto">
+            <div className="bg-sand-50 p-2.5 rounded-lg mb-2 flex items-center justify-center">
               {uploadingDocs[docType] ? (
                 <div className="w-4 h-4 border-2 border-terracotta border-t-transparent rounded-full animate-spin" />
               ) : (
@@ -650,6 +792,41 @@ const HostDashboard = () => {
         )}
       </div>
     );
+  };
+
+  const renderVerificationDocRow = (doc) => {
+    const value = getDocumentValue(doc.docType);
+    return renderDocCard(doc.number, doc.title, doc.description, doc.docType, value, doc.accept, doc.required, doc.icon);
+  };
+
+  const agreementMarkdownComponents = {
+    h2: () => null,
+    h3: ({ children }) => (
+      <h3 className="mt-5 mb-2 flex items-start gap-2 text-[13px] font-black uppercase tracking-[0.12em] text-charcoal">
+        <span className="mt-1 h-2 w-2 rounded-full bg-terracotta flex-shrink-0" />
+        <span>{children}</span>
+      </h3>
+    ),
+    p: ({ children }) => (
+      <p className="mb-3 text-[13px] font-medium leading-7 text-charcoal-light">
+        {children}
+      </p>
+    ),
+    strong: ({ children }) => (
+      <strong className="font-black text-charcoal">{children}</strong>
+    ),
+    ul: ({ children }) => (
+      <ul className="my-3 space-y-2 pl-0">{children}</ul>
+    ),
+    ol: ({ children }) => (
+      <ol className="my-3 space-y-2 pl-0">{children}</ol>
+    ),
+    li: ({ children }) => (
+      <li className="flex gap-2 text-[13px] font-medium leading-7 text-charcoal-light">
+        <span className="mt-3 h-1.5 w-1.5 rounded-full bg-terracotta/70 flex-shrink-0" />
+        <span>{children}</span>
+      </li>
+    ),
   };
 
   const unusedSubsCount = subscriptions.filter(s => !s.property_id && s.status === 'active').length;
@@ -798,6 +975,37 @@ const HostDashboard = () => {
 
   const isLive = (property) => {
     return property.status === 'live';
+  };
+
+  const formatScheduleDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(`${dateStr}T00:00:00`).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const videoVerificationInfo = (property) => {
+    const info = property?.video_verification || {};
+    const caseInfo = property?.verification_case || {};
+    const verificationId = info.verification_id || caseInfo.verification_id;
+    const scheduledDate = info.scheduled_date || caseInfo.scheduled_date;
+    const startTime = info.scheduled_start_time || caseInfo.scheduled_start_time;
+    const endTime = info.scheduled_end_time || caseInfo.scheduled_end_time;
+    if (!verificationId || !scheduledDate || !startTime) return null;
+    return {
+      verificationId,
+      scheduledDate,
+      startTime,
+      endTime,
+      notes: info.notes || caseInfo.schedule_notes || '',
+      joinPath: `/host/properties/${property.property_id}/video-verification?verificationId=${verificationId}`,
+    };
   };
 
   const stats = [
@@ -1133,6 +1341,35 @@ const HostDashboard = () => {
                           )}
 
                           {(() => {
+                            const videoInfo = videoVerificationInfo(property);
+                            if (!videoInfo) return null;
+                            return (
+                              <div className="mb-3 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2.5">
+                                <div className="flex items-start gap-2">
+                                  <div className="mt-0.5 rounded-lg bg-white p-1.5 text-blue-600">
+                                    <Video className="h-4 w-4" />
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-blue-700">Video Verification Scheduled</p>
+                                    <p className="mt-1 text-xs font-black text-slate-950">
+                                      {formatScheduleDate(videoInfo.scheduledDate)} at {videoInfo.startTime}{videoInfo.endTime ? ` - ${videoInfo.endTime}` : ''}
+                                    </p>
+                                    {videoInfo.notes && <p className="mt-1 truncate text-[10px] font-semibold text-slate-500">{videoInfo.notes}</p>}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => navigate(videoInfo.joinPath)}
+                                  className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-[9px] font-black uppercase tracking-widest text-white hover:bg-blue-700"
+                                >
+                                  <Video className="h-3.5 w-3.5" />
+                                  Join Video Verification
+                                </button>
+                              </div>
+                            );
+                          })()}
+
+                          {(() => {
                             const propSub = subscriptions.find(s => s.property_id === property.property_id);
                             if (!propSub) return null;
                             const plan = plans.find(p => p.plan_id === propSub.plan_id);
@@ -1372,68 +1609,80 @@ const HostDashboard = () => {
         )}
 
         {showVerificationModal && (
-          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-6">
-            <div className="bg-stone rounded-[3rem] max-w-5xl w-full shadow-elevated animate-scale-up max-h-[90vh] flex flex-col overflow-hidden">
-              <div className="flex justify-between items-start p-10 pb-4 border-b border-gray-100 flex-shrink-0">
+          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[100] flex items-center justify-center p-4 md:p-6">
+            <div className="bg-stone rounded-3xl max-w-4xl w-full shadow-elevated animate-scale-up max-h-[90vh] flex flex-col overflow-hidden">
+              <div className="flex justify-between items-start p-6 md:p-8 pb-4 border-b border-gray-100 flex-shrink-0">
                 <div>
-                  <h3 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight mb-2 flex items-center">
-                    <FileText className="w-8 h-8 text-terracotta mr-3" />
+                  <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal mb-2 flex items-center">
+                    <FileText className="w-7 h-7 text-terracotta mr-3" />
                     Document Verification
                   </h3>
-                  <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Please upload your documents to verify your host profile</p>
+                  <p className="text-charcoal-muted font-bold text-xs uppercase tracking-widest">Upload mandatory host documents for telecaller verification</p>
                 </div>
                 <button onClick={() => setShowVerificationModal(false)} className="w-10 h-10 rounded-full bg-white flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors border border-gray-100">
                   <Plus className="w-6 h-6 rotate-45" />
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-10 pb-10 pt-6 custom-modal-scrollbar">
+              <div className="flex-1 overflow-y-auto px-4 md:px-8 pb-8 pt-5 custom-modal-scrollbar">
                 <form onSubmit={handleVerifySubmit} className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {renderDocCard("01", "KYC - Owner", "Aadhaar Card / PAN Card / Passport of owner", "aadhar", aadharCard, "image/*,application/pdf", true, User)}
-                  <div className="bg-white rounded-none border border-sand-200 p-6 shadow-sm flex flex-col justify-between min-h-[18rem] h-auto relative overflow-hidden transition-all duration-300 hover:shadow-premium hover:border-terracotta group">
-                    <div className="absolute top-0 left-0 bg-terracotta text-white font-black text-[10px] tracking-wider px-3.5 py-1.5 rounded-none shadow-sm">02</div>
-                    <div className="flex flex-col items-center flex-1 w-full">
-                      <div className="w-14 h-14 rounded-none bg-sand-50 border border-sand-200 flex items-center justify-center mb-4 group-hover:bg-terracotta/5 transition-colors">
-                        <FileText className="w-6 h-6 text-terracotta" />
-                      </div>
-                      <h4 className="text-sm font-black text-charcoal text-center mb-1">PAN Card Number <span className="text-red-500 font-bold ml-1">*</span></h4>
-                      <p className="text-[11px] text-charcoal-muted font-bold text-center mb-4 leading-normal max-w-[90%]">Enter owner PAN number or mark Not Applicable.</p>
-                      <div className="w-full text-left">
-                        <label className="text-[8px] font-black text-charcoal-muted uppercase tracking-widest block mb-1">PAN Number</label>
+                  <div className="bg-white border border-sand-200 rounded-2xl p-4 md:p-5">
+                    <h4 className="text-base font-black text-charcoal">How are you associated with the property?</h4>
+                    <p className="text-xs text-charcoal-muted font-bold mt-1">Required documents will change based on your selection.</p>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4">
+                      {associationOptions.map(option => (
+                        <label
+                          key={option.value}
+                          className={`flex items-center gap-3 rounded-xl border px-4 py-4 cursor-pointer transition-all ${hostAssociationType === option.value ? 'border-blue-500 bg-blue-50' : 'border-sand-200 bg-white hover:border-terracotta'}`}
+                        >
+                          <input
+                            type="radio"
+                            name="host_association_type"
+                            value={option.value}
+                            checked={hostAssociationType === option.value}
+                            onChange={(e) => setHostAssociationType(e.target.value)}
+                            className="w-4 h-4 accent-blue-600"
+                          />
+                          <span className="text-sm font-black text-charcoal">{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {hostAssociationType === 'property_owner' && (
+                    <div className="bg-white rounded-xl border border-sand-200 p-4 shadow-sm">
+                      <label className="text-[9px] font-black text-charcoal-muted uppercase tracking-widest block mb-2">PAN Card Number <span className="text-red-500">*</span></label>
+                      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
                         <input
                           type="text"
                           placeholder="ABCDE1234F"
-                          value={panNumber === 'NOT_APPLICABLE' ? 'Not Applicable' : panNumber}
+                          value={panNumber === 'NOT_APPLICABLE' ? '' : panNumber}
                           onChange={(e) => setPanNumber(e.target.value.toUpperCase())}
                           onBlur={() => savePanNumberDraft()}
-                          className={`w-full px-3 py-2 border rounded-none text-[11px] outline-none font-semibold ${panNumber && !isValidPanNumber(panNumber) ? 'border-red-300 focus:border-red-500' : 'border-sand-200 focus:border-terracotta'}`}
+                          disabled={panNumber === 'NOT_APPLICABLE'}
+                          className={`w-full px-4 py-3 border rounded-xl text-sm outline-none font-semibold ${panNumber && !isValidPanNumber(panNumber) ? 'border-red-300 focus:border-red-500' : 'border-sand-200 focus:border-terracotta'}`}
                         />
-                        {panNumber && !isValidPanNumber(panNumber) && (
-                          <p className="mt-1 text-[9px] font-bold text-red-600">Use ABCDE1234F format or select Not Applicable.</p>
-                        )}
+                        <label className="inline-flex items-center justify-center gap-2 rounded-xl border border-sand-200 bg-sand-50 px-4 py-3 text-sm font-black text-charcoal cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={panNumber === 'NOT_APPLICABLE'}
+                            onChange={(e) => e.target.checked ? markPanNotApplicable() : setPanNumber('')}
+                            className="w-4 h-4"
+                          />
+                          Not Applicable
+                        </label>
                       </div>
-                      <button
-                        type="button"
-                        onClick={markPanNotApplicable}
-                        className="mt-3 w-full border border-sand-200 bg-sand-50 px-3 py-2 text-[9px] font-black uppercase tracking-wider text-charcoal hover:border-terracotta transition-colors"
-                      >
-                        Not Applicable
-                      </button>
-                      {panNumber && isValidPanNumber(panNumber) && (
-                        <span className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 bg-amber-50 text-amber-600 border border-amber-200 rounded-full text-[9px] font-black uppercase tracking-wider">
-                          <Clock className="w-3 h-3" />
-                          Pending
-                        </span>
+                      {panNumber && panNumber !== 'NOT_APPLICABLE' && !isValidPanNumber(panNumber) && (
+                        <p className="mt-2 text-[10px] font-bold text-red-600">Use ABCDE1234F format or select Not Applicable.</p>
                       )}
                     </div>
+                  )}
+
+                  <div className="grid grid-cols-1 gap-3">
+                    {getAssociationDocuments().map(doc => (
+                      <React.Fragment key={doc.docType}>{renderVerificationDocRow(doc)}</React.Fragment>
+                    ))}
                   </div>
-                  {renderDocCard("03", "Property Documents", "Property Tax / Water Tax / MSEB Bill", "property", propertyProof, "image/*,application/pdf", true, Building2)}
-                  {renderDocCard("04", "Society NOC", "If not a society, then Neighbour NOC", "society", societyNoc, "image/*,application/pdf", false, Users)}
-                  {renderDocCard("05", "Cancelled Cheque / Bank Statement", "Latest cancelled cheque or bank statement", "cheque", cancelledCheque, "image/*,application/pdf", true, Landmark)}
-                  {renderDocCard("06", "Shop Act License", "Shop Act registration copy of the business", "shop_act", shopAct, "image/*,application/pdf", true, FileText)}
-                  {renderDocCard("07", "GST Document", "GST Certificate / GST Registration (Optional)", "gst", gstCertificate, "image/*,application/pdf", false, Briefcase)}
-                </div>
                 <div style={{ display: 'none' }}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    {/* Card 1: Aadhar Card */}
@@ -1593,7 +1842,10 @@ const HostDashboard = () => {
                       ) : null}
                       <button
                         type="button"
-                        onClick={() => setShowAgreementModal(true)}
+                        onClick={() => {
+                          setAgreementExpanded(false);
+                          setShowAgreementModal(true);
+                        }}
                         className="px-6 py-3 bg-charcoal hover:bg-terracotta text-white rounded-xl text-[10px] font-bold tracking-tight uppercase tracking-widest transition-all shadow-subtle flex items-center"
                       >
                         <Edit3 className="w-4 h-4 mr-2" />
@@ -1631,7 +1883,7 @@ const HostDashboard = () => {
                   </button>
                   <button
                     type="submit"
-                    disabled={verificationSubmitting || !aadharCard || !propertyProof || !cancelledCheque || !shopAct || !agreementSignature || !verificationConsent}
+                    disabled={verificationSubmitting || getAssociationDocuments().filter(doc => doc.required).some(doc => !getDocumentValue(doc.docType)) || !agreementSignature || !verificationConsent || (hostAssociationType === 'property_owner' && (!panNumber.trim() || !isValidPanNumber(panNumber)))}
                     className="flex-1 btn-premium py-4 shadow-premium disabled:opacity-40"
                   >
                     {verificationSubmitting ? 'Submitting...' : 'Submit for Verification'}
@@ -1645,159 +1897,209 @@ const HostDashboard = () => {
 
         {/* Agreement Signing Modal */}
         {showAgreementModal && (
-          <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-md z-[110] flex items-center justify-center p-6 overflow-y-auto">
-            <div className="bg-white rounded-[3rem] p-10 max-w-2xl w-full shadow-elevated animate-scale-up max-h-[90vh] overflow-y-auto">
-              <div className="flex justify-between items-start mb-6">
+          <div className="fixed inset-0 bg-charcoal/65 backdrop-blur-md z-[110] flex items-center justify-center p-4 md:p-6 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-4xl w-full shadow-elevated animate-scale-up max-h-[92vh] overflow-hidden flex flex-col border border-white/80">
+              <div className="flex justify-between items-start gap-4 px-6 md:px-8 py-6 border-b border-gray-100 bg-white flex-shrink-0">
                 <div>
-                  <h3 className="text-2xl font-bold tracking-tight text-charcoal tracking-tight mb-1">X-Space360 Agreement</h3>
-                  <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Review and draw signature below</span>
+                  <span className="text-[10px] font-black text-terracotta uppercase tracking-[0.22em]">Host Verification Agreement</span>
+                  <h3 className="text-2xl md:text-3xl font-black tracking-tight text-charcoal mt-1">X-Space360 Host Agreement</h3>
+                  <p className="text-xs md:text-sm font-semibold text-charcoal-muted mt-2">Review the agreement, confirm owner details, and sign electronically.</p>
                 </div>
-                <button onClick={() => setShowAgreementModal(false)} className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors">
+                <button onClick={() => { setAgreementExpanded(false); setShowAgreementModal(false); }} className="w-10 h-10 rounded-full bg-stone flex items-center justify-center text-charcoal-muted hover:text-terracotta transition-colors border border-gray-100 flex-shrink-0">
                   <Plus className="w-5 h-5 rotate-45" />
                 </button>
               </div>
 
-              <div className="bg-stone p-6 rounded-2xl h-56 overflow-y-auto mb-6 border border-gray-100 select-text">
-                <p className="font-black mb-4 text-sm text-charcoal uppercase tracking-[0.16em]">{agreementContent.title || DEFAULT_HOST_AGREEMENT_TITLE}</p>
-                <div className="prose prose-sm max-w-none text-charcoal-light prose-headings:text-charcoal prose-headings:font-black prose-h2:text-base prose-h2:uppercase prose-h2:tracking-[0.12em] prose-h3:text-sm prose-h3:uppercase prose-h3:tracking-[0.1em] prose-p:leading-7 prose-p:text-justify prose-li:leading-7 prose-strong:text-charcoal">
-                <ReactMarkdown>{agreementContent.agreement_text || ''}</ReactMarkdown>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5 font-bold">Owner Name (Full Name)</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Full Name as per Pancard"
-                      value={agreementOwnerName}
-                      onChange={(e) => setAgreementOwnerName(e.target.value)}
-                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5 font-bold">Owner Address</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Enter Address as per Adharcard"
-                      value={agreementOwnerAddress}
-                      onChange={(e) => setAgreementOwnerAddress(e.target.value)}
-                      className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 outline-none focus:border-terracotta font-semibold text-charcoal text-sm"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
-                    <div className="flex items-center space-x-4 flex-wrap gap-2">
-                      <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest font-bold">Draw Signature</label>
-                      
-                      {/* Pen thickness control */}
-                      <div className="flex items-center space-x-2 bg-gray-50/80 px-2 py-0.5 rounded-lg border border-gray-100">
-                        <span className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Pen:</span>
-                        {[2, 3, 5, 8].map((size) => (
-                          <button
-                            key={size}
-                            type="button"
-                            onClick={() => setPenWidth(size)}
-                            className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                              penWidth === size 
-                                ? 'bg-charcoal text-white font-bold' 
-                                : 'text-charcoal-light hover:bg-sand-200'
-                            }`}
-                          >
-                            <span 
-                              className="rounded-full bg-current" 
-                              style={{ 
-                                width: `${size === 2 ? 3 : size === 3 ? 5 : size === 5 ? 7 : 10}px`, 
-                                height: `${size === 2 ? 3 : size === 3 ? 5 : size === 5 ? 7 : 10}px` 
-                              }} 
-                            />
-                          </button>
-                        ))}
+              <div className="flex-1 overflow-y-auto px-6 md:px-8 py-6 bg-stone/40">
+                <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-6">
+                  <section className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                    <div className="px-5 py-4 border-b border-gray-100 bg-gradient-to-r from-sand-50 to-white">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-black text-sm text-charcoal uppercase tracking-[0.16em]">{agreementContent.title || DEFAULT_HOST_AGREEMENT_TITLE}</p>
+                          <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest mt-1">Legal terms and platform verification consent</p>
+                        </div>
+                        <span className="rounded-full border border-terracotta/20 bg-terracotta/5 px-3 py-1 text-[9px] font-black uppercase tracking-widest text-terracotta flex-shrink-0">
+                          Review
+                        </span>
                       </div>
-
-                      {/* Box height control */}
-                      <div className="flex items-center space-x-1.5 bg-gray-50/80 px-2 py-0.5 rounded-lg border border-gray-100">
-                        <span className="text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Box:</span>
+                    </div>
+                    <div className="px-5 py-5 select-text">
+                      <div className={`relative rounded-2xl bg-white transition-all duration-300 ${agreementExpanded ? 'max-h-[30rem] overflow-y-auto pr-3 custom-modal-scrollbar' : 'max-h-[30rem] overflow-hidden'}`}>
+                        <ReactMarkdown components={agreementMarkdownComponents}>{agreementContent.agreement_text || ''}</ReactMarkdown>
+                        {!agreementExpanded && (
+                          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-white via-white/95 to-white/0" />
+                        )}
+                      </div>
+                      <div className="mt-4 flex items-center justify-between gap-3 border-t border-gray-100 pt-4">
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-charcoal-muted">
+                          {agreementExpanded ? 'Full agreement visible' : 'Continue reading the remaining agreement clauses'}
+                        </p>
                         <button
                           type="button"
-                          onClick={() => {
-                            if (window.confirm('Changing the box size will clear your current signature. Do you want to proceed?')) {
-                              setCanvasHeight(120);
-                              clearCanvas();
-                            }
-                          }}
-                          className={`px-1.5 py-0.5 rounded text-[8px] font-bold tracking-tight uppercase tracking-wider transition-all ${
-                            canvasHeight === 120 
-                              ? 'bg-charcoal text-white' 
-                              : 'text-charcoal-light hover:bg-sand-200'
-                          }`}
+                          onClick={() => setAgreementExpanded(prev => !prev)}
+                          className="rounded-xl border border-terracotta/30 bg-terracotta/5 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-terracotta hover:bg-terracotta hover:text-white transition-colors flex-shrink-0"
                         >
-                          Standard
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (window.confirm('Changing the box size will clear your current signature. Do you want to proceed?')) {
-                              setCanvasHeight(200);
-                              clearCanvas();
-                            }
-                          }}
-                          className={`px-1.5 py-0.5 rounded text-[8px] font-bold tracking-tight uppercase tracking-wider transition-all ${
-                            canvasHeight === 200 
-                              ? 'bg-charcoal text-white' 
-                              : 'text-charcoal-light hover:bg-sand-200'
-                          }`}
-                        >
-                          Large
+                          {agreementExpanded ? 'Show Less' : 'Read More'}
                         </button>
                       </div>
                     </div>
-                    
-                    <button
-                      type="button"
-                      onClick={clearCanvas}
-                      className="text-[10px] font-bold tracking-tight text-terracotta hover:underline uppercase tracking-wider"
-                    >
-                      Clear Signature
-                    </button>
-                  </div>
-                  <div className="border-2 border-dashed border-gray-200 rounded-2xl bg-stone/50 p-2 overflow-hidden flex justify-center items-center">
-                    <canvas
-                      ref={canvasRef}
-                      width={500}
-                      height={canvasHeight === 120 ? 150 : 250}
-                      onMouseDown={startDrawing}
-                      onMouseMove={draw}
-                      onMouseUp={stopDrawing}
-                      onMouseLeave={stopDrawing}
-                      onTouchStart={startDrawing}
-                      onTouchMove={draw}
-                      onTouchEnd={stopDrawing}
-                      className="w-full bg-white rounded-xl shadow-inner border border-gray-100 cursor-crosshair touch-none transition-all duration-300"
-                      style={{ height: `${canvasHeight}px` }}
-                    />
-                  </div>
-                  <span className="text-[9px] text-charcoal-muted block mt-1">Draw your signature inside the box using mouse, trackpad, or touch screen. You can adjust the pen stroke and drawing box size using the controls above.</span>
+                  </section>
+
+                  <section className="space-y-5">
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                      <div className="flex items-start gap-3 mb-4">
+                        <div className="w-10 h-10 rounded-xl bg-terracotta/10 text-terracotta flex items-center justify-center flex-shrink-0">
+                          <User className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-base font-black text-charcoal">Owner Details</h4>
+                          <p className="text-xs font-semibold text-charcoal-muted mt-1">Use details matching the submitted KYC documents.</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Owner Name (Full Name)</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Full name as per PAN card"
+                            value={agreementOwnerName}
+                            onChange={(e) => setAgreementOwnerName(e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-terracotta font-semibold text-charcoal text-sm bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black text-charcoal-muted uppercase tracking-widest block mb-1.5">Owner Address</label>
+                          <textarea
+                            required
+                            rows={3}
+                            placeholder="Address as per KYC document"
+                            value={agreementOwnerAddress}
+                            onChange={(e) => setAgreementOwnerAddress(e.target.value)}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-3 outline-none focus:border-terracotta font-semibold text-charcoal text-sm bg-white resize-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div>
+                          <h4 className="text-base font-black text-charcoal">Electronic Signature</h4>
+                          <p className="text-xs font-semibold text-charcoal-muted mt-1">Draw inside the box using mouse, trackpad, or touch.</p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearCanvas}
+                          className="text-[10px] font-black text-terracotta hover:underline uppercase tracking-wider flex-shrink-0"
+                        >
+                          Clear
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <div className="flex items-center gap-2 bg-stone px-3 py-2 rounded-xl border border-gray-100">
+                          <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Pen</span>
+                          {[2, 3, 5, 8].map((size) => (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => setPenWidth(size)}
+                              className={`w-6 h-6 rounded-full flex items-center justify-center transition-all ${
+                                penWidth === size
+                                  ? 'bg-charcoal text-white'
+                                  : 'text-charcoal-light hover:bg-sand-200'
+                              }`}
+                              aria-label={`Set pen width ${size}`}
+                            >
+                              <span
+                                className="rounded-full bg-current"
+                                style={{
+                                  width: `${size === 2 ? 3 : size === 3 ? 5 : size === 5 ? 7 : 10}px`,
+                                  height: `${size === 2 ? 3 : size === 3 ? 5 : size === 5 ? 7 : 10}px`
+                                }}
+                              />
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-1.5 bg-stone px-3 py-2 rounded-xl border border-gray-100">
+                          <span className="text-[9px] font-black text-charcoal-muted uppercase tracking-wider">Box</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (canvasHeight === 120) return;
+                              if (window.confirm('Changing the box size will clear your current signature. Do you want to proceed?')) {
+                                setCanvasHeight(120);
+                                clearCanvas();
+                              }
+                            }}
+                            className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
+                              canvasHeight === 120
+                                ? 'bg-charcoal text-white'
+                                : 'text-charcoal-light hover:bg-sand-200'
+                            }`}
+                          >
+                            Standard
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (canvasHeight === 200) return;
+                              if (window.confirm('Changing the box size will clear your current signature. Do you want to proceed?')) {
+                                setCanvasHeight(200);
+                                clearCanvas();
+                              }
+                            }}
+                            className={`px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all ${
+                              canvasHeight === 200
+                                ? 'bg-charcoal text-white'
+                                : 'text-charcoal-light hover:bg-sand-200'
+                            }`}
+                          >
+                            Large
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="border border-dashed border-gray-300 rounded-2xl bg-sand-50 p-2 overflow-hidden flex justify-center items-center">
+                        <canvas
+                          ref={canvasRef}
+                          width={520}
+                          height={canvasHeight === 120 ? 150 : 250}
+                          onMouseDown={startDrawing}
+                          onMouseMove={draw}
+                          onMouseUp={stopDrawing}
+                          onMouseLeave={stopDrawing}
+                          onTouchStart={startDrawing}
+                          onTouchMove={draw}
+                          onTouchEnd={stopDrawing}
+                          className="w-full bg-white rounded-xl shadow-inner border border-gray-100 cursor-crosshair touch-none transition-all duration-300"
+                          style={{ height: `${canvasHeight}px` }}
+                        />
+                      </div>
+                      <p className="text-[10px] text-charcoal-muted font-semibold mt-2 leading-relaxed">Your electronic signature will be stored with the host verification record.</p>
+                    </div>
+                  </section>
                 </div>
               </div>
 
-              <div className="mt-8 pt-6 border-t border-gray-100 flex space-x-4">
+              <div className="px-6 md:px-8 py-5 border-t border-gray-100 bg-white flex flex-col-reverse sm:flex-row gap-3 sm:justify-end flex-shrink-0">
                 <button
                   type="button"
-                  onClick={() => setShowAgreementModal(false)}
-                  className="flex-1 py-4 text-charcoal-muted hover:text-charcoal font-bold tracking-tight text-xs uppercase tracking-widest transition-colors"
+                  onClick={() => {
+                    setAgreementExpanded(false);
+                    setShowAgreementModal(false);
+                  }}
+                  className="sm:min-w-[140px] px-6 py-3 rounded-2xl border border-gray-200 bg-white text-charcoal-muted hover:text-charcoal hover:border-charcoal font-black text-xs uppercase tracking-widest transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="button"
                   onClick={handleSaveSignatureAndAgreement}
-                  className="flex-1 btn-premium py-4 shadow-premium"
+                  className="sm:min-w-[240px] rounded-2xl bg-charcoal px-6 py-3 text-white font-black text-xs uppercase tracking-widest shadow-premium hover:bg-terracotta transition-colors"
                 >
                   I Agree & Save Signature
                 </button>
@@ -1897,7 +2199,7 @@ const HostDashboard = () => {
                     </div>
                     <div className="rounded-2xl border border-gray-100 bg-stone/60 p-4">
                       <div className="mb-2 flex items-center justify-between gap-2">
-                        <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">Branch Manager / RM Code</span>
+                        <span className="text-[8px] font-bold text-charcoal-muted uppercase tracking-wider block">{profileSecondaryAssignmentType} Code</span>
                         <span className="rounded-full border border-amber-100 bg-amber-50 px-2 py-0.5 text-[8px] font-black uppercase tracking-widest text-amber-700">
                           {profileSecondaryAssignmentType}
                         </span>
