@@ -521,6 +521,40 @@ def _source_code_from_user(user: dict) -> str:
     return user.get("lg_code") or user.get("employee_code") or user.get("uid") or user.get("user_id") or ""
 
 
+def _source_role_from_owner(owner: dict, fallback: str = "") -> str:
+    raw = " ".join(
+        str(value or "")
+        for value in (
+            owner.get("admin_role_key"),
+            owner.get("designation"),
+            owner.get("role"),
+            fallback,
+        )
+    ).lower()
+    if "broker" in raw:
+        return "BROKER"
+    if raw == "rm" or "relationship_manager" in raw or "relationship manager" in raw:
+        return "RM"
+    if "telecaller" in raw or "tele caller" in raw:
+        return "TELECALLER"
+    if "host" in raw or "self" in raw:
+        return "SELF_HOST"
+    return str(fallback or "SELF_HOST").upper()
+
+
+def _source_role_from_code(code: str, fallback: str = "") -> str:
+    value = str(code or "").upper()
+    if not value:
+        return str(fallback or "SELF_HOST").upper()
+    if "TEL" in value or "TELECALL" in value:
+        return "TELECALLER"
+    if re.search(r"(^|[-_])RM($|[-_0-9])", value):
+        return "RM"
+    if re.search(r"(^|[-_])BR($|[-_0-9])", value) or "BROKER" in value:
+        return "BROKER"
+    return str(fallback or "SELF_HOST").upper()
+
+
 async def _registration_source_owner(db, host: dict | None = None, prop: dict | None = None, case: dict | None = None) -> dict:
     host = host or {}
     prop = prop or {}
@@ -537,6 +571,10 @@ async def _registration_source_owner(db, host: dict | None = None, prop: dict | 
         case.get("lg_owner_id")
         or prop.get("lg_owner_id")
         or host.get("lg_owner_id")
+        or host.get("assignment_primary_id")
+        or prop.get("assignment_primary_id")
+        or host.get("broker_id")
+        or host.get("rm_id")
         or host.get("created_by_user_id")
         or prop.get("created_by_user_id")
         or ""
@@ -544,37 +582,69 @@ async def _registration_source_owner(db, host: dict | None = None, prop: dict | 
     code = (
         case.get("lg_code")
         or prop.get("lg_code")
+        or host.get("assignment_primary_code")
+        or prop.get("assignment_primary_code")
         or host.get("lg_code")
         or host.get("broker_lg_code")
         or host.get("rm_code")
-        or host.get("employee_code")
         or ""
     )
     owner = None
-    lookup_terms = [str(value).strip() for value in [owner_id, code] if str(value or "").strip()]
-    if lookup_terms:
+    code_terms = [str(value).strip() for value in [code] if str(value or "").strip()]
+    id_terms = [str(value).strip() for value in [owner_id] if str(value or "").strip()]
+    if code_terms:
+        code_regex = [{"$regex": f"^{re.escape(term)}$", "$options": "i"} for term in code_terms]
         owner = await db.users.find_one(
             {
                 "$or": [
-                    {"user_id": {"$in": lookup_terms}},
-                    {"uid": {"$in": lookup_terms}},
-                    {"employee_code": {"$in": lookup_terms}},
-                    {"lg_code": {"$in": lookup_terms}},
+                    {"uid": {"$in": code_terms}},
+                    {"employee_code": {"$in": code_terms}},
+                    {"lg_code": {"$in": code_terms}},
+                    {"user_id": {"$in": code_terms}},
+                    *({"uid": regex} for regex in code_regex),
+                    *({"employee_code": regex} for regex in code_regex),
+                    *({"lg_code": regex} for regex in code_regex),
+                    *({"user_id": regex} for regex in code_regex),
                 ]
             },
             {"_id": 0, "password_hash": 0},
         )
+    if not owner and id_terms:
+        id_regex = [{"$regex": f"^{re.escape(term)}$", "$options": "i"} for term in id_terms]
+        owner = await db.users.find_one(
+            {
+                "$or": [
+                    {"user_id": {"$in": id_terms}},
+                    {"uid": {"$in": id_terms}},
+                    *({"user_id": regex} for regex in id_regex),
+                    *({"uid": regex} for regex in id_regex),
+                ]
+            },
+            {"_id": 0, "password_hash": 0},
+        )
+    if owner:
+        source = _source_role_from_owner(owner, source)
+    else:
+        source = _source_role_from_code(code, source)
     if not owner and source in {"SELF_HOST", "HOST"}:
         owner = host
     owner = owner or {}
     display_name = owner.get("full_name") or owner.get("name") or owner.get("display_name") or ""
     display_code = _source_code_from_user(owner) or code or owner_id
-    if not display_name and source in {"SELF_HOST", "HOST"}:
-        display_name = "Self registration"
+    owner_role = (
+        owner.get("admin_role_key")
+        or owner.get("designation")
+        or owner.get("role")
+        or host.get("lg_owner_role")
+        or host.get("created_by_role")
+        or source
+    )
+    if source in {"SELF_HOST", "HOST"}:
+        display_name = "Host Self"
     return {
         "source": source,
         "owner_id": owner.get("user_id") or owner_id,
-        "owner_role": owner.get("role") or host.get("lg_owner_role") or host.get("created_by_role") or source,
+        "owner_role": owner_role,
         "owner_name": display_name,
         "owner_code": display_code,
     }
@@ -675,8 +745,7 @@ async def _assign_unassigned_telecaller_cases(db):
     ]
     rows = await db.property_verifications.find({"current_stage": {"$in": active_stages}}, {"_id": 0}).sort("created_at", 1).to_list(length=500)
     for case in rows:
-        policy = case.get("telecaller_assignment_policy") or {}
-        if case.get("telecaller_id") and policy.get("policy") == "registration_order_batch":
+        if case.get("telecaller_id"):
             continue
         prop = await db.properties.find_one(_active_property_filter({"property_id": case.get("property_id")}), {"_id": 0}) or {}
         host = await db.users.find_one(_active_host_filter({"user_id": case.get("host_id") or case.get("owner_id") or prop.get("owner_id")}), {"_id": 0, "password_hash": 0}) or {}
@@ -820,14 +889,26 @@ async def _assign_host_document_telecallers(db):
         host_id = host.get("user_id")
         if not host_id:
             continue
-        telecaller_index = (index // TELECALLER_ASSIGNMENT_BATCH_SIZE) % len(telecallers)
-        telecaller = telecallers[telecaller_index]
+        existing_assignment = host.get("verification_telecaller_id") or host.get("document_telecaller_id")
+        if existing_assignment:
+            continue
+        host_created_at = _parse_case_dt(host.get("created_at") or host.get("timestamp") or host.get("createdAt"))
+        eligible_telecallers = []
+        for telecaller_profile in telecallers:
+            telecaller_created_at = _parse_case_dt(
+                telecaller_profile.get("created_at")
+                or telecaller_profile.get("timestamp")
+                or telecaller_profile.get("createdAt")
+            )
+            if not host_created_at or not telecaller_created_at or telecaller_created_at <= host_created_at:
+                eligible_telecallers.append(telecaller_profile)
+        if not eligible_telecallers:
+            eligible_telecallers = telecallers[:1]
+        telecaller_index = (index // TELECALLER_ASSIGNMENT_BATCH_SIZE) % len(eligible_telecallers)
+        telecaller = eligible_telecallers[telecaller_index]
         telecaller_id = telecaller.get("user_id")
         meta = _batch_assignment_meta(telecaller, index + 1, telecaller_index)
-        existing_assignment = host.get("verification_telecaller_id") or host.get("document_telecaller_id")
-        existing_policy = host.get("document_telecaller_assignment_policy") or {}
-        if existing_assignment == telecaller_id and existing_policy.get("sequence") == meta.get("sequence"):
-            continue
+        meta["eligible_telecaller_count"] = len(eligible_telecallers)
         await _sync_host_telecaller_assignment(db, host, telecaller_id, meta)
 
 def _kyc_required_documents(host: dict) -> list[dict]:
