@@ -17,6 +17,11 @@ class AdjustmentType(str, Enum):
     DECREASE = "DECREASE"
 
 
+class AdjustmentUnit(str, Enum):
+    PERCENTAGE = "PERCENTAGE"
+    FLAT = "FLAT"
+
+
 class PropertyPriceRule(BaseModel):
     rule_id: str = Field(default_factory=lambda: f"pr_{uuid4().hex[:14]}")
     property_id: str
@@ -27,7 +32,9 @@ class PropertyPriceRule(BaseModel):
     days_of_week: List[int] = []
     day_adjustments: dict[str, float] = {}
     adjustment_type: AdjustmentType = AdjustmentType.INCREASE
-    adjustment_percentage: float = Field(ge=0, le=1000)
+    adjustment_unit: AdjustmentUnit = AdjustmentUnit.PERCENTAGE
+    adjustment_percentage: float = Field(default=0.0, ge=0, le=1000)
+    adjustment_amount: float = Field(default=0.0, ge=0)
     is_active: bool = True
     priority: int = 100
     created_by: Optional[str] = None
@@ -63,7 +70,9 @@ class PriceRuleCreate(BaseModel):
     days_of_week: List[int] = []
     day_adjustments: dict[str, float] = {}
     adjustment_type: AdjustmentType = AdjustmentType.INCREASE
-    adjustment_percentage: float = Field(ge=0, le=1000)
+    adjustment_unit: AdjustmentUnit = AdjustmentUnit.PERCENTAGE
+    adjustment_percentage: float = Field(default=0.0, ge=0, le=1000)
+    adjustment_amount: float = Field(default=0.0, ge=0)
     is_active: bool = True
 
 
@@ -74,7 +83,9 @@ class PriceRuleUpdate(BaseModel):
     days_of_week: Optional[List[int]] = None
     day_adjustments: Optional[dict[str, float]] = None
     adjustment_type: Optional[AdjustmentType] = None
+    adjustment_unit: Optional[AdjustmentUnit] = None
     adjustment_percentage: Optional[float] = Field(default=None, ge=0, le=1000)
+    adjustment_amount: Optional[float] = Field(default=None, ge=0)
     is_active: Optional[bool] = None
 
 
@@ -87,4 +98,5 @@ class BulkPriceUpdate(BaseModel):
 class PriceCalculationRequest(BaseModel):
     property_id: str
     date: str
+
 

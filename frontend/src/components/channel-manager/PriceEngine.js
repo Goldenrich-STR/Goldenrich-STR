@@ -27,7 +27,10 @@ const priceUnit = (property) => property.category === 'residential'
         ? 'month'
         : 'day';
 const percent = (value) => `${Number(value || 0) >= 0 ? '+' : ''}${Number(value || 0)}%`;
-const defaultRule = () => ({ rule_type: 'SEASON', rule_name: '', start_date: '', end_date: '', adjustment_type: 'INCREASE', adjustment_percentage: 20, saturday: 20, sunday: 15, scope: 'selected' });
+const ruleBadge = (rule) => (rule?.adjustment_unit === 'FLAT' || rule?.value_type === 'FLAT')
+  ? `${rule?.adjustment_type === 'DECREASE' ? '-' : '+'}₹${Number(rule?.adjustment_amount || rule?.adjustment_value || 0).toLocaleString('en-IN')}`
+  : percent(rule?.adjustment_percentage);
+const defaultRule = () => ({ rule_type: 'SEASON', rule_name: '', start_date: '', end_date: '', adjustment_type: 'INCREASE', adjustment_unit: 'PERCENTAGE', adjustment_percentage: 20, adjustment_amount: 2000, saturday: 20, sunday: 15, scope: 'selected' });
 
 const Card = ({ children, className = '' }) => <section className={`rounded-md border border-slate-200 bg-white ${className}`}>{children}</section>;
 const Button = ({ children, secondary = false, danger = false, className = '', ...props }) => <button {...props} className={`inline-flex h-10 items-center justify-center gap-2 rounded-md px-4 text-sm font-bold transition disabled:cursor-not-allowed disabled:opacity-50 ${danger ? 'border border-red-200 bg-white text-red-700 hover:bg-red-50' : secondary ? 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50' : 'bg-blue-700 text-white hover:bg-blue-800'} ${className}`}>{children}</button>;
@@ -60,8 +63,23 @@ function RuleModal({ mode, property, properties, selectedIds, onClose, onSaved, 
     return properties;
   }, [form.scope, properties, property, selectedIds]);
   const average = targets.length ? targets.reduce((sum, item) => sum + item.base_price, 0) / targets.length : 0;
-  const adjustment = form.adjustment_type === 'DECREASE' ? -Number(form.adjustment_percentage || 0) : Number(form.adjustment_percentage || 0);
-  const preview = average * (1 + adjustment / 100);
+
+  const isFlat = form.adjustment_unit === 'FLAT';
+  const adjustmentVal = isFlat ? Number(form.adjustment_amount || 0) : Number(form.adjustment_percentage || 0);
+  const signedAdjustment = form.adjustment_type === 'DECREASE' ? -adjustmentVal : adjustmentVal;
+  
+  const preview = form.rule_type === 'WEEKEND'
+    ? average * (1 + Number(form.saturday || 0) / 100)
+    : isFlat
+      ? Math.max(0, average + signedAdjustment)
+      : average * (1 + signedAdjustment / 100);
+
+  const previewBadge = form.rule_type === 'WEEKEND'
+    ? `Sat +${form.saturday}%`
+    : isFlat
+      ? `${signedAdjustment >= 0 ? '+' : ''}₹${Math.abs(signedAdjustment).toLocaleString('en-IN')}`
+      : percent(signedAdjustment);
+
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async () => {
     if (!targets.length) return notify('Choose at least one eligible property.', 'error');
@@ -69,14 +87,17 @@ function RuleModal({ mode, property, properties, selectedIds, onClose, onSaved, 
     setSaving(true);
     try {
       await priceEngineApi.createRule({
-        property_ids: targets.map((item) => item.property_id), rule_type: form.rule_type,
+        property_ids: targets.map((item) => item.property_id),
+        rule_type: form.rule_type,
         rule_name: form.rule_type === 'WEEKEND' ? 'Weekend Pricing' : form.rule_name.trim(),
         start_date: form.rule_type === 'WEEKEND' ? null : form.start_date,
         end_date: form.rule_type === 'WEEKEND' ? null : form.end_date,
         days_of_week: form.rule_type === 'WEEKEND' ? [5, 6] : [],
         day_adjustments: form.rule_type === 'WEEKEND' ? { 5: Number(form.saturday || 0), 6: Number(form.sunday || 0) } : {},
         adjustment_type: form.adjustment_type,
+        adjustment_unit: form.rule_type === 'WEEKEND' ? 'PERCENTAGE' : (form.adjustment_unit || 'PERCENTAGE'),
         adjustment_percentage: form.rule_type === 'WEEKEND' ? Number(form.saturday || 0) : Number(form.adjustment_percentage || 0),
+        adjustment_amount: form.rule_type === 'WEEKEND' ? 0 : Number(form.adjustment_amount || 0),
         is_active: true,
       });
       notify(`${form.rule_type === 'WEEKEND' ? 'Weekend pricing' : form.rule_name} saved for ${targets.length} ${targets.length === 1 ? 'property' : 'properties'}.`);
@@ -90,9 +111,55 @@ function RuleModal({ mode, property, properties, selectedIds, onClose, onSaved, 
     <div className="space-y-5 p-5">
       {mode === 'builder' && <div><p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">1. What do you want to change?</p><div className="grid grid-cols-3 gap-2">{[['WEEKEND','Weekend'],['SEASON','Season / Festival'],['CUSTOM','Custom Dates']].map(([key,label]) => <button key={key} className={`rounded-md border p-3 text-xs font-bold ${form.rule_type === key ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200'}`} onClick={() => set('rule_type', key)}>{label}</button>)}</div></div>}
       {form.rule_type !== 'WEEKEND' && <><label className="block"><span className="mb-1.5 block text-xs font-black uppercase text-slate-500">Season or event name</span><input className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm outline-none focus:border-blue-600" placeholder="e.g. Diwali" value={form.rule_name} onChange={(event) => set('rule_name', event.target.value)} /></label><div className="grid gap-3 sm:grid-cols-2"><label><span className="mb-1.5 block text-xs font-black uppercase text-slate-500">Start Date</span><input className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm" type="date" value={form.start_date} onChange={(event) => set('start_date', event.target.value)} /></label><label><span className="mb-1.5 block text-xs font-black uppercase text-slate-500">End Date</span><input className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm" min={form.start_date} type="date" value={form.end_date} onChange={(event) => set('end_date', event.target.value)} /></label></div></>}
-      {form.rule_type === 'WEEKEND' ? <div className="grid gap-3 sm:grid-cols-2">{[['saturday','Saturday'],['sunday','Sunday']].map(([key,label]) => <label key={key}><span className="mb-1.5 block text-xs font-black uppercase text-slate-500">{label}</span><div className="flex h-11 items-center rounded-md border border-slate-300 px-3"><span className="text-sm text-slate-500">Increase by</span><input className="min-w-0 flex-1 text-right font-black outline-none" min="0" type="number" value={form[key]} onChange={(event) => set(key, event.target.value)} /><span className="ml-2">%</span></div></label>)}</div> : <div><p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">2. Price adjustment</p><div className="flex gap-2"><button className={`flex-1 rounded-md border p-3 text-sm font-bold ${form.adjustment_type === 'INCREASE' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200'}`} onClick={() => set('adjustment_type','INCREASE')}><ArrowUp className="mr-1 inline" size={15} />Increase</button><button className={`flex-1 rounded-md border p-3 text-sm font-bold ${form.adjustment_type === 'DECREASE' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200'}`} onClick={() => set('adjustment_type','DECREASE')}><ArrowDown className="mr-1 inline" size={15} />Decrease</button></div><label className="mt-3 flex h-11 items-center rounded-md border border-slate-300 px-3"><input className="min-w-0 flex-1 font-black outline-none" min="0" type="number" value={form.adjustment_percentage} onChange={(event) => set('adjustment_percentage', event.target.value)} /><span>%</span></label></div>}
+      {form.rule_type === 'WEEKEND' ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {[['saturday','Saturday'],['sunday','Sunday']].map(([key,label]) => (
+            <label key={key}>
+              <span className="mb-1.5 block text-xs font-black uppercase text-slate-500">{label}</span>
+              <div className="flex h-11 items-center rounded-md border border-slate-300 px-3">
+                <span className="text-sm text-slate-500">Increase by</span>
+                <input className="min-w-0 flex-1 text-right font-black outline-none" min="0" type="number" value={form[key]} onChange={(event) => set(key, event.target.value)} />
+                <span className="ml-2">%</span>
+              </div>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <div>
+          <p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">2. Price adjustment</p>
+          <div className="flex gap-2">
+            <button className={`flex-1 rounded-md border p-3 text-sm font-bold ${form.adjustment_type === 'INCREASE' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200'}`} onClick={() => set('adjustment_type','INCREASE')}>
+              <ArrowUp className="mr-1 inline" size={15} />Increase
+            </button>
+            <button className={`flex-1 rounded-md border p-3 text-sm font-bold ${form.adjustment_type === 'DECREASE' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200'}`} onClick={() => set('adjustment_type','DECREASE')}>
+              <ArrowDown className="mr-1 inline" size={15} />Decrease
+            </button>
+          </div>
+
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <button type="button" className={`rounded-md border p-2.5 text-xs font-bold transition ${form.adjustment_unit === 'PERCENTAGE' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`} onClick={() => set('adjustment_unit', 'PERCENTAGE')}>
+              Percentage (%)
+            </button>
+            <button type="button" className={`rounded-md border p-2.5 text-xs font-bold transition ${form.adjustment_unit === 'FLAT' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`} onClick={() => set('adjustment_unit', 'FLAT')}>
+              Fixed Amount (₹)
+            </button>
+          </div>
+
+          {form.adjustment_unit === 'FLAT' ? (
+            <label className="mt-3 flex h-11 items-center rounded-md border border-slate-300 px-3">
+              <span className="mr-2 font-bold text-slate-500">₹</span>
+              <input className="min-w-0 flex-1 font-black outline-none" min="0" placeholder="Type price adjustment in ₹ (e.g. 2000)" type="number" value={form.adjustment_amount} onChange={(event) => set('adjustment_amount', event.target.value)} />
+            </label>
+          ) : (
+            <label className="mt-3 flex h-11 items-center rounded-md border border-slate-300 px-3">
+              <input className="min-w-0 flex-1 font-black outline-none" min="0" placeholder="Type percentage (e.g. 20)" type="number" value={form.adjustment_percentage} onChange={(event) => set('adjustment_percentage', event.target.value)} />
+              <span>%</span>
+            </label>
+          )}
+        </div>
+      )}
       <div><p className="mb-2 text-xs font-black uppercase tracking-wide text-slate-500">Apply to</p><ApplyScope value={form.scope} onChange={(value) => set('scope', value)} hasProperty={Boolean(property)} /></div>
-      <div className="rounded-md border border-blue-100 bg-blue-50 p-4"><div className="flex items-center justify-between"><span className="text-sm text-slate-600">{targets.length} {targets.length === 1 ? 'property' : 'properties'}</span><span className="text-xs font-bold text-blue-700">LIVE PREVIEW</span></div><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><p className="text-xs text-slate-500">Base Price</p><p className="mt-1 font-black">{money(average)}</p></div><div><p className="text-xs text-slate-500">Adjustment</p><p className="mt-1 font-black text-blue-700">{form.rule_type === 'WEEKEND' ? `Sat +${form.saturday}%` : percent(adjustment)}</p></div><div><p className="text-xs text-slate-500">Final Price</p><p className="mt-1 font-black">{money(form.rule_type === 'WEEKEND' ? average * (1 + Number(form.saturday || 0) / 100) : preview)}</p></div></div></div>
+      <div className="rounded-md border border-blue-100 bg-blue-50 p-4"><div className="flex items-center justify-between"><span className="text-sm text-slate-600">{targets.length} {targets.length === 1 ? 'property' : 'properties'}</span><span className="text-xs font-bold text-blue-700">LIVE PREVIEW</span></div><div className="mt-3 grid grid-cols-3 gap-2 text-center"><div><p className="text-xs text-slate-500">Base Price</p><p className="mt-1 font-black">{money(average)}</p></div><div><p className="text-xs text-slate-500">Adjustment</p><p className="mt-1 font-black text-blue-700">{previewBadge}</p></div><div><p className="text-xs text-slate-500">Final Price</p><p className="mt-1 font-black">{money(preview)}</p></div></div></div>
       <div className="flex justify-end gap-2"><Button secondary onClick={onClose}>Cancel</Button><Button disabled={saving} onClick={save}>{saving ? <RefreshCw className="animate-spin" size={16} /> : <Check size={16} />}Save {form.rule_type === 'WEEKEND' ? 'Weekend Pricing' : 'Rule'}</Button></div>
     </div>
   </Modal>;
@@ -121,7 +188,13 @@ function BulkModal({ properties, selectedIds, onClose, onSaved, notify }) {
 }
 
 function EditRuleModal({ rule, onClose, onSaved, notify }) {
-  const [form, setForm] = useState({ ...rule, saturday: rule.day_adjustments?.['5'] ?? 0, sunday: rule.day_adjustments?.['6'] ?? 0 });
+  const [form, setForm] = useState({
+    ...rule,
+    adjustment_unit: rule.adjustment_unit || 'PERCENTAGE',
+    adjustment_amount: rule.adjustment_amount ?? 0,
+    saturday: rule.day_adjustments?.['5'] ?? 0,
+    sunday: rule.day_adjustments?.['6'] ?? 0,
+  });
   const [saving, setSaving] = useState(false);
   const set = (key, value) => setForm((current) => ({ ...current, [key]: value }));
   const save = async () => {
@@ -132,7 +205,9 @@ function EditRuleModal({ rule, onClose, onSaved, notify }) {
         start_date: form.rule_type === 'WEEKEND' ? null : form.start_date,
         end_date: form.rule_type === 'WEEKEND' ? null : form.end_date,
         adjustment_type: form.adjustment_type,
+        adjustment_unit: form.rule_type === 'WEEKEND' ? 'PERCENTAGE' : form.adjustment_unit,
         adjustment_percentage: form.rule_type === 'WEEKEND' ? Number(form.saturday || 0) : Number(form.adjustment_percentage || 0),
+        adjustment_amount: form.rule_type === 'WEEKEND' ? 0 : Number(form.adjustment_amount || 0),
         day_adjustments: form.rule_type === 'WEEKEND' ? { 5: Number(form.saturday || 0), 6: Number(form.sunday || 0) } : {},
       });
       notify(`${form.rule_name} updated.`);
@@ -142,7 +217,70 @@ function EditRuleModal({ rule, onClose, onSaved, notify }) {
     } finally { setSaving(false); }
   };
   return <Modal title="Edit Pricing Rule" subtitle="Changes take effect automatically on the matching dates." onClose={onClose}>
-    <div className="space-y-4 p-5"><label className="block"><span className="mb-1.5 block text-xs font-black uppercase text-slate-500">Rule name</span><input className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm" value={form.rule_name} onChange={(event) => set('rule_name', event.target.value)} /></label>{form.rule_type === 'WEEKEND' ? <div className="grid grid-cols-2 gap-3">{[['saturday','Saturday'],['sunday','Sunday']].map(([key,label]) => <label key={key}><span className="mb-1.5 block text-xs font-black uppercase text-slate-500">{label}</span><div className="flex h-11 rounded-md border border-slate-300 px-3"><input className="min-w-0 flex-1 font-black outline-none" min="0" type="number" value={form[key]} onChange={(event) => set(key,event.target.value)} /><span className="self-center">%</span></div></label>)}</div> : <><div className="grid grid-cols-2 gap-3"><label><span className="mb-1.5 block text-xs font-black uppercase text-slate-500">Start Date</span><input className="h-11 w-full rounded-md border border-slate-300 px-3" type="date" value={form.start_date} onChange={(event) => set('start_date',event.target.value)} /></label><label><span className="mb-1.5 block text-xs font-black uppercase text-slate-500">End Date</span><input className="h-11 w-full rounded-md border border-slate-300 px-3" min={form.start_date} type="date" value={form.end_date} onChange={(event) => set('end_date',event.target.value)} /></label></div><div className="grid grid-cols-[1fr_130px] gap-3"><select className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm font-bold" value={form.adjustment_type} onChange={(event) => set('adjustment_type',event.target.value)}><option value="INCREASE">Increase</option><option value="DECREASE">Decrease</option></select><label className="flex h-11 rounded-md border border-slate-300 px-3"><input className="min-w-0 flex-1 font-black outline-none" min="0" type="number" value={form.adjustment_percentage} onChange={(event) => set('adjustment_percentage',event.target.value)} /><span className="self-center">%</span></label></div></>}<div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800"><strong>Preview:</strong> {form.adjustment_type === 'DECREASE' ? 'Decrease' : 'Increase'} the base price by {form.rule_type === 'WEEKEND' ? `${form.saturday}% Saturday and ${form.sunday}% Sunday` : `${form.adjustment_percentage}%`}.</div><div className="flex justify-end gap-2"><Button secondary onClick={onClose}>Cancel</Button><Button disabled={saving} onClick={save}>{saving ? <RefreshCw className="animate-spin" size={16} /> : <Check size={16} />}Save Changes</Button></div></div>
+    <div className="space-y-4 p-5">
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-black uppercase text-slate-500">Rule name</span>
+        <input className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm" value={form.rule_name} onChange={(event) => set('rule_name', event.target.value)} />
+      </label>
+      {form.rule_type === 'WEEKEND' ? (
+        <div className="grid grid-cols-2 gap-3">
+          {[['saturday','Saturday'],['sunday','Sunday']].map(([key,label]) => (
+            <label key={key}>
+              <span className="mb-1.5 block text-xs font-black uppercase text-slate-500">{label}</span>
+              <div className="flex h-11 rounded-md border border-slate-300 px-3">
+                <input className="min-w-0 flex-1 font-black outline-none" min="0" type="number" value={form[key]} onChange={(event) => set(key,event.target.value)} />
+                <span className="self-center">%</span>
+              </div>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3">
+            <label>
+              <span className="mb-1.5 block text-xs font-black uppercase text-slate-500">Start Date</span>
+              <input className="h-11 w-full rounded-md border border-slate-300 px-3" type="date" value={form.start_date} onChange={(event) => set('start_date',event.target.value)} />
+            </label>
+            <label>
+              <span className="mb-1.5 block text-xs font-black uppercase text-slate-500">End Date</span>
+              <input className="h-11 w-full rounded-md border border-slate-300 px-3" min={form.start_date} type="date" value={form.end_date} onChange={(event) => set('end_date',event.target.value)} />
+            </label>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className={`rounded-md border p-2.5 text-xs font-bold ${form.adjustment_unit === 'PERCENTAGE' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600'}`} onClick={() => set('adjustment_unit', 'PERCENTAGE')}>
+              Percentage (%)
+            </button>
+            <button type="button" className={`rounded-md border p-2.5 text-xs font-bold ${form.adjustment_unit === 'FLAT' ? 'border-blue-600 bg-blue-50 text-blue-800' : 'border-slate-200 text-slate-600'}`} onClick={() => set('adjustment_unit', 'FLAT')}>
+              Fixed Amount (₹)
+            </button>
+          </div>
+          <div className="grid grid-cols-[1fr_130px] gap-3">
+            <select className="h-11 rounded-md border border-slate-300 bg-white px-3 text-sm font-bold" value={form.adjustment_type} onChange={(event) => set('adjustment_type',event.target.value)}>
+              <option value="INCREASE">Increase</option>
+              <option value="DECREASE">Decrease</option>
+            </select>
+            {form.adjustment_unit === 'FLAT' ? (
+              <label className="flex h-11 items-center rounded-md border border-slate-300 px-3">
+                <span className="mr-1 font-bold text-slate-500">₹</span>
+                <input className="min-w-0 flex-1 font-black outline-none" min="0" type="number" value={form.adjustment_amount} onChange={(event) => set('adjustment_amount',event.target.value)} />
+              </label>
+            ) : (
+              <label className="flex h-11 items-center rounded-md border border-slate-300 px-3">
+                <input className="min-w-0 flex-1 font-black outline-none" min="0" type="number" value={form.adjustment_percentage} onChange={(event) => set('adjustment_percentage',event.target.value)} />
+                <span className="self-center">%</span>
+              </label>
+            )}
+          </div>
+        </>
+      )}
+      <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800">
+        <strong>Preview:</strong> {form.adjustment_type === 'DECREASE' ? 'Decrease' : 'Increase'} the base price by {form.rule_type === 'WEEKEND' ? `${form.saturday}% Saturday and ${form.sunday}% Sunday` : form.adjustment_unit === 'FLAT' ? `₹${form.adjustment_amount}` : `${form.adjustment_percentage}%`}.
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button secondary onClick={onClose}>Cancel</Button>
+        <Button disabled={saving} onClick={save}>{saving ? <RefreshCw className="animate-spin" size={16} /> : <Check size={16} />}Save Changes</Button>
+      </div>
+    </div>
   </Modal>;
 }
 

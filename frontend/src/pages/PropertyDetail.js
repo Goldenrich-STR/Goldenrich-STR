@@ -1277,7 +1277,22 @@ const PropertyDetail = () => {
   useEffect(() => {
     let cancelled = false;
     const hostAmount = Number(baseAmount) || 0;
-    if (hostAmount <= 0) {
+    
+    let effectiveCheckIn = checkIn || null;
+    let effectiveCheckOut = checkOut || null;
+    if (checkIn && (!checkOut || checkOut <= checkIn)) {
+      const nextDay = new Date(checkIn);
+      nextDay.setDate(nextDay.getDate() + 1);
+      effectiveCheckOut = toISO(nextDay);
+    }
+
+    const effectiveHostAmount = hostAmount > 0
+      ? hostAmount
+      : checkIn
+      ? (Number(property?.price_per_night) || 0) * 1
+      : 0;
+
+    if (effectiveHostAmount <= 0) {
       setBookingQuote(null);
       setBookingTaxPercent(0);
       return () => { cancelled = true; };
@@ -1285,15 +1300,15 @@ const PropertyDetail = () => {
 
     bookingAPI.getPricingQuote({
       property_id: property?.property_id || id,
-      host_amount: hostAmount,
-      tax_slab_base_amount: Number(taxSlabBaseAmount) || hostAmount,
+      host_amount: effectiveHostAmount,
+      tax_slab_base_amount: Number(taxSlabBaseAmount) || effectiveHostAmount,
       charge_base_amount: property?.category === 'event_venue'
         ? (Number(property?.price_per_night) || 0) * Math.max(1, Number(nights) || 1)
-        : hostAmount,
+        : effectiveHostAmount,
       pricing_units: Math.max(1, Number(bookingUnits) || 1),
       extra_guest_amount: extraGuestTotal,
-      check_in_date: checkIn || null,
-      check_out_date: checkOut || null,
+      check_in_date: effectiveCheckIn,
+      check_out_date: effectiveCheckOut,
     })
       .then((res) => {
         if (!cancelled) {
@@ -1302,7 +1317,7 @@ const PropertyDetail = () => {
         }
       })
       .catch(() => {
-        bookingAPI.getBookingTaxSlab(Number(taxSlabBaseAmount) || hostAmount)
+        bookingAPI.getBookingTaxSlab(Number(taxSlabBaseAmount) || effectiveHostAmount)
           .then((res) => {
             if (!cancelled) {
               setBookingQuote(null);
@@ -1334,7 +1349,7 @@ const PropertyDetail = () => {
     ? readPercent(parsedPolicies?.advance, 50)
     : 50;
   const finalNightlyPrice = quoteNumber(bookingQuote?.final_nightly_price, displayPricePerNight);
-  const selectedDatePriceReady = Boolean(checkIn && checkOut && bookingQuote);
+  const selectedDatePriceReady = Boolean(checkIn && bookingQuote);
   const shownNightlyPrice = selectedDatePriceReady ? finalNightlyPrice : displayPricePerNight;
   const roundedDisplayPricePerNight = Math.round(shownNightlyPrice || 0);
   const dynamicSummary = property?.dynamic_pricing_summary || {};
@@ -1343,13 +1358,38 @@ const PropertyDetail = () => {
     : [];
   const selectedAdjustments = selectedRuleNights.map((night) => Number(night.adjustment_percentage || 0));
   const currentPriceRule = property?.active_price_rule;
-  const pricingBadgeText = selectedRuleNights.length
-    ? `${selectedRuleNights.some((night) => night.rule_type === 'SEASON' || night.rule_type === 'CUSTOM') ? 'Seasonal' : 'Weekend'} rate applied · ${Math.max(...selectedAdjustments)}% adjustment for selected dates`
-    : currentPriceRule?.rule_type && currentPriceRule.rule_type !== 'BASE'
-      ? `${currentPriceRule.rule_type === 'WEEKEND' ? 'Weekend' : 'Seasonal'} rate applied · ${Math.abs(Number(currentPriceRule.adjustment_percentage || 0))}% ${Number(currentPriceRule.adjustment_percentage || 0) < 0 ? 'lower' : 'higher'} today`
-    : dynamicSummary.has_rules
-      ? `${dynamicSummary.has_weekend && dynamicSummary.has_seasonal ? 'Weekend & seasonal' : dynamicSummary.has_weekend ? 'Saturday & Sunday' : 'Seasonal'} rates may ${Number(dynamicSummary.minimum_adjustment) < 0 ? 'vary' : 'increase'} by ${Math.abs(Number(dynamicSummary.minimum_adjustment || 0)) === Math.abs(Number(dynamicSummary.maximum_adjustment || 0)) ? `${Math.abs(Number(dynamicSummary.maximum_adjustment || 0))}%` : `${Math.abs(Number(dynamicSummary.minimum_adjustment || 0))}–${Math.abs(Number(dynamicSummary.maximum_adjustment || 0))}%`}`
-      : '';
+  
+  let pricingBadgeText = '';
+  if (checkIn) {
+    if (selectedRuleNights.length > 0) {
+      const firstRule = selectedRuleNights[0];
+      const ruleKind = selectedRuleNights.some((night) => night.rule_type === 'SEASON' || night.rule_type === 'CUSTOM')
+        ? 'Seasonal'
+        : 'Weekend';
+      if (firstRule.adjustment_unit === 'FLAT' || firstRule.value_type === 'FLAT') {
+        const amt = Math.abs(Number(firstRule.adjustment_amount || 0));
+        const sign = Number(firstRule.adjustment_amount || 0) < 0 ? '-' : '+';
+        pricingBadgeText = `${ruleKind} rate applied · ${sign}₹${amt.toLocaleString('en-IN')} adjustment for selected dates`;
+      } else {
+        const maxAdj = Math.max(...selectedAdjustments);
+        pricingBadgeText = `${ruleKind} rate applied · ${maxAdj}% adjustment for selected dates`;
+      }
+    } else {
+      pricingBadgeText = '';
+    }
+  } else {
+    if (currentPriceRule?.rule_type && currentPriceRule.rule_type !== 'BASE') {
+      if (currentPriceRule.adjustment_unit === 'FLAT' || currentPriceRule.value_type === 'FLAT') {
+        const amt = Math.abs(Number(currentPriceRule.adjustment_amount || currentPriceRule.adjustment_value || 0));
+        const isLower = Number(currentPriceRule.adjustment_amount || currentPriceRule.adjustment_value || 0) < 0;
+        pricingBadgeText = `${currentPriceRule.rule_type === 'WEEKEND' ? 'Weekend' : 'Seasonal'} rate applied · ₹${amt.toLocaleString('en-IN')} ${isLower ? 'lower' : 'higher'} today`;
+      } else {
+        pricingBadgeText = `${currentPriceRule.rule_type === 'WEEKEND' ? 'Weekend' : 'Seasonal'} rate applied · ${Math.abs(Number(currentPriceRule.adjustment_percentage || 0))}% ${Number(currentPriceRule.adjustment_percentage || 0) < 0 ? 'lower' : 'higher'} today`;
+      }
+    } else if (dynamicSummary.has_rules) {
+      pricingBadgeText = `${dynamicSummary.has_weekend && dynamicSummary.has_seasonal ? 'Weekend & seasonal' : dynamicSummary.has_weekend ? 'Saturday & Sunday' : 'Seasonal'} rates may ${Number(dynamicSummary.minimum_adjustment) < 0 ? 'vary' : 'increase'} by ${Math.abs(Number(dynamicSummary.minimum_adjustment || 0)) === Math.abs(Number(dynamicSummary.maximum_adjustment || 0)) ? `${Math.abs(Number(dynamicSummary.maximum_adjustment || 0))}%` : `${Math.abs(Number(dynamicSummary.minimum_adjustment || 0))}–${Math.abs(Number(dynamicSummary.maximum_adjustment || 0))}%`}`;
+    }
+  }
   const roundedPerPersonPrice = Math.round(Number(property?.per_person_price || 0));
   const nightlySubtotal = Math.round(finalNightlyPrice * bookingUnits);
   const eventVenueRate = displayPricePerNight;
