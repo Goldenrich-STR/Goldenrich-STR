@@ -37,7 +37,7 @@ const DEFAULT_FOOTER_DATA = {
     { heading: 'For Guests', items: [
       { label: 'Browse Collections', action_type: 'link', link: '/guest/browse', text: '' },
       { label: 'All Destinations', action_type: 'link', link: '/guest/browse', text: '' },
-      { label: 'Short-term Stays', action_type: 'link', link: '/property/residential', text: '' }
+      { label: 'Short-term Stays', action_type: 'link', link: '/property/residential-stay', text: '' }
     ] },
     { heading: 'For Hosts', items: [
       { label: 'List Your Space', action_type: 'link', link: '/list-your-property', text: '' },
