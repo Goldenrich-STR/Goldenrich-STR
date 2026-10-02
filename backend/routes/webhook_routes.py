@@ -328,20 +328,22 @@ async def razorpay_webhook(
                 {"subscription_id": subscription_id},
                 {"$set": {
                     "status": SubscriptionStatus.ACTIVE.value,
+                    "payment_status": "paid",
+                    "razorpay_payment_id": payment_id,
                     "razorpay_subscription_id": payment_id,
                     "updated_at": datetime.now(timezone.utc)
                 }}
             )
 
-            # Activate associated property listing
-            if subscription.get("property_id"):
-                await db.properties.update_one(
-                    {"property_id": subscription["property_id"]},
-                    {"$set": {
-                        "subscription_id": subscription_id,
-                        "subscription_status": "active"
-                    }}
-                )
+            # Use the same finalizer as the browser confirmation path. Besides
+            # linking the subscription, this submits a paid draft property for
+            # verification and starts its verification workflow.
+            from routes.subscription_routes import _activate_property_after_subscription_payment
+            await _activate_property_after_subscription_payment(
+                db,
+                {**subscription, "status": SubscriptionStatus.ACTIVE.value, "payment_status": "paid"},
+                subscription_id,
+            )
 
             # Record transaction
             try:
@@ -369,6 +371,11 @@ async def razorpay_webhook(
             )
             return {"status": "processed", "resolved_entity": "subscription", "id": subscription_id}
         else:
+            # Webhooks are retried. Reconcile the linked property even when a
+            # previous callback activated the subscription but failed before
+            # moving the property out of draft.
+            from routes.subscription_routes import _activate_property_after_subscription_payment
+            await _activate_property_after_subscription_payment(db, subscription, subscription_id)
             logger.info(f"Subscription {subscription_id} was already active. No-op.")
             return {"status": "already_processed", "resolved_entity": "subscription", "id": subscription_id}
 
