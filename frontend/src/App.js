@@ -205,7 +205,7 @@ const GlobalAlertDialog = () => {
               setOpen(false);
               setMessage('');
             }}
-            className="px-8 py-3 rounded-2xl bg-terracotta text-white text-xs font-bold tracking-tight uppercase tracking-widest shadow-premium hover:bg-terracotta-dark transition"
+            className="px-8 py-3 rounded-2xl bg-terracotta text-white text-xs font-bold uppercase tracking-widest shadow-premium hover:bg-terracotta-dark transition"
             autoFocus
           >
             OK
@@ -280,6 +280,7 @@ function AppRoutes() {
         <Route path="/legal/:slug" element={<LegalPage />} />
         <Route path="/terms" element={<LegalPage />} />
         <Route path="/privacy" element={<LegalPage />} />
+        <Route path="/privacy-policy" element={<LegalPage />} />
         <Route path="/refund-policy" element={<LegalPage />} />
         <Route path="/account-deletion" element={<AccountDeletionPage />} />
         <Route path="/sso/goldenrich/callback" element={<SsoCallback />} />
@@ -461,6 +462,11 @@ function AppRoutes() {
 }
 
 function App() {
+  const location = useLocation();
+  // Host/admin workspaces have their own contextual support control. Keeping
+  // the public WhatsApp + chatbot launcher there covers form actions on small screens.
+  const isWorkspaceRoute = /^\/(host|admin|md)(?:\/|$)/.test(location.pathname);
+
   return (
     <div className="App">
       <AuthProvider>
@@ -468,7 +474,7 @@ function App() {
         <Suspense fallback={<ScreenLoading />}>
           <AppRoutes />
         </Suspense>
-        <ChatbotWidget />
+        {!isWorkspaceRoute && <ChatbotWidget />}
       </AuthProvider>
     </div>
   );

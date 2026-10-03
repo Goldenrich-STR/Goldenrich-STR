@@ -9,7 +9,7 @@ const initialForm = {
   message: '',
 };
 
-const HostSupportWidget = ({ context = 'host_dashboard' }) => {
+const HostSupportWidget = ({ context = 'host_dashboard', inline = false }) => {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...initialForm, category: context });
   const [tickets, setTickets] = useState([]);
@@ -62,11 +62,14 @@ const HostSupportWidget = ({ context = 'host_dashboard' }) => {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="fixed right-4 bottom-4 z-[180] inline-flex items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-[0_18px_40px_rgba(15,23,42,0.22)] transition hover:bg-black"
+        className={inline
+          ? "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-3 py-3 text-xs font-bold uppercase tracking-widest text-slate-700 transition hover:bg-slate-50"
+          : "fixed bottom-4 left-4 z-[180] inline-flex max-w-[calc(100vw-2rem)] items-center gap-2 rounded-full bg-slate-950 px-5 py-3 text-xs font-bold uppercase tracking-widest text-white shadow-[0_18px_40px_rgba(15,23,42,0.22)] transition hover:bg-black xl:left-auto xl:right-4"
+        }
         data-testid="host-raise-ticket-button"
       >
         <Headphones className="w-4 h-4" />
-        Raise Ticket
+        <span className={inline ? 'hidden xl:inline' : ''}>Raise Ticket</span>
       </button>
 
       {open && (

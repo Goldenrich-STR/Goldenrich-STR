@@ -33,22 +33,37 @@ export default function Footer({ cmsContent }) {
   const footerData = { ...DEFAULT_FOOTER_DATA, ...(cmsContent?.footer || {}) };
   const legalData = { ...footerData, ...(cmsContent?.legal_terms || {}) };
 
+  const slugify = (value) => String(value || '')
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+
   const footerLegalItems = [
-    ...(legalData.privacy_text ? [{ label: legalData.privacy_label || 'Privacy Policy', text: legalData.privacy_text }] : []),
-    ...(legalData.terms_text ? [{ label: legalData.terms_label || 'Terms & Conditions', text: legalData.terms_text }] : []),
-    ...(legalData.refund_text ? [{ label: legalData.refund_label || 'Cancellation & Refund Policy', text: legalData.refund_text }] : []),
+    ...(legalData.privacy_text ? [{ label: legalData.privacy_label || 'Privacy Policy', text: legalData.privacy_text, link: '/privacy-policy' }] : []),
+    ...(legalData.terms_text ? [{ label: legalData.terms_label || 'Terms & Conditions', text: legalData.terms_text, link: '/terms' }] : []),
+    ...(legalData.refund_text ? [{ label: legalData.refund_label || 'Cancellation & Refund Policy', text: legalData.refund_text, link: '/refund-policy' }] : []),
     ...(Array.isArray(legalData.custom_policies)
       ? legalData.custom_policies
           .filter(policy => policy?.status === 'Active' && policy?.text)
-          .map(policy => ({ label: policy.label || policy.title || 'Legal Policy', text: policy.text }))
+          .map(policy => ({
+            label: policy.label || policy.title || 'Legal Policy',
+            text: policy.text,
+            link: `/legal/${slugify(policy.label || policy.title || 'policy')}`
+          }))
       : []),
   ];
 
   const handleLegalClick = (item) => {
-    setFooterPopup({
-      title: item.label || 'X-Space360 Legal',
-      text: item.text || 'Details will be updated soon.',
-    });
+    if (item.link) {
+      navigate(item.link);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      setFooterPopup({
+        title: item.label || 'X-Space360 Legal',
+        text: item.text || 'Details will be updated soon.',
+      });
+    }
   };
 
   return (
