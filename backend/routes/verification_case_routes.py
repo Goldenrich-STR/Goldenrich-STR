@@ -363,6 +363,22 @@ def _telecaller_identity_terms(user: dict) -> list[str]:
     return clean
 
 
+def _created_after_telecaller(record: dict | None, telecaller: dict) -> bool:
+    """A telecaller must never inherit records created before their account."""
+    telecaller_created = _parse_case_dt(telecaller.get("created_at"))
+    if not telecaller_created:
+        return True
+    record = record or {}
+    record_created = _parse_case_dt(record.get("created_at") or record.get("submitted_at"))
+    if not record_created:
+        return False
+    if telecaller_created.tzinfo is None:
+        telecaller_created = telecaller_created.replace(tzinfo=timezone.utc)
+    if record_created.tzinfo is None:
+        record_created = record_created.replace(tzinfo=timezone.utc)
+    return record_created >= telecaller_created
+
+
 def _employee_identity_terms(user: dict) -> list[str]:
     terms = [
         user.get("user_id"),
@@ -903,7 +919,9 @@ async def _assign_host_document_telecallers(db):
             if not host_created_at or not telecaller_created_at or telecaller_created_at <= host_created_at:
                 eligible_telecallers.append(telecaller_profile)
         if not eligible_telecallers:
-            eligible_telecallers = telecallers[:1]
+            # All hosts predate every active telecaller. They are historical
+            # records and must not be handed to a newly created account.
+            continue
         telecaller_index = (index // TELECALLER_ASSIGNMENT_BATCH_SIZE) % len(eligible_telecallers)
         telecaller = eligible_telecallers[telecaller_index]
         telecaller_id = telecaller.get("user_id")
@@ -1112,9 +1130,14 @@ async def list_cases(stage: Optional[str] = None, current_user: dict = Depends(g
             }
     elif not _is_admin(current_user):
         query["host_id"] = current_user["user_id"]
+    telecaller_profile = current_user
+    if _is_telecaller(current_user):
+        telecaller_profile = await db.users.find_one({"user_id": current_user.get("user_id")}, {"_id": 0, "password_hash": 0}) or current_user
     rows = await db.property_verifications.find(query, {"_id": 0}).sort("updated_at", -1).to_list(length=500)
     enriched = []
     for row in rows:
+        if _is_telecaller(current_user) and not _created_after_telecaller(row, telecaller_profile):
+            continue
         item = await _enrich_case(db, row)
         if not _case_has_active_entities(item):
             continue
@@ -1175,6 +1198,8 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
         host_query["user_id"] = {"$in": list(set(assigned_case_host_ids))}
 
     hosts = await db.users.find(host_query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(length=1000)
+    if _is_telecaller(current_user):
+        hosts = [host for host in hosts if _created_after_telecaller(host, telecaller_profile)]
     host_ids = [host.get("user_id") for host in hosts if host.get("user_id")]
     properties = []
     if _is_telecaller(current_user):
@@ -1279,10 +1304,15 @@ async def dashboard_summary(current_user: dict = Depends(get_current_user), db: 
     if _is_telecaller(current_user):
         telecaller_terms = _telecaller_identity_terms(current_user)
         case_query["telecaller_id"] = {"$in": telecaller_terms}
+    telecaller_profile = current_user
+    if _is_telecaller(current_user):
+        telecaller_profile = await db.users.find_one({"user_id": current_user.get("user_id")}, {"_id": 0, "password_hash": 0}) or current_user
     cases = await db.property_verifications.find(case_query, {"_id": 0}).to_list(length=1000)
     visible_cases = []
     enriched = []
     for case in cases:
+        if _is_telecaller(current_user) and not _created_after_telecaller(case, telecaller_profile):
+            continue
         item = await _enrich_case(db, case)
         if not _case_has_active_entities(item):
             continue
@@ -1417,6 +1447,9 @@ async def list_document_queue(stage: Optional[str] = None, current_user: dict = 
             return {"items": [], "total": 0}
         query["user_id"] = {"$in": assigned_host_ids}
     hosts = await db.users.find(query, {"_id": 0, "password_hash": 0}).sort("updated_at", -1).to_list(length=500)
+    if _is_telecaller(current_user):
+        telecaller_profile = await db.users.find_one({"user_id": current_user.get("user_id")}, {"_id": 0, "password_hash": 0}) or current_user
+        hosts = [host for host in hosts if _created_after_telecaller(host, telecaller_profile)]
     properties = await db.properties.find(
         _active_property_filter({"owner_id": {"$in": [host.get("user_id") for host in hosts if host.get("user_id")] }}),
         {"_id": 0, "property_id": 1, "title": 1, "city": 1, "address": 1, "category": 1, "property_type": 1, "status": 1, "workflow_status": 1, "verification_stage": 1, "owner_id": 1, "registration_source": 1, "lg_code": 1},
@@ -1901,6 +1934,14 @@ async def save_call_outcome(verification_id: str, payload: CallPayload, current_
     if not (_is_admin(current_user) or _is_telecaller(current_user)):
         raise HTTPException(status_code=403, detail="Telecaller access required")
     case = await _case_or_404(db, verification_id)
+    host = await db.users.find_one(
+        _active_host_filter({"user_id": case.get("host_id") or case.get("owner_id")}),
+        {"_id": 0, "kyc_status": 1},
+    ) or {}
+    if str(host.get("kyc_status") or "").lower() not in {"approved", "verified", "complete", "completed"}:
+        raise HTTPException(status_code=400, detail="Complete host document verification before the normal call.")
+    if case.get("verification_path") == "VIDEO_ONLY":
+        raise HTTPException(status_code=400, detail="This existing host listing requires video verification only.")
     outcome = payload.outcome.strip().upper().replace(" ", "_")
     valid = {"CONNECTED", "NO_ANSWER", "BUSY", "WRONG_NUMBER", "CALLBACK_REQUESTED", "HOST_NOT_INTERESTED", "COMPLETED", "SCHEDULED", "RESCHEDULED"}
     if outcome not in valid:

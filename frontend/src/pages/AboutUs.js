@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { 
+import {
   Building2, MapPin, Mail, Phone, ShieldCheck, CheckCircle2, Sparkles, 
   Facebook, Instagram, Youtube, Menu, X, ArrowRight, Compass, Users, Milestone, Award
 } from 'lucide-react';
@@ -275,7 +275,7 @@ const AboutUs = () => {
             <div className="flex items-center space-x-3">
               <button
                 onClick={() => navigate('/dashboard')}
-                className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-bold tracking-tight uppercase tracking-wider"
+                className="btn-premium px-5 py-2.5 rounded-2xl flex items-center space-x-1.5 text-xs font-bold uppercase tracking-wider"
               >
                 <span>Dashboard</span>
               </button>

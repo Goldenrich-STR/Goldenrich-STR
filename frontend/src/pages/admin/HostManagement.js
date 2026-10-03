@@ -155,12 +155,13 @@ const HostManagement = () => {
   useEffect(() => {
     setPage(1);
   }, [tab, search]);
-  const [assignees, setAssignees] = useState({ loading: true, error: '', brokers: [], relationship_managers: [], branch_managers: [] });
+  const [assignees, setAssignees] = useState({ loading: true, error: '', brokers: [], relationship_managers: [], branch_managers: [], telecallers: [] });
   const [assignment, setAssignment] = useState({
     open: false,
     host: null,
     broker_id: '',
     rm_id: '',
+    telecaller_id: '',
     reason: 'Host team assignment updated from Host Management',
     saving: false,
     error: '',
@@ -272,9 +273,10 @@ const HostManagement = () => {
         brokers: data.brokers || [],
         relationship_managers: data.relationship_managers || [],
         branch_managers: data.branch_managers || [],
+        telecallers: data.telecallers || [],
       });
     } catch (error) {
-      setAssignees({ loading: false, error: error.response?.data?.detail || 'Failed to load brokers, RMs and branch managers', brokers: [], relationship_managers: [], branch_managers: [] });
+      setAssignees({ loading: false, error: error.response?.data?.detail || 'Failed to load assignment options', brokers: [], relationship_managers: [], branch_managers: [], telecallers: [] });
     }
   }, []);
 
@@ -356,6 +358,7 @@ const HostManagement = () => {
       host,
       broker_id: primaryId,
       rm_id: secondaryId,
+      telecaller_id: host.verification_telecaller_id || host.document_telecaller_id || '',
       reason: 'Host team assignment updated from Host Management',
       saving: false,
       error: '',
@@ -368,6 +371,7 @@ const HostManagement = () => {
       host: null,
       broker_id: '',
       rm_id: '',
+    telecaller_id: '',
       reason: 'Host team assignment updated from Host Management',
       saving: false,
       error: '',
@@ -381,6 +385,7 @@ const HostManagement = () => {
       await adminPhase1API.assignHostTeam(assignment.host.user_id, {
         broker_id: assignment.broker_id,
         rm_id: assignment.rm_id,
+        telecaller_id: assignment.telecaller_id,
         reason: assignment.reason || 'Host team assignment updated from Host Management',
       });
       closeAssignment();
@@ -675,6 +680,23 @@ const AssignmentModal = ({ assignees, assignment, onChange, onClose, onSave }) =
             <span className="text-xs font-medium text-slate-500">Current: {host.broker_id ? (host.rm?.employee_code || host.rm_id || '-') : (host.branch_manager?.employee_code || host.branch_manager_code || host.branch_manager_id || '-')}</span>
           </label>
 
+          <label className="grid gap-2 text-sm font-bold">
+            Telecaller
+            <select
+              value={assignment.telecaller_id}
+              onChange={(event) => updateField('telecaller_id', event.target.value)}
+              disabled={assignees.loading || assignment.saving}
+              className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-[#2f6df6]"
+            >
+              <option value="">-- Auto assign telecaller --</option>
+              {(assignees.telecallers || []).map((user) => (
+                <option key={`telecaller-${user.user_id}`} value={user.user_id}>
+                  {getAssigneeOptionLabel(user)} [Telecaller]
+                </option>
+              ))}
+            </select>
+            <span className="text-xs font-medium text-slate-500">Current: {host.verification_telecaller_id || host.document_telecaller_id || 'Auto assigned'}</span>
+          </label>
           <label className="grid gap-2 text-sm font-bold">
             Assignment Reason
             <textarea
