@@ -3,6 +3,10 @@ from services.verification_case_workflow import (
     VERIFICATION_SCHEDULED,
     initial_case_status,
 )
+from routes.verification_case_routes import (
+    _is_explicitly_assigned_to_telecaller,
+    _visible_to_telecaller,
+)
 
 
 def test_existing_kyc_approved_host_listing_starts_in_video_queue():
@@ -13,3 +17,74 @@ def test_existing_kyc_approved_host_listing_starts_in_video_queue():
 def test_new_host_listing_keeps_documents_call_then_video_path():
     assert initial_case_status("BROKER", {"kyc_status": "pending"}) == TELECALLER_CALL_PENDING
     assert initial_case_status("RM", {}) == TELECALLER_CALL_PENDING
+
+
+def test_historical_unassigned_record_stays_hidden_from_new_telecaller():
+    telecaller = {
+        "user_id": "telecaller-new",
+        "employee_code": "TC-NEW",
+        "created_at": "2026-10-03T10:00:00+00:00",
+    }
+    historical_host = {"created_at": "2026-09-01T10:00:00+00:00"}
+
+    assert not _is_explicitly_assigned_to_telecaller(historical_host, telecaller)
+    assert not _visible_to_telecaller(historical_host, telecaller)
+
+
+def test_new_unassigned_record_remains_visible_to_eligible_telecaller():
+    telecaller = {
+        "user_id": "telecaller-existing",
+        "created_at": "2026-10-01T10:00:00+00:00",
+    }
+    new_host = {"created_at": "2026-10-03T10:00:00+00:00"}
+
+    assert _visible_to_telecaller(new_host, telecaller)
+
+
+def test_historical_record_is_visible_after_explicit_assignment():
+    telecaller = {
+        "user_id": "telecaller-new",
+        "employee_code": "TC-NEW",
+        "created_at": "2026-10-03T10:00:00+00:00",
+    }
+    historical_case = {
+        "created_at": "2026-09-01T10:00:00+00:00",
+        "telecaller_id": "telecaller-new",
+    }
+    historical_host = {
+        "created_at": "2026-09-01T10:00:00+00:00",
+        "verification_telecaller_id": "TC-NEW",
+    }
+
+    assert _visible_to_telecaller(historical_case, telecaller)
+    assert _visible_to_telecaller(historical_host, telecaller)
+
+
+def test_historical_record_assigned_to_another_telecaller_stays_hidden():
+    telecaller = {
+        "user_id": "telecaller-new",
+        "created_at": "2026-10-03T10:00:00+00:00",
+    }
+    historical_case = {
+        "created_at": "2026-09-01T10:00:00+00:00",
+        "telecaller_id": "telecaller-other",
+    }
+
+    assert not _visible_to_telecaller(historical_case, telecaller)
+
+
+def test_assigned_host_id_from_case_overrides_historical_host_date():
+    telecaller = {
+        "user_id": "telecaller-new",
+        "created_at": "2026-10-03T10:00:00+00:00",
+    }
+    historical_host = {
+        "user_id": "host-old",
+        "created_at": "2026-09-01T10:00:00+00:00",
+    }
+
+    assert _visible_to_telecaller(
+        historical_host,
+        telecaller,
+        explicitly_assigned=historical_host["user_id"] in {"host-old"},
+    )
