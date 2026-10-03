@@ -1,5 +1,6 @@
 /** Canonical URLs approved in the SEO URL sheet. */
 const CANONICAL_SEO_ROUTE_MAP = {
+  '/property/residential-bungalows': { category: 'residential', property_type: 'villa', title: 'Bungalows for Rent', h1: 'Bungalows for Rent' },
   '/property/residential/bungalows': { category: 'residential', property_type: 'villa', title: 'Bungalows for Rent', h1: 'Bungalows for Rent' },
   '/property/residential/private-house': { category: 'residential', property_type: 'independent_house', title: 'Private Houses for Rent', h1: 'Private Houses' },
   '/property/coworking-desk': { category: 'commercial', property_type: 'co_working', title: 'Coworking Desks', h1: 'Coworking Desks' },
@@ -8,6 +9,7 @@ const CANONICAL_SEO_ROUTE_MAP = {
   '/property/event-venues': { category: 'event_venue', title: 'Event Venues', h1: 'Event Venues' },
   '/property/banquet-halls': { category: 'event_venue', property_type: 'banquet_hall', title: 'Banquet Halls', h1: 'Banquet Halls' },
   '/property/hotel-ball-rooms': { category: 'event_venue', property_type: 'hotel_ballroom', title: 'Hotel Ballrooms', h1: 'Hotel Ballrooms' },
+  '/property/hotel-ballrooms': { category: 'event_venue', property_type: 'hotel_ballroom', title: 'Hotel Ballrooms', h1: 'Hotel Ballrooms' },
   '/property/wedding-venues': { category: 'event_venue', property_type: 'wedding_venue', title: 'Wedding Venues', h1: 'Wedding Venues' },
   '/property/workspaces-in-nashik': { category: 'commercial', city: 'Nashik', title: 'Workspaces in Nashik', h1: 'Workspaces in Nashik' },
   '/property/private-offices': { category: 'commercial', property_type: 'private_office', title: 'Private Offices', h1: 'Private Offices' },
@@ -15,6 +17,7 @@ const CANONICAL_SEO_ROUTE_MAP = {
   '/property/villas-in-trimbakeshwar': { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar', title: 'Villas in Trimbakeshwar', h1: 'Villas in Trimbakeshwar' },
   '/property/pool-villas-in-trimbakeshwar': { category: 'residential', property_type: 'villa', city: 'Trimbakeshwar', title: 'Pool Villas in Trimbakeshwar', h1: 'Pool Villas in Trimbakeshwar' },
   '/property/office-suites-in-trimbakeshwar': { category: 'commercial', property_type: 'private_office', city: 'Trimbakeshwar', title: 'Office Suites in Trimbakeshwar', h1: 'Office Suites in Trimbakeshwar' },
+  '/property/premium-offices-in-nashik': { category: 'commercial', property_type: 'private_office', city: 'Nashik', title: 'Premium Offices in Nashik', h1: 'Premium Offices in Nashik' },
   '/property/villas-in-igatpuri': { category: 'residential', property_type: 'villa', city: 'Igatpuri', title: 'Villas in Igatpuri', h1: 'Villas in Igatpuri' },
   '/property/corporate-space-in-igatpuri': { category: 'commercial', city: 'Igatpuri', title: 'Corporate Spaces in Igatpuri', h1: 'Corporate Spaces in Igatpuri' },
   '/property/residential-stay': { category: 'residential', title: 'Residential Stays', h1: 'Residential Stays' },
@@ -336,6 +339,8 @@ export const SEO_ROUTE_MAP = {
 export const SEO_BROWSE_PATHS = Object.keys(SEO_ROUTE_MAP);
 
 export const LEGACY_SEO_REDIRECTS = {
+  '/property/residential/bungalows': '/property/residential-bungalows',
+  '/property/hotel-ball-rooms': '/property/hotel-ballrooms',
   '/property/residential': '/property/residential/bungalows',
   '/property/residential/': '/property/residential/bungalows',
   '/property/residential/banglows': '/property/residential/bungalows',
@@ -346,7 +351,6 @@ export const LEGACY_SEO_REDIRECTS = {
   '/event-venues/banquet-halls': '/property/banquet-halls',
   '/event-venues/hotel-ballrooms': '/property/hotel-ball-rooms',
   '/event-venues/wedding-venues': '/property/wedding-venues',
-  '/property/workspaces': '/property/workspaces-in-nashik',
   '/property/residential/familystay-in-trimbak': '/property/residential/family-stay-in-trimbak',
   '/property/residential/holidayhomes-in-igatpuri': '/property/residential/holiday-homes-in-igatpuri',
   '/property/residential/naturestay-in-bhandardara': '/property/residential/nature-stay-in-bhandardara',

@@ -2,9 +2,10 @@ import React from "react";
 import { Helmet } from "react-helmet-async";
 import { organizationSchema, websiteSchema } from "../lib/seoSchemas";
 import { getPropertySlug } from "../lib/propertySlug";
+import { getApprovedCanonicalPath } from "../lib/canonicalRoutes";
 
 const SITE_NAME = "X-Space360";
-const SITE_URL = "https://x-space360.in";
+const SITE_URL = "https://www.x-space360.in";
 const DEFAULT_IMAGE = `${SITE_URL}/images/xspace360-og-image.jpg`;
 
 const DEFAULT_LOCAL_BUSINESS_SCHEMA = {
@@ -71,7 +72,12 @@ const SEO = ({
     ? resolvedKeywords.join(", ")
     : (resolvedKeywords || "short term rentals, luxury villas, event venues, banquet halls, co-working spaces, offices");
   const normalizedPath = path === "/" ? "/" : `/${String(path || "/").replace(/^\/+/, "")}`;
-  const pageCanonical = seo?.canonical || canonicalUrl || `${SITE_URL}${normalizedPath}`;
+  // The approved SEO sheet takes precedence for its 58 pages, including the
+  // required www host and its intentional trailing-slash choices.
+  const approvedCanonicalPath = getApprovedCanonicalPath(path);
+  const pageCanonical = approvedCanonicalPath
+    ? `${SITE_URL}${approvedCanonicalPath}`
+    : (seo?.canonical || canonicalUrl || `${SITE_URL}${normalizedPath}`);
   const pageRobots = seo?.robots || robots || (
     noIndex
       ? "noindex, nofollow"

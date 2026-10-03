@@ -4,6 +4,7 @@ import { Home, Briefcase, PartyPopper, ChevronDown, Layers } from 'lucide-react'
 import { getSeoUrlForFilters } from '../lib/seoRoutes';
 
 const CATEGORIES = [
+
   {
     key: 'residential',
     title: 'Residential Stays',
