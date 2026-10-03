@@ -12,6 +12,7 @@ from middleware.auth_middleware import get_current_user
 from services.audit_service import write_audit_log
 from services.booking_calculation_service import calculate_configured_charge, extract_booking_pricing_snapshot, get_booking_payment_config, resolve_platform_fee_charge
 from services.tds_service import get_active_tds_config
+from services.verification_case_workflow import upsert_verification_case
 from datetime import datetime, timezone, timedelta
 import logging
 import asyncio
@@ -883,37 +884,6 @@ async def submit_broker_property_for_verification(
             )
 
         now = datetime.now(timezone.utc)
-        existing_verification = await db.property_verifications.find_one(
-            _get_broker_or_rm_query(current_user, {"property_id": property_id}),
-            {"_id": 0}
-        )
-        if existing_verification:
-            verification_id = existing_verification["verification_id"]
-            await db.property_verifications.update_one(
-                {"verification_id": verification_id},
-                {"$set": {
-                    "owner_id": property_data["owner_id"],
-                    "status": VerificationStatus.PENDING.value,
-                    "rm_reviewed": False,
-                    "rm_approved": False,
-                    "rm_remarks": None,
-                    "rm_id": broker_id if is_rm else (owner.get("rm_id") or property_data.get("rm_id") or current_user.get("rm_id")),
-                    "broker_remarks": "Broker submitted draft property for verification",
-                    "updated_at": now,
-                }}
-            )
-        else:
-            verification = PropertyVerification(
-                property_id=property_id,
-                broker_id="" if is_rm else broker_id,
-                owner_id=property_data["owner_id"],
-                status=VerificationStatus.PENDING,
-                rm_id=broker_id if is_rm else (owner.get("rm_id") or property_data.get("rm_id") or current_user.get("rm_id")),
-                broker_remarks="Broker submitted draft property for verification"
-            )
-            verification_doc = verification.model_dump()
-            await db.property_verifications.insert_one(verification_doc)
-            verification_id = verification.verification_id
 
         await db.properties.update_one(
             _get_broker_or_rm_query(current_user, {"property_id": property_id}),
@@ -923,6 +893,9 @@ async def submit_broker_property_for_verification(
                 "updated_at": now,
             }}
         )
+        submitted_property = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+        verification_case = await upsert_verification_case(db, submitted_property, owner, current_user)
+        verification_id = verification_case["verification_id"]
 
         try:
             await db.audit_logs.insert_one({
@@ -1396,8 +1369,12 @@ async def submit_verification(
     current_user: dict = Depends(require_broker),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Submit property verification after site visit."""
+    """Legacy broker/RM site-visit flow is no longer part of listing verification."""
     try:
+        raise HTTPException(
+            status_code=status.HTTP_410_GONE,
+            detail="Broker/RM visit submission has been removed. Properties are verified by the telecaller workflow.",
+        )
         broker_id = current_user["user_id"]
         is_rm = current_user.get("role") == UserRole.EMPLOYEE.value and current_user.get("admin_role_key") in ["rm", "relationship_manager"]
         

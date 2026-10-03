@@ -481,6 +481,7 @@ class HostAgreementVerificationPayload(BaseModel):
 class AssignmentPayload(BaseModel):
     broker_id: Optional[str] = ""
     rm_id: Optional[str] = ""
+    telecaller_id: Optional[str] = ""
     reason: str
 
 
@@ -2762,6 +2763,24 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
     unset_updates = {}
     broker_value = (payload.broker_id or "").strip()
     rm_value = (payload.rm_id or "").strip()
+    telecaller_value = (payload.telecaller_id or "").strip()
+    if telecaller_value:
+        telecaller = await db.users.find_one({
+            "user_id": telecaller_value,
+            "is_active": {"$ne": False},
+            "$or": [
+                {"role": "telecaller"},
+                {"role": "employee", "admin_role_key": "telecaller"},
+                {"role": "employee", "designation": {"$regex": "telecaller", "$options": "i"}},
+            ],
+        }, {"_id": 0})
+        if not telecaller:
+            raise HTTPException(status_code=400, detail="Telecaller not found or inactive")
+        set_updates["verification_telecaller_id"] = telecaller["user_id"]
+        set_updates["document_telecaller_id"] = telecaller["user_id"]
+    else:
+        unset_updates["verification_telecaller_id"] = ""
+        unset_updates["document_telecaller_id"] = ""
     if broker_value:
         primary_user, primary_type = await _resolve_broker_or_rm(db, broker_value)
         if not primary_user:
@@ -2803,14 +2822,19 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
         unset_updates["branch_manager_code"] = ""
 
     update_doc = {"$set": set_updates}
-    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "updated_at"}}
+    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "verification_telecaller_id", "document_telecaller_id", "updated_at"}}
     property_update_doc = {"$set": property_set_updates}
     if unset_updates:
         update_doc["$unset"] = unset_updates
-        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code"}}
+        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "verification_telecaller_id", "document_telecaller_id"}}
 
     await db.users.update_one({"user_id": host_id}, update_doc)
     await db.properties.update_many({"owner_id": host_id}, property_update_doc)
+    if telecaller_value:
+        await db.property_verifications.update_many(
+            {"$or": [{"host_id": host_id}, {"owner_id": host_id}]},
+            {"$set": {"telecaller_id": set_updates["verification_telecaller_id"], "updated_at": now}},
+        )
     audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="host_management", action="host_team_assigned", record_id=host_id, old_value={"broker_id": host.get("broker_id"), "rm_id": host.get("rm_id"), "branch_manager_id": host.get("branch_manager_id"), "lg_code": host.get("lg_code"), "employee_code": host.get("employee_code")}, new_value=audit_new_value, reason=payload.reason)
     return api_response("Host assignment updated")
@@ -3999,6 +4023,15 @@ async def crm_assignees(current_user: dict = Depends(require_admin), db: AsyncIO
         ],
     }
     branch_managers = await db.users.find(branch_manager_query, {"_id": 0, "password_hash": 0}).sort("full_name", 1).to_list(length=500)
+    telecaller_query = {
+        "is_active": {"$ne": False},
+        "$or": [
+            {"role": "telecaller"},
+            {"role": "employee", "admin_role_key": "telecaller"},
+            {"role": "employee", "designation": {"$regex": "telecaller", "$options": "i"}},
+        ],
+    }
+    telecallers = await db.users.find(telecaller_query, {"_id": 0, "password_hash": 0}).sort("full_name", 1).to_list(length=500)
     team_leaders = [
         user for user in employees
         if re.search("lead|manager|head|tl", f"{user.get('designation', '')} {user.get('admin_role_key', '')}", re.IGNORECASE)
@@ -4007,6 +4040,7 @@ async def crm_assignees(current_user: dict = Depends(require_admin), db: AsyncIO
         "brokers": [_public_user(user) for user in brokers],
         "relationship_managers": [_public_user(user) for user in relationship_managers],
         "branch_managers": [_public_user(user) for user in branch_managers],
+        "telecallers": [_public_user(user) for user in telecallers],
         "team_leaders": [_public_user(user) for user in team_leaders],
     })
 

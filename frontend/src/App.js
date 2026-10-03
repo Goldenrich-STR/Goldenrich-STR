@@ -244,9 +244,9 @@ function AppRoutes() {
   const location = useLocation();
 
   // Check if current route is an authentication page
-  const isAuthRoute = 
-    location.pathname === "/login" || 
-    location.pathname === "/register" || 
+  const isAuthRoute =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
     location.pathname === "/register/host" ||
     location.pathname === "/host/register" ||
     location.pathname === "/admin/login" ||
@@ -393,12 +393,12 @@ function AppRoutes() {
         <Route
           path="/employee/dashboard"
           element={
+
             <ProtectedRoute allowedRoles={["employee"]} allowedRoleKeys={["telecaller"]}>
               <EmployeeDashboardRoute />
             </ProtectedRoute>
           }
         />
-
         {/* Broker Routes */}
         <Route
           path="/broker/dashboard"
@@ -408,7 +408,6 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
-
         {/* Telecaller Routes */}
         <Route path="/telecalling/dashboard" element={<Navigate to="/telecaller/dashboard" replace />} />
         <Route
