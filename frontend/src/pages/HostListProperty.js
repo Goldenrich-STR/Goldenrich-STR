@@ -3052,7 +3052,7 @@ const HostListProperty = () => {
           )}
         </div>
 
-        <div className="mt-6 flex items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_36px_rgba(15,23,42,0.04)]">
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_36px_rgba(15,23,42,0.04)]">
           <button
             onClick={prev}
             disabled={step === 0}
@@ -3062,7 +3062,8 @@ const HostListProperty = () => {
             <ArrowLeft className="w-4 h-4" />
             <span>Back</span>
           </button>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <HostSupportWidget context="property_listing" inline />
             {isHostManageMode && (
               <button
                 onClick={submitListing}
@@ -3414,7 +3415,6 @@ const HostListProperty = () => {
           </div>
         </div>
       )}
-      <HostSupportWidget context="property_listing" />
     </HostWorkspaceShell>
   );
 };

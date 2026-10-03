@@ -146,16 +146,44 @@ const isListedLead = (lead) => {
 };
 const sourceRoleOf = (lead) => {
   const raw = String(
-    lead?.source_owner?.owner_role
+    lead?.source_owner?.admin_role_key
+    || lead?.source_owner?.designation
     || lead?.source_owner?.source
+    || lead?.source_owner?.owner_role
     || lead?.registration_source
     || ''
   ).toLowerCase();
   if (raw.includes('broker')) return 'Broker';
-  if (raw === 'rm' || raw.includes('relationship_manager')) return 'RM';
+  if (raw === 'rm' || raw.includes('relationship_manager') || raw.includes('relationship manager')) return 'RM';
   if (raw.includes('telecaller')) return 'Telecaller';
-  if (raw.includes('host') || raw.includes('self')) return 'Host';
+  if (raw.includes('host') || raw.includes('self')) return 'Self Host';
   return human(raw || 'source');
+};
+const sourceNameOf = (lead) => {
+  const owner = lead?.source_owner || {};
+  const name = (
+    lead?.source_owner_name
+    || owner.owner_name
+    || owner.full_name
+    || owner.name
+    || owner.display_name
+    || ''
+  );
+  if (name) return name;
+  return sourceRoleOf(lead) === 'Self Host' ? 'Host Self' : 'Not assigned';
+};
+const sourceCodeOf = (lead) => {
+  const owner = lead?.source_owner || {};
+  return (
+    lead?.source_owner_code
+    || owner.owner_code
+    || owner.lg_code
+    || owner.employee_code
+    || owner.uid
+    || owner.user_id
+    || lead?.lg_code
+    || 'No LG code'
+  );
 };
 const hostIdOf = (lead) => lead?.host?.user_id || caseOf(lead)?.host_id || '';
 const leadHostId = (lead) => (
@@ -428,7 +456,7 @@ const TelecallerDashboard = () => {
     const baseRows = ['leads', 'tasks'].includes(activeNav) ? leadRows : merged;
     return baseRows.filter((lead) => {
       const stage = stageOf(lead);
-      const text = [hostName(lead), leadPhone(lead), leadEmail(lead), propertyTitle(lead), lead.lead_id, lead.lg_code, lead.source_owner_name, lead.source_owner_code, stage].join(' ').toLowerCase();
+      const text = [hostName(lead), leadPhone(lead), leadEmail(lead), propertyTitle(lead), lead.lead_id, lead.lg_code, sourceRoleOf(lead), sourceNameOf(lead), sourceCodeOf(lead), stage].join(' ').toLowerCase();
       if (search && !text.includes(search.toLowerCase())) return false;
       if (activeTab === 'calls') {
         const kycStatus = String(lead.kyc_status || '').toLowerCase();
@@ -1222,7 +1250,7 @@ const TelecallerDashboard = () => {
                                     <p className="truncate text-xs text-slate-400">{propertyTitle(lead)}</p>
                                     {compactTable && (
                                       <p className="mt-1 truncate text-[10px] font-black uppercase tracking-wider text-slate-400">
-                                        {sourceRoleOf(lead)} / {lead.source_owner_name || 'Self registration'} / {lead.source_owner_code || lead.lg_code || 'No LG'}
+                                        {sourceRoleOf(lead)} / {sourceNameOf(lead)} / {sourceCodeOf(lead)}
                                       </p>
                                     )}
                                     {compactTable && <p className="text-[10px] font-bold text-slate-400">{lead.property?.city || lead.host?.city || '-'}</p>}
@@ -1233,8 +1261,8 @@ const TelecallerDashboard = () => {
                                   <div className="space-y-0.5">
                                     <StatusChip>{sourceRoleOf(lead)}</StatusChip>
                                     <div className="max-w-[170px]">
-                                      <p className="truncate text-[11px] font-bold text-slate-700">{lead.source_owner_name || 'Self registration'}</p>
-                                      <p className="truncate text-[10px] font-black uppercase tracking-wider text-slate-400">{lead.source_owner_code || lead.lg_code || 'No LG code'}</p>
+                                      <p className="truncate text-[11px] font-bold text-slate-700">{sourceNameOf(lead)}</p>
+                                      <p className="truncate text-[10px] font-black uppercase tracking-wider text-slate-400">{sourceCodeOf(lead)}</p>
                                     </div>
                                   </div>
                                 </td>
@@ -1903,8 +1931,8 @@ function Lead360({ selected, activity, checklist, setChecklist, checklistDone, r
           <Info label="Property" value={propertyTitle(selected)} />
           <Info label="Location" value={selected.property?.city || selected.host?.city || '-'} />
           <Info label="Source" value={sourceRoleOf(selected)} />
-          <Info label="Source Owner" value={selected.source_owner_name || 'Self registration'} />
-          <Info label="Owner LG Code" value={selected.source_owner_code || selected.lg_code || '-'} />
+          <Info label="Source Owner" value={sourceNameOf(selected)} />
+          <Info label="Owner LG Code" value={sourceCodeOf(selected)} />
           <Info label="Assigned Telecaller" value={user?.full_name || user?.email || '-'} />
           <Info label="Next Best Action" value={nextAction(selected)} highlight />
         </div>

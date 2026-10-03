@@ -153,7 +153,7 @@ const LegalPage = () => {
     : (pathParts[0] || 'terms');
   const selectedDoc = useMemo(() => {
     if (requestedSlug === 'terms') return documents.find(doc => doc.id === 'terms') || null;
-    if (requestedSlug === 'privacy') return documents.find(doc => doc.id === 'privacy') || null;
+    if (requestedSlug === 'privacy' || requestedSlug === 'privacy-policy') return documents.find(doc => doc.id === 'privacy') || null;
     if (requestedSlug === 'refund-policy') return documents.find(doc => doc.id === 'refund-policy') || null;
     return documents.find(doc => slugify(doc.title) === requestedSlug || doc.id === requestedSlug) || documents[0] || null;
   }, [documents, requestedSlug]);
@@ -439,7 +439,7 @@ const LegalPage = () => {
                 const href = doc.id === 'terms'
                   ? '/terms'
                   : doc.id === 'privacy'
-                    ? '/privacy'
+                    ? '/privacy-policy'
                     : doc.id === 'refund-policy'
                       ? '/refund-policy'
                       : `/legal/${slug}`;

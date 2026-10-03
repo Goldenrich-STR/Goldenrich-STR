@@ -49,7 +49,7 @@ const AccountDeletionPage = () => {
             X-Space360
           </Link>
           <Link
-            to="/privacy"
+            to="/privacy-policy"
             className="rounded-md border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
           >
             Privacy Policy

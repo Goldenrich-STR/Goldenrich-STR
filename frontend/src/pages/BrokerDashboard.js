@@ -17,7 +17,6 @@ const brokerNavigation = [
   { id: 'overview', label: 'Command Center', group: 'Control', icon: Building2 },
   { id: 'owners', label: 'Host Management', group: 'CRM', icon: Users },
   { id: 'properties', label: 'Property CRM', group: 'CRM', icon: Building2 },
-  { id: 'verifications', label: 'Verification Hub', group: 'Operations', icon: FileCheck },
   { id: 'bookings', label: 'Bookings & Reports', group: 'Operations', icon: FileText },
   { id: 'leads', label: 'Lead Pipeline', group: 'Sales', icon: Target },
   { id: 'commissions', label: 'Commission Ledger', group: 'Finance', icon: IndianRupee },
@@ -138,12 +137,6 @@ const BrokerDashboard = () => {
       subtextClassName: 'border border-slate-200 bg-slate-100 text-slate-700'
     },
     { 
-      label: 'Pending Verifications', 
-      value: stats.verifications.pending, 
-      icon: FileCheck, 
-      iconClassName: 'bg-slate-100 text-slate-700 ring-1 ring-slate-200'
-    },
-    { 
       label: 'Total Commission', 
       value: `₹${Math.round(Number(stats.commission.total || 0) / 100).toLocaleString('en-IN')}`, 
       icon: IndianRupee, 
@@ -208,7 +201,7 @@ const BrokerDashboard = () => {
 
             <div className="mt-5 space-y-2" data-testid="broker-tabs">
               {brokerNavigation.map((tab) => {
-                const displayLabel = tab.id === 'verifications' && isRm ? 'RM Checklist' : tab.label;
+                const displayLabel = tab.label;
                 return (
                   <button
                     key={tab.id}
@@ -239,12 +232,12 @@ const BrokerDashboard = () => {
             <div className="mb-8 rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:p-8">
               <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">{isRm ? 'X-Space360 RM Workspace' : 'X-Space360 Broker Workspace'}</p>
               <h1 className="mt-2 text-[32px] font-black tracking-[-0.05em] text-slate-950 md:text-[42px]">
-                {activeTab === 'verifications' && isRm ? 'RM Checklist' : (brokerNavigation.find((item) => item.id === activeTab)?.label || 'Dashboard')}
+                {brokerNavigation.find((item) => item.id === activeTab)?.label || 'Dashboard'}
               </h1>
               <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-500">
                 {activeTab === 'overview'
                   ? (isRm ? 'Monitor your RM workflow with a cleaner command center for leads, verifications, portfolio health and commissions.' : 'Monitor your broker workflow with a cleaner command center for leads, verifications, portfolio health and commissions.')
-                  : `Manage ${activeTab === 'verifications' && isRm ? 'RM checklist tasks' : (brokerNavigation.find((item) => item.id === activeTab)?.label?.toLowerCase() || 'operations')} from a focused workspace.`}
+                  : `Manage ${brokerNavigation.find((item) => item.id === activeTab)?.label?.toLowerCase() || 'operations'} from a focused workspace.`}
               </p>
             </div>
 
@@ -277,36 +270,12 @@ const BrokerDashboard = () => {
                     ))}
                   </div>
 
-                  {/* Pending Verifications Alert */}
-                  {stats && stats.verifications.pending > 0 && (
-                    <div className="mb-12 flex flex-col items-center justify-between gap-6 rounded-[28px] border border-slate-200 bg-[linear-gradient(180deg,#ffffff,#f7f7f5)] p-8 shadow-[0_16px_36px_rgba(15,23,42,0.04)] md:flex-row" data-testid="pending-alert">
-                      <div className="flex items-center space-x-6">
-                        <div className="rounded-2xl bg-slate-100 p-4 shadow-sm ring-1 ring-slate-200">
-                           <Clock className="w-8 h-8 text-slate-700" />
-                        </div>
-                        <div>
-                          <p className="mb-1 text-xl font-black tracking-[-0.03em] text-slate-950">
-                            {stats.verifications.pending} Physical Inspections Required
-                          </p>
-                          <p className="text-xs font-bold uppercase tracking-widest text-slate-500">Site visits must be completed for remote RM review</p>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => setActiveTab('verifications')}
-                        className="whitespace-nowrap rounded-2xl bg-slate-900 px-8 py-4 text-xs font-black uppercase tracking-[0.2em] text-white shadow-[0_14px_28px_rgba(15,23,42,0.14)] transition hover:bg-black"
-                      >
-                        Action Queue
-                      </button>
-                    </div>
-                  )}
-
                   {/* Quick Actions */}
                   <div className="rounded-[28px] border border-slate-200 bg-white p-10 shadow-[0_16px_36px_rgba(15,23,42,0.04)]" data-testid="quick-actions">
                     <h3 className="mb-8 text-xl font-black tracking-[-0.03em] text-slate-950">System Shortcuts</h3>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       {[
                         { id: 'leads', label: 'GENERATE LEAD', icon: Target, color: 'text-slate-900' },
-                        { id: 'verifications', label: 'SITE INSPECTION', icon: FileCheck, color: 'text-slate-700' },
                         { id: 'owners', label: 'HOST MANAGEMENT', icon: Users, color: 'text-slate-900' }
                       ].map(action => (
                         <button
@@ -337,7 +306,6 @@ const BrokerDashboard = () => {
         {activeTab === 'properties' && <PropertiesSection />}
 
         {/* Verifications Tab */}
-        {activeTab === 'verifications' && <VerificationsSection />}
 
         {/* Leads Tab */}
         {activeTab === 'leads' && <LeadsSection />}
