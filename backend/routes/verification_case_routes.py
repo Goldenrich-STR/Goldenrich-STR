@@ -1901,6 +1901,14 @@ async def save_call_outcome(verification_id: str, payload: CallPayload, current_
     if not (_is_admin(current_user) or _is_telecaller(current_user)):
         raise HTTPException(status_code=403, detail="Telecaller access required")
     case = await _case_or_404(db, verification_id)
+    host = await db.users.find_one(
+        _active_host_filter({"user_id": case.get("host_id") or case.get("owner_id")}),
+        {"_id": 0, "kyc_status": 1},
+    ) or {}
+    if str(host.get("kyc_status") or "").lower() not in {"approved", "verified", "complete", "completed"}:
+        raise HTTPException(status_code=400, detail="Complete host document verification before the normal call.")
+    if case.get("verification_path") == "VIDEO_ONLY":
+        raise HTTPException(status_code=400, detail="This existing host listing requires video verification only.")
     outcome = payload.outcome.strip().upper().replace(" ", "_")
     valid = {"CONNECTED", "NO_ANSWER", "BUSY", "WRONG_NUMBER", "CALLBACK_REQUESTED", "HOST_NOT_INTERESTED", "COMPLETED", "SCHEDULED", "RESCHEDULED"}
     if outcome not in valid:

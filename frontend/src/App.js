@@ -182,20 +182,11 @@ const RoleAwareVideoVerificationRoom = () => {
   const { user } = useAuth();
   return <VideoVerificationRoom role={isRoleKey(user, ["telecaller"]) ? "telecaller" : "host"} />;
 };
-fix/telecaller-role-wiring
-const EmployeeDashboardRouter = () => {
-  const { user } = useAuth();
-
-  if (isRoleKey(user, ["telecaller"])) {
-    return <Navigate to="/telecaller/dashboard" replace />;
-  }
-
 const EmployeeDashboardRoute = () => {
   const { user } = useAuth();
   if (isRoleKey(user, ["telecaller"])) {
     return <Navigate to="/telecaller/dashboard" replace />;
   }
- uat
   return <EmployeeDashboard />;
 };
 
@@ -252,9 +243,9 @@ function AppRoutes() {
   const location = useLocation();
 
   // Check if current route is an authentication page
-  const isAuthRoute = 
-    location.pathname === "/login" || 
-    location.pathname === "/register" || 
+  const isAuthRoute =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
     location.pathname === "/register/host" ||
     location.pathname === "/host/register" ||
     location.pathname === "/admin/login" ||
@@ -398,15 +389,10 @@ function AppRoutes() {
           path="/employee/dashboard"
           element={
             <ProtectedRoute allowedRoles={["employee"]}>
-fix/telecaller-role-wiring
-              <EmployeeDashboardRouter />
-
               <EmployeeDashboardRoute />
- uat
             </ProtectedRoute>
           }
         />
-
         {/* Broker Routes */}
         <Route
           path="/broker/dashboard"
@@ -416,7 +402,6 @@ fix/telecaller-role-wiring
             </ProtectedRoute>
           }
         />
-
         {/* Telecaller Routes */}
         <Route path="/telecalling/dashboard" element={<Navigate to="/telecaller/dashboard" replace />} />
         <Route

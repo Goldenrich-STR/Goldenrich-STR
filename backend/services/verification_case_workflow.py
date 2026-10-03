@@ -102,7 +102,17 @@ def attribution_from_host(host: dict | None, actor: dict | None = None) -> dict:
     }
 
 
-def initial_case_status(registration_source: str) -> str:
+def host_has_completed_document_verification(host: dict | None) -> bool:
+    """A previously verified host needs only the property video check."""
+    status = str((host or {}).get("kyc_status") or "").strip().lower()
+    return status in {"approved", "verified", "complete", "completed"}
+
+
+def initial_case_status(registration_source: str, host: dict | None = None) -> str:
+    # Existing hosts have already completed KYC, so a new listing bypasses
+    # document review and the normal call and lands directly in the video queue.
+    if host_has_completed_document_verification(host):
+        return VERIFICATION_SCHEDULED
     return TELECALLER_CALL_PENDING
 
 
@@ -254,7 +264,7 @@ async def upsert_verification_case(db, prop: dict, host: dict, actor: dict | Non
     attribution = attribution_from_host(host, actor)
     branch_manager = await resolve_branch_manager(db, prop, host)
     assigned_telecaller_id, assignment_meta = await resolve_verification_telecaller(db, prop, host, existing)
-    status = initial_case_status(attribution["registration_source"])
+    status = initial_case_status(attribution["registration_source"], host)
     now = now_utc()
     base = {
         "property_id": prop["property_id"],
@@ -274,16 +284,30 @@ async def upsert_verification_case(db, prop: dict, host: dict, actor: dict | Non
         "current_status": status,
         "workflow_status": status,
         "status": "pending",
+        "verification_path": "VIDEO_ONLY" if status == VERIFICATION_SCHEDULED else "DOCUMENTS_CALL_VIDEO",
         "telecaller_checklist": existing.get("telecaller_checklist", {}) if existing else {},
         "bm_checklist": existing.get("bm_checklist", {}) if existing else {},
         "updated_at": now,
     }
     if existing:
+        # Reopening/enriching a case must never move it backwards in the flow.
+        if existing.get("current_stage"):
+            base["current_stage"] = existing["current_stage"]
+            base["current_status"] = existing.get("current_status") or existing["current_stage"]
+            base["workflow_status"] = existing.get("workflow_status") or existing["current_stage"]
+            base["status"] = existing.get("status") or base["status"]
+            base["verification_path"] = existing.get("verification_path") or base["verification_path"]
         await db.property_verifications.update_one({"verification_id": existing["verification_id"]}, {"$set": base})
         if assigned_telecaller_id:
             await db.properties.update_one(
                 {"property_id": prop["property_id"]},
-                {"$set": {"telecaller_id": assigned_telecaller_id, "verification_telecaller_id": assigned_telecaller_id, "updated_at": now}},
+                {"$set": {
+                    "telecaller_id": assigned_telecaller_id,
+                    "verification_telecaller_id": assigned_telecaller_id,
+                    "workflow_status": base["workflow_status"],
+                    "verification_stage": base["current_stage"],
+                    "updated_at": now,
+                }},
             )
             await db.users.update_one(
                 {"user_id": base["host_id"]},
@@ -312,7 +336,13 @@ async def upsert_verification_case(db, prop: dict, host: dict, actor: dict | Non
     if assigned_telecaller_id:
         await db.properties.update_one(
             {"property_id": prop["property_id"]},
-            {"$set": {"telecaller_id": assigned_telecaller_id, "verification_telecaller_id": assigned_telecaller_id, "updated_at": now}},
+            {"$set": {
+                "telecaller_id": assigned_telecaller_id,
+                "verification_telecaller_id": assigned_telecaller_id,
+                "workflow_status": base["workflow_status"],
+                "verification_stage": base["current_stage"],
+                "updated_at": now,
+            }},
         )
         await db.users.update_one(
             {"user_id": base["host_id"]},

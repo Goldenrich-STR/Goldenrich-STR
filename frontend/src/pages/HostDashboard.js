@@ -3,11 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, getImageUrl, accountAPI, uploadAPI, loadRazorpaySdk, cmsAPI } from '../services/api';
 import ReactMarkdown from 'react-markdown';
-fix/telecaller-role-wiring
-import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, User, Star, Video } from 'lucide-react';
-
-import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User, Star, Percent } from 'lucide-react';
-uat
+import { Building2, Plus, Calendar, IndianRupee, Eye, MapPin, Lock, Check, Upload, FileText, CheckCircle2, AlertCircle, Edit3, ChevronLeft, ChevronRight, Trash2, Clock, Users, Landmark, Briefcase, User, Star, Video, Percent } from 'lucide-react';
 import { NotificationBell } from '../components/NotificationCenter';
 import LegalLinks from '../components/LegalLinks';
 import HostSupportWidget from '../components/HostSupportWidget';
