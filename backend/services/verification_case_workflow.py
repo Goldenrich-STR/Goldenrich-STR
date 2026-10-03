@@ -66,6 +66,19 @@ def now_utc():
     return datetime.now(timezone.utc)
 
 
+def _parse_dt(value):
+    if not value:
+        return None
+    if isinstance(value, datetime):
+        result = value
+    else:
+        try:
+            result = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return None
+    return result if result.tzinfo else result.replace(tzinfo=timezone.utc)
+
+
 def workflow_id(prefix: str) -> str:
     return f"{prefix}-{uuid4().hex[:10].upper()}"
 
@@ -205,9 +218,17 @@ async def assign_next_verification_telecaller(db, prop: dict | None = None, host
     telecallers = [row for row in telecallers if row.get("user_id")]
     telecallers.sort(key=_telecaller_sort_value)
 
+    lead_created = _parse_dt(prop.get("created_at") or host.get("created_at"))
+    if lead_created:
+        eligible = []
+        for telecaller in telecallers:
+            telecaller_created = _parse_dt(telecaller.get("created_at") or telecaller.get("timestamp") or telecaller.get("createdAt"))
+            if telecaller_created and telecaller_created <= lead_created:
+                eligible.append(telecaller)
+        telecallers = eligible
+
     if not telecallers:
-        fallback = prop.get("telecaller_id") or host.get("telecaller_id") or ""
-        return fallback, {"policy": "fallback_no_active_telecaller"}
+        return "", {"policy": "no_telecaller_existed_when_lead_was_created"}
 
     counter_key = f"counter:{TELECALLER_ASSIGNMENT_COUNTER_ID}"
     counter = await db.platform_settings.find_one({"key": counter_key}, {"_id": 0})
