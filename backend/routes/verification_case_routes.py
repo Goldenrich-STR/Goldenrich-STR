@@ -379,6 +379,34 @@ def _created_after_telecaller(record: dict | None, telecaller: dict) -> bool:
     return record_created >= telecaller_created
 
 
+def _is_explicitly_assigned_to_telecaller(record: dict | None, telecaller: dict) -> bool:
+    """Return whether a record is explicitly assigned to this telecaller."""
+    record = record or {}
+    telecaller_terms = set(_telecaller_identity_terms(telecaller))
+    assigned_terms = {
+        str(record.get("telecaller_id") or "").strip(),
+        str(record.get("verification_telecaller_id") or "").strip(),
+        str(record.get("document_telecaller_id") or "").strip(),
+        str(record.get("assigned_telecaller_id") or "").strip(),
+    }
+    assigned_terms.discard("")
+    return bool(telecaller_terms.intersection(assigned_terms))
+
+
+def _visible_to_telecaller(
+    record: dict | None,
+    telecaller: dict,
+    *,
+    explicitly_assigned: bool = False,
+) -> bool:
+    """Keep historical records hidden unless they were explicitly assigned."""
+    return (
+        explicitly_assigned
+        or _is_explicitly_assigned_to_telecaller(record, telecaller)
+        or _created_after_telecaller(record, telecaller)
+    )
+
+
 def _employee_identity_terms(user: dict) -> list[str]:
     terms = [
         user.get("user_id"),
@@ -1136,7 +1164,7 @@ async def list_cases(stage: Optional[str] = None, current_user: dict = Depends(g
     rows = await db.property_verifications.find(query, {"_id": 0}).sort("updated_at", -1).to_list(length=500)
     enriched = []
     for row in rows:
-        if _is_telecaller(current_user) and not _created_after_telecaller(row, telecaller_profile):
+        if _is_telecaller(current_user) and not _visible_to_telecaller(row, telecaller_profile):
             continue
         item = await _enrich_case(db, row)
         if not _case_has_active_entities(item):
@@ -1199,7 +1227,16 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
 
     hosts = await db.users.find(host_query, {"_id": 0, "password_hash": 0}).sort("created_at", -1).to_list(length=1000)
     if _is_telecaller(current_user):
-        hosts = [host for host in hosts if _created_after_telecaller(host, telecaller_profile)]
+        assigned_host_id_set = set(assigned_case_host_ids)
+        hosts = [
+            host
+            for host in hosts
+            if _visible_to_telecaller(
+                host,
+                telecaller_profile,
+                explicitly_assigned=host.get("user_id") in assigned_host_id_set,
+            )
+        ]
     host_ids = [host.get("user_id") for host in hosts if host.get("user_id")]
     properties = []
     if _is_telecaller(current_user):
@@ -1311,7 +1348,7 @@ async def dashboard_summary(current_user: dict = Depends(get_current_user), db: 
     visible_cases = []
     enriched = []
     for case in cases:
-        if _is_telecaller(current_user) and not _created_after_telecaller(case, telecaller_profile):
+        if _is_telecaller(current_user) and not _visible_to_telecaller(case, telecaller_profile):
             continue
         item = await _enrich_case(db, case)
         if not _case_has_active_entities(item):
@@ -1449,7 +1486,16 @@ async def list_document_queue(stage: Optional[str] = None, current_user: dict = 
     hosts = await db.users.find(query, {"_id": 0, "password_hash": 0}).sort("updated_at", -1).to_list(length=500)
     if _is_telecaller(current_user):
         telecaller_profile = await db.users.find_one({"user_id": current_user.get("user_id")}, {"_id": 0, "password_hash": 0}) or current_user
-        hosts = [host for host in hosts if _created_after_telecaller(host, telecaller_profile)]
+        assigned_host_id_set = set(assigned_host_ids)
+        hosts = [
+            host
+            for host in hosts
+            if _visible_to_telecaller(
+                host,
+                telecaller_profile,
+                explicitly_assigned=host.get("user_id") in assigned_host_id_set,
+            )
+        ]
     properties = await db.properties.find(
         _active_property_filter({"owner_id": {"$in": [host.get("user_id") for host in hosts if host.get("user_id")] }}),
         {"_id": 0, "property_id": 1, "title": 1, "city": 1, "address": 1, "category": 1, "property_type": 1, "status": 1, "workflow_status": 1, "verification_stage": 1, "owner_id": 1, "registration_source": 1, "lg_code": 1},
