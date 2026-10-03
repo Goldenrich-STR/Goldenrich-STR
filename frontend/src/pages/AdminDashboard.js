@@ -163,7 +163,7 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
               <select 
                 value={currentMonth}
                 onChange={e => setCurrentMonth(parseInt(e.target.value))}
-                className="bg-transparent text-sm font-bold tracking-tight text-charcoal uppercase tracking-wider outline-none cursor-pointer hover:text-terracotta transition"
+                className="bg-transparent text-sm font-bold text-charcoal uppercase tracking-wider outline-none cursor-pointer hover:text-terracotta transition"
               >
                 {months.map((m, idx) => (
                   <option key={m} value={idx} className="text-charcoal bg-white normal-case font-bold">{m}</option>
@@ -172,7 +172,7 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
               <select 
                 value={currentYear}
                 onChange={e => setCurrentYear(parseInt(e.target.value))}
-                className="bg-transparent text-sm font-bold tracking-tight text-charcoal tracking-wide outline-none cursor-pointer hover:text-terracotta transition"
+                className="bg-transparent text-sm font-bold text-charcoal tracking-wide outline-none cursor-pointer hover:text-terracotta transition"
               >
                 {years.map(y => (
                   <option key={y} value={y} className="text-charcoal bg-white font-bold">{y}</option>
@@ -190,7 +190,7 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
 
           <div className="grid grid-cols-7 text-center mb-2">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(day => (
-              <div key={day} className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{day}</div>
+              <div key={day} className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest">{day}</div>
             ))}
           </div>
 
@@ -221,14 +221,14 @@ const PremiumDatePicker = ({ value, onChange, placeholder = 'Select Date', requi
             <button 
               type="button"
               onClick={handleClear}
-              className="text-[10px] font-bold tracking-tight text-charcoal-muted hover:text-charcoal uppercase tracking-widest transition"
+              className="text-[10px] font-bold text-charcoal-muted hover:text-charcoal uppercase tracking-widest transition"
             >
               Clear
             </button>
             <button 
               type="button"
               onClick={handleToday}
-              className="text-[10px] font-bold tracking-tight text-terracotta hover:text-terracotta-dark uppercase tracking-widest transition"
+              className="text-[10px] font-bold text-terracotta hover:text-terracotta-dark uppercase tracking-widest transition"
             >
               Today
             </button>
@@ -1823,7 +1823,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
       {/* Advanced Search & Filter Row */}
       <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-subtle mb-6 space-y-4">
-        <h4 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Search & Filter Users</h4>
+        <h4 className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Search & Filter Users</h4>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           {/* Name or UID Search */}
           <div className="relative">
@@ -1941,11 +1941,11 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                     <h4 className="font-bold text-charcoal text-lg">{user.full_name}</h4>
                     <p className="text-sm text-charcoal-light">{user.email} | {user.phone}</p>
                     <div className="flex flex-wrap items-center gap-2 mt-1">
-                      <span className="inline-block px-2 py-0.5 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-wider rounded">
+                      <span className="inline-block px-2 py-0.5 bg-terracotta/10 text-terracotta text-[10px] font-bold uppercase tracking-wider rounded">
                         {user.role}
                       </span>
                       {user.role === 'host' && (
-                        <span className={`inline-block px-2 py-0.5 text-[10px] font-bold tracking-tight uppercase tracking-wider rounded border ${
+                        <span className={`inline-block px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded border ${
                           user.kyc_status === 'approved' ? 'bg-green-50 text-green-600 border-green-200' :
                           user.kyc_status === 'rejected' ? 'bg-red-50 text-red-600 border-red-200' :
                           user.kyc_status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-200 animate-pulse' :
@@ -1961,7 +1961,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                         <span className="text-xs text-charcoal-muted">in {user.city}</span>
                       )}
                       {user.created_at && (
-                        <span className="inline-block px-2 py-0.5 bg-gray-50 text-charcoal-muted text-[10px] font-medium rounded flex items-center">
+                        <span className="px-2 py-0.5 bg-gray-50 text-charcoal-muted text-[10px] font-medium rounded inline-flex items-center">
                           <Clock className="w-3 h-3 mr-1 text-charcoal-muted/70" />
                           Registered: {formatUserDate(user.created_at)}
                         </span>
@@ -2088,7 +2088,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 </div>
                 <div>
                   <h3 className="text-2xl font-bold tracking-tight text-charcoal leading-none mb-1">Create New User</h3>
-                  <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mt-0.5">Register professional nodes in the STR network</span>
+                  <span className="text-[10px] font-bold text-charcoal-muted uppercase tracking-widest block mt-0.5">Register professional nodes in the STR network</span>
                 </div>
               </div>
               <div className="w-10 h-10 rounded-xl bg-terracotta/5 border border-terracotta/10 flex items-center justify-center text-terracotta">
@@ -2099,7 +2099,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
             <form onSubmit={handleCreateUser} className="space-y-6">
               {/* Profile Image Upload Component */}
               <div className="bg-[#FAF9F6] border border-gray-100 rounded-2xl p-5 mb-4">
-                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-3">Profile Image</label>
+                <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block mb-3">Profile Image</label>
                 <div className="flex items-center space-x-4">
                   {/* Circular Preview */}
                   <div className="relative flex-shrink-0">
@@ -2157,7 +2157,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               </div>
 
               <div>
-                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Full Name</label>
+                <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block mb-1.5">Full Name</label>
                 <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
                   <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                     <User className="w-5 h-5" />
@@ -2174,7 +2174,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Email Address</label>
+                  <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block mb-1.5">Email Address</label>
                   <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
                     <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                       <Mail className="w-5 h-5" />
@@ -2189,7 +2189,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Phone Number</label>
+                  <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block mb-1.5">Phone Number</label>
                   <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
                     <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                       <Phone className="w-5 h-5" />
@@ -2206,7 +2206,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               </div>
 
               <div>
-                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Password</label>
+                <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block mb-1.5">Password</label>
                 <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
                   <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                     <Lock className="w-5 h-5" />
@@ -2233,7 +2233,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
               </div>
 
               <div>
-                <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
+                <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block mb-1.5">Role</label>
                 <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
                   <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                     <Shield className="w-5 h-5" />
@@ -2358,7 +2358,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                   <div className="grid grid-cols-1 gap-4 animate-slide-up">
                     {newUser.role === 'broker' ? (
                       <div>
-                        <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Broker Code</label>
+                        <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block mb-1.5">Broker Code</label>
                         <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
                           <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                             <Shield className="w-5 h-5" />
@@ -2374,7 +2374,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                       </div>
                     ) : (
                       <div>
-                        <label className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest block mb-1.5">Employee Code</label>
+                        <label className="text-xs font-bold text-charcoal-muted uppercase tracking-widest block mb-1.5">Employee Code</label>
                         <div className="relative flex items-center border border-gray-200/80 rounded-2xl overflow-hidden focus-within:border-terracotta bg-white focus-within:shadow-subtle transition-all">
                           <div className="flex items-center justify-center w-12 h-12 bg-stone/40 border-r border-gray-100 text-terracotta/70 flex-shrink-0">
                             <Shield className="w-5 h-5" />
@@ -2461,7 +2461,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                 
                 {/* Profile Image Section */}
                 <div className="flex flex-col space-y-2">
-                  <span className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Profile Image</span>
+                  <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Profile Image</span>
                   <div className="flex items-center space-x-6 bg-stone/40 p-4 rounded-2xl border border-gray-100 shadow-subtle">
                     {/* Circular Avatar Preview Container */}
                     <div 
@@ -2516,7 +2516,7 @@ const UserManagement = ({ roleFilter, setRoleFilter }) => {
                         className="hidden"
                       />
                       {uploading ? (
-                        <span className="text-[10px] font-bold tracking-tight text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
+                        <span className="text-[10px] font-bold text-terracotta uppercase tracking-widest animate-pulse">Uploading to node server...</span>
                       ) : (
                         <span className="text-[9px] font-medium text-charcoal-muted">Supported formats: PNG, JPG, JPEG, WEBP, GIF (Max 8MB)</span>
                       )}
