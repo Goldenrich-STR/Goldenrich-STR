@@ -821,10 +821,10 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
         <div className="overflow-y-auto p-6 md:p-10 custom-scrollbar w-full h-full">
           {/* Modal Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-semibold tracking-tight text-[10px] uppercase tracking-[0.2em] mb-4 animate-pulse">
+          <span className="inline-block px-4 py-1.5 rounded-full bg-terracotta/10 text-terracotta font-semibold text-[10px] uppercase tracking-[0.2em] mb-4 animate-pulse">
             {t('modalJourney')}
           </span>
-          <h3 id="how-it-works-modal-title" className="text-3xl md:text-5xl font-bold tracking-tight text-charcoal tracking-tight mb-4">
+          <h3 id="how-it-works-modal-title" className="text-3xl md:text-5xl font-bold tracking-tight text-charcoal mb-4">
             {t('modalTitle')}
           </h3>
           <p className="text-charcoal-light font-medium text-base md:text-lg leading-relaxed">
@@ -880,10 +880,10 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
           
           {/* Left Column: Descriptions */}
           <div className="md:col-span-7 space-y-4 animate-slide-up">
-            <span className="inline-block px-3 py-1 rounded-full bg-sage/10 text-sage font-semibold tracking-tight text-[9px] uppercase tracking-widest">
+            <span className="inline-block px-3 py-1 rounded-full bg-sage/10 text-sage font-semibold text-[9px] uppercase tracking-widest">
               {t('activeStage').replace('{stage}', activeStep)}
             </span>
-            <h4 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal tracking-tight transition-all duration-300">
+            <h4 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal transition-all duration-300">
               {currentStepData.heading}
             </h4>
             <p className="text-sm font-semibold tracking-tight text-terracotta italic font-serif">
@@ -1003,7 +1003,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
         {/* Interactive Guidelines Panel */}
         <div className="grid md:grid-cols-2 gap-8 bg-stone rounded-3xl p-6 md:p-8 mb-8 border border-gray-100">
           <div>
-            <h4 className="font-bold tracking-tight text-charcoal uppercase tracking-wider text-xs mb-4 flex items-center space-x-2">
+            <h4 className="font-bold text-charcoal uppercase tracking-wider text-xs mb-4 flex items-center space-x-2">
               <ClipboardList className="w-4 h-4 text-terracotta" />
               <span>{t('onboardingGuidelines')}</span>
             </h4>
@@ -1023,7 +1023,7 @@ const HowItWorksModal = ({ isOpen, onClose, user, navigate, steps, t }) => {
           </div>
 
           <div>
-            <h4 className="font-bold tracking-tight text-charcoal uppercase tracking-wider text-xs mb-4 flex items-center space-x-2">
+            <h4 className="font-bold text-charcoal uppercase tracking-wider text-xs mb-4 flex items-center space-x-2">
               <Sparkles className="w-4 h-4 text-sage" />
               <span>{t('securePayments')}</span>
             </h4>
@@ -2811,7 +2811,7 @@ const LandingPage = () => {
                   {/* Left Actions (Badges) */}
                   <div className="absolute top-3 left-3 flex gap-2 z-20">
                      <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
-                        <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal">
                            {formatPropertyTypeLabel(item.property_type || item.type) || 'Stay'}
                         </span>
                      </div>
@@ -3629,7 +3629,7 @@ const LandingPage = () => {
                         </div>
                       )}
                       <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
-                        <span className="text-[10px] font-bold tracking-tight uppercase tracking-widest text-charcoal">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal">
                           {formatPropertyTypeLabel(item.property_type || item.type) || 'Stay'}
                         </span>
                       </div>
@@ -4264,7 +4264,7 @@ const LandingPage = () => {
           {/* Testimonials (Loved by Guests & Hosts) */}
           <ScrollReveal duration="duration-[900ms]">
             <div className="mb-12 md:mb-20 text-center">
-            <span className="text-xs font-bold tracking-tight tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
+            <span className="text-xs font-bold tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
             <h3 className="text-3xl md:text-4xl font-bold text-charcoal mt-2 mb-6 tracking-tight">{t('lovedByGuests')}</h3>
             
             <div className="max-w-7xl mx-auto relative px-4 md:px-8">
@@ -4583,7 +4583,7 @@ const LandingPage = () => {
                     
                     {/* Floating Info inside Image Column */}
                     <div className="absolute bottom-6 left-6 right-6 z-20 text-white">
-                      <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold tracking-tight uppercase tracking-widest text-white mb-3 shadow-sm">
+                      <span className="inline-block px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-[10px] font-bold uppercase tracking-widest text-white mb-3 shadow-sm">
                         {selectedPost.read_time || '5 min read'}
                       </span>
                       <h4 className="text-lg md:text-xl font-bold tracking-tight font-serif italic text-sand-100 leading-tight">
@@ -4598,7 +4598,7 @@ const LandingPage = () => {
                     {/* Header Controls */}
                     <div className="flex items-center justify-between p-6 md:p-8 pb-4 border-b border-sand-100">
                       {/* Date & Tagline */}
-                      <div className="flex items-center space-x-2 text-xs font-bold tracking-tight text-terracotta uppercase tracking-[0.2em]">
+                      <div className="flex items-center space-x-2 text-xs font-bold text-terracotta uppercase tracking-[0.2em]">
                         <span>{t('ourJournal')}</span>
                         <span className="text-charcoal-muted font-normal">•</span>
                         <span className="text-charcoal-muted">{selectedPost.date}</span>
@@ -4618,7 +4618,7 @@ const LandingPage = () => {
                     <div className="overflow-y-auto px-6 md:px-8 py-6 custom-scrollbar flex-1 space-y-6">
                       
                       {/* Title */}
-                      <h3 className="text-2xl md:text-3xl font-bold tracking-tight text-charcoal tracking-tight leading-tight">
+                      <h3 className="text-2xl md:text-3xl font-bold text-charcoal tracking-tight leading-tight">
                         {selectedPost.title}
                       </h3>
 

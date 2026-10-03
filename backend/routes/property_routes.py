@@ -1380,7 +1380,7 @@ async def submit_for_verification(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Submit property for verification (Host only). Auto-assigns a broker + fires notifications."""
+    """Submit a property into the telecaller-led verification workflow."""
     try:
         # Check property ownership
         property_dict = await db.properties.find_one({"property_id": property_id})
@@ -1407,17 +1407,23 @@ async def submit_for_verification(
             }}
         )
 
-        # Trigger workflow: broker auto-assignment + notifications
+        # One case workflow serves every listing. KYC-approved existing hosts
+        # enter the video queue directly; new hosts begin with documents/call.
         try:
-            from services.verification_workflow import on_host_submit
+            from services.verification_case_workflow import upsert_verification_case
             updated = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
-            broker_id = await on_host_submit(db, updated)
+            host = await db.users.find_one({"user_id": current_user["user_id"]}, {"_id": 0}) or current_user
+            verification_case = await upsert_verification_case(db, updated, host, current_user)
         except Exception as wf_err:
             logger.warning(f"Verification workflow trigger failed: {wf_err}")
-            broker_id = None
+            verification_case = None
 
-        logger.info(f"Property submitted for verification: {property_id} (broker={broker_id})")
-        return {"message": "Property submitted for verification", "broker_id": broker_id}
+        logger.info(f"Property submitted for verification: {property_id}")
+        return {
+            "message": "Property submitted for verification",
+            "verification_id": (verification_case or {}).get("verification_id"),
+            "workflow_status": (verification_case or {}).get("current_stage"),
+        }
     
     except HTTPException:
         raise
