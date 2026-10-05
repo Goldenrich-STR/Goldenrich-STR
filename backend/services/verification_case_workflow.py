@@ -104,7 +104,13 @@ def attribution_from_host(host: dict | None, actor: dict | None = None) -> dict:
 
 def host_has_completed_document_verification(host: dict | None) -> bool:
     """A previously verified host needs only the property video check."""
-    status = str((host or {}).get("kyc_status") or "").strip().lower()
+    host = host or {}
+    status = str(
+        host.get("kyc_status")
+        or host.get("document_verification_status")
+        or host.get("verification_status")
+        or ""
+    ).strip().lower()
     return status in {"approved", "verified", "complete", "completed"}
 
 

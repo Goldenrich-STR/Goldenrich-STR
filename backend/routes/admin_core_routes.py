@@ -2761,10 +2761,25 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
     now = _now()
     set_updates = {"updated_at": now}
     unset_updates = {}
+    requested_assignments = getattr(payload, "model_fields_set", getattr(payload, "__fields_set__", set()))
     broker_value = (payload.broker_id or "").strip()
     rm_value = (payload.rm_id or "").strip()
     telecaller_value = (payload.telecaller_id or "").strip()
-    if telecaller_value:
+    if "broker_id" in requested_assignments and broker_value:
+        broker = await _resolve_assignee_user(db, broker_value, "broker")
+        if not broker:
+            raise HTTPException(status_code=400, detail="Broker not found")
+        set_updates["broker_id"] = broker["user_id"]
+    elif "broker_id" in requested_assignments:
+        unset_updates["broker_id"] = ""
+    if "rm_id" in requested_assignments and rm_value:
+        rm = await _resolve_assignee_user(db, rm_value, "employee")
+        if not rm:
+            raise HTTPException(status_code=400, detail="RM not found")
+        set_updates["rm_id"] = rm["user_id"]
+    elif "rm_id" in requested_assignments:
+        unset_updates["rm_id"] = ""
+    if "telecaller_id" in requested_assignments and telecaller_value:
         telecaller = await db.users.find_one({
             "user_id": telecaller_value,
             "is_active": {"$ne": False},
@@ -2776,50 +2791,11 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
         }, {"_id": 0})
         if not telecaller:
             raise HTTPException(status_code=400, detail="Telecaller not found or inactive")
+        set_updates["telecaller_id"] = telecaller["user_id"]
         set_updates["verification_telecaller_id"] = telecaller["user_id"]
-        set_updates["document_telecaller_id"] = telecaller["user_id"]
-    else:
+    elif "telecaller_id" in requested_assignments:
+        unset_updates["telecaller_id"] = ""
         unset_updates["verification_telecaller_id"] = ""
-        unset_updates["document_telecaller_id"] = ""
-    if broker_value:
-        primary_user, primary_type = await _resolve_broker_or_rm(db, broker_value)
-        if not primary_user:
-            raise HTTPException(status_code=400, detail="Broker / RM code not found")
-        if primary_type == "broker":
-            set_updates["broker_id"] = primary_user["user_id"]
-            set_updates["lg_code"] = primary_user.get("lg_code") or primary_user.get("employee_code") or primary_user.get("uid") or primary_user["user_id"]
-            unset_updates["branch_manager_id"] = ""
-            unset_updates["branch_manager_code"] = ""
-            if rm_value:
-                rm = await _resolve_assignee_user(db, rm_value, "employee")
-                if not rm or not _is_rm_user(rm):
-                    raise HTTPException(status_code=400, detail="RM code not found")
-                set_updates["rm_id"] = rm["user_id"]
-                set_updates["employee_code"] = rm.get("employee_code") or rm.get("uid") or rm["user_id"]
-            else:
-                unset_updates["rm_id"] = ""
-                unset_updates["employee_code"] = ""
-        else:
-            unset_updates["broker_id"] = ""
-            set_updates["rm_id"] = primary_user["user_id"]
-            set_updates["lg_code"] = primary_user.get("employee_code") or primary_user.get("uid") or primary_user["user_id"]
-            set_updates["employee_code"] = primary_user.get("employee_code") or primary_user.get("uid") or primary_user["user_id"]
-            if rm_value:
-                branch_manager = await _resolve_assignee_user(db, rm_value, "employee")
-                if not branch_manager or not _is_branch_manager_user(branch_manager):
-                    raise HTTPException(status_code=400, detail="Branch Manager code not found")
-                set_updates["branch_manager_id"] = branch_manager["user_id"]
-                set_updates["branch_manager_code"] = branch_manager.get("employee_code") or branch_manager.get("uid") or branch_manager["user_id"]
-            else:
-                unset_updates["branch_manager_id"] = ""
-                unset_updates["branch_manager_code"] = ""
-    else:
-        unset_updates["broker_id"] = ""
-        unset_updates["rm_id"] = ""
-        unset_updates["branch_manager_id"] = ""
-        unset_updates["lg_code"] = ""
-        unset_updates["employee_code"] = ""
-        unset_updates["branch_manager_code"] = ""
 
     update_doc = {"$set": set_updates}
     property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "verification_telecaller_id", "document_telecaller_id", "updated_at"}}
@@ -3081,33 +3057,72 @@ async def assign_property_team(property_id: str, payload: AssignmentPayload, cur
     prop = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
     if not prop:
         raise HTTPException(status_code=404, detail="Property not found")
-    set_updates = {"updated_at": _now()}
+    now = _now()
+    set_updates = {"updated_at": now}
     unset_updates = {}
+    requested_assignments = getattr(payload, "model_fields_set", getattr(payload, "__fields_set__", set()))
     broker_value = (payload.broker_id or "").strip()
     rm_value = (payload.rm_id or "").strip()
-    if broker_value:
+    telecaller_value = (payload.telecaller_id or "").strip()
+    if "broker_id" in requested_assignments and broker_value:
         broker = await _resolve_assignee_user(db, broker_value, "broker")
         if not broker:
             raise HTTPException(status_code=400, detail="Broker not found")
         set_updates["broker_id"] = broker["user_id"]
-    else:
+    elif "broker_id" in requested_assignments:
         unset_updates["broker_id"] = ""
-    if rm_value:
+    if "rm_id" in requested_assignments and rm_value:
         rm = await _resolve_assignee_user(db, rm_value, "employee")
         if not rm:
             raise HTTPException(status_code=400, detail="RM not found")
         set_updates["rm_id"] = rm["user_id"]
-    else:
+    elif "rm_id" in requested_assignments:
         unset_updates["rm_id"] = ""
+    if "telecaller_id" in requested_assignments and telecaller_value:
+        telecaller = await db.users.find_one({
+            "user_id": telecaller_value,
+            "is_active": {"$ne": False},
+            "$or": [
+                {"role": "telecaller"},
+                {"role": "employee", "admin_role_key": "telecaller"},
+                {"role": "employee", "designation": {"$regex": "telecaller", "$options": "i"}},
+            ],
+        }, {"_id": 0})
+        if not telecaller:
+            raise HTTPException(status_code=400, detail="Telecaller not found or inactive")
+        set_updates["telecaller_id"] = telecaller["user_id"]
+        set_updates["verification_telecaller_id"] = telecaller["user_id"]
+    elif "telecaller_id" in requested_assignments:
+        unset_updates["telecaller_id"] = ""
+        unset_updates["verification_telecaller_id"] = ""
 
     update_doc = {"$set": set_updates}
     if unset_updates:
         update_doc["$unset"] = unset_updates
     await db.properties.update_one({"property_id": property_id}, update_doc)
-    audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
-    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="property_operations", action="property_team_assigned", record_id=property_id, old_value={"broker_id": prop.get("broker_id"), "rm_id": prop.get("rm_id")}, new_value=audit_new_value, reason=payload.reason)
-    return api_response("Property assignment updated")
 
+    host = await db.users.find_one({"user_id": prop.get("owner_id"), "role": "host"}, {"_id": 0}) or {}
+    from services.verification_case_workflow import upsert_verification_case
+    verification_case = await upsert_verification_case(db, {**prop, **set_updates}, host, current_user)
+    if telecaller_value:
+        assignment_meta = {"policy": "manual_property_assignment", "assigned_by": current_user["user_id"]}
+        await db.property_verifications.update_one(
+            {"verification_id": verification_case["verification_id"]},
+            {"$set": {
+                "telecaller_id": set_updates["telecaller_id"],
+                "telecaller_assignment_policy": assignment_meta,
+                "updated_at": now,
+            }, "$push": {"history": {
+                "action": "TELECALLER_MANUALLY_ASSIGNED",
+                "actor": current_user["user_id"],
+                "role": current_user["role"],
+                "timestamp": now.isoformat(),
+                "details": assignment_meta,
+            }}},
+        )
+    audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="property_operations", action="property_team_assigned", record_id=property_id, old_value={"broker_id": prop.get("broker_id"), "rm_id": prop.get("rm_id"), "telecaller_id": prop.get("telecaller_id") or prop.get("verification_telecaller_id")}, new_value=audit_new_value, reason=payload.reason)
+    return api_response("Property assignment updated", {"verification_id": verification_case["verification_id"], "workflow_status": verification_case.get("current_stage")})
 
 @router.patch("/properties-operations/{property_id}/checklist")
 async def update_property_checklist(property_id: str, payload: PropertyChecklistPayload, current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):

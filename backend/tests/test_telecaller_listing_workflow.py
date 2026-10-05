@@ -13,3 +13,7 @@ def test_existing_kyc_approved_host_listing_starts_in_video_queue():
 def test_new_host_listing_keeps_documents_call_then_video_path():
     assert initial_case_status("BROKER", {"kyc_status": "pending"}) == TELECALLER_CALL_PENDING
     assert initial_case_status("RM", {}) == TELECALLER_CALL_PENDING
+
+
+def test_existing_host_document_verification_status_starts_in_video_queue():
+    assert initial_case_status("SELF_HOST", {"document_verification_status": "approved"}) == VERIFICATION_SCHEDULED

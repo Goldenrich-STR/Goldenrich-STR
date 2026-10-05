@@ -232,6 +232,28 @@ const PromptDialog = ({
   );
 };
 
+const ChoiceDialog = ({ title, description, choices = [], onResolve }) => (
+  <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm">
+    <div className="w-full max-w-lg overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-elevated">
+      <div className="border-b border-slate-100 px-5 py-4">
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#2f6df6]">Assignment Type</p>
+        <h2 className="mt-1 text-xl font-black text-slate-950">{title}</h2>
+        {description && <p className="mt-2 text-sm font-semibold text-slate-500">{description}</p>}
+      </div>
+      <div className="grid gap-3 p-5 sm:grid-cols-3">
+        {choices.map((choice) => (
+          <button key={choice.value} type="button" onClick={() => onResolve(choice.value)} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-5 text-left transition hover:border-[#2f6df6] hover:bg-[#eef5ff]">
+            <span className="block text-sm font-black text-slate-950">{choice.label}</span>
+            {choice.description && <span className="mt-1 block text-xs font-semibold text-slate-500">{choice.description}</span>}
+          </button>
+        ))}
+      </div>
+      <div className="flex justify-end border-t border-slate-100 bg-slate-50 px-5 py-4">
+        <button onClick={() => onResolve(null)} className="rounded-2xl px-4 py-2.5 text-sm font-black text-slate-600 hover:bg-white" type="button">Cancel</button>
+      </div>
+    </div>
+  </div>
+);
 const ConfirmDialog = ({
   title,
   description,
@@ -315,6 +337,8 @@ const mountDialog = (renderDialog) => new Promise((resolve) => {
 });
 
 export const requestInput = (options = {}) => mountDialog((cleanup) => <PromptDialog {...options} onResolve={cleanup} />);
+
+export const requestChoice = (options = {}) => mountDialog((cleanup) => <ChoiceDialog {...options} onResolve={cleanup} />);
 
 export const requestConfirm = (options = {}) => mountDialog((cleanup) => <ConfirmDialog {...options} onResolve={cleanup} />);
 
