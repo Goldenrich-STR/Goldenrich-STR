@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, ExternalLink, Image, Search, Trash2, UserCog, XCircle, Download } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice, Pagination } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestChoice, requestInput, requestReason, showNotice, Pagination } from './shared';
 
 const tabs = [
   ['all', 'All Properties'],
@@ -81,37 +81,42 @@ const PropertyOperations = () => {
   }), [state.properties]);
 
   const assignTeam = async (property) => {
-    const broker_id = await requestInput({
-      title: 'Assign Broker',
-      description: `Enter broker user ID for ${property.title || property.property_id}.`,
-      label: 'Broker User ID',
-      defaultValue: property.assigned_broker || '',
-      placeholder: 'e.g. user_broker_propnest',
-      confirmLabel: 'Continue',
-      allowEmpty: true,
+    const assignmentType = await requestChoice({
+      title: 'Who do you want to assign?',
+      description: `Choose the team member for ${property.title || property.property_id}.`,
+      choices: [
+        { value: 'broker', label: 'Broker', description: 'Assign broker' },
+        { value: 'rm', label: 'RM', description: 'Assign relationship manager' },
+        { value: 'telecaller', label: 'Telecaller', description: 'Assign video verification' },
+      ],
     });
-    if (broker_id === null) return;
-    const rm_id = await requestInput({
-      title: 'Assign RM',
-      description: `Enter RM employee user ID for ${property.title || property.property_id}.`,
-      label: 'RM Employee User ID',
-      defaultValue: property.assigned_rm || '',
-      placeholder: 'e.g. user_employee_propnest',
+    if (!assignmentType) return;
+
+    const labels = { broker: 'Broker', rm: 'RM', telecaller: 'Telecaller' };
+    const currentValues = {
+      broker: property.assigned_broker || '',
+      rm: property.assigned_rm || '',
+      telecaller: property.telecaller_id || '',
+    };
+    const assigneeId = await requestInput({
+      title: `Assign ${labels[assignmentType]}`,
+      description: `Enter the ${labels[assignmentType]} user ID or code for ${property.title || property.property_id}.`,
+      label: `${labels[assignmentType]} User ID / Code`,
+      defaultValue: currentValues[assignmentType],
+      placeholder: `Enter ${labels[assignmentType]} user ID or code`,
       confirmLabel: 'Continue',
-      allowEmpty: true,
     });
-    if (rm_id === null) return;
+    if (assigneeId === null) return;
     const reason = await requestReason({
-      title: 'Property Assignment Reason',
-      description: `Assigning team for ${property.title || property.property_id}.`,
-      placeholder: 'Explain why this broker/RM assignment is being changed.',
+      title: `${labels[assignmentType]} Assignment Reason`,
+      description: `Assigning ${labels[assignmentType]} for ${property.title || property.property_id}.`,
+      placeholder: 'Explain why this assignment is being changed.',
       minLength: 3,
     });
     if (!reason) return;
-    await adminPhase1API.assignPropertyTeam(property.property_id, { broker_id, rm_id, reason });
+    await adminPhase1API.assignPropertyTeam(property.property_id, { [`${assignmentType}_id`]: assigneeId, reason });
     load();
   };
-
   const changeStatus = async (property, status) => {
     const reason = await requestReason({
       title: 'Property Status Change',

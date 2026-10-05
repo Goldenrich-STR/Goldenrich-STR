@@ -88,3 +88,5 @@ def test_assigned_host_id_from_case_overrides_historical_host_date():
         telecaller,
         explicitly_assigned=historical_host["user_id"] in {"host-old"},
     )
+def test_existing_host_document_verification_status_starts_in_video_queue():
+    assert initial_case_status("SELF_HOST", {"document_verification_status": "approved"}) == VERIFICATION_SCHEDULED
