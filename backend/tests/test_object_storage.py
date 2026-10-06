@@ -1,4 +1,5 @@
 from botocore.exceptions import ClientError
+from azure.core.exceptions import ResourceNotFoundError
 
 from services import object_storage
 
@@ -43,6 +44,60 @@ class FakeS3:
         }
 
 
+class FakeAzureBlob:
+    def __init__(self, container, name):
+        self.container = container
+        self.name = name
+
+    def upload_blob(self, name, data, overwrite, content_settings):
+        self.container.objects[name] = {
+            "Body": data,
+            "ContentType": content_settings.content_type,
+            "CacheControl": content_settings.cache_control,
+        }
+
+    def get_blob_properties(self):
+        stored = self.container.objects.get(self.name)
+        if not stored:
+            raise ResourceNotFoundError("missing")
+        return type(
+            "Props",
+            (),
+            {
+                "size": len(stored["Body"]),
+                "content_settings": type(
+                    "ContentSettings",
+                    (),
+                    {"content_type": stored["ContentType"]},
+                )(),
+            },
+        )()
+
+    def download_blob(self):
+        stored = self.container.objects[self.name]
+        return type("Downloader", (), {"readall": lambda self_: stored["Body"]})()
+
+    def delete_blob(self, name):
+        self.container.objects.pop(name, None)
+
+
+class FakeAzureContainer:
+    def __init__(self):
+        self.objects = {}
+
+    def upload_blob(self, **kwargs):
+        FakeAzureBlob(self, kwargs["name"]).upload_blob(**kwargs)
+
+    def get_blob_client(self, name):
+        return FakeAzureBlob(self, name)
+
+    def download_blob(self, name):
+        return FakeAzureBlob(self, name).download_blob()
+
+    def delete_blob(self, name):
+        self.objects.pop(name, None)
+
+
 def test_local_storage_remains_default(monkeypatch, tmp_path):
     monkeypatch.delenv("S3_UPLOADS_BUCKET", raising=False)
     monkeypatch.setattr(object_storage, "LOCAL_UPLOAD_DIR", tmp_path)
@@ -75,6 +130,29 @@ def test_s3_storage_uses_stable_prefix_and_dual_writes(monkeypatch, tmp_path):
     assert key == "properties/photo.jpg"
     stored = fake.objects[("xspace-prod-uploads", key)]
     assert stored["ServerSideEncryption"] == "AES256"
+    assert stored["ContentType"] == "image/jpeg"
+
+
+def test_azure_storage_uses_stable_prefix(monkeypatch, tmp_path):
+    fake = FakeAzureContainer()
+    monkeypatch.setenv("AZURE_STORAGE_ACCOUNT", "xspaceproduploads")
+    monkeypatch.setenv("AZURE_STORAGE_CONTAINER", "uploads")
+    monkeypatch.setenv("AZURE_STORAGE_KEY", "secret")
+    monkeypatch.delenv("S3_UPLOADS_BUCKET", raising=False)
+    monkeypatch.setattr(object_storage, "LOCAL_UPLOAD_DIR", tmp_path)
+    monkeypatch.setattr(object_storage, "_azure_container_client", lambda: fake)
+
+    key = object_storage.store_upload(
+        b"image",
+        "photo.jpg",
+        "properties",
+        "image/jpeg",
+    )
+
+    assert key == "properties/photo.jpg"
+    assert fake.objects[key]["ContentType"] == "image/jpeg"
+    stored = object_storage.open_s3_object("properties/photo.jpg")
+    assert stored["Body"] == b"image"
     assert stored["ContentType"] == "image/jpeg"
     assert (tmp_path / "photo.jpg").read_bytes() == b"image"
 
