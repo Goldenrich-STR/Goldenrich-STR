@@ -164,6 +164,9 @@ async def serve_upload(object_path: str):
     body = s3_object["Body"]
 
     def stream_body():
+        if isinstance(body, (bytes, bytearray)):
+            yield bytes(body)
+            return
         try:
             yield from body.iter_chunks(chunk_size=64 * 1024)
         finally:
