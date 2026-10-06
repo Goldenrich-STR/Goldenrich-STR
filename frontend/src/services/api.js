@@ -32,6 +32,19 @@ const apiClient = axios.create({
   },
 });
 
+// The FastAPI application exposes its routers below `/api`.  Keep the base
+// URL as the server origin because a few legacy calls already include `/api`,
+// then normalize every other request here.  Without this, calls such as
+// `/properties/search` go to `http://localhost:8001/properties/search` and
+// receive a 404 even though the data exists at `/api/properties/search`.
+apiClient.interceptors.request.use((config) => {
+  const url = config.url || '';
+  if (typeof url === 'string' && url.startsWith('/') && !url.startsWith('/api/')) {
+    config.url = `/api${url}`;
+  }
+  return config;
+});
+
 export const getApiErrorMessage = (error, fallback = 'Something went wrong') => {
   if (error?.code === 'ECONNABORTED') {
     return 'Request timed out. Please try again.';
@@ -244,7 +257,7 @@ export const authAPI = {
 // Property API
 export const propertyAPI = {
   searchProperties: (params) =>
-    apiClient.get('/properties/search', { params }),
+    apiClient.get('/api/properties/search', { params }),
   
   getProperty: (propertyId) =>
     apiClient.get(`/properties/${propertyId}`),
