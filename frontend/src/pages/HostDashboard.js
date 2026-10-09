@@ -1370,7 +1370,14 @@ const HostDashboard = () => {
                           })()}
 
                           {(() => {
-                            const propSub = subscriptions.find(s => s.property_id === property.property_id);
+                            const propertySubscriptions = subscriptions.filter(
+                              s => s.property_id === property.property_id
+                            );
+                            const propSub = propertySubscriptions.find(
+                              s => s.subscription_id === property.subscription_id
+                            ) || propertySubscriptions.find(
+                              s => s.status === 'active' && s.payment_status === 'paid'
+                            ) || propertySubscriptions[0];
                             if (!propSub) return null;
                             const plan = plans.find(p => p.plan_id === propSub.plan_id);
                             
