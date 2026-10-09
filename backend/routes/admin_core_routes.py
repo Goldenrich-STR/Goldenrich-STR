@@ -151,6 +151,17 @@ def _truthy_flag(value) -> bool:
     return bool(value)
 
 
+def _host_documents_approved(host: Optional[dict]) -> bool:
+    host = host or {}
+    status_value = str(
+        host.get("kyc_status")
+        or host.get("document_verification_status")
+        or host.get("verification_status")
+        or ""
+    ).strip().lower()
+    return status_value in {"approved", "verified", "complete", "completed"}
+
+
 def _property_operations_stage(prop: dict, assignment: dict, verification: Optional[dict]) -> str:
     status_value = str(prop.get("status") or "").strip().lower()
     verification = verification or {}
@@ -2792,24 +2803,53 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
         if not telecaller:
             raise HTTPException(status_code=400, detail="Telecaller not found or inactive")
         set_updates["telecaller_id"] = telecaller["user_id"]
-        set_updates["verification_telecaller_id"] = telecaller["user_id"]
+        if _host_documents_approved(host):
+            unset_updates["verification_telecaller_id"] = ""
+            unset_updates["document_telecaller_id"] = ""
+            unset_updates["document_telecaller_assignment_policy"] = ""
+        else:
+            assignment_meta = {
+                "policy": "manual_host_assignment",
+                "assigned_by": current_user["user_id"],
+            }
+            set_updates["verification_telecaller_id"] = telecaller["user_id"]
+            set_updates["document_telecaller_id"] = telecaller["user_id"]
+            set_updates["document_telecaller_assignment_policy"] = assignment_meta
     elif "telecaller_id" in requested_assignments:
         unset_updates["telecaller_id"] = ""
         unset_updates["verification_telecaller_id"] = ""
+        unset_updates["document_telecaller_id"] = ""
+        unset_updates["document_telecaller_assignment_policy"] = ""
 
     update_doc = {"$set": set_updates}
-    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "verification_telecaller_id", "document_telecaller_id", "updated_at"}}
+    property_set_updates = {k: v for k, v in set_updates.items() if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "telecaller_id", "verification_telecaller_id", "updated_at"}}
     property_update_doc = {"$set": property_set_updates}
     if unset_updates:
         update_doc["$unset"] = unset_updates
-        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "verification_telecaller_id", "document_telecaller_id"}}
+        property_update_doc["$unset"] = {k: "" for k in unset_updates if k in {"broker_id", "rm_id", "branch_manager_id", "branch_manager_code", "employee_code", "telecaller_id", "verification_telecaller_id"}}
 
     await db.users.update_one({"user_id": host_id}, update_doc)
     await db.properties.update_many({"owner_id": host_id}, property_update_doc)
     if telecaller_value:
+        case_assignment_meta = {
+            "policy": "manual_host_assignment",
+            "assigned_by": current_user["user_id"],
+        }
         await db.property_verifications.update_many(
             {"$or": [{"host_id": host_id}, {"owner_id": host_id}]},
-            {"$set": {"telecaller_id": set_updates["verification_telecaller_id"], "updated_at": now}},
+            {"$set": {
+                "telecaller_id": telecaller["user_id"],
+                "telecaller_assignment_policy": case_assignment_meta,
+                "updated_at": now,
+            }},
+        )
+    elif "telecaller_id" in requested_assignments:
+        await db.property_verifications.update_many(
+            {"$or": [{"host_id": host_id}, {"owner_id": host_id}]},
+            {"$unset": {
+                "telecaller_id": "",
+                "telecaller_assignment_policy": "",
+            }, "$set": {"updated_at": now}},
         )
     audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="host_management", action="host_team_assigned", record_id=host_id, old_value={"broker_id": host.get("broker_id"), "rm_id": host.get("rm_id"), "branch_manager_id": host.get("branch_manager_id"), "lg_code": host.get("lg_code"), "employee_code": host.get("employee_code")}, new_value=audit_new_value, reason=payload.reason)
@@ -3119,6 +3159,33 @@ async def assign_property_team(property_id: str, payload: AssignmentPayload, cur
                 "timestamp": now.isoformat(),
                 "details": assignment_meta,
             }}},
+        )
+        if _host_documents_approved(host):
+            await db.users.update_one(
+                {"user_id": host.get("user_id")},
+                {"$unset": {
+                    "verification_telecaller_id": "",
+                    "document_telecaller_id": "",
+                    "document_telecaller_assignment_policy": "",
+                }, "$set": {"updated_at": now}},
+            )
+        else:
+            await db.users.update_one(
+                {"user_id": host.get("user_id")},
+                {"$set": {
+                    "verification_telecaller_id": set_updates["telecaller_id"],
+                    "document_telecaller_id": set_updates["telecaller_id"],
+                    "document_telecaller_assignment_policy": assignment_meta,
+                    "updated_at": now,
+                }},
+            )
+    elif "telecaller_id" in requested_assignments:
+        await db.property_verifications.update_one(
+            {"verification_id": verification_case["verification_id"]},
+            {"$unset": {
+                "telecaller_id": "",
+                "telecaller_assignment_policy": "",
+            }, "$set": {"updated_at": now}},
         )
     audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="property_operations", action="property_team_assigned", record_id=property_id, old_value={"broker_id": prop.get("broker_id"), "rm_id": prop.get("rm_id"), "telecaller_id": prop.get("telecaller_id") or prop.get("verification_telecaller_id")}, new_value=audit_new_value, reason=payload.reason)

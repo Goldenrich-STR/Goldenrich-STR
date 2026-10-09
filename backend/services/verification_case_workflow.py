@@ -210,7 +210,10 @@ async def resolve_verification_telecaller(db, prop: dict, host: dict | None = No
             "source": "property",
         }
 
-    return await assign_next_verification_telecaller(db, prop, host)
+    # Telecaller ownership is an operational decision made by an admin. Do not
+    # silently distribute new verification work merely because a dashboard was
+    # opened or a case was created.
+    return "", {"policy": "awaiting_admin_assignment"}
 
 
 async def assign_next_verification_telecaller(db, prop: dict | None = None, host: dict | None = None):
@@ -336,15 +339,16 @@ async def upsert_verification_case(db, prop: dict, host: dict, actor: dict | Non
                     "updated_at": now,
                 }},
             )
-            await db.users.update_one(
-                {"user_id": base["host_id"]},
-                {"$set": {
-                    "verification_telecaller_id": assigned_telecaller_id,
-                    "document_telecaller_id": assigned_telecaller_id,
-                    "document_telecaller_assignment_policy": assignment_meta,
-                    "updated_at": now,
-                }},
-            )
+            if not host_has_completed_document_verification(host):
+                await db.users.update_one(
+                    {"user_id": base["host_id"]},
+                    {"$set": {
+                        "verification_telecaller_id": assigned_telecaller_id,
+                        "document_telecaller_id": assigned_telecaller_id,
+                        "document_telecaller_assignment_policy": assignment_meta,
+                        "updated_at": now,
+                    }},
+                )
         existing.update(base)
         return existing
     doc = {
@@ -371,15 +375,16 @@ async def upsert_verification_case(db, prop: dict, host: dict, actor: dict | Non
                 "updated_at": now,
             }},
         )
-        await db.users.update_one(
-            {"user_id": base["host_id"]},
-            {"$set": {
-                "verification_telecaller_id": assigned_telecaller_id,
-                "document_telecaller_id": assigned_telecaller_id,
-                "document_telecaller_assignment_policy": assignment_meta,
-                "updated_at": now,
-            }},
-        )
+        if not host_has_completed_document_verification(host):
+            await db.users.update_one(
+                {"user_id": base["host_id"]},
+                {"$set": {
+                    "verification_telecaller_id": assigned_telecaller_id,
+                    "document_telecaller_id": assigned_telecaller_id,
+                    "document_telecaller_assignment_policy": assignment_meta,
+                    "updated_at": now,
+                }},
+            )
     return doc
 
 
