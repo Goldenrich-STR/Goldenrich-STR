@@ -228,6 +228,8 @@ const documentsOf = (lead, docQueue = []) => {
 };
 const hasDocumentRecords = (lead, docQueue = []) => documentsOf(lead, docQueue).length > 0;
 const hasPendingDocuments = (lead, docQueue = []) => {
+  const kycStatus = String(lead?.kyc_status || lead?.host?.kyc_status || '').toLowerCase();
+  if (APPROVED_DOCUMENT_STATUSES.includes(kycStatus)) return false;
   const documentList = documentsOf(lead, docQueue);
   if (documentList.length) {
     return documentList.some((doc) => !APPROVED_DOCUMENT_STATUSES.includes(documentStatusOf(doc)));
@@ -235,6 +237,8 @@ const hasPendingDocuments = (lead, docQueue = []) => {
   return !APPROVED_DOCUMENT_STATUSES.includes(String(lead?.kyc_status || lead?.host?.kyc_status || '').toLowerCase());
 };
 const documentsApproved = (lead, docQueue = []) => {
+  const kycStatus = String(lead?.kyc_status || lead?.host?.kyc_status || '').toLowerCase();
+  if (APPROVED_DOCUMENT_STATUSES.includes(kycStatus)) return true;
   const documentList = documentsOf(lead, docQueue);
   if (documentList.length) {
     return documentList.every((doc) => APPROVED_DOCUMENT_STATUSES.includes(documentStatusOf(doc)));
