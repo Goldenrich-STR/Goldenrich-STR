@@ -530,6 +530,10 @@ const HostListProperty = () => {
     () => `host_resume_path_${user?.user_id || 'anonymous'}`,
     [user?.user_id]
   );
+  const createdPropertyStorageKey = useMemo(
+    () => `list_property_created_id_${draftStorageId}`,
+    [draftStorageId]
+  );
 
   const [step, setStep] = useState(() => {
     const editId = new URLSearchParams(window.location.search).get('edit') || window.history.state?.usr?.editPropertyId;
@@ -562,7 +566,13 @@ const HostListProperty = () => {
   const [plans, setPlans] = useState([]);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [createdPropertyId, setCreatedPropertyId] = useState(null);
+  const [createdPropertyId, setCreatedPropertyId] = useState(() => {
+    const editId = new URLSearchParams(window.location.search).get('edit') || window.history.state?.usr?.editPropertyId;
+    if (editId) return editId;
+    const storedUser = JSON.parse(localStorage.getItem('propnest_user') || '{}');
+    const storageId = `new_${storedUser?.user_id || 'anonymous'}`;
+    return localStorage.getItem(`list_property_created_id_${storageId}`);
+  });
   const [upiPayment, setUpiPayment] = useState({ isOpen: false, utr: '', error: '', submitting: false });
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
@@ -666,6 +676,35 @@ const HostListProperty = () => {
       setHasActiveSubscription(false);
     }
   }, [editPropertyId, createdPropertyId]);
+
+  useEffect(() => {
+    if (editPropertyId || !createdPropertyId) return;
+
+    // A property is created before Checkout opens. Keep its identity across a
+    // refresh/payment callback failure so retrying Submit updates the same row
+    // instead of creating a duplicate property and a second payment order.
+    localStorage.setItem(createdPropertyStorageKey, createdPropertyId);
+    propertyAPI.getProperty(createdPropertyId)
+      .then((res) => {
+        const property = res.data || {};
+        const subscriptionStatus = String(property.subscription_status || '').toLowerCase();
+        const propertyStatus = String(property.status || '').toLowerCase();
+        setHasActiveSubscription(subscriptionStatus === 'active');
+        if (['pending_verification', 'live'].includes(propertyStatus) && subscriptionStatus === 'active') {
+          localStorage.removeItem(`list_property_form_${draftStorageId}`);
+          localStorage.removeItem(`list_property_step_${draftStorageId}`);
+          localStorage.removeItem(createdPropertyStorageKey);
+          localStorage.removeItem(hostResumePathKey);
+          setSuccess(true);
+        }
+      })
+      .catch((err) => {
+        if (err?.response?.status === 404) {
+          localStorage.removeItem(createdPropertyStorageKey);
+          setCreatedPropertyId(null);
+        }
+      });
+  }, [createdPropertyId, createdPropertyStorageKey, draftStorageId, editPropertyId, hostResumePathKey]);
 
   useEffect(() => {
     if (editPropertyId) {
@@ -1588,6 +1627,7 @@ const HostListProperty = () => {
         }
         localStorage.removeItem(`list_property_form_${draftStorageId}`);
         localStorage.removeItem(`list_property_step_${draftStorageId}`);
+        localStorage.removeItem(createdPropertyStorageKey);
         localStorage.removeItem(hostResumePathKey);
         alert('Property details updated successfully.');
         navigate('/admin/properties');
@@ -1598,6 +1638,7 @@ const HostListProperty = () => {
         await propertyAPI.updateProperty(editPropertyId, buildHostManagePayload());
         localStorage.removeItem(`list_property_form_${draftStorageId}`);
         localStorage.removeItem(`list_property_step_${draftStorageId}`);
+        localStorage.removeItem(createdPropertyStorageKey);
         localStorage.removeItem(hostResumePathKey);
         alert('Property manage details saved successfully.');
         navigate('/host/dashboard');
@@ -1610,6 +1651,7 @@ const HostListProperty = () => {
         const propRes = await propertyAPI.createProperty(buildPropertyPayload());
         propertyId = propRes.data.property_id;
         setCreatedPropertyId(propertyId);
+        localStorage.setItem(createdPropertyStorageKey, propertyId);
       } else {
         await propertyAPI.updateProperty(propertyId, buildPropertyPayload());
       }
@@ -1626,6 +1668,7 @@ const HostListProperty = () => {
       await propertyAPI.submitForVerification(propertyId);
       localStorage.removeItem(`list_property_form_${draftStorageId}`);
       localStorage.removeItem(`list_property_step_${draftStorageId}`);
+      localStorage.removeItem(createdPropertyStorageKey);
       localStorage.removeItem(hostResumePathKey);
       setSuccess(true);
     } catch (err) {
@@ -1686,6 +1729,7 @@ const HostListProperty = () => {
                   setStep(0);
                   setSuccess(false);
                   setCreatedPropertyId(null);
+                  localStorage.removeItem(createdPropertyStorageKey);
                   setHasActiveSubscription(false);
                   setSubscriptionCouponCode('');
                   setPricingSummaryPlan(null);
