@@ -399,11 +399,10 @@ def _visible_to_telecaller(
     *,
     explicitly_assigned: bool = False,
 ) -> bool:
-    """Keep historical records hidden unless they were explicitly assigned."""
+    """Show records only when they were explicitly assigned to the telecaller."""
     return (
         explicitly_assigned
         or _is_explicitly_assigned_to_telecaller(record, telecaller)
-        or _created_after_telecaller(record, telecaller)
     )
 
 
@@ -1117,8 +1116,6 @@ def _update_host_kyc_status(host: dict, doc_summary: dict) -> str:
 @router.get("")
 async def list_cases(stage: Optional[str] = None, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):
     await _ensure_missing_cases_for_submitted_properties(db, current_user)
-    await _assign_unassigned_telecaller_cases(db)
-    await _assign_host_document_telecallers(db)
     query = {}
     if stage:
         query["current_stage"] = stage
@@ -1185,8 +1182,6 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
     if not (_is_admin(current_user) or _is_telecaller(current_user)):
         raise HTTPException(status_code=403, detail="Telecaller access required")
     await _ensure_missing_cases_for_submitted_properties(db, current_user)
-    await _assign_unassigned_telecaller_cases(db)
-    await _assign_host_document_telecallers(db)
 
     telecaller_profile = current_user
     if _is_telecaller(current_user):
@@ -1335,8 +1330,6 @@ async def dashboard_summary(current_user: dict = Depends(get_current_user), db: 
     if not (_is_admin(current_user) or _is_telecaller(current_user)):
         raise HTTPException(status_code=403, detail="Telecaller dashboard access required")
     await _ensure_missing_cases_for_submitted_properties(db, current_user)
-    await _assign_unassigned_telecaller_cases(db)
-    await _assign_host_document_telecallers(db)
     case_query: dict = {}
     if _is_telecaller(current_user):
         telecaller_terms = _telecaller_identity_terms(current_user)
@@ -1451,35 +1444,24 @@ async def case_activity(verification_id: str, current_user: dict = Depends(get_c
 @router.get("/document-queue")
 async def list_document_queue(stage: Optional[str] = None, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):
     await _ensure_missing_cases_for_submitted_properties(db, current_user)
-    await _assign_unassigned_telecaller_cases(db)
-    await _assign_host_document_telecallers(db)
     if not (_is_admin(current_user) or _is_telecaller(current_user) or _is_branch_manager(current_user)):
         raise HTTPException(status_code=403, detail="Document queue access required")
     query: dict = _active_host_filter()
     if stage and stage != "all":
         query["kyc_status"] = stage
     else:
-        query["kyc_status"] = {"$in": ["pending", "pending_review", "submitted", "under_review", "rejected", "approved"]}
+        query["kyc_status"] = {"$in": ["pending", "pending_review", "submitted", "under_review", "rejected"]}
     if _is_telecaller(current_user):
         telecaller_terms = _telecaller_identity_terms(current_user)
-        assigned_cases = await db.property_verifications.find(
-            {"telecaller_id": {"$in": telecaller_terms}},
-            {"_id": 0, "host_id": 1, "owner_id": 1},
-        ).to_list(length=1000)
-        assigned_host_ids = list({
-            case.get("host_id") or case.get("owner_id")
-            for case in assigned_cases
-            if case.get("host_id") or case.get("owner_id")
-        })
         assigned_document_hosts = await db.users.find(
             _active_host_filter(_host_document_assignment_query(telecaller_terms)),
             {"_id": 0, "user_id": 1},
         ).to_list(length=1000)
-        assigned_host_ids = list(set(assigned_host_ids + [
+        assigned_host_ids = list({
             host.get("user_id")
             for host in assigned_document_hosts
             if host.get("user_id")
-        ]))
+        })
         if not assigned_host_ids:
             return {"items": [], "total": 0}
         query["user_id"] = {"$in": assigned_host_ids}
