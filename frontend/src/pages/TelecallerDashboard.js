@@ -228,6 +228,8 @@ const documentsOf = (lead, docQueue = []) => {
 };
 const hasDocumentRecords = (lead, docQueue = []) => documentsOf(lead, docQueue).length > 0;
 const hasPendingDocuments = (lead, docQueue = []) => {
+  const kycStatus = String(lead?.kyc_status || lead?.host?.kyc_status || '').toLowerCase();
+  if (APPROVED_DOCUMENT_STATUSES.includes(kycStatus)) return false;
   const documentList = documentsOf(lead, docQueue);
   if (documentList.length) {
     return documentList.some((doc) => !APPROVED_DOCUMENT_STATUSES.includes(documentStatusOf(doc)));
@@ -235,6 +237,8 @@ const hasPendingDocuments = (lead, docQueue = []) => {
   return !APPROVED_DOCUMENT_STATUSES.includes(String(lead?.kyc_status || lead?.host?.kyc_status || '').toLowerCase());
 };
 const documentsApproved = (lead, docQueue = []) => {
+  const kycStatus = String(lead?.kyc_status || lead?.host?.kyc_status || '').toLowerCase();
+  if (APPROVED_DOCUMENT_STATUSES.includes(kycStatus)) return true;
   const documentList = documentsOf(lead, docQueue);
   if (documentList.length) {
     return documentList.every((doc) => APPROVED_DOCUMENT_STATUSES.includes(documentStatusOf(doc)));
@@ -543,7 +547,7 @@ const TelecallerDashboard = () => {
       }
       if (hasPendingDocuments(lead, docs)) {
         generated.push({
-          task_id: `${lead.lead_id}-documents`,
+          task_id: `${leadHostId(lead) || lead.lead_id}-documents`,
           task: 'Review host documents',
           property: propertyTitle(lead),
           host: hostName(lead),
@@ -566,6 +570,9 @@ const TelecallerDashboard = () => {
     });
     const documentEvents = allLeadRows
       .filter((lead) => hasPendingDocuments(lead, docs))
+      .filter((lead, index, list) => index === list.findIndex((item) => (
+        (leadHostId(item) || item.lead_id) === (leadHostId(lead) || lead.lead_id)
+      )))
       .map((lead) => ({
         activity_type: 'Host documents assigned',
         property: propertyTitle(lead),
@@ -577,8 +584,11 @@ const TelecallerDashboard = () => {
       .slice(0, 12);
   }, [allLeadRows, docs]);
   const dashboardMetrics = useMemo(() => {
-    const pendingDocs = allLeadRows.filter((lead) => hasPendingDocuments(lead, docs));
-    const docsVerified = allLeadRows.filter((lead) => documentsApproved(lead, docs));
+    const uniqueHostRows = allLeadRows.filter((lead, index, list) => index === list.findIndex((item) => (
+      (leadHostId(item) || item.lead_id) === (leadHostId(lead) || lead.lead_id)
+    )));
+    const pendingDocs = uniqueHostRows.filter((lead) => hasPendingDocuments(lead, docs));
+    const docsVerified = uniqueHostRows.filter((lead) => documentsApproved(lead, docs));
     return {
       assigned: allLeadRows.length,
       contacted: allLeadRows.filter((lead) => Boolean(caseOf(lead)?.last_call_outcome)).length,

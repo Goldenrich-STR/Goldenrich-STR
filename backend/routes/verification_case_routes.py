@@ -1235,12 +1235,14 @@ async def my_leads(current_user: dict = Depends(get_current_user), db: AsyncIOMo
     host_ids = [host.get("user_id") for host in hosts if host.get("user_id")]
     properties = []
     if _is_telecaller(current_user):
-        property_query: dict = {"$or": []}
+        # Property visibility is assignment-scoped.  A telecaller assigned to one
+        # property must not inherit every other property owned by the same host.
+        # Hosts explicitly assigned for document review still appear as a
+        # host-only lead when they do not yet have an assigned property case.
+        property_query: dict = {}
         if assigned_case_property_ids:
-            property_query["$or"].append({"property_id": {"$in": list(set(assigned_case_property_ids))}})
-        if host_ids:
-            property_query["$or"].append({"owner_id": {"$in": host_ids}})
-        if property_query["$or"]:
+            property_query["property_id"] = {"$in": list(set(assigned_case_property_ids))}
+        if property_query:
             properties = await db.properties.find(_active_property_filter(property_query), {"_id": 0}).sort("created_at", -1).to_list(length=1000)
     elif host_ids:
         properties = await db.properties.find(_active_property_filter({"owner_id": {"$in": host_ids}}), {"_id": 0}).sort("created_at", -1).to_list(length=1000)
