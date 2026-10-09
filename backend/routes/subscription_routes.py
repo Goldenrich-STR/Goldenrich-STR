@@ -500,13 +500,16 @@ async def create_subscription(
                     "status": {"$in": [SubscriptionStatus.ACTIVE.value, SubscriptionStatus.TRIAL.value]},
                     "cancelled_at": None,
                 },
-                sort=[("created_at", -1)],
+                # Prefer the first order for this property. If Checkout captured
+                # it but confirmation failed, a later retry may already have
+                # created another unpaid row; the original paid order must win.
+                sort=[("created_at", 1)],
             )
             if existing_subscription:
                 existing_status = existing_subscription.get("status")
                 existing_payment_status = existing_subscription.get("payment_status")
                 has_active_payment = existing_status == SubscriptionStatus.ACTIVE.value or existing_payment_status == "paid"
-                has_open_order = existing_payment_status == "order_created" and existing_subscription.get("razorpay_order_id")
+                has_open_order = existing_payment_status in {"order_created", "order_invalid"} and existing_subscription.get("razorpay_order_id")
                 if has_active_payment:
                     await _activate_property_after_subscription_payment(db, existing_subscription, existing_subscription["subscription_id"])
                     return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code, already_active=True)
@@ -514,6 +517,59 @@ async def create_subscription(
                     expected_amount = int(round(amount * 100))
                     order_result = razorpay_service.fetch_order(existing_subscription["razorpay_order_id"])
                     order = order_result.get("order") or {}
+
+                    # Checkout may have captured the money while the confirmation
+                    # request lost its Razorpay API connection. Reconcile the paid
+                    # order before ever offering the host another payment attempt.
+                    if (
+                        order_result.get("success")
+                        and order.get("status") == "paid"
+                        and int(order.get("amount_paid") or 0) == expected_amount
+                        and (order.get("currency") or "INR").upper() == "INR"
+                    ):
+                        payments_result = razorpay_service.fetch_order_payments(order["id"])
+                        captured_payment = next((
+                            payment for payment in payments_result.get("payments", [])
+                            if payment.get("status") == "captured"
+                            and payment.get("order_id") == order["id"]
+                            and int(payment.get("amount") or 0) == expected_amount
+                            and (payment.get("currency") or "INR").upper() == "INR"
+                        ), None)
+                        if captured_payment:
+                            payment_id = captured_payment["id"]
+                            now = datetime.now(timezone.utc)
+                            await db.subscriptions.update_one(
+                                {
+                                    "subscription_id": existing_subscription["subscription_id"],
+                                    "payment_status": {"$in": ["order_created", "order_invalid"]},
+                                },
+                                {"$set": {
+                                    "status": SubscriptionStatus.ACTIVE.value,
+                                    "payment_status": "paid",
+                                    "razorpay_payment_id": payment_id,
+                                    "razorpay_subscription_id": payment_id,
+                                    "updated_at": now,
+                                }},
+                            )
+                            recovered_subscription = {
+                                **existing_subscription,
+                                "status": SubscriptionStatus.ACTIVE.value,
+                                "payment_status": "paid",
+                                "razorpay_payment_id": payment_id,
+                                "razorpay_subscription_id": payment_id,
+                                "updated_at": now,
+                            }
+                            await _activate_property_after_subscription_payment(
+                                db, recovered_subscription, existing_subscription["subscription_id"]
+                            )
+                            logger.warning(
+                                "Recovered captured Razorpay payment %s for subscription %s",
+                                payment_id, existing_subscription["subscription_id"],
+                            )
+                            return _subscription_checkout_payload(
+                                recovered_subscription, plan, amount_breakdown, coupon_code, already_active=True
+                            )
+
                     order_is_reusable = (
                         order_result.get("success")
                         and (razorpay_service.is_mock or (
