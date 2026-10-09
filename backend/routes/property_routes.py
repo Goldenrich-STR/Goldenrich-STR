@@ -1233,7 +1233,8 @@ async def update_property(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Only pricing rules, amenities, and photos can be updated for submitted or live properties",
                 )
-            update_data["status"] = PropertyStatus.LIVE.value
+            # Preserve the current verification status. Only the admin approval
+            # workflow is allowed to promote a submitted property to live.
             update_data["is_edited"] = True
 
         update_data["updated_at"] = datetime.now(timezone.utc)
