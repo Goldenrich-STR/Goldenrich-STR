@@ -6,6 +6,7 @@ import logging
 import uuid
 import hmac
 import hashlib
+import time
 from typing import Dict, Optional
 
 import contextvars
@@ -126,11 +127,41 @@ class RazorpayService:
         if not self.client:
             return {"success": False, "error": "Razorpay live keys are not configured"}
 
-        try:
-            return {"success": True, "order": self.client.order.fetch(order_id)}
-        except Exception as e:
-            logger.warning("Unable to fetch Razorpay order %s: %s", order_id, str(e))
-            return {"success": False, "error": str(e)}
+        last_error = None
+        for attempt in range(3):
+            try:
+                return {"success": True, "order": self.client.order.fetch(order_id)}
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "Unable to fetch Razorpay order %s (attempt %s/3): %s",
+                    order_id, attempt + 1, str(e),
+                )
+                if attempt < 2:
+                    time.sleep(0.25 * (2 ** attempt))
+        return {"success": False, "error": str(last_error)}
+
+    def fetch_order_payments(self, order_id: str) -> Dict:
+        """Fetch payments for an order, retrying transient Razorpay/network failures."""
+        if self.is_mock:
+            return {"success": True, "payments": []}
+        if not self.client:
+            return {"success": False, "error": "Razorpay live keys are not configured"}
+
+        last_error = None
+        for attempt in range(3):
+            try:
+                result = self.client.order.payments(order_id)
+                return {"success": True, "payments": (result or {}).get("items", [])}
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "Unable to fetch payments for Razorpay order %s (attempt %s/3): %s",
+                    order_id, attempt + 1, str(e),
+                )
+                if attempt < 2:
+                    time.sleep(0.25 * (2 ** attempt))
+        return {"success": False, "error": str(last_error)}
 
     # --------------- Verify ----------------
 
@@ -169,11 +200,20 @@ class RazorpayService:
         if not self.client:
             return {"success": False, "error": "Razorpay live keys are not configured"}
 
-        try:
-            return {"success": True, "payment": self.client.payment.fetch(razorpay_payment_id)}
-        except Exception as e:
-            logger.error(f"Failed to fetch Razorpay payment: {str(e)}")
-            return {"success": False, "error": str(e)}
+        last_error = None
+        for attempt in range(3):
+            try:
+                return {"success": True, "payment": self.client.payment.fetch(razorpay_payment_id)}
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "Failed to fetch Razorpay payment %s (attempt %s/3): %s",
+                    razorpay_payment_id, attempt + 1, str(e),
+                )
+                if attempt < 2:
+                    time.sleep(0.25 * (2 ** attempt))
+        logger.error("Failed to fetch Razorpay payment %s after retries", razorpay_payment_id)
+        return {"success": False, "error": str(last_error)}
 
     # --------------- Mock helpers ----------------
 
