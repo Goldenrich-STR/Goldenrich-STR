@@ -455,9 +455,28 @@ const TelecallerDashboard = () => {
       created_at: item.created_at,
       updated_at: item.updated_at,
     }));
+    const documentRows = docs
+      .map((item) => ({
+        lead_id: `documents::${item.host?.user_id || item.assigned_telecaller_id || 'unknown'}`,
+        host: item.host,
+        property: item.primary_property || null,
+        verification_case: item.verification_case || null,
+        documents: item.documents || [],
+        registration_source: item.registration_source,
+        lg_code: item.lg_code,
+        lead_stage: item.verification_case?.current_stage || item.primary_property?.workflow_status || 'HOST_REGISTERED',
+        kyc_status: item.kyc_status || item.host?.kyc_status || 'pending',
+        created_at: item.host?.created_at,
+        updated_at: item.last_updated || item.host?.updated_at,
+      }))
+      .filter((item, index, list) => index === list.findIndex((candidate) => (
+        leadHostId(candidate) === leadHostId(item)
+      )));
     const seen = new Set(caseRows.map((item) => item.lead_id));
     const merged = [...caseRows, ...leadRows.filter((item) => !seen.has(caseOf(item)?.verification_id || item.lead_id))];
-    const baseRows = ['leads', 'tasks'].includes(activeNav) ? leadRows : merged;
+    const baseRows = activeNav === 'documents'
+      ? documentRows
+      : (['leads', 'tasks'].includes(activeNav) ? leadRows : merged);
     return baseRows.filter((lead) => {
       const stage = stageOf(lead);
       const text = [hostName(lead), leadPhone(lead), leadEmail(lead), propertyTitle(lead), lead.lead_id, lead.lg_code, sourceRoleOf(lead), sourceNameOf(lead), sourceCodeOf(lead), stage].join(' ').toLowerCase();
