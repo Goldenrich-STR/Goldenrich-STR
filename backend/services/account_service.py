@@ -638,7 +638,7 @@ async def approve_refund_request(
     rfd.processed_at = datetime.now(timezone.utc)
 
     if refund_paise and rfd.razorpay_payment_id:
-        result = razorpay_service.create_refund(
+        result = await razorpay_service.call_async("create_refund",
             payment_id=rfd.razorpay_payment_id,
             amount=refund_paise,
             notes={"booking_id": rfd.booking_id, "reason": (reason or rfd.reason or "")[:200]},
@@ -820,7 +820,7 @@ async def initiate_refund(
             logger.warning(f"Failed to start refund notification task: {err}")
         return rfd
 
-    result = razorpay_service.create_refund(
+    result = await razorpay_service.call_async("create_refund",
         payment_id=rfd.razorpay_payment_id,
         amount=refund_paise,
         notes={"booking_id": rfd.booking_id, "reason": reason[:200]},
@@ -1102,7 +1102,7 @@ async def process_payout(
         }},
     )
 
-    result = razorpay_service.create_payout(
+    result = await razorpay_service.call_async("create_payout",
         destination_type=dest_type.value,
         destination_ref=dest_ref,
         amount=payout.net_amount,

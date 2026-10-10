@@ -515,7 +515,7 @@ async def create_subscription(
                     return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code, already_active=True)
                 if has_open_order:
                     expected_amount = int(round(amount * 100))
-                    order_result = razorpay_service.fetch_order(existing_subscription["razorpay_order_id"])
+                    order_result = await razorpay_service.call_async("fetch_order", existing_subscription["razorpay_order_id"])
                     order = order_result.get("order") or {}
 
                     # Checkout may have captured the money while the confirmation
@@ -527,7 +527,7 @@ async def create_subscription(
                         and int(order.get("amount_paid") or 0) == expected_amount
                         and (order.get("currency") or "INR").upper() == "INR"
                     ):
-                        payments_result = razorpay_service.fetch_order_payments(order["id"])
+                        payments_result = await razorpay_service.call_async("fetch_order_payments", order["id"])
                         captured_payment = next((
                             payment for payment in payments_result.get("payments", [])
                             if payment.get("status") == "captured"
@@ -621,7 +621,7 @@ async def create_subscription(
         )
         
         # Create Razorpay order for subscription
-        razorpay_result = razorpay_service.create_order(
+        razorpay_result = await razorpay_service.call_async("create_order",
             amount=int(round(amount * 100)),  # Convert to paise
             receipt=subscription.subscription_id[:40]
         )
@@ -729,7 +729,7 @@ async def confirm_subscription_payment(
                 detail="Invalid payment signature"
             )
 
-        payment_lookup = razorpay_service.fetch_payment(razorpay_payment_id)
+        payment_lookup = await razorpay_service.call_async("fetch_payment", razorpay_payment_id)
         if not payment_lookup.get("success"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1038,7 +1038,7 @@ async def create_registration_fee_order(
                 "registration_fee_payment_id": user.get("registration_fee_payment_id"),
             }
 
-        razorpay_result = razorpay_service.create_order(
+        razorpay_result = await razorpay_service.call_async("create_order",
             amount=REGISTRATION_FEE_AMOUNT,
             receipt=f"reg_fee_{current_user['user_id']}"
         )
@@ -1133,7 +1133,7 @@ async def confirm_registration_fee_payment(
                 detail="Invalid payment signature"
             )
 
-        payment_lookup = razorpay_service.fetch_payment(payload.razorpay_payment_id)
+        payment_lookup = await razorpay_service.call_async("fetch_payment", payload.razorpay_payment_id)
         if not payment_lookup.get("success"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
