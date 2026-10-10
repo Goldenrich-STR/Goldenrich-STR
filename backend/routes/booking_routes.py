@@ -976,7 +976,7 @@ async def create_booking(
         )
         
         # Create Razorpay order
-        razorpay_result = razorpay_service.create_order(
+        razorpay_result = await razorpay_service.call_async("create_order",
             amount=int(order_amount * 100),  # Convert to paise
             currency="INR",
             receipt=booking.booking_id[:40]
@@ -1247,7 +1247,7 @@ async def retry_booking_payment(
     order_id = booking_dict.get("razorpay_order_id")
     if not order_id:
         amount = int(round(_booking_payable_amount(booking_dict) * 100))
-        razorpay_result = razorpay_service.create_order(
+        razorpay_result = await razorpay_service.call_async("create_order",
             amount=amount,
             currency="INR",
             receipt=booking_id[:40],
@@ -1350,7 +1350,7 @@ async def create_remaining_payment_order(
     order_id = booking_dict.get("remaining_payment_order_id")
     order_amount = int(round(remaining_amount * 100))
     if not order_id:
-        razorpay_result = razorpay_service.create_order(
+        razorpay_result = await razorpay_service.call_async("create_order",
             amount=order_amount,
             currency="INR",
             receipt=f"{booking_id[:30]}_BAL",
@@ -1565,7 +1565,7 @@ async def confirm_payment(
             payment_status = "partially_paid" if payment_type == "advance" else "paid"
         expected_amount_paise = int(round(float(paid_amount or 0) * 100))
 
-        payment_lookup = razorpay_service.fetch_payment(razorpay_payment_id)
+        payment_lookup = await razorpay_service.call_async("fetch_payment", razorpay_payment_id)
         if not payment_lookup.get("success"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -1748,7 +1748,7 @@ async def mock_pay_booking(
     order_id = booking_dict.get("razorpay_order_id")
     if not order_id:
         amount = int(round(_booking_payable_amount(booking_dict) * 100))
-        order_result = razorpay_service.create_order(amount=amount, currency="INR", receipt=booking_id[:40])
+        order_result = await razorpay_service.call_async("create_order", amount=amount, currency="INR", receipt=booking_id[:40])
         if not order_result.get("success"):
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create mock payment order")
         order_id = order_result["order"]["id"]
@@ -2421,7 +2421,7 @@ async def apply_coupon(
         # Update Razorpay order ID if not in mock mode
         razorpay_order_id = booking_dict.get("razorpay_order_id")
         if not razorpay_service.is_mock:
-            razorpay_result = razorpay_service.create_order(
+            razorpay_result = await razorpay_service.call_async("create_order",
                 amount=int(round(new_total * 100)),
                 receipt=booking_id[:40]
             )
