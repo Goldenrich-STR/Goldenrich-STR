@@ -162,6 +162,7 @@ const HostManagement = () => {
     broker_id: '',
     rm_id: '',
     telecaller_id: '',
+    primary_assignment_type: '',
     reason: 'Host team assignment updated from Host Management',
     saving: false,
     error: '',
@@ -359,6 +360,7 @@ const HostManagement = () => {
       broker_id: primaryId,
       rm_id: secondaryId,
       telecaller_id: host.verification_telecaller_id || host.document_telecaller_id || '',
+      primary_assignment_type: host.broker_id ? 'broker' : host.rm_id ? 'rm' : '',
       reason: 'Host team assignment updated from Host Management',
       saving: false,
       error: '',
@@ -371,7 +373,8 @@ const HostManagement = () => {
       host: null,
       broker_id: '',
       rm_id: '',
-    telecaller_id: '',
+      telecaller_id: '',
+      primary_assignment_type: '',
       reason: 'Host team assignment updated from Host Management',
       saving: false,
       error: '',
@@ -386,6 +389,7 @@ const HostManagement = () => {
         broker_id: assignment.broker_id,
         rm_id: assignment.rm_id,
         telecaller_id: assignment.telecaller_id,
+        primary_assignment_type: assignment.primary_assignment_type,
         reason: assignment.reason || 'Host team assignment updated from Host Management',
       });
       closeAssignment();
@@ -625,7 +629,14 @@ const AssignmentModal = ({ assignees, assignment, onChange, onClose, onSave }) =
       ? '-- Select Branch Manager Code --'
       : '-- Select Broker / RM first --';
   const handlePrimaryChange = (value) => {
-    onChange((current) => ({ ...current, broker_id: value, rm_id: '', error: '' }));
+    const selected = primaryOptions.find((user) => user.user_id === value || getAssigneeCode(user) === value);
+    onChange((current) => ({
+      ...current,
+      broker_id: value,
+      rm_id: '',
+      primary_assignment_type: selected?.assignment_type || '',
+      error: '',
+    }));
   };
 
   return (
