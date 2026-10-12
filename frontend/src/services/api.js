@@ -552,6 +552,8 @@ export const verificationAPI = {
 
   reviewHostDocument: (hostId, documentType, payload) =>
     apiClient.post(`/verification-cases/document-queue/${hostId}/documents/${documentType}/decision`, payload),
+  uploadReplacementHostDocument: (hostId, documentType, payload) =>
+    apiClient.post(`/verification-cases/document-queue/${hostId}/documents/${documentType}/replacement`, payload),
 
   submitHostDocumentVerification: (hostId, payload) =>
     apiClient.post(`/verification-cases/document-queue/${hostId}/submit`, payload),

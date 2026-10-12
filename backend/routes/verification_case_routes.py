@@ -98,6 +98,10 @@ class HostDocumentFinalPayload(BaseModel):
     result: str
     remarks: str = ""
 
+class ReplacementDocumentPayload(BaseModel):
+    document_url: str
+    remarks: str = ""
+
 
 class CallPayload(BaseModel):
     outcome: str
@@ -1629,6 +1633,82 @@ async def review_host_document(
     )
     return {"message": "Document decision saved", "kyc_status": kyc_status, "document_type": document_type}
 
+
+@router.post("/document-queue/{host_id}/documents/{document_type}/replacement")
+async def replace_host_document(
+    host_id: str,
+    document_type: str,
+    payload: ReplacementDocumentPayload,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    if not (_is_admin(current_user) or _is_telecaller(current_user) or _is_branch_manager(current_user)):
+        raise HTTPException(status_code=403, detail="Document upload access required")
+    if not payload.document_url.strip():
+        raise HTTPException(status_code=400, detail="Uploaded document URL is required")
+
+    host = await db.users.find_one(_active_host_filter({"user_id": host_id}), {"_id": 0})
+    if not host:
+        raise HTTPException(status_code=404, detail="Host not found")
+
+    documents = list(host.get("kyc_documents") or [])
+    updated_at = now_utc()
+    summary_before = _host_document_summary(host)
+    summary_item = next((item for item in summary_before["items"] if item["document_type"] == document_type), None)
+    source_document_type = (summary_item or {}).get("source_document_type") or document_type
+    matched = False
+    for document in documents:
+        if str(document.get("document_type") or "").lower() in {
+            str(document_type or "").lower(),
+            str(source_document_type or "").lower(),
+        }:
+            document["document_url"] = payload.document_url.strip()
+            document["status"] = "pending"
+            document["rejection_reason"] = ""
+            document["review_remarks"] = payload.remarks.strip()
+            document["uploaded_by"] = current_user.get("user_id")
+            document["uploaded_by_role"] = current_user.get("role")
+            document["uploaded_at"] = updated_at.isoformat()
+            document["replaced_by_telecaller"] = _is_telecaller(current_user)
+            document.pop("reviewed_by", None)
+            document.pop("reviewed_at", None)
+            matched = True
+            break
+
+    if not matched:
+        requirement = summary_item or next((item for item in _kyc_required_documents(host) if item["document_type"] == document_type), None)
+        if not requirement:
+            raise HTTPException(status_code=404, detail="Document requirement not found on host profile")
+        documents.append({
+            "document_type": document_type,
+            "document_name": requirement["label"],
+            "required": bool(requirement.get("required")),
+            "document_url": payload.document_url.strip(),
+            "status": "pending",
+            "rejection_reason": "",
+            "review_remarks": payload.remarks.strip(),
+            "uploaded_by": current_user.get("user_id"),
+            "uploaded_by_role": current_user.get("role"),
+            "uploaded_at": updated_at.isoformat(),
+            "replaced_by_telecaller": _is_telecaller(current_user),
+        })
+
+    document_summary = _host_document_summary({**host, "kyc_documents": documents})
+    kyc_status = _update_host_kyc_status(host, document_summary)
+    await db.users.update_one(
+        {"user_id": host_id},
+        {"$set": {"kyc_documents": documents, "kyc_status": kyc_status, "updated_at": updated_at}},
+    )
+    await write_audit_log(
+        db,
+        user_id=current_user.get("user_id"),
+        role=current_user.get("role"),
+        module="host_document_verification",
+        action="document_replacement_uploaded",
+        record_id=host_id,
+        new_value={"document_type": document_type, "document_url": payload.document_url.strip(), "remarks": payload.remarks.strip(), "kyc_status": kyc_status},
+    )
+    return {"message": "Replacement document uploaded for review", "document_type": document_type, "kyc_status": kyc_status}
 
 @router.post("/document-queue/{host_id}/submit")
 async def submit_host_document_verification(

@@ -372,6 +372,7 @@ const TelecallerDashboard = () => {
   const [selectedDocumentType, setSelectedDocumentType] = useState('');
   const [pendingDocumentAction, setPendingDocumentAction] = useState('');
   const [pendingDocumentBulk, setPendingDocumentBulk] = useState(false);
+  const [uploadingDocumentType, setUploadingDocumentType] = useState('');
   const mediaRecorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
   const recordingChunksRef = useRef([]);
@@ -1154,6 +1155,26 @@ const TelecallerDashboard = () => {
     }
   };
 
+  const uploadReplacementDocument = async (documentType, file) => {
+    const hostId = hostIdOf(documentModalLead || selected);
+    if (!hostId || !documentType || !file) return;
+    setUploadingDocumentType(documentType);
+    setSaving(true);
+    try {
+      const upload = await uploadAPI.uploadDocument(file);
+      await verificationAPI.uploadReplacementHostDocument(hostId, documentType, {
+        document_url: upload.url,
+        remarks: 'Replacement document uploaded by telecaller.',
+      });
+      setNotice('Replacement document uploaded and sent for review.');
+      await loadData();
+    } catch (err) {
+      setNotice(getApiErrorMessage(err, 'Unable to upload replacement document.'));
+    } finally {
+      setUploadingDocumentType('');
+      setSaving(false);
+    }
+  };
   const modalDocuments = documentModalLead ? documentsOf(documentModalLead, docs) : [];
   const selectedModalDocument = modalDocuments.find((doc) => (doc.document_type || doc.type) === selectedDocumentType) || modalDocuments[0] || null;
   const selectedModalDocumentType = selectedModalDocument?.document_type || selectedModalDocument?.type || '';
@@ -1828,8 +1849,36 @@ const TelecallerDashboard = () => {
                             </StatusChip>
                           </div>
                           <div className="mt-3 grid grid-cols-4 gap-2">
-                            <a
-                              href={docUrl || undefined}
+
+                            <label className={cx('inline-flex cursor-pointer items-center justify-center rounded-md border border-blue-200 bg-blue-50 px-2 py-2 text-[10px] font-black uppercase tracking-wider text-blue-700 hover:bg-blue-100', (saving || !documentType) && 'pointer-events-none opacity-50')}>
+
+                              <input
+
+                                type="file"
+
+                                accept=".pdf,image/png,image/jpeg,image/webp,image/gif"
+
+                                className="sr-only"
+
+                                disabled={saving || !documentType}
+
+                                onChange={(event) => {
+
+                                  const file = event.target.files?.[0];
+
+                                  event.target.value = '';
+
+                                  if (file) uploadReplacementDocument(documentType, file);
+
+                                }}
+
+                              />
+
+                              {uploadingDocumentType === documentType ? 'Uploading...' : 'Re-upload'}
+
+                            </label>
+
+                            <a                              href={docUrl || undefined}
                               target="_blank"
                               rel="noreferrer"
                               onClick={(event) => {
@@ -1843,7 +1892,6 @@ const TelecallerDashboard = () => {
                               Open
                             </a>
                             <button disabled={saving || !documentType} onClick={() => startDocumentAction(documentType, 'approve')} className="rounded-md bg-emerald-600 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-50">Approve</button>
-                            <button disabled={saving || !documentType} onClick={() => startDocumentAction(documentType, 'request_reupload')} className="rounded-md border border-amber-200 bg-amber-50 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-amber-700 disabled:opacity-50">Re-upload</button>
                             <button disabled={saving || !documentType} onClick={() => startDocumentAction(documentType, 'reject')} className="rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-red-700 disabled:opacity-50">Reject</button>
                           </div>
                         </div>
@@ -1852,7 +1900,7 @@ const TelecallerDashboard = () => {
                   </div>
                 )}
                 <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[11px] font-semibold text-slate-500">
-                  Approve, reject or re-upload kelyavar mandatory reason popup open hoil.
+                  Re-upload click kelyavar file select kara. PDF kiwa image upload zalyavar document Pending Review madhe jail.
                 </div>
               </div>
             </div>
