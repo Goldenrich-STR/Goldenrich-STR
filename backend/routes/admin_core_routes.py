@@ -81,7 +81,7 @@ async def _resolve_assignee_user(db: AsyncIOMotorDatabase, value: Optional[str],
     identifier = (value or "").strip()
     if not identifier:
         return None
-    query = {"role": role}
+    query = {"role": role, "is_active": {"$ne": False}}
     if role == "broker":
         query["$or"] = [
             {"user_id": identifier},
@@ -482,6 +482,7 @@ class AssignmentPayload(BaseModel):
     broker_id: Optional[str] = ""
     rm_id: Optional[str] = ""
     telecaller_id: Optional[str] = ""
+    primary_assignment_type: Optional[str] = ""
     reason: str
 
 
@@ -2765,20 +2766,51 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
     broker_value = (payload.broker_id or "").strip()
     rm_value = (payload.rm_id or "").strip()
     telecaller_value = (payload.telecaller_id or "").strip()
+    primary_assignment_type = (payload.primary_assignment_type or "").strip().lower()
+    effective_primary_type = primary_assignment_type
     if "broker_id" in requested_assignments and broker_value:
-        broker = await _resolve_assignee_user(db, broker_value, "broker")
-        if not broker:
-            raise HTTPException(status_code=400, detail="Broker not found")
-        set_updates["broker_id"] = broker["user_id"]
+        broker = None
+        primary_rm = None
+        if primary_assignment_type != "rm":
+            broker = await _resolve_assignee_user(db, broker_value, "broker")
+        if primary_assignment_type != "broker" and not broker:
+            candidate = await _resolve_assignee_user(db, broker_value, "employee")
+            if candidate and _is_rm_user(candidate):
+                primary_rm = candidate
+        if broker:
+            effective_primary_type = "broker"
+            set_updates["broker_id"] = broker["user_id"]
+            unset_updates["branch_manager_id"] = ""
+            unset_updates["branch_manager_code"] = ""
+        elif primary_rm:
+            effective_primary_type = "rm"
+            set_updates["rm_id"] = primary_rm["user_id"]
+            unset_updates["broker_id"] = ""
+        else:
+            raise HTTPException(status_code=400, detail="Broker / RM not found or inactive")
     elif "broker_id" in requested_assignments:
         unset_updates["broker_id"] = ""
-    if "rm_id" in requested_assignments and rm_value:
+        unset_updates["branch_manager_id"] = ""
+        unset_updates["branch_manager_code"] = ""
+    if "rm_id" in requested_assignments and rm_value and effective_primary_type == "rm":
+        branch_manager = await _resolve_assignee_user(db, rm_value, "employee")
+        if not branch_manager or not _is_branch_manager_user(branch_manager):
+            raise HTTPException(status_code=400, detail="Branch Manager not found or inactive")
+        set_updates["branch_manager_id"] = branch_manager["user_id"]
+        set_updates["branch_manager_code"] = _team_code(branch_manager)
+    elif "rm_id" in requested_assignments and rm_value:
         rm = await _resolve_assignee_user(db, rm_value, "employee")
-        if not rm:
-            raise HTTPException(status_code=400, detail="RM not found")
+        if not rm or not _is_rm_user(rm):
+            raise HTTPException(status_code=400, detail="RM not found or inactive")
         set_updates["rm_id"] = rm["user_id"]
+        unset_updates["branch_manager_id"] = ""
+        unset_updates["branch_manager_code"] = ""
     elif "rm_id" in requested_assignments:
-        unset_updates["rm_id"] = ""
+        if effective_primary_type == "rm":
+            unset_updates["branch_manager_id"] = ""
+            unset_updates["branch_manager_code"] = ""
+        else:
+            unset_updates["rm_id"] = ""
     if "telecaller_id" in requested_assignments and telecaller_value:
         telecaller = await db.users.find_one({
             "user_id": telecaller_value,
