@@ -21,6 +21,7 @@ from services.booking_calculation_service import (
     resolve_platform_fee_charge,
 )
 from services.permission_service import ensure_default_permissions
+from services.verification_case_workflow import live_case_updates
 from services.tds_service import (
     calculate_host_payout_tds,
     get_active_tds_config,
@@ -213,6 +214,18 @@ def _property_operations_stage(prop: dict, assignment: dict, verification: Optio
         return "admin_review"
     return "admin_review" if is_reviewable else status_value or "all"
 
+
+def _telecaller_stage_value(prop: dict, verification: Optional[dict]) -> str:
+    if str(prop.get("status") or "").strip().lower() == "live":
+        return "PROPERTY_LIVE"
+    verification = verification or {}
+    return str(
+        verification.get("current_stage")
+        or verification.get("current_status")
+        or verification.get("workflow_status")
+        or verification.get("verification_stage")
+        or ""
+    )
 
 def _verification_stage_value(verification: Optional[dict]) -> str:
     verification = verification or {}
@@ -2984,13 +2997,8 @@ async def property_operations(
         prop["telecaller_id"] = telecaller_id or ""
         prop["telecaller_name"] = telecaller.get("full_name") or ""
         prop["telecaller_code"] = _team_code(telecaller, telecaller_id)
-        prop["telecaller_stage"] = (
-            (verification or {}).get("current_stage")
-            or (verification or {}).get("current_status")
-            or (verification or {}).get("workflow_status")
-            or (verification or {}).get("verification_stage")
-            or ""
-        )
+        prop["telecaller_stage"] = _telecaller_stage_value(prop, verification)
+
         prop["telecaller_result"] = (verification or {}).get("telecaller_result") or ""
         prop["workflow_stage"] = _property_operations_stage(prop, assignment, verification)
         prop["operations_review"] = _normalise_property_review(prop, owner, verification)
@@ -3039,13 +3047,8 @@ async def property_operation_detail(property_id: str, current_user: dict = Depen
     prop["telecaller_id"] = telecaller_id or ""
     prop["telecaller_name"] = telecaller.get("full_name") or ""
     prop["telecaller_code"] = _team_code(telecaller, telecaller_id)
-    prop["telecaller_stage"] = (
-        verification.get("current_stage")
-        or verification.get("current_status")
-        or verification.get("workflow_status")
-        or verification.get("verification_stage")
-        or ""
-    )
+    prop["telecaller_stage"] = _telecaller_stage_value(prop, verification)
+
     prop["telecaller_result"] = verification.get("telecaller_result") or ""
     prop["workflow_stage"] = _property_operations_stage(prop, assignment, verification)
     prop["operations_review"] = _normalise_property_review(prop, owner, verification)
@@ -3186,6 +3189,11 @@ async def update_property_operation_status(property_id: str, payload: PropertySt
     if payload.status == "live":
         updates["approved_at"] = _now()
     await db.properties.update_one({"property_id": property_id}, {"$set": updates})
+    if payload.status == "live":
+        await db.property_verifications.update_many(
+            {"property_id": property_id},
+            {"$set": live_case_updates(updates["approved_at"])},
+        )
     await db.property_status_history.insert_one({"history_id": f"psh_{uuid4().hex[:12]}", "property_id": property_id, "old_status": prop.get("status"), "new_status": payload.status, "reason": payload.reason, "changed_by": current_user["user_id"], "created_at": _now()})
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="property_operations", action="property_status_changed", record_id=property_id, old_value={"status": prop.get("status")}, new_value=updates, reason=payload.reason)
 

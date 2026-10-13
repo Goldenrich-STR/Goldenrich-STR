@@ -991,6 +991,7 @@ const HostDashboard = () => {
   };
 
   const videoVerificationInfo = (property) => {
+    if (isLive(property)) return null;
     const info = property?.video_verification || {};
     const caseInfo = property?.verification_case || {};
     const verificationId = info.verification_id || caseInfo.verification_id;

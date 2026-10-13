@@ -1159,7 +1159,12 @@ async def get_host_properties(
             verification = verification_by_property.get(prop.get("property_id")) or {}
             if verification:
                 prop["verification_case"] = verification
-                if verification.get("scheduled_date") and verification.get("scheduled_start_time"):
+                if (
+                    str(prop.get("status") or "").lower() != "live"
+                    and verification.get("current_stage") not in {"LIVE", "COMPLETED"}
+                    and verification.get("scheduled_date")
+                    and verification.get("scheduled_start_time")
+                ):
                     prop["video_verification"] = {
                         **(prop.get("video_verification") or {}),
                         "verification_id": verification.get("verification_id"),

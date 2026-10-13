@@ -66,6 +66,18 @@ def now_utc():
     return datetime.now(timezone.utc)
 
 
+def live_case_updates(timestamp=None) -> dict:
+    timestamp = timestamp or now_utc()
+    return {
+        "current_stage": LIVE,
+        "current_status": COMPLETED,
+        "workflow_status": LIVE,
+        "status": "approved",
+        "property_live_at": timestamp,
+        "updated_at": timestamp,
+    }
+
+
 def workflow_id(prefix: str) -> str:
     return f"{prefix}-{uuid4().hex[:10].upper()}"
 

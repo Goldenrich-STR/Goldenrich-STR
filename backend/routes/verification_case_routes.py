@@ -37,6 +37,7 @@ from services.verification_case_workflow import (
     TELECALLER_VERIFICATION_FAILED,
     TELECALLER_VERIFICATION_IN_PROGRESS,
     TELECALLER_VERIFIED,
+    live_case_updates,
     VERIFICATION_SCHEDULED,
     all_required_done,
     now_utc,
@@ -707,6 +708,8 @@ async def _case_belongs_to_user(db, case: dict, user_id: str | None) -> bool:
 
 async def _enrich_case(db, case: dict):
     prop = await db.properties.find_one(_active_property_filter({"property_id": case.get("property_id")}), {"_id": 0}) or {}
+    if str(prop.get("status") or "").lower() == "live":
+        case = {**case, **live_case_updates(case.get("property_live_at") or case.get("updated_at") or now_utc())}
     host = await db.users.find_one(_active_host_filter({"user_id": case.get("host_id") or case.get("owner_id")}), {"_id": 0, "password_hash": 0}) or {}
     telecaller = {}
     bm = {}
