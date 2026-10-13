@@ -535,6 +535,12 @@ export const verificationAPI = {
   getCaseActivity: (verificationId) =>
     apiClient.get(`/verification-cases/${verificationId}/activity`),
 
+  startVideoRecording: (verificationId, payload) =>
+    apiClient.post(`/verification-cases/${verificationId}/recording/start`, payload),
+
+  stopVideoRecording: (verificationId) =>
+    apiClient.post(`/verification-cases/${verificationId}/recording/stop`),
+
   saveTelecallerChecklist: (verificationId, payload) =>
     apiClient.patch(`/verification-cases/${verificationId}/telecaller-checklist`, payload),
 
