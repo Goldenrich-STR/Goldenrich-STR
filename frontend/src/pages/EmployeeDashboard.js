@@ -1069,8 +1069,13 @@ const VerificationReviewSection = () => {
                       <div><p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Time</p><p className="font-bold text-charcoal">{selectedVerification.scheduled_start_time || 'N/A'}{selectedVerification.scheduled_end_time ? ` - ${selectedVerification.scheduled_end_time}` : ''}</p></div>
                       <div><p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Status</p><p className="font-bold text-charcoal">{selectedVerification.telecaller_checklist?.video_completed ? 'Completed' : 'Pending / Not marked'}</p></div>
                     </div>
-                    {(selectedVerification.telecaller_video_url || selectedVerification.video_url) && (
-                      <button type="button" onClick={() => window.open(selectedVerification.telecaller_video_url || selectedVerification.video_url, '_blank')} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white">
+                    {selectedVerification.recording_status && (
+                      <p className="mt-3 text-xs font-bold uppercase tracking-wider text-blue-700">
+                        Secure recording: {String(selectedVerification.recording_status).replace(/_/g, ' ')}
+                      </p>
+                    )}
+                    {(selectedVerification.recording_url || selectedVerification.telecaller_video_url || selectedVerification.video_url) && (
+                      <button type="button" onClick={() => window.open(selectedVerification.recording_url || selectedVerification.telecaller_video_url || selectedVerification.video_url, '_blank')} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white">
                         <Eye className="w-4 h-4" /> Watch Video
                       </button>
                     )}

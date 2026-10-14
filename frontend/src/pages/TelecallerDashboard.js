@@ -934,24 +934,13 @@ const TelecallerDashboard = () => {
     }
   };
 
-  const openVideoCallInModal = async (lead) => {
+  const openVideoCallInModal = (lead) => {
     const c = caseOf(lead);
     if (!c?.verification_id) {
       setNotice('This lead does not have a verification case yet.');
       return;
     }
-    try {
-      const response = await verificationAPI.getCase(c.verification_id);
-      const freshCase = response.data || c;
-      const enrichedLead = { ...lead, verification_case: freshCase };
-      setSelected(enrichedLead);
-      setVideoCallLead(enrichedLead);
-      setChecklist(freshCase?.telecaller_checklist || checklist || {});
-      setRemarks(freshCase?.telecaller_remarks || remarks || '');
-      setTelecallerVideoUrl(freshCase?.telecaller_video_url || '');
-    } catch (err) {
-      setNotice(getApiErrorMessage(err, 'Unable to open video verification room.'));
-    }
+    navigate(`/verification/video/${c.verification_id}`);
   };
 
   const uploadTelecallerVerificationVideo = async (file) => {
