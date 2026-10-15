@@ -11,12 +11,15 @@ from urllib.parse import urlparse
 
 import jwt
 
-from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from middleware.auth_middleware import get_current_user
 from services.audit_service import write_audit_log
+from services.object_storage import open_s3_object, store_upload_fileobj
 from services.verification_case_workflow import (
     ADMIN_APPROVED,
     ADMIN_CORRECTION_REQUIRED,
@@ -2001,6 +2004,105 @@ async def recording_callback(
     )
     await write_audit_log(db, user_id="jibri", role="system", module="verification_recording", action=f"recording_{status_value.lower()}", record_id=case["verification_id"], new_value=session)
     return {"message": "Recording callback processed"}
+
+
+@router.post("/recording-upload")
+async def upload_completed_recording(
+    request: Request,
+    session_id: str = Form(...),
+    verification_id: str = Form(""),
+    recording: UploadFile = File(...),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    if not _recording_callback_authorized(request):
+        raise HTTPException(status_code=401, detail="Invalid recording upload credentials")
+    case = await db.property_verifications.find_one(
+        {"recording_session.session_id": session_id}, {"_id": 0}
+    )
+    if not case or (verification_id and case.get("verification_id") != verification_id):
+        raise HTTPException(status_code=404, detail="Recording session not found")
+    suffix = Path(recording.filename or "recording.mp4").suffix.lower()
+    if suffix not in {".mp4", ".webm"}:
+        raise HTTPException(status_code=400, detail="Only MP4 or WebM recordings are accepted")
+    safe_filename = f"recording{suffix}"
+    object_key = await run_in_threadpool(
+        store_upload_fileobj,
+        recording.file,
+        safe_filename,
+        f"verification-recordings/{session_id}",
+        recording.content_type or ("video/mp4" if suffix == ".mp4" else "video/webm"),
+    )
+    now = now_utc()
+    session = case.get("recording_session") or {}
+    playback_path = f"/api/verification-cases/{case['verification_id']}/recording/file"
+    session.update({
+        "status": "COMPLETED",
+        "recording_url": playback_path,
+        "recording_object_key": object_key,
+        "completed_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+    })
+    await db.property_verifications.update_one(
+        {"verification_id": case["verification_id"]},
+        {"$set": {
+            "recording_session": session,
+            "recording_status": "COMPLETED",
+            "recording_url": playback_path,
+            "recording_object_key": object_key,
+            "updated_at": now,
+        }},
+    )
+    await write_audit_log(
+        db,
+        user_id="jibri",
+        role="system",
+        module="verification_recording",
+        action="recording_completed",
+        record_id=case["verification_id"],
+        new_value={"session_id": session_id, "recording_object_key": object_key},
+    )
+    return {"message": "Recording uploaded", "recording_object_key": object_key}
+
+
+@router.get("/{verification_id}/recording/file")
+async def stream_verification_recording(
+    verification_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    case = await _case_or_404(db, verification_id)
+    if not (
+        _is_admin(current_user)
+        or _is_telecaller(current_user)
+        or _is_branch_manager(current_user)
+        or await _case_belongs_to_user(db, case, current_user.get("user_id"))
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized to view this recording")
+    object_key = str(case.get("recording_object_key") or "").strip()
+    if not object_key:
+        raise HTTPException(status_code=404, detail="Recording is not available")
+    stored = await run_in_threadpool(open_s3_object, object_key)
+    if not stored:
+        raise HTTPException(status_code=404, detail="Recording file not found")
+    body = stored["Body"]
+
+    def stream_body():
+        if isinstance(body, (bytes, bytearray)):
+            yield bytes(body)
+            return
+        try:
+            yield from body.iter_chunks(chunk_size=1024 * 1024)
+        finally:
+            body.close()
+
+    return StreamingResponse(
+        stream_body(),
+        media_type=stored.get("ContentType") or "video/mp4",
+        headers={
+            "Cache-Control": "private,no-store",
+            "Content-Disposition": 'inline; filename="verification-recording.mp4"',
+        },
+    )
 
 @router.post("/schedule")
 async def schedule_case(payload: SchedulePayload, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):
