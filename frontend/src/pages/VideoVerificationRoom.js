@@ -56,6 +56,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
   const [checklist, setChecklist] = useState({});
   const [remarks, setRemarks] = useState('');
   const [checklistSaving, setChecklistSaving] = useState(false);
+  const [submittingToBm, setSubmittingToBm] = useState(false);
   const [checklistNotice, setChecklistNotice] = useState('');
   const verificationId = routeVerificationId || searchParams.get('verificationId');
   const baseUrl = useMemo(() => String(verification?.jitsi_meet_base_url || 'https://meet.jit.si').replace(/\/$/, ''), [verification?.jitsi_meet_base_url]);
@@ -172,6 +173,45 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
     }
   };
 
+  const submitToBranchManager = async () => {
+    if (!verification?.verification_id) return;
+    if (checklistDone !== CHECKLIST.length) {
+      setChecklistNotice('Complete all checklist points before sending to Branch Manager.');
+      return;
+    }
+    if (!remarks.trim()) {
+      setChecklistNotice('Telecaller notes are required before sending to Branch Manager.');
+      return;
+    }
+    setSubmittingToBm(true);
+    setChecklistNotice('');
+    try {
+      await verificationAPI.saveTelecallerChecklist(verification.verification_id, {
+        checklist,
+        remarks: remarks.trim(),
+        video_url: verification.telecaller_video_url || '',
+      });
+      await verificationAPI.telecallerDecision(verification.verification_id, {
+        result: 'VERIFIED',
+        remarks: remarks.trim(),
+        video_url: verification.telecaller_video_url || '',
+      });
+      setChecklistNotice('Verification sent to Branch Manager successfully.');
+      setVerification((current) => current ? {
+        ...current,
+        current_stage: 'BM_REVIEW_PENDING',
+        current_status: 'BM_REVIEW_PENDING',
+        workflow_status: 'BM_REVIEW_PENDING',
+        telecaller_checklist: checklist,
+        telecaller_remarks: remarks.trim(),
+      } : current);
+    } catch (err) {
+      setChecklistNotice(err?.response?.data?.detail || err.message || 'Unable to send verification to Branch Manager.');
+    } finally {
+      setSubmittingToBm(false);
+    }
+  };
+
   return <div className="min-h-screen bg-slate-50 p-3 text-slate-950"><main className="mx-auto max-w-6xl">
     {loading ? <div className="flex h-[62vh] items-center justify-center rounded-lg bg-slate-950 text-white"><div className="text-center"><Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin" /><p className="font-black">Preparing secure video verification...</p></div></div>
       : !verification ? <div className="rounded-lg border border-red-200 bg-red-50 p-4 font-bold text-red-700">{error}</div>
@@ -186,6 +226,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
             <div className="space-y-1.5">{CHECKLIST.map(([key, label]) => <label key={key} className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={isChecked(checklist[key])} onChange={(event) => setChecklist((current) => ({ ...current, [key]: event.target.checked ? 'yes' : 'no' }))} className="h-3.5 w-3.5 accent-blue-600" /><span>{label}</span></label>)}</div>
             <div className="mt-3"><div className="mb-1 flex items-center justify-between"><p className="text-xs font-black">Telecaller Notes</p><p className="text-[10px] font-bold text-slate-400">{remarks.length}/500</p></div><textarea value={remarks} maxLength={500} onChange={(event) => setRemarks(event.target.value)} placeholder="Add your notes here..." className="min-h-[92px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" /></div>
             <button type="button" disabled={checklistSaving} onClick={saveChecklist} className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{checklistSaving ? 'Saving...' : 'Save Checklist'}</button>
+            <button type="button" disabled={submittingToBm || checklistDone !== CHECKLIST.length || !remarks.trim()} onClick={submitToBranchManager} className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{submittingToBm ? 'Sending...' : 'Save & Send to BM'}</button>
             {checklistNotice && <p className="mt-2 text-xs font-bold text-blue-700">{checklistNotice}</p>}
           </aside>}
           </div></section>}
