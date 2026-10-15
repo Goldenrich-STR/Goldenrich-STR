@@ -94,12 +94,29 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
       api = new JitsiMeetExternalAPI(domain, {
         roomName: verification.jitsi_room_name,
         parentNode: containerRef.current,
+        ...(verification.jitsi_jwt ? { jwt: verification.jitsi_jwt } : {}),
         userInfo: { displayName: user?.full_name || (role === 'host' ? hostName(verification) : 'Telecaller') },
         configOverwrite: { prejoinPageEnabled: false, requireDisplayName: false, disableDeepLinking: true, startWithAudioMuted: true, startWithVideoMuted: true },
         interfaceConfigOverwrite: { SHOW_JITSI_WATERMARK: true },
       });
       apiRef.current = api;
       api.addEventListener('videoConferenceJoined', () => setJoined(true));
+      api.addEventListener('recordingStatusChanged', (event = {}) => {
+        if (event.mode && event.mode !== 'file') return;
+        if (event.on) {
+          setRecordingStatus('RECORDING');
+          setError('');
+          return;
+        }
+        if (event.error) {
+          setRecordingStatus('FAILED');
+          setError(`Recording failed: ${event.error}`);
+          if (recordingRef.current && role === 'telecaller') {
+            verificationAPI.stopVideoRecording(verification.verification_id).catch(() => null);
+          }
+          recordingRef.current = null;
+        }
+      });
       api.addEventListener('readyToClose', () => {
         setJoined(false);
         if (recordingRef.current && role === 'telecaller') verificationAPI.stopVideoRecording(verification.verification_id).catch(() => null);

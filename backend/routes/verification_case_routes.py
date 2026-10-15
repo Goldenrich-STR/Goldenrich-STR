@@ -7,6 +7,9 @@ import shutil
 import subprocess
 import threading
 import time
+from urllib.parse import urlparse
+
+import jwt
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from motor.motor_asyncio import AsyncIOMotorDatabase
@@ -326,6 +329,47 @@ def _recording_callback_authorized(request: Request) -> bool:
     secret = _recording_callback_secret()
     supplied = request.headers.get("X-XSpace-Recording-Secret", "")
     return bool(secret and supplied and __import__("hmac").compare_digest(secret, supplied))
+
+
+def _jitsi_moderator_token(current_user: dict, case: dict) -> str:
+    """Return a short-lived room-scoped token only for the assigned Telecaller/Admin."""
+    if not (_is_admin(current_user) or _is_telecaller(current_user)):
+        return ""
+    assigned_telecaller = str(case.get("telecaller_id") or "").strip()
+    if assigned_telecaller and not _is_admin(current_user):
+        if assigned_telecaller not in _telecaller_identity_terms(current_user):
+            return ""
+    room_name = str(case.get("jitsi_room_name") or "").strip()
+    app_id = os.getenv("JITSI_APP_ID", "").strip()
+    app_secret = os.getenv("JITSI_APP_SECRET", "").strip()
+    if not room_name or not app_id or not app_secret:
+        return ""
+    now = now_utc()
+    domain = urlparse(_jitsi_meet_base_url()).hostname or "meet-uat.x-space360.in"
+    user_id = str(current_user.get("user_id") or current_user.get("uid") or "telecaller")
+    display_name = str(current_user.get("full_name") or current_user.get("name") or "Telecaller")
+    payload = {
+        "aud": app_id,
+        "iss": app_id,
+        "sub": domain,
+        "room": room_name,
+        "nbf": int((now - timedelta(seconds=10)).timestamp()),
+        "exp": int((now + timedelta(minutes=90)).timestamp()),
+        "context": {
+            "user": {
+                "id": user_id,
+                "name": display_name,
+                "email": str(current_user.get("email") or ""),
+                "moderator": True,
+            },
+            "features": {
+                "recording": True,
+                "livestreaming": False,
+                "transcription": False,
+            },
+        },
+    }
+    return jwt.encode(payload, app_secret, algorithm="HS256")
 
 def _is_branch_manager(user: dict) -> bool:
     role = str(user.get("role") or "").lower()
@@ -1825,6 +1869,7 @@ async def get_case(verification_id: str, current_user: dict = Depends(get_curren
     enriched = await _enrich_case(db, case)
     enriched["jitsi_meet_base_url"] = _jitsi_meet_base_url()
     enriched["jitsi_recording_enabled"] = _jitsi_recording_enabled()
+    enriched["jitsi_jwt"] = _jitsi_moderator_token(current_user, case)
     return enriched
 
 
