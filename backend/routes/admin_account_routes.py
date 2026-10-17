@@ -1831,6 +1831,9 @@ async def list_payouts(
             {
                 "_id": 0,
                 "booking_id": 1,
+                "host_id": 1,
+                "owner_id": 1,
+                "host_user_id": 1,
                 "booking_status": 1,
                 "status": 1,
                 "payment_status": 1,
@@ -1997,40 +2000,44 @@ async def list_payouts(
             "extra_guest_fee": _rupees_to_paise(extra_charges.get("extra_guest_fee")),
             "customer_gst": _rupees_to_paise(pricing_snapshot.get("gst_amount")),
         }
-        p["customer_charge_breakdown"] = {
-            "platform_fee": _first_paise(snapshot_charge_breakdown.get("platform_fee"), existing_charge_breakdown.get("platform_fee"), p.get("platform_fee")),
-            "gateway_charge": _first_paise(snapshot_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("payment_gateway_charge"), p.get("gateway_charge")),
-            "convenience_fee": _first_paise(snapshot_charge_breakdown.get("convenience_fee"), existing_charge_breakdown.get("convenience_fee")),
-            "insurance_fee": _first_paise(snapshot_charge_breakdown.get("insurance_fee"), existing_charge_breakdown.get("insurance_fee")),
-            "cleaning_fee": _first_paise(snapshot_charge_breakdown.get("cleaning_fee"), existing_charge_breakdown.get("cleaning_fee")),
-            "extra_guest_fee": _first_paise(snapshot_charge_breakdown.get("extra_guest_fee"), existing_charge_breakdown.get("extra_guest_fee")),
-            "customer_gst": _first_paise(snapshot_charge_breakdown.get("customer_gst"), existing_charge_breakdown.get("customer_gst")),
+        # The booking snapshot is authoritative, including explicit zeroes.
+        # Falling back to today's finance configuration corrupts historical
+        # bookings that were created before a charge was enabled.
+        p["customer_charge_breakdown"] = snapshot_charge_breakdown if booking else {
+            "platform_fee": _first_paise(existing_charge_breakdown.get("platform_fee"), p.get("platform_fee")),
+            "gateway_charge": _first_paise(existing_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("payment_gateway_charge"), p.get("gateway_charge")),
+            "convenience_fee": _paise(existing_charge_breakdown.get("convenience_fee")),
+            "insurance_fee": _paise(existing_charge_breakdown.get("insurance_fee")),
+            "cleaning_fee": _paise(existing_charge_breakdown.get("cleaning_fee")),
+            "extra_guest_fee": _paise(existing_charge_breakdown.get("extra_guest_fee")),
+            "customer_gst": _paise(existing_charge_breakdown.get("customer_gst")),
         }
-        host_actual_amount = _first_paise(
-            p.get("host_actual_value_amount"),
-            _rupees_to_paise(pricing_snapshot.get("host_actual_value")),
-            p.get("gross_amount"),
+        host_actual_amount = (
+            _rupees_to_paise(pricing_snapshot.get("host_actual_value"))
+            if booking else _first_paise(p.get("host_actual_value_amount"), p.get("gross_amount"))
         )
         p["host_actual_value_amount"] = host_actual_amount
         p["gross_amount"] = host_actual_amount
-        p["total_extra_charges_amount"] = _first_paise(
-            p.get("total_extra_charges_amount"),
-            _rupees_to_paise(pricing_snapshot.get("total_extra_charges")),
-            sum(p["customer_charge_breakdown"].get(k, 0) for k in (
+        p["total_extra_charges_amount"] = (
+            _rupees_to_paise(pricing_snapshot.get("total_extra_charges"))
+            if booking else _first_paise(
+                p.get("total_extra_charges_amount"),
+                sum(p["customer_charge_breakdown"].get(k, 0) for k in (
                 "platform_fee",
                 "gateway_charge",
                 "convenience_fee",
                 "insurance_fee",
                 "cleaning_fee",
                 "extra_guest_fee",
-            )),
+                )),
+            )
         )
-        p["customer_final_payable_amount"] = _first_paise(
-            p.get("customer_final_payable_amount"),
-            _rupees_to_paise(pricing_snapshot.get("customer_final_payable")),
+        p["customer_final_payable_amount"] = (
+            _rupees_to_paise(pricing_snapshot.get("customer_final_payable"))
+            if booking else _paise(p.get("customer_final_payable_amount"))
         )
-        p["platform_fee"] = p["customer_charge_breakdown"].get("platform_fee") or p.get("platform_fee") or 0
-        p["gateway_charge"] = p["customer_charge_breakdown"].get("gateway_charge") or p.get("gateway_charge") or 0
+        p["platform_fee"] = p["customer_charge_breakdown"].get("platform_fee", 0)
+        p["gateway_charge"] = p["customer_charge_breakdown"].get("gateway_charge", 0)
         p.pop("company_charge", None)
 
         if booking and p.get("status") not in {"paid", "processed", "completed"}:
@@ -2051,6 +2058,13 @@ async def list_payouts(
                 await db.payouts.update_one(
                     {"payout_id": p.get("payout_id")},
                     {"$set": {
+                        "gross_amount": payout_breakdown.get("gross_amount", p["gross_amount"]),
+                        "host_actual_value_amount": payout_breakdown.get("host_actual_value_amount", p["host_actual_value_amount"]),
+                        "platform_fee": payout_breakdown.get("platform_fee", p["platform_fee"]),
+                        "gateway_charge": payout_breakdown.get("gateway_charge", p["gateway_charge"]),
+                        "customer_charge_breakdown": payout_breakdown.get("customer_charge_breakdown") or p["customer_charge_breakdown"],
+                        "total_extra_charges_amount": payout_breakdown.get("total_extra_charges_amount", p["total_extra_charges_amount"]),
+                        "customer_final_payable_amount": payout_breakdown.get("customer_final_payable_amount", p["customer_final_payable_amount"]),
                         "tds_amount": p["tds_amount"],
                         "net_amount": p["net_amount"],
                         "deductions": p["deductions"],

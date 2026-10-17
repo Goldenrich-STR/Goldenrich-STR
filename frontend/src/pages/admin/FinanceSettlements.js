@@ -616,6 +616,17 @@ const firstChargeRupees = (source, keys, referenceAmount = 0) => {
 };
 const settlementChargeBreakdown = (payout = {}, paymentConfig = {}) => {
   const basePaise = toPaiseAmount(firstPresent(payout.gross_amount, payout.tds_base_amount, payout.booking?.host_base_amount, payout.booking?.base_amount, 0));
+  const snapshotCharges = payout.customer_charge_breakdown;
+  if (snapshotCharges && typeof snapshotCharges === 'object') {
+    return {
+      platform_fee: Number(snapshotCharges.platform_fee || 0) / 100,
+      payment_gateway_charge: Number(firstPresent(snapshotCharges.payment_gateway_charge, snapshotCharges.gateway_charge, 0) || 0) / 100,
+      convenience_fee: Number(snapshotCharges.convenience_fee || 0) / 100,
+      insurance_fee: Number(snapshotCharges.insurance_fee || 0) / 100,
+      cleaning_fee: Number(snapshotCharges.cleaning_fee || 0) / 100,
+      extra_guest_fee: Number(snapshotCharges.extra_guest_fee || 0) / 100,
+    };
+  }
   const explicitPlatform = firstChargeRupees(payout, ['platform_fee', 'platform_charge', 'platform_fee_amount', 'platform_charge_amount', 'platformFee', 'platformFeeAmount', 'platformCharge', 'platformChargeAmount'], basePaise);
   return {
     platform_fee: explicitPlatform || (platformFeePaiseFromTransaction(payout, basePaise, paymentConfig) / 100),

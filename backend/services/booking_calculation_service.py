@@ -122,7 +122,7 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
         booking.get("host_price_per_night"),
         booking.get("price_per_night"),
     )
-    host_actual = _first_money(
+    host_listed_value = _first_money(
         pricing.get("host_actual_value"),
         pricing.get("host_amount"),
         pricing.get("host_base_amount"),
@@ -130,13 +130,13 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
         booking.get("host_amount"),
         booking.get("host_base_amount"),
     )
-    if host_actual == Decimal("0.00") and unit_host_price != Decimal("0.00"):
-        host_actual = unit_host_price * units
-    if host_actual == Decimal("0.00"):
+    if host_listed_value == Decimal("0.00") and unit_host_price != Decimal("0.00"):
+        host_listed_value = unit_host_price * units
+    if host_listed_value == Decimal("0.00"):
         # Last-resort fallback for legacy rows only. New code must persist
         # host_amount/host_actual_value so customer subtotal is not mistaken
         # for the host base value.
-        host_actual = money(booking.get("base_amount") or 0)
+        host_listed_value = money(booking.get("base_amount") or 0)
 
     def charge_amount(key: str, *aliases: str) -> Decimal:
         names = (key, *aliases)
@@ -231,16 +231,26 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
         booking.get("total_amount"),
     )
     if total_extra_charges == Decimal("0.00") and customer_final != Decimal("0.00"):
-        derived_extra_charges = customer_final - host_actual - gst_amount + discount_amount
+        derived_extra_charges = customer_final - host_listed_value - gst_amount + discount_amount
         if derived_extra_charges > Decimal("0.00"):
             total_extra_charges = derived_extra_charges
             if not any(value > Decimal("0.00") for value in extra_charges.values()):
                 extra_charges["company_charge"] = derived_extra_charges
     if customer_final == Decimal("0.00"):
-        customer_final = host_actual + total_extra_charges + gst_amount - discount_amount
+        customer_final = host_listed_value + total_extra_charges + gst_amount - discount_amount
+
+    # A booking coupon reduces the taxable supply that funded the host payout.
+    # Settlements must therefore use the discounted, GST-excluded host value,
+    # never the property's original/listed value. Customer-side charges retain
+    # their persisted values; the discount is applied against the host portion
+    # first, matching booking checkout's subtotal-minus-discount calculation.
+    host_discount_amount = min(host_listed_value, discount_amount)
+    host_actual = max(Decimal("0.00"), host_listed_value - host_discount_amount)
 
     return {
         "host_actual_value": as_float(host_actual),
+        "host_listed_value": as_float(host_listed_value),
+        "host_discount_amount": as_float(host_discount_amount),
         "extra_charges": {key: as_float(value) for key, value in extra_charges.items()},
         "total_extra_charges": as_float(total_extra_charges),
         "gst_amount": as_float(gst_amount),
