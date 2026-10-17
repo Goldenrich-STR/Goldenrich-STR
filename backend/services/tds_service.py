@@ -385,7 +385,15 @@ async def calculate_host_payout_tds(
     config = await get_active_tds_config(db, transaction_date)
     fy_start, fy_end, fy_label = financial_year_bounds(transaction_date)
     gross = max(Decimal("0.00"), money(gross_booking_value))
-    profile = await get_host_tax_profile(db, host_id) if host_id else {"pan_status": "missing", "legal_entity_type": "unknown", "residential_status": "unknown"}
+    # Missing host linkage must not silently select the zero-threshold
+    # other-entity bucket. Hosts without an explicit tax profile use the
+    # resident Individual/HUF threshold; an explicit company/LLP profile will
+    # still select the configured other-entity threshold.
+    profile = await get_host_tax_profile(db, host_id) if host_id else {
+        "pan_status": "missing",
+        "legal_entity_type": "individual",
+        "residential_status": "resident",
+    }
     prior = await _fy_gross_before(db, host_id, fy_label, booking_id, payout_id) if host_id else Decimal("0.00")
     projected = money(prior + gross)
     entity = str(profile.get("legal_entity_type") or "individual").lower()
