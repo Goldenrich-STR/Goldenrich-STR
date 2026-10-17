@@ -430,59 +430,6 @@
   animation: float-reverse 5s ease-in-out infinite;
 }
 
-/* Lit diyas frame the transparent hero search capsule. */
-.diya {
-  position: absolute;
-  top: 50%;
-  z-index: 60;
-  width: 38px;
-  height: 42px;
-  transform: translateY(-50%);
-  filter: drop-shadow(0 3px 8px rgba(87, 30, 8, 0.38));
-}
-.diya-left { left: -48px; }
-.diya-right { right: -48px; }
-.diya-bowl {
-  position: absolute;
-  bottom: 4px;
-  left: 50%;
-  width: 34px;
-  height: 14px;
-  transform: translateX(-50%);
-  clip-path: polygon(0 5%, 100% 5%, 78% 100%, 22% 100%);
-  background: linear-gradient(135deg, #870711, #e11d31 52%, #79050d);
-  box-shadow: none;
-}
-.diya-bowl::before {
-  content: '';
-  position: absolute;
-  top: -2px;
-  left: 3px;
-  right: 3px;
-  height: 4px;
-  clip-path: polygon(0 0, 100% 0, 84% 100%, 16% 100%);
-  background: #69060c;
-}
-.diya-flame {
-  position: absolute;
-  z-index: 1;
-  bottom: 15px;
-  left: 50%;
-  width: 13px;
-  height: 22px;
-  transform: translateX(-50%) rotate(2deg);
-  transform-origin: 50% 100%;
-  clip-path: polygon(50% 0, 79% 43%, 63% 100%, 35% 100%, 19% 43%);
-  border-radius: 50% 50% 42% 42%;
-  background: linear-gradient(to top, #ff7a00 0 24%, #ffca12 40% 64%, #fff7ad 65% 100%);
-  box-shadow: 0 0 8px #ff9b09, 0 0 17px rgba(255, 152, 16, .78);
-  animation: diya-flicker 1.45s ease-in-out infinite alternate;
-}
-@keyframes diya-flicker {
-  0% { transform: translateX(-50%) rotate(-4deg) scale(.91, 1.05); opacity: .88; }
-  48% { transform: translateX(-50%) rotate(4deg) scale(1.06, .94); opacity: 1; }
-  100% { transform: translateX(-50%) rotate(-1deg) scale(.96, 1.09); opacity: .92; }
-}
 @media (max-width: 640px) {
   .mobile-guest-dropdown {
     left: 0;
@@ -490,12 +437,6 @@
     width: calc(200% + 6px);
     margin-top: 8px;
   }
-  .diya { display: none; }
-  .diya { width: 28px; height: 33px; }
-  .diya-left { left: -24px; }
-  .diya-right { right: -24px; }
-  .diya-bowl { width: 26px; height: 11px; bottom: 4px; }
-  .diya-flame { bottom: 13px; width: 10px; height: 17px; }
 }
 
 /* Reduced Motion & Print Visibility Safeguards */

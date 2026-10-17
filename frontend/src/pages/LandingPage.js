@@ -3896,8 +3896,6 @@ const LandingPage = () => {
                  <div className="absolute left-1/2 top-[76%] md:top-[88%] z-50 w-[calc(100vw-2rem)] max-w-6xl -translate-x-1/2 -translate-y-1/2 text-left">
                     {/* Capsule Search Bar */}
                     <div ref={landingSearchRef} className="font-apple relative z-50 overflow-visible rounded-[32px] lg:rounded-full border border-white/45 bg-white/25 p-2 shadow-[0_18px_45px_rgba(10,25,30,0.28)] backdrop-blur-xl">
-                      <div className="diya diya-left" aria-hidden="true"><span className="diya-flame" /><span className="diya-bowl" /></div>
-                      <div className="diya diya-right" aria-hidden="true"><span className="diya-flame" /><span className="diya-bowl" /></div>
                       <div className="grid grid-cols-2 lg:flex min-h-[72px] lg:flex-row items-stretch lg:items-center gap-1.5 rounded-[26px] lg:rounded-full w-full border border-white/90 bg-white/95 p-1.5 relative overflow-visible shadow-[0_4px_15px_rgba(20,30,20,0.08)]">
                         
                         {/* Search Input */}

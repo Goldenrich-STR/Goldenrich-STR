@@ -9,6 +9,27 @@ const WhatsAppIcon = ({ className }) => (
   </svg>
 );
 
+const DiyaIcon = ({ className = '' }) => (
+  <svg viewBox="0 0 64 64" className={className} role="img" aria-label="Festive diya">
+    <defs>
+      <linearGradient id="footer-diya-flame" x1="0" y1="1" x2="0.78" y2="0">
+        <stop offset="0" stopColor="#f28a00" />
+        <stop offset="0.5" stopColor="#ffc400" />
+        <stop offset="1" stopColor="#fff48a" />
+      </linearGradient>
+      <linearGradient id="footer-diya-bowl" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#8c0015" />
+        <stop offset="0.58" stopColor="#d70b28" />
+        <stop offset="1" stopColor="#8b0013" />
+      </linearGradient>
+    </defs>
+    <path d="M35.1 4.2c1.1 8.1-5.6 10.4-4.2 18.8 3.4-2.4 5.1-5.4 5-9.1 5.6 5.8 5.2 13.4-.8 18.1-6.2-3-8.6-8-6.3-13.8 1.8-4.6 5.8-7.1 6.3-14Z" fill="url(#footer-diya-flame)" />
+    <path d="M27.8 27.5c2.3-1.9 5.8-2.2 8.6-.8" fill="none" stroke="#6f0010" strokeWidth="1.8" strokeLinecap="round" />
+    <path d="M6 32.5c7.8 2.6 16.5 3.9 26 3.9s18.2-1.3 26-3.9c-1.8 14.4-12.5 24.1-26 24.1S7.8 46.9 6 32.5Z" fill="url(#footer-diya-bowl)" />
+    <path d="M6 32.5c8.4 1.6 17.1 2.4 26 2.4s17.6-.8 26-2.4c-5.9 4-15 6.3-26 6.3S11.9 36.5 6 32.5Z" fill="#720012" />
+  </svg>
+);
+
 const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals and spaces in India through technology, curation, and verified service.',
   location: 'Nashik, Maharashtra',
@@ -70,6 +91,7 @@ export default function Footer({ cmsContent }) {
     <>
       {/* Modern Sleek Dark Footer Section */}
       <footer className="relative overflow-hidden bg-[#0A121D] text-white border-t border-white/10">
+        <DiyaIcon className="pointer-events-none absolute right-5 top-4 z-20 h-12 w-12 md:right-10 md:top-6 md:h-14 md:w-14" />
         <div className="relative z-10 mx-auto max-w-7xl px-6 py-20 md:px-10 lg:px-12 lg:py-24">
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:gap-10">
