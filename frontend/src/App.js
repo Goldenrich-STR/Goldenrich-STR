@@ -463,9 +463,9 @@ function AppRoutes() {
 
 function App() {
   const location = useLocation();
-  // Host/admin workspaces have their own contextual support control. Keeping
-  // the public WhatsApp + chatbot launcher there covers form actions on small screens.
-  const isWorkspaceRoute = /^\/(host|admin|md)(?:\/|$)/.test(location.pathname);
+  // Keep the public floating launchers on the landing page only. Other pages,
+  // especially property details, have their own fixed booking actions.
+  const isLandingPage = location.pathname === "/";
 
   return (
     <div className="App">
@@ -474,7 +474,7 @@ function App() {
         <Suspense fallback={<ScreenLoading />}>
           <AppRoutes />
         </Suspense>
-        {!isWorkspaceRoute && <ChatbotWidget />}
+        {isLandingPage && <ChatbotWidget />}
       </AuthProvider>
     </div>
   );

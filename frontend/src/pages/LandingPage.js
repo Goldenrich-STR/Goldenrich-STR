@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
+import { setOptions, importLibrary } from '@googlemaps/js-api-loader';
 import { Crown, Building2, MapPin, Calendar, Star, Zap, Search, User, LogOut, CheckCircle2, ShieldCheck, ClipboardList, Sparkles, X, CreditCard, ArrowRight, Home, Briefcase, PartyPopper, Facebook, Instagram, Youtube, Heart, Share2, ChevronLeft, ChevronRight, ChevronUp, ChevronDown, Menu, Compass, Trees, Waves, Hotel, Sunset, UserCheck, ChefHat, ConciergeBell, Gamepad2, Mail, Phone, Headphones, IndianRupee, Smartphone } from 'lucide-react';
 import apiClient, { propertyAPI, getImageUrl, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
@@ -18,8 +19,26 @@ import ScrollReveal from '../components/ui/ScrollReveal';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import DownloadAppButton from '../components/ui/DownloadAppButton';
 import AppPromoSection from '../components/ui/AppPromoSection';
+import DiwaliFireworks from '../components/ui/DiwaliFireworks';
 import { formatContentWithBullets, markdownComponents } from '../lib/formatContent';
 import Footer from '../components/Footer';
+
+let googlePlacesLibraryPromise;
+
+const loadGooglePlacesLibrary = () => {
+  const apiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+  if (!apiKey) return Promise.resolve(null);
+
+  if (!googlePlacesLibraryPromise) {
+    setOptions({ key: apiKey, v: 'weekly', language: 'en', region: 'IN' });
+    googlePlacesLibraryPromise = importLibrary('places').catch((error) => {
+      googlePlacesLibraryPromise = null;
+      throw error;
+    });
+  }
+
+  return googlePlacesLibraryPromise;
+};
 
 const FALLBACK_BLOG_IMAGES = [
   'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=1200',
@@ -32,6 +51,74 @@ const FALLBACK_BLOG_IMAGES = [
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
 
+const NASHIK_PARTNER_STRIPS = [
+  {
+    name: 'Radisson Blu',
+    logo: '/assets/partners/radisson-blu.jpg',
+    headline: 'Radisson Blu for polished Nashik city breaks',
+    subline: 'A familiar address for refined rooms, business travel and special celebrations.',
+    search: 'Radisson Blu',
+    surface: 'bg-[#24252a]',
+    text: 'text-white',
+    muted: 'text-white/65',
+    button: 'border-white/50 text-white hover:bg-white hover:text-[#24252a]',
+    logoBlend: 'mix-blend-screen',
+    logoScale: 'scale-100',
+  },
+  {
+    name: 'SSK Solitaire',
+    logo: '/assets/partners/ssk-solitaire.png',
+    headline: 'SSK Solitaire for easy stays and beautiful celebrations',
+    subline: 'A Nashik hotel and banqueting destination for family functions and get-togethers.',
+    search: 'SSK Solitaire',
+    surface: 'bg-[#f7efd9]',
+    text: 'text-[#42241e]',
+    muted: 'text-[#42241e]/65',
+    button: 'border-[#42241e]/50 text-[#42241e] hover:bg-[#42241e] hover:text-white',
+    logoBlend: 'mix-blend-multiply',
+    logoScale: 'scale-[1.85]',
+  },
+  {
+    name: 'Bon Vivant',
+    logo: '/assets/partners/bon-vivant.jpg',
+    headline: 'Bon Vivant makes dining an occasion',
+    subline: 'A warm choice for leisurely meals, close celebrations and memorable evenings.',
+    search: 'Bon Vivant',
+    surface: 'bg-[#1d1b1d]',
+    text: 'text-white',
+    muted: 'text-white/65',
+    button: 'border-white/50 text-white hover:bg-white hover:text-[#1d1b1d]',
+    logoBlend: 'mix-blend-screen',
+    logoScale: 'scale-100',
+  },
+  {
+    name: 'Enrise by Sayaji',
+    logo: '/assets/partners/enrise-sayaji.jpg',
+    headline: 'Enrise by Sayaji offers a relaxed Nashik welcome',
+    subline: 'Thoughtful rooms and event-ready spaces for effortless work trips and weekends.',
+    search: 'Enrise Sayaji',
+    surface: 'bg-[#edf1eb]',
+    text: 'text-[#3f4542]',
+    muted: 'text-[#3f4542]/65',
+    button: 'border-[#3f4542]/45 text-[#3f4542] hover:bg-[#3f4542] hover:text-white',
+    logoBlend: 'mix-blend-multiply',
+    logoScale: 'scale-[1.7]',
+  },
+  {
+    name: 'Pegasus',
+    logo: '/assets/partners/pegasus.jpg',
+    headline: 'Pegasus brings global cuisine to good company',
+    subline: 'A distinctive spot in Nashik for dinner plans, celebrations and shared tables.',
+    search: 'Pegasus',
+    surface: 'bg-[#211d1e]',
+    text: 'text-white',
+    muted: 'text-white/65',
+    button: 'border-white/50 text-white hover:bg-white hover:text-[#211d1e]',
+    logoBlend: 'mix-blend-screen',
+    logoScale: 'scale-100',
+  },
+];
+
 const getPropertyCardImage = (item) => {
   const fromImages = getImageUrl(item?.images?.[0]);
   if (fromImages) return fromImages;
@@ -39,6 +126,297 @@ const getPropertyCardImage = (item) => {
     return getImageUrl(item?.img || item?.image_url) || PROPERTY_IMAGE_FALLBACK;
   }
   return PROPERTY_IMAGE_FALLBACK;
+};
+
+const getPropertyCardImages = (item) => {
+  const rawImages = Array.isArray(item?.images) ? item.images : [];
+  const imageUrls = rawImages
+    .map((image) => getImageUrl(typeof image === 'string' ? image : image?.url || image?.image_url))
+    .filter(Boolean);
+  const fallbackImage = getPropertyCardImage(item);
+  return [...new Set([...imageUrls, fallbackImage].filter(Boolean))];
+};
+
+const MORE_THAN_STAY_SLIDES = [
+  { image: '/assets/experiences/billiards.webp', label: 'Games & Recreation' },
+  { image: '/assets/experiences/shared-dining.webp', label: 'Shared Dining' },
+  { image: '/assets/experiences/cycling-trail.webp', label: 'Explore Outdoors' },
+  { image: '/assets/experiences/sunset-terrace.webp', label: 'Sunset Evenings' },
+  { image: '/assets/experiences/garden-picnic.webp', label: 'Garden Picnics' },
+  { image: '/assets/experiences/lakeside-picnic.webp', label: 'Lakeside Moments' },
+  { image: '/assets/experiences/barbecue-evening.webp', label: 'Barbecue Nights' },
+];
+
+const MORE_THAN_STAY_FEATURES = [
+  { label: 'Private Pool', position: '0% 0%' },
+  { label: 'Chef Service', position: '33.333% 0%' },
+  { label: 'Stay Support', position: '66.667% 0%' },
+  { label: 'Local Trails', position: '100% 0%' },
+  { label: 'Games & Fun', position: '0% 100%' },
+  { label: 'Open Spaces', position: '33.333% 100%' },
+  { label: 'Celebrations', position: '66.667% 100%' },
+  { label: 'Barbecue Nights', position: '100% 100%' },
+];
+
+function MoreThanStaySlider() {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCurrentIndex((index) => (index + 1) % MORE_THAN_STAY_SLIDES.length);
+    }, 5000);
+    return () => window.clearInterval(interval);
+  }, []);
+
+  const showNext = () => {
+    setCurrentIndex((index) => (index + 1) % MORE_THAN_STAY_SLIDES.length);
+  };
+
+  return (
+    <section className="relative left-1/2 my-8 w-screen -translate-x-1/2 bg-[#F5F2EB] py-7 md:my-10 md:py-9">
+      <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
+        <div className="relative h-[420px] overflow-hidden rounded-2xl md:h-[520px]">
+          {MORE_THAN_STAY_SLIDES.map((slide, index) => (
+            <img
+              key={slide.image}
+              src={slide.image}
+              alt={slide.label}
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+            />
+          ))}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-black/10" />
+          <button
+            type="button"
+            onClick={showNext}
+            className="absolute right-4 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/25 text-white backdrop-blur-sm transition hover:bg-white hover:text-charcoal md:right-6"
+            aria-label="Next experience image"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          <div className="absolute bottom-10 left-5 z-10 w-[min(500px,calc(100%-88px))] p-3 text-left text-white md:bottom-14 md:left-7 md:p-4">
+            <h3 className="font-megafield whitespace-nowrap text-[27px] font-normal leading-none tracking-tight text-white md:text-[34px]">More Than a Stay</h3>
+            <p className="font-apple mt-3 max-w-[365px] text-[12px] leading-relaxed text-white/90 md:text-[13px]">Thoughtful comforts, local moments and space to make your stay your own.</p>
+            <div className="mt-3 grid grid-cols-4 gap-x-4 gap-y-4">
+              {MORE_THAN_STAY_FEATURES.map(({ label, position }) => (
+                <div key={label} className="flex min-w-0 flex-col items-center gap-1.5 text-center">
+                  <span className="h-14 w-14 bg-[length:400%_200%] bg-no-repeat" style={{ backgroundImage: "url('/assets/experiences/xspace-feature-icons-source.png')", backgroundPosition: position }} />
+                  <span className="font-apple text-[10px] font-medium leading-tight text-white/95">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function PropertyImageCarousel({ item, className = '', imageClassName = '', children }) {
+  const images = useMemo(() => getPropertyCardImages(item), [item]);
+  const [activeImage, setActiveImage] = useState(0);
+  const [isHovered, setIsHovered] = useState(false);
+  const imageIndex = Math.min(activeImage, Math.max(images.length - 1, 0));
+  const hasMultipleImages = images.length > 1;
+
+  const changeImage = (event, direction) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setActiveImage((index) => (index + direction + images.length) % images.length);
+  };
+
+  return (
+    <div
+      className={`relative overflow-hidden ${className}`}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+    >
+      <img
+        src={images[imageIndex] || PROPERTY_IMAGE_FALLBACK}
+        alt={item.title}
+        loading="lazy"
+        decoding="async"
+        onError={({ currentTarget }) => {
+          currentTarget.onerror = null;
+          currentTarget.src = PROPERTY_IMAGE_FALLBACK;
+        }}
+        className={`h-full w-full object-cover transition-transform duration-700 ${imageClassName}`}
+      />
+      {hasMultipleImages && (
+        <>
+          <button
+            type="button"
+            onClick={(event) => changeImage(event, -1)}
+            className={`absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-charcoal shadow-md transition ${isHovered ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            aria-label="Previous property photo"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={(event) => changeImage(event, 1)}
+            className={`absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-charcoal shadow-md transition ${isHovered ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            aria-label="Next property photo"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+          <span className={`absolute bottom-3 right-3 z-20 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold tracking-wide text-charcoal shadow-sm transition ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
+            {imageIndex + 1} / {images.length} PHOTOS
+          </span>
+        </>
+      )}
+      {children}
+    </div>
+  );
+}
+
+const RecentlyVisitedCard = ({ item, index, navigate, wishlist, handleWishlistToggle, badgeLabel }) => {
+  return (
+    <article
+      key={item.property_id || index}
+      role="link"
+      tabIndex={0}
+      onClick={() => navigate(getPropertyUrl(item))}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          navigate(getPropertyUrl(item));
+        }
+      }}
+      className="recently-visited-card group/card bg-transparent cursor-pointer text-left snap-start outline-none"
+    >
+      <PropertyImageCarousel
+        item={item}
+        className="aspect-[16/10] rounded-xl bg-sand-200"
+        imageClassName="group-hover/card:scale-[1.025]"
+      >
+
+        <button
+          type="button"
+          onClick={(event) => { event.preventDefault(); event.stopPropagation(); handleWishlistToggle(item.property_id); }}
+          className="absolute right-3 top-3 z-20 rounded-full p-1.5 text-white drop-shadow-md transition hover:scale-105"
+          aria-label="Toggle wishlist"
+        >
+          <Heart className={`h-5 w-5 ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
+        </button>
+
+      </PropertyImageCarousel>
+
+      <div className="pt-3">
+        <div className="flex items-start justify-between gap-3">
+          <h3 className="font-sans text-[15px] font-semibold leading-snug text-charcoal line-clamp-2 group-hover/card:text-terracotta transition-colors">{item.title}</h3>
+          {item.rating > 0 && item.review_count > 0 && (
+            <span className="flex shrink-0 items-center pt-0.5 text-sm font-semibold text-charcoal"><Star className="mr-1 h-4 w-4 fill-current text-[#eab308]" />{Number(item.rating).toFixed(1)}</span>
+          )}
+        </div>
+        <p className="mt-1.5 flex items-center gap-1 text-[12px] text-charcoal-muted"><MapPin className="h-3.5 w-3.5 shrink-0" />{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</p>
+        <p className="mt-3 text-[15px] font-semibold text-charcoal">₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}<span className="ml-1 text-[11px] font-normal text-charcoal-muted">/ night</span></p>
+      </div>
+    </article>
+  );
+};
+
+const FooterExploreSection = ({ properties, navigate }) => {
+  const [activeCategory, setActiveCategory] = useState('all');
+  const categories = [
+    { id: 'all', label: 'All Spaces' },
+    { id: 'residential', label: 'Residential' },
+    { id: 'commercial', label: 'Commercial' },
+    { id: 'event_venue', label: 'Event Venues' },
+  ];
+
+  const links = useMemo(() => {
+    const sources = activeCategory === 'all'
+      ? Object.entries(properties || {}).flatMap(([category, items]) => (items || []).map((item) => ({ ...item, category: item.category || category })))
+      : (properties?.[activeCategory] || []).map((item) => ({ ...item, category: item.category || activeCategory }));
+
+    const dynamicLinks = sources.reduce((result, property) => {
+      const city = String(property.city || '').trim();
+      const propertyType = String(property.property_type || property.type || '').trim();
+      if (!city || !propertyType) return result;
+
+      const key = `${property.category}-${propertyType}-${city}`.toLowerCase();
+      if (result.some((item) => item.key === key)) return result;
+
+      result.push({
+        key,
+        label: `${formatPropertyTypeLabel(propertyType)} in ${city}`,
+        filters: { category: property.category, property_type: propertyType, city },
+      });
+      return result;
+    }, []);
+
+    const staticLinks = {
+      all: [
+        ['Villas in Nashik', 'residential', 'Nashik'], ['Homestays in Nashik', 'residential', 'Nashik'], ['Apartments in Pune', 'residential', 'Pune'],
+        ['Villas in Igatpuri', 'residential', 'Igatpuri'], ['Villas in Alibaug', 'residential', 'Alibaug'], ['Private houses in Lonavala', 'residential', 'Lonavala'],
+        ['Event venues in Nashik', 'event_venue', 'Nashik'], ['Banquet halls in Nashik', 'event_venue', 'Nashik'], ['Wedding venues in Pune', 'event_venue', 'Pune'],
+        ['Co-working spaces in Nashik', 'commercial', 'Nashik'], ['Private offices in Pune', 'commercial', 'Pune'], ['Meeting rooms in Nashik', 'commercial', 'Nashik'],
+      ],
+      residential: [
+        ['Villas in Nashik', 'residential', 'Nashik'], ['Homestays in Nashik', 'residential', 'Nashik'], ['Villas in Igatpuri', 'residential', 'Igatpuri'],
+        ['Villas in Alibaug', 'residential', 'Alibaug'], ['Private houses in Lonavala', 'residential', 'Lonavala'], ['Apartments in Pune', 'residential', 'Pune'],
+      ],
+      commercial: [
+        ['Co-working spaces in Nashik', 'commercial', 'Nashik'], ['Private offices in Nashik', 'commercial', 'Nashik'], ['Meeting rooms in Nashik', 'commercial', 'Nashik'],
+        ['Co-working spaces in Pune', 'commercial', 'Pune'], ['Private offices in Pune', 'commercial', 'Pune'], ['Conference rooms in Pune', 'commercial', 'Pune'],
+      ],
+      event_venue: [
+        ['Event venues in Nashik', 'event_venue', 'Nashik'], ['Banquet halls in Nashik', 'event_venue', 'Nashik'], ['Wedding venues in Nashik', 'event_venue', 'Nashik'],
+        ['Event venues in Pune', 'event_venue', 'Pune'], ['Banquet halls in Pune', 'event_venue', 'Pune'], ['Garden venues in Nashik', 'event_venue', 'Nashik'],
+      ],
+    };
+
+    const fallbackLinks = (staticLinks[activeCategory] || []).map(([label, category, city]) => ({
+      key: `static-${category}-${label}`.toLowerCase(),
+      label,
+      filters: { category, city },
+    }));
+
+    return [...dynamicLinks, ...fallbackLinks.filter((link) => !dynamicLinks.some((item) => item.label.toLowerCase() === link.label.toLowerCase()))].slice(0, 30);
+  }, [activeCategory, properties]);
+
+  if (!links.length) return null;
+
+  return (
+    <section className="border-y border-slate-100 bg-white py-9 md:py-11">
+      <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Browse locally</p>
+            <h2 className="mt-1 font-serif-hero text-[21px] font-semibold text-[#1E1E1E] md:text-[27px]">Find the right space near you</h2>
+          </div>
+          <button type="button" onClick={() => navigate('/guest/browse')} className="w-fit text-sm font-semibold text-charcoal transition hover:text-terracotta">View all spaces <span aria-hidden="true">→</span></button>
+        </div>
+
+        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-b border-slate-200 pb-3">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              type="button"
+              onClick={() => setActiveCategory(category.id)}
+              className={`relative pb-1 text-sm font-medium transition ${activeCategory === category.id ? 'text-charcoal' : 'text-slate-500 hover:text-charcoal'}`}
+            >
+              {category.label}
+              {activeCategory === category.id ? <span className="absolute inset-x-0 -bottom-[13px] h-[2px] bg-charcoal" /> : null}
+            </button>
+          ))}
+        </div>
+
+        <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+          {links.map((link) => (
+            <button
+              key={link.key}
+              type="button"
+              onClick={() => navigate(getSeoUrlForFilters(link.filters))}
+              className="w-fit text-left text-[13px] font-medium text-slate-600 transition hover:text-charcoal hover:underline"
+            >
+              {link.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
 };
 
 const homeSchema = {
@@ -66,52 +444,58 @@ const homeSchema = {
 
 const DEFAULT_HERO_SLIDES = [
   {
-    src: '/videos/hero/hero-coworking-hd.jpg',
-    mobilePosition: '58% center',
-    tag: 'COMMERCIAL SPACES',
-    subTag: 'COMMERCIAL SPACES',
-    titleLine1: 'Premium Workspaces',
-    titleLine2: 'in Nashik',
-    titlePrefix: 'Premium Workspaces ',
-    titleHighlight: 'in Nashik',
-    titleSuffix: '',
-    badges: ['Corporate rates & flexible leasing available*']
+    src: '/assets/hero/diwali-sky-lanterns.jpg',
+    mobilePosition: 'center center',
+    title: '#ApnoWaliDiwali',
+    subtitle: 'Iss Diwali, ghar se door bhi apno ke kareeb rahiye.'
   },
   {
-    src: '/videos/hero/hero-villa-mobile-crop.png',
-    mobilePosition: 'center 58%',
-    tag: 'RESORT VILLAS',
-    subTag: 'RESORT VILLAS',
-    titleLine1: 'Luxury Villas',
-    titleLine2: "in India's Wine Capital",
-    titlePrefix: 'Luxury Villas ',
-    titleHighlight: "in India's Wine Capital",
-    titleSuffix: '',
-    badges: ['Curated luxury stays with private pools*']
+    src: '/assets/hero/diwali-family-dinner.jpg',
+    mobilePosition: 'center center',
+    title: 'Diwali Special: Save up to 20%',
+    subtitle: 'Jahan apne hon, wahi har pal ghar jaisa lagta hai.'
   },
   {
-    src: '/videos/hero/pexels-thevisionaryvows-33485961.jpg',
-    mobilePosition: '58% center',
-    tag: 'WEDDING VENUES',
-    subTag: 'WEDDING VENUES',
-    titleLine1: 'Luxury Weddings,',
-    titleLine2: 'Beautiful Memories',
-    titlePrefix: 'Luxury Weddings, ',
-    titleHighlight: 'Beautiful Memories',
-    titleSuffix: '',
-    badges: ['Plan your dream celebration with custom setups*']
+    src: '/assets/hero/workamp-stay.avif',
+    mobilePosition: 'center center',
+    title: 'Workspaces for Every Workday',
+    subtitle: 'Find practical spaces for meetings, teams and focused work.'
   },
   {
-    src: '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg',
-    mobilePosition: 'left center',
-    tag: 'RESIDENTIAL SPACES',
-    subTag: 'RESIDENTIAL SPACES',
-    titleLine1: 'Experience the',
-    titleLine2: 'Comfort of Home',
-    titlePrefix: 'Experience the ',
-    titleHighlight: 'Comfort of Home',
-    titleSuffix: '',
-    badges: ['Fully serviced spaces with premium amenities*']
+    src: '/assets/hero/vineyard-retreat.webp',
+    mobilePosition: 'center center',
+    title: 'Vineyard Stays near Nashik',
+    subtitle: 'Comfortable villas for weekends, families and small groups.'
+  },
+  {
+    src: '/assets/hero/lakeside-retreat.webp',
+    mobilePosition: 'center center',
+    title: 'Lakeside Stays for a Quiet Break',
+    subtitle: 'Choose a stay with open views, fresh air and room to unwind.'
+  },
+  {
+    src: '/assets/hero/group-stay.webp',
+    mobilePosition: 'center center',
+    title: 'Get Together, Stay Together',
+    subtitle: 'Spacious homes for friends, families and celebrations.'
+  },
+  {
+    src: '/assets/hero/wedding-celebration.webp',
+    mobilePosition: 'center center',
+    title: 'Wedding Venues for Your Big Day',
+    subtitle: 'Explore beautiful spaces for ceremonies, celebrations and family gatherings.'
+  },
+  {
+    src: '/assets/hero/heritage-homestay.webp',
+    mobilePosition: 'center center',
+    title: 'Homestays with a Personal Touch',
+    subtitle: 'Comfortable homes for relaxed family stays and longer visits.'
+  },
+  {
+    src: '/assets/hero/poolside-villa.webp',
+    mobilePosition: 'center center',
+    title: 'Poolside Villas for Easy Weekends',
+    subtitle: 'Plan a relaxed stay with open views, a private pool and good company.'
   }
 ];
 
@@ -1802,7 +2186,7 @@ const DestinationLineIcon = ({ label, destinationType = 'tourist' }) => {
 const PREMIUM_COLLECTIONS = [
   {
     id: 'luxury-villas',
-    label: 'Luxury Villas & Farmhouses',
+    label: 'Villas',
     subtitle: 'Private pools, lush lawns & royal stays across India',
     detail: 'From Alibaug to Coorg, our hand-picked villas offer complete privacy, personal caretakers, BBQ setups & breathtaking views. Perfect for family vacations, pre-wedding shoots & weekend escapes.',
     tag: 'Most Booked',
@@ -1812,17 +2196,17 @@ const PREMIUM_COLLECTIONS = [
   },
   {
     id: 'hilltop-retreats',
-    label: 'Signature Series',
+    label: 'X-Space Series',
     subtitle: 'The ultimate pinnacle of private luxury stays',
     detail: 'A curated portfolio of India’s most exclusive private estates, featuring infinity pools, personalized butler service, master chefs, and unparalleled tranquility.',
-    tag: 'Signature Series',
+    tag: 'X-Space Series',
     image: '/videos/Discover our collection/Signature series/3baaabd56fa442979578b06924b47477.jpg',
     query: 'residential',
     property_type: 'resort'
   },
   {
     id: 'wedding-venues',
-    label: 'Intimate Wedding & Event Venues',
+    label: 'Banquet Halls',
     subtitle: 'Magical backdrops for your dream celebration',
     detail: 'Say goodbye to Big Fat Weddings, say hello to intimate, curated celebration venues with floral-wrapped courtyards, rooftop terraces & in-house chefs. Available for 50 to 300 guests.',
     tag: 'Trending',
@@ -1832,7 +2216,7 @@ const PREMIUM_COLLECTIONS = [
   },
   {
     id: 'residential-stays',
-    label: 'Premium Apartments & Homes',
+    label: 'Homestays',
     subtitle: 'Fully serviced urban homes with hotel-grade amenities',
     detail: 'Monthly or nightly, our premium residential properties come with AC, WiFi, housekeeping & verified hosts. Ideal for business travelers, relocating professionals & long-term stays in metro cities.',
     tag: 'New Launches',
@@ -1842,12 +2226,13 @@ const PREMIUM_COLLECTIONS = [
   },
   {
     id: 'commercial-spaces',
-    label: 'Commercial & Co-working Spaces',
+    label: 'Coworking Spaces',
     subtitle: 'Premium offices and collaborative work studios',
     detail: 'Short-term or long-term rentals for startups, corporate offsites, and growing teams. Our commercial spaces include boardrooms, co-working zones, event halls & plug-and-play setups.',
     tag: 'Offices',
     image: '/videos/Discover our collection/office spaces/a69603cfa2714a9baf245d7b43f2cd26.jpg',
-    query: 'commercial'
+    query: 'commercial',
+    property_type: 'co_working'
   }
 ];
 
@@ -1872,7 +2257,10 @@ const CollectionsSection = ({
   getImageUrl
 }) => {
   const sliderRef = React.useRef(null);
-  const [activeTab, setActiveTab] = React.useState('All');
+  const [activeCity, setActiveCity] = React.useState('All');
+  const [activeCategory, setActiveCategory] = React.useState('All');
+  const [activePartnerStrip, setActivePartnerStrip] = React.useState(0);
+  const activePartner = NASHIK_PARTNER_STRIPS[activePartnerStrip];
 
   const scrollSlider = (direction, id) => {
     const container = document.getElementById(id);
@@ -1889,25 +2277,30 @@ const CollectionsSection = ({
     ].filter(Boolean);
   }, [properties]);
 
-  const locationTabs = React.useMemo(() => {
-    const preferred = ['Nashik', 'Pune', 'Goa', 'Mumbai', 'Alibaug'];
-    const present = preferred.filter((city) =>
-      collectionProperties.some((item) => String(item.city || '').trim().toLowerCase() === city.toLowerCase())
-    );
+  const categoryTabs = [
+    { id: 'All', label: 'All' },
+    { id: 'residential', label: 'Residential' },
+    { id: 'commercial', label: 'Commercial' },
+    { id: 'event_venue', label: 'Event Venues' },
+  ];
+
+  const cityTabs = React.useMemo(() => {
+    const preferred = ['Nashik', 'Pune', 'Goa', 'Alibaug'];
+    const present = preferred.filter((city) => collectionProperties.some((item) => String(item.city || '').trim().toLowerCase() === city.toLowerCase()));
     return ['All', ...present, 'Discover All'];
   }, [collectionProperties]);
 
+  const filteredAvailable = React.useMemo(() => {
+    if (activeCity === 'All') return collectionProperties.slice(0, 10);
+    return collectionProperties.filter((item) => String(item.city || '').trim().toLowerCase() === activeCity.toLowerCase()).slice(0, 10);
+  }, [activeCity, collectionProperties]);
+
   const filteredCollections = React.useMemo(() => {
-    if (activeTab === 'All') {
-      return collectionProperties.slice(0, 8);
+    if (activeCategory === 'All') {
+      return collectionProperties.slice(0, 10);
     }
-    if (activeTab === 'Discover All') {
-      return collectionProperties.slice(0, 8);
-    }
-    return collectionProperties
-      .filter((item) => String(item.city || '').trim().toLowerCase() === activeTab.toLowerCase())
-      .slice(0, 8);
-  }, [activeTab, collectionProperties]);
+    return (properties?.[activeCategory] || []).slice(0, 10);
+  }, [activeCategory, collectionProperties, properties]);
 
   const handleCardClick = (col) => {
     if (!col?.property_id) {
@@ -1924,37 +2317,29 @@ const CollectionsSection = ({
   };
 
   return (
-    <section className="relative w-full overflow-hidden bg-white py-12 md:py-20">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-100"
-        style={{
-          background:
-            'radial-gradient(circle at 10% 10%, rgba(219,39,119,0.14), transparent 34%), radial-gradient(circle at 88% 12%, rgba(251,191,36,0.18), transparent 28%), radial-gradient(circle at 14% 88%, rgba(249,115,22,0.15), transparent 32%), radial-gradient(circle at 86% 86%, rgba(219,39,119,0.12), transparent 26%), linear-gradient(180deg, rgba(255,255,255,0.98) 0%, rgba(255,255,255,0.94) 46%, rgba(254,250,246,0.98) 100%)'
-        }}
-      />
-      
-      
-      <div className="relative w-full max-w-[1440px] mx-auto px-4 md:px-8 z-10">
+    <section className="relative w-full overflow-hidden bg-white py-10 md:py-12">
+      <div className="relative z-10 mx-auto w-full max-w-[1216px] px-4 md:px-8">
         <ScrollReveal duration="duration-[800ms]">
-          <div className="mb-14">
-            <div className="mb-8 flex items-end justify-between gap-4">
+          <div className="relative left-1/2 mb-10 w-screen -translate-x-1/2 bg-[#F5F2EB] py-10 md:mb-12 md:py-12">
+            <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
+            <div className="mb-6 flex items-end justify-between gap-4">
               <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
                 Discover Our Collection
               </h2>
-              <div className="hidden items-center gap-3 text-charcoal md:flex">
+              <div className="hidden items-center gap-4 text-charcoal md:flex">
                 <button
                   onClick={() => scroll('left')}
-                  className="rounded-full border border-gray-200 bg-white/90 p-2 backdrop-blur transition-all duration-300 hover:bg-gray-50"
+                  className="p-1 text-charcoal/45 transition-colors hover:text-charcoal"
                   aria-label="Previous collection"
                 >
-                  <ChevronLeft className="h-4 w-4" />
+                  <ChevronLeft className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => scroll('right')}
-                  className="rounded-full border border-gray-200 bg-white/90 p-2 backdrop-blur transition-all duration-300 hover:bg-gray-50"
+                  className="p-1 text-charcoal transition-colors hover:text-terracotta"
                   aria-label="Next collection"
                 >
-                  <ChevronRight className="h-4 w-4" />
+                  <ChevronRight className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -1962,47 +2347,36 @@ const CollectionsSection = ({
             <div className="overflow-hidden">
               <div
                 ref={sliderRef}
-                className="flex snap-x gap-5 overflow-x-auto pb-4 scroll-smooth no-scrollbar"
+                className="flex snap-x gap-5 overflow-x-auto pb-3 scroll-smooth no-scrollbar"
               >
                 {PREMIUM_COLLECTIONS.map((col) => (
                   <div
                     key={col.id}
                     onClick={() => {
                       if (col.id === 'hilltop-retreats') {
-                        navigate('/property/villas');
+                        // Keep this collection distinct from the general villas
+                        // catalogue: Signature Series contains only premium villas.
+                        navigate('/guest/browse?signature=true');
                         return;
                       }
                       navigate(getSeoUrlForFilters({ category: col.query, property_type: col.property_type }));
                     }}
-                    className="relative aspect-[3/4] w-[240px] min-w-[240px] snap-start cursor-pointer overflow-hidden rounded-2xl shadow-md transition-all duration-500 hover:shadow-xl md:w-[300px] md:min-w-[300px] group bg-stone-800"
+                    className="group relative aspect-[3/4] w-[220px] min-w-[220px] snap-start cursor-pointer overflow-hidden rounded-xl shadow-sm transition-all duration-500 hover:shadow-lg md:w-[250px] md:min-w-[250px] bg-stone-800"
                   >
                     <img
                       src={col.image}
                       alt={col.label}
                       className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent transition-opacity duration-300 group-hover:opacity-90" />
-                    <div className="absolute left-4 top-4 z-10">
-                      {col.tag === 'Signature Series' ? (
-                        <div className="flex items-center gap-1.5 border border-[#D4AF37]/50 bg-black px-3 py-1 shadow-md">
-                          <Crown className="h-3 w-3 fill-[#D4AF37]/20 text-[#D4AF37]" />
-                          <span className="font-serif text-[9px] font-extrabold uppercase tracking-[0.15em] text-[#D4AF37]">
-                            Signature Series
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="rounded-full bg-white/95 px-3 py-1 text-[9px] font-extrabold uppercase tracking-widest text-charcoal shadow-sm">
-                          {col.tag}
-                        </span>
-                      )}
-                    </div>
-                    <div className="absolute inset-0 z-10 flex flex-col justify-end p-5 md:p-6">
-                      <h3 className="text-lg font-serif-hero leading-snug text-white transition-transform duration-500 group-hover:-translate-y-1 md:text-xl">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/20 to-black/5 transition-opacity duration-300 group-hover:from-black/90" />
+                    <span className="absolute right-4 top-4 z-10 text-xl leading-none text-white opacity-0 transition-opacity duration-300 group-hover:opacity-100">↗</span>
+                    <div className="absolute inset-0 z-10 flex flex-col justify-end p-5 md:p-4">
+                      <h3 className="font-serif-hero whitespace-nowrap text-[13px] font-semibold leading-none text-white transition-transform duration-300 group-hover:-translate-y-1 md:text-[15px]">
                         {col.label}
                       </h3>
-                      <div className="max-h-0 overflow-hidden opacity-0 transition-all duration-500 ease-in-out group-hover:mt-2 group-hover:max-h-[120px] group-hover:opacity-100">
-                        <p className="text-[11px] leading-relaxed text-white/80 md:text-xs">
-                          {col.detail}
+                      <div className="max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-out group-hover:mt-2 group-hover:max-h-12 group-hover:opacity-100">
+                        <p className="text-[10px] font-medium leading-snug text-white/90 md:text-[11px]">
+                          {col.subtitle}
                         </p>
                       </div>
                     </div>
@@ -2011,6 +2385,7 @@ const CollectionsSection = ({
               </div>
             </div>
           </div>
+          </div>
         </ScrollReveal>
 
         <ScrollReveal duration="duration-[1000ms]" delay={120}>
@@ -2018,11 +2393,11 @@ const CollectionsSection = ({
             <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
               <div>
                 <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
-                  Holiday Getaway
+                  Available This Weekend
                 </h3>
                 <div className="mt-4 flex flex-wrap items-center gap-5 border-b border-black/10 pb-2 text-sm font-medium text-slate-500">
-                  {locationTabs.map((tab) => {
-                    const isActive = activeTab === tab;
+                  {cityTabs.map((tab) => {
+                    const isActive = activeCity === tab;
                     return (
                       <button
                         key={tab}
@@ -2032,7 +2407,7 @@ const CollectionsSection = ({
                             navigate('/guest/browse');
                             return;
                           }
-                          setActiveTab(tab);
+                          setActiveCity(tab);
                         }}
                         className={`relative pb-2 transition-colors ${
                           isActive ? 'text-charcoal' : 'hover:text-charcoal'
@@ -2064,7 +2439,7 @@ const CollectionsSection = ({
               id="slider-getaway"
               className="flex snap-x gap-5 overflow-x-auto pb-5 scroll-smooth no-scrollbar"
             >
-              {filteredCollections.map((item, index) => {
+              {filteredAvailable.map((item, index) => {
                 const price = Math.round(Number(
                   item.display_price_per_night ??
                   item.customer_price_per_night ??
@@ -2075,7 +2450,7 @@ const CollectionsSection = ({
                 return (
                   <article
                     key={item.property_id || `${item.title}-${index}`}
-                    className="group flex w-[280px] min-w-[280px] snap-start flex-col overflow-hidden rounded-[28px] bg-white shadow-[0_10px_28px_rgba(15,23,42,0.06)] transition-all duration-500 hover:-translate-y-1 hover:shadow-[0_18px_44px_rgba(15,23,42,0.10)] md:w-[320px] md:min-w-[320px]"
+                    className="group flex w-[250px] min-w-[250px] snap-start flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-shadow duration-500 hover:shadow-lg md:w-[280px] md:min-w-[280px]"
                   >
                     <div
                       role="button"
@@ -2089,62 +2464,59 @@ const CollectionsSection = ({
                       }}
                       className="flex h-full flex-col text-left"
                     >
-                      <div className="relative aspect-[1.14] overflow-hidden">
-                        <img
-                          src={getPropertyCardImage(item)}
-                          alt={item.title}
-                          loading="lazy"
-                          decoding="async"
-                          onError={({ currentTarget }) => {
-                            currentTarget.onerror = null;
-                            currentTarget.src = PROPERTY_IMAGE_FALLBACK;
-                          }}
-                          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
-                        />
+                      <PropertyImageCarousel
+                        item={item}
+                        className="aspect-[16/10]"
+                        imageClassName="group-hover:scale-[1.04]"
+                      >
 
-                        <div className="absolute right-4 top-4 z-10 flex space-x-2">
-                          <ShareDropdown property={item} align="right" className="!w-10 !h-10" />
+                        <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
+                          <span className="inline-flex h-6 items-center rounded-[4px] border border-white/90 bg-white/95 px-2.5 text-[9px] font-bold uppercase leading-none tracking-[0.08em] text-charcoal shadow-sm">
+                            {formatPropertyTypeLabel(item.property_type || item.type) || 'Stay'}
+                          </span>
+                        </div>
+                        <div className="absolute right-3 top-3 z-10">
                           <button
                             type="button"
                             onClick={(event) => {
                               event.stopPropagation();
                               handleWishlistToggle(item.property_id);
                             }}
-                            className="flex h-10 w-10 items-center justify-center rounded-full bg-white/95 shadow-sm backdrop-blur text-charcoal hover:text-red-500"
+                            className="flex h-8 w-8 items-center justify-center text-white drop-shadow-md transition hover:scale-105 hover:text-red-300"
                             aria-label="Toggle wishlist"
                           >
                             <Heart className={`h-5 w-5 ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
                           </button>
                         </div>
-                        <div className="absolute bottom-4 right-0 z-10 rounded-l-xl bg-[#171717] px-3 py-2 text-xs font-semibold text-white shadow-lg">
+                        <div className="absolute bottom-3 right-0 z-10 rounded-l-[3px] border border-white/25 bg-charcoal/60 px-2 py-1 text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-white shadow-sm backdrop-blur-md">
                           Best Rated
                         </div>
-                      </div>
-                      <div className="flex flex-1 flex-col p-5">
-                        <h3 className="line-clamp-1 text-[1.55rem] font-semibold leading-tight text-charcoal md:text-[1.65rem]">
+                      </PropertyImageCarousel>
+                      <div className="flex flex-1 flex-col p-3.5">
+                        <h3 className="font-sans line-clamp-1 text-[16px] font-semibold leading-tight text-charcoal">
                           {item.title}
                         </h3>
-                        <p className="mt-3 flex items-center gap-1 text-sm font-medium text-slate-600">
-                          <MapPin className="h-4 w-4 text-slate-500" />
+                        <p className="mt-2 flex items-center gap-1 text-[12px] font-medium text-slate-600">
+                          <MapPin className="h-3.5 w-3.5 text-slate-500" />
                           <span>{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</span>
                         </p>
-                        <p className="mt-3 text-sm text-slate-600">
+                        <p className="mt-2 text-[11px] text-slate-600">
                           Upto {item.max_guests || item.guests || 4} Guests
                           <span className="mx-2 text-slate-300">✦</span>
                           {item.bedrooms || item.rooms || 1} Rooms
                           <span className="mx-2 text-slate-300">✦</span>
                           {item.bathrooms || item.baths || 1} Baths
                         </p>
-                        <div className="mt-4 border-t border-slate-100 pt-4">
+                        <div className="mt-3 border-t border-slate-100 pt-3">
                           <div className="flex items-end justify-between gap-3">
                             <div>
-                              <p className="text-3xl font-bold tracking-tight text-charcoal">
+                              <p className="text-[20px] font-bold tracking-tight text-charcoal">
                                 ₹{price.toLocaleString('en-IN')}
                               </p>
-                              <p className="mt-1 text-sm text-slate-500">For Per Night + Taxes</p>
+                              <p className="mt-1 text-[11px] text-slate-500">Per night + taxes</p>
                             </div>
-                            <span className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-charcoal transition-transform duration-300 group-hover:translate-x-1">
-                              <ArrowRight className="h-5 w-5" />
+                            <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 text-charcoal transition-transform duration-300 group-hover:translate-x-1">
+                              <ArrowRight className="h-4 w-4" />
                             </span>
                           </div>
                         </div>
@@ -2157,6 +2529,77 @@ const CollectionsSection = ({
           </div>
           </div>
         </ScrollReveal>
+
+        <ScrollReveal duration="duration-[800ms]" delay={80}>
+          <div className="my-8 md:my-10">
+            <div className={`relative overflow-hidden rounded-2xl px-5 py-5 shadow-sm md:px-8 md:py-4 ${activePartner.surface}`}>
+              <div className="relative z-10 grid items-center gap-5 md:grid-cols-[210px_minmax(0,1fr)_auto] md:gap-8">
+                <div className="flex h-[58px] items-center justify-center overflow-hidden md:h-[70px]">
+                  <img src={activePartner.logo} alt={activePartner.name} className={`h-full max-w-full object-contain transition-transform ${activePartner.logoBlend} ${activePartner.logoScale}`} />
+                </div>
+                <div className="text-left">
+                  <p className={`mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] ${activePartner.muted}`}>Our partner</p>
+                  <p className={`text-[18px] font-semibold leading-tight md:text-[22px] ${activePartner.text}`}>{activePartner.headline}</p>
+                  <p className={`mt-1 text-[12px] leading-relaxed md:text-[13px] ${activePartner.muted}`}>{activePartner.subline}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/guest/browse?search=${encodeURIComponent(activePartner.search)}`)}
+                  className={`inline-flex w-fit items-center gap-2 rounded-full border px-4 py-2 text-[12px] font-semibold transition md:px-5 ${activePartner.button}`}
+                >
+                  Explore spaces <ArrowRight className="h-4 w-4" />
+                </button>
+              </div>
+              <div className="relative z-10 mt-4 flex items-center justify-center gap-1.5 md:absolute md:bottom-3 md:right-5 md:mt-0">
+                {NASHIK_PARTNER_STRIPS.map((partner, index) => (
+                  <button
+                    key={partner.name}
+                    type="button"
+                    onClick={() => setActivePartnerStrip(index)}
+                    aria-label={`Show ${partner.name}`}
+                    className={`h-1.5 rounded-full transition-all ${index === activePartnerStrip ? 'w-5 bg-current opacity-100' : 'w-1.5 bg-current opacity-35 hover:opacity-70'} ${activePartner.text}`}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </ScrollReveal>
+
+        <ScrollReveal duration="duration-[900ms]" delay={100}>
+          <div className="mt-8 md:mt-10">
+            <div className="mb-6 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+              <div>
+                <h3 className="font-serif-hero text-[20px] font-semibold text-[#1E1E1E] md:text-[28px]">Explore Spaces</h3>
+                <div className="mt-4 flex flex-wrap items-center gap-5 border-b border-black/10 pb-2 text-sm font-medium text-slate-500">
+                  {categoryTabs.map((tab) => {
+                    const isActive = activeCategory === tab.id;
+                    return (
+                      <button
+                        key={tab.id}
+                        type="button"
+                        onClick={() => setActiveCategory(tab.id)}
+                        className={`relative pb-2 transition-colors ${isActive ? 'text-charcoal' : 'hover:text-charcoal'}`}
+                      >
+                        {tab.label}
+                        {isActive ? <span className="absolute inset-x-0 -bottom-[9px] h-[2px] rounded-full bg-charcoal" /> : null}
+                      </button>
+                    );
+                  })}
+                  <button type="button" onClick={() => navigate('/guest/browse')} className="pb-2 transition-colors hover:text-charcoal">Discover All</button>
+                </div>
+              </div>
+              <div className="hidden space-x-2 pb-2 md:flex">
+                <button onClick={() => scrollSlider('left', 'slider-explore-spaces')} className="grid h-11 w-11 place-items-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-charcoal" aria-label="Previous spaces"><ChevronLeft className="h-4 w-4" /></button>
+                <button onClick={() => scrollSlider('right', 'slider-explore-spaces')} className="grid h-11 w-11 place-items-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-charcoal" aria-label="Next spaces"><ChevronRight className="h-4 w-4" /></button>
+              </div>
+            </div>
+            <div id="slider-explore-spaces" className="flex snap-x gap-6 overflow-x-auto pb-4 scroll-smooth no-scrollbar">
+              {filteredCollections.map((item, index) => (
+                <RecentlyVisitedCard key={item.property_id || index} item={item} index={index} navigate={navigate} wishlist={wishlist} handleWishlistToggle={handleWishlistToggle} />
+              ))}
+            </div>
+            </div>
+        </ScrollReveal>
       </div>
     </section>
   );
@@ -2166,6 +2609,7 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const exploreMenuCloseTimerRef = React.useRef(null);
+  const landingSearchRef = React.useRef(null);
   const RECENT_LOCATION_STORAGE_KEY = 'xspace_recent_location_searches';
   const handleSignOut = () => {
     logout();
@@ -2184,12 +2628,30 @@ const LandingPage = () => {
   const [isExplicitCategorySelected, setIsExplicitCategorySelected] = useState(false);
   const [nearbyHub, setNearbyHub] = useState('Nashik');
   const [isDetectingNearby, setIsDetectingNearby] = useState(false);
+  const [selectedSearchCity, setSelectedSearchCity] = useState('');
+  const [selectedSearchProperty, setSelectedSearchProperty] = useState(null);
+  const [googlePlaceSuggestions, setGooglePlaceSuggestions] = useState([]);
+  const [isGooglePlacesLoading, setIsGooglePlacesLoading] = useState(false);
+  const [searchPromptIndex, setSearchPromptIndex] = useState(0);
 
   const [activeDropdown, setActiveDropdown] = useState(null);
   const [guestCounts, setGuestCounts] = useState({ adults: 2, children: 0, infants: 0 });
   const [dates, setDates] = useState({ checkIn: '', checkOut: '' });
   const [landingCalendarOpen, setLandingCalendarOpen] = useState(false);
   const [landingCalendarAnchor, setLandingCalendarAnchor] = useState('checkIn');
+
+  useEffect(() => {
+    if (!activeDropdown && !landingCalendarOpen) return undefined;
+
+    const closeOnOutsidePointerDown = (event) => {
+      if (landingSearchRef.current?.contains(event.target)) return;
+      setActiveDropdown(null);
+      setLandingCalendarOpen(false);
+    };
+
+    document.addEventListener('pointerdown', closeOnOutsidePointerDown, true);
+    return () => document.removeEventListener('pointerdown', closeOnOutsidePointerDown, true);
+  }, [activeDropdown, landingCalendarOpen]);
 
   const totalGuests = (guestCounts.adults || 0) + (guestCounts.children || 0);
 
@@ -2253,7 +2715,6 @@ const LandingPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
   const [activeBlog, setActiveBlog] = useState(0);
-  const [sliderInteracted, setSliderInteracted] = useState({});
   const [recentlyVisitedProperties, setRecentlyVisitedProperties] = useState(() => getRecentlyVisitedProperties());
   const [isNavScrolled, setIsNavScrolled] = useState(false);
   const [isExploreMenuOpen, setIsExploreMenuOpen] = useState(false);
@@ -2604,8 +3065,28 @@ const LandingPage = () => {
   }, []);
 
   React.useEffect(() => {
-    const refreshRecentlyVisited = () => {
-      setRecentlyVisitedProperties(getRecentlyVisitedProperties());
+    let cancelled = false;
+
+    const refreshRecentlyVisited = async () => {
+      const savedItems = getRecentlyVisitedProperties();
+      if (!savedItems.length) {
+        if (!cancelled) setRecentlyVisitedProperties([]);
+        return;
+      }
+
+      try {
+        // Recently visited entries are stored in localStorage. Refresh their image
+        // data from the API so gallery updates are reflected after a page reload.
+        const response = await propertyAPI.searchProperties({ limit: 1000 });
+        const liveById = new Map((response.data?.properties || []).map((property) => [property.property_id, property]));
+        const refreshedItems = savedItems.map((item) => {
+          const latest = liveById.get(item.property_id);
+          return latest ? { ...item, ...latest, visited_at: item.visited_at } : item;
+        });
+        if (!cancelled) setRecentlyVisitedProperties(refreshedItems);
+      } catch (error) {
+        if (!cancelled) setRecentlyVisitedProperties(savedItems);
+      }
     };
 
     refreshRecentlyVisited();
@@ -2613,6 +3094,7 @@ const LandingPage = () => {
     window.addEventListener(RECENTLY_VISITED_PROPERTIES_EVENT, refreshRecentlyVisited);
 
     return () => {
+      cancelled = true;
       window.removeEventListener('storage', refreshRecentlyVisited);
       window.removeEventListener(RECENTLY_VISITED_PROPERTIES_EVENT, refreshRecentlyVisited);
     };
@@ -2657,25 +3139,146 @@ const LandingPage = () => {
     fetchAllFeatured();
   }, []);
 
+  const searchableProperties = useMemo(
+    () => [...properties.residential, ...properties.commercial, ...properties.event_venue].filter(Boolean),
+    [properties]
+  );
+
+  const locationCitySuggestions = useMemo(() => {
+    const defaults = ['Nashik', 'Pune', 'Igatpuri', 'Trimbakeshwar', 'Alibaug', 'Karjat', 'Lonavala', 'Bhandardara', 'Goa'];
+    const propertyCities = searchableProperties.map((property) => String(property.city || '').trim()).filter(Boolean);
+    const query = locationQuery.trim().toLowerCase();
+    return [...new Set([...defaults, ...propertyCities])]
+      .filter((city) => !query || city.toLowerCase().includes(query))
+      .slice(0, 6);
+  }, [locationQuery, searchableProperties]);
+
+  const localPropertySuggestions = useMemo(() => {
+    const query = locationQuery.trim().toLowerCase();
+    if (query.length < 2) return [];
+    return searchableProperties
+      .filter((property) => [property.title, property.city, property.address, property.locality]
+        .filter(Boolean)
+        .some((value) => String(value).toLowerCase().includes(query)))
+      .slice(0, 5);
+  }, [locationQuery, searchableProperties]);
+
+  const searchPrompts = useMemo(() => {
+    const residentialCities = properties.residential.map((property) => String(property.city || '').trim()).filter(Boolean);
+    const commercialCities = properties.commercial.map((property) => String(property.city || '').trim()).filter(Boolean);
+    const eventCities = properties.event_venue.map((property) => String(property.city || '').trim()).filter(Boolean);
+    const firstResidentialCity = residentialCities[0] || 'Nashik';
+    const secondResidentialCity = residentialCities.find((city) => city !== firstResidentialCity) || 'Igatpuri';
+    const firstCommercialCity = commercialCities[0] || 'Pune';
+    const firstEventCity = eventCities[0] || 'Nashik';
+
+    return [
+      `Villas in ${firstResidentialCity}`,
+      `Homestays in ${secondResidentialCity}`,
+      `Event venues in ${firstEventCity}`,
+      `Workspaces in ${firstCommercialCity}`,
+      `Weekend stays near ${nearbyHub || 'Nashik'}`,
+    ];
+  }, [nearbyHub, properties]);
+
+  const activeSearchPrompt = searchPrompts[searchPromptIndex % searchPrompts.length] || 'properties, villas and destinations';
+
+  useEffect(() => {
+    if (locationQuery.trim()) return undefined;
+    const timer = window.setInterval(() => {
+      setSearchPromptIndex((current) => (current + 1) % searchPrompts.length);
+    }, 2600);
+    return () => window.clearInterval(timer);
+  }, [locationQuery, searchPrompts.length]);
+
+  useEffect(() => {
+    const query = locationQuery.trim();
+    if (activeDropdown !== 'location' || query.length < 2) {
+      setGooglePlaceSuggestions([]);
+      setIsGooglePlacesLoading(false);
+      return undefined;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setIsGooglePlacesLoading(true);
+      try {
+        const placesLibrary = await loadGooglePlacesLibrary();
+        if (!placesLibrary || cancelled) return;
+
+        if (placesLibrary.AutocompleteSuggestion) {
+          const response = await placesLibrary.AutocompleteSuggestion.fetchAutocompleteSuggestions({
+            input: query,
+            includedRegionCodes: ['in'],
+          });
+          if (!cancelled) {
+            setGooglePlaceSuggestions((response.suggestions || [])
+              .map((suggestion) => suggestion.placePrediction)
+              .filter(Boolean)
+              .slice(0, 4)
+              .map((place) => ({
+                placeId: place.placeId,
+                description: place.text?.toString?.() || place.mainText?.toString?.() || '',
+                secondaryText: place.secondaryText?.toString?.() || 'Google Maps place',
+              }))
+              .filter((place) => place.description));
+          }
+        } else if (placesLibrary.AutocompleteService) {
+          const service = new placesLibrary.AutocompleteService();
+          service.getPlacePredictions(
+            { input: query, componentRestrictions: { country: 'in' } },
+            (predictions) => {
+              if (!cancelled) {
+                setGooglePlaceSuggestions((predictions || []).slice(0, 4).map((place) => ({
+                  placeId: place.place_id,
+                  description: place.description,
+                  secondaryText: place.structured_formatting?.secondary_text || 'Google Maps place',
+                })));
+              }
+            }
+          );
+        }
+      } catch (error) {
+        // Local cities and properties remain available if Maps is unavailable.
+        if (!cancelled) setGooglePlaceSuggestions([]);
+      } finally {
+        if (!cancelled) setIsGooglePlacesLoading(false);
+      }
+    }, 260);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [activeDropdown, locationQuery]);
+
   const handleSearch = () => {
+    setActiveDropdown(null);
+    setLandingCalendarOpen(false);
+    if (selectedSearchProperty) {
+      navigate(getPropertyUrl(selectedSearchProperty));
+      return;
+    }
+
     const totalGuests = guestCounts.adults + guestCounts.children;
-    const city = locationQuery.trim();
-    if (city) {
+    const typedLocation = locationQuery.trim();
+    const city = selectedSearchCity || '';
+    const recentSearch = city || typedLocation;
+    if (recentSearch) {
       setRecentLocationSearches((current) => {
-        const next = [city, ...current.filter((item) => item !== city)].slice(0, 5);
+        const next = [recentSearch, ...current.filter((item) => item !== recentSearch)].slice(0, 5);
         localStorage.setItem(RECENT_LOCATION_STORAGE_KEY, JSON.stringify(next));
         return next;
       });
     }
-    const category = searchCategory && searchCategory !== 'all' ? searchCategory : '';
-    const cleanUrl = getSeoUrlForFilters({
-      city,
-      category,
-      check_in: dates.checkIn,
-      check_out: dates.checkOut,
-      guests: totalGuests ? String(totalGuests) : '2'
-    });
-    navigate(cleanUrl);
+    const searchParams = new URLSearchParams();
+    if (city) searchParams.set('city', city);
+    else if (typedLocation) searchParams.set('search', typedLocation);
+    if (searchCategory && searchCategory !== 'all') searchParams.set('category', searchCategory);
+    if (dates.checkIn) searchParams.set('checkIn', dates.checkIn);
+    if (dates.checkOut) searchParams.set('checkOut', dates.checkOut);
+    searchParams.set('guests', totalGuests ? String(totalGuests) : '2');
+    navigate(`/guest/browse?${searchParams.toString()}`);
   };
 
   const saveRecentLocation = React.useCallback((value) => {
@@ -2688,11 +3291,59 @@ const LandingPage = () => {
     });
   }, []);
 
+  const recentSearchItems = recentLocationSearches.length ? recentLocationSearches : ['Nashik', 'Igatpuri', 'Pune'];
+  const openRecentSearch = (value) => {
+    const query = String(value || '').trim();
+    if (!query) return;
+    const cityMatch = query.match(/\sin\s(.+)$/i);
+    const city = cityMatch?.[1]?.trim() || query;
+    const normalized = query.toLowerCase();
+    const category = /villa|homestay|apartment|private house|residential/.test(normalized)
+      ? 'residential'
+      : /office|co-working|conference|commercial/.test(normalized)
+        ? 'commercial'
+        : /venue|banquet|wedding|rooftop|garden|event/.test(normalized)
+          ? 'event_venue'
+          : '';
+    setActiveDropdown(null);
+    setLandingCalendarOpen(false);
+    if (['explore', 'property types', 'residential', 'commercial', 'event venues'].includes(normalized)) {
+      const params = new URLSearchParams({ guests: String(totalGuests || 2) });
+      if (category) params.set('category', category);
+      navigate(`/guest/browse?${params.toString()}`);
+      return;
+    }
+    setLocationQuery(city);
+    setSelectedSearchCity(city);
+    setSelectedSearchProperty(null);
+    const params = new URLSearchParams({ city, guests: String(totalGuests || 2) });
+    if (category) params.set('category', category);
+    navigate(`/guest/browse?${params.toString()}`);
+  };
+
+  React.useEffect(() => {
+    const rememberBrowseShortcut = (event) => {
+      const target = event.target.closest('a, button');
+      const label = target?.textContent?.replace(/\s+/g, ' ').trim() || '';
+      const isBrowseLabel = /^(villas?|homestays?|apartments?|residential|commercial|event venues?|explore|property types|.+\sin\s.+)$/i.test(label);
+      if (isBrowseLabel && label.length <= 48) saveRecentLocation(label);
+    };
+
+    document.addEventListener('click', rememberBrowseShortcut, true);
+    return () => document.removeEventListener('click', rememberBrowseShortcut, true);
+  }, [saveRecentLocation]);
+
   const handleShowNearbyLocations = () => {
+    setActiveDropdown(null);
+    // Nearby results should include every property category around the detected hub.
+    setSearchCategory('all');
+    setIsExplicitCategorySelected(false);
+
     const typedHub = findDestinationHubForQuery(locationQuery);
     if (typedHub) {
       setNearbyHub(typedHub);
       setLocationQuery(typedHub);
+      setSelectedSearchCity(typedHub);
       saveRecentLocation(typedHub);
       return;
     }
@@ -2700,6 +3351,7 @@ const LandingPage = () => {
     if (!navigator.geolocation) {
       setNearbyHub('Nashik');
       setLocationQuery('Nashik');
+      setSelectedSearchCity('Nashik');
       saveRecentLocation('Nashik');
       return;
     }
@@ -2714,12 +3366,14 @@ const LandingPage = () => {
         const hub = nearest?.city || 'Nashik';
         setNearbyHub(hub);
         setLocationQuery(hub);
+        setSelectedSearchCity(hub);
         saveRecentLocation(hub);
         setIsDetectingNearby(false);
       },
       () => {
         setNearbyHub('Nashik');
         setLocationQuery('Nashik');
+        setSelectedSearchCity('Nashik');
         saveRecentLocation('Nashik');
         setIsDetectingNearby(false);
       },
@@ -2739,7 +3393,6 @@ const LandingPage = () => {
     const container = document.getElementById(id);
     if (container) {
       container.scrollBy({ left: direction === 'left' ? -350 : 350, behavior: 'smooth' });
-      setSliderInteracted(prev => ({ ...prev, [id]: true }));
     }
   };
   const renderPropertySlider = (sectionId, title, subtitle, IconComponent, categoryKey, items) => {
@@ -2748,7 +3401,7 @@ const LandingPage = () => {
     return (
       <div className="relative mb-4 md:mb-6 group">
         {/* Header */}
-        <div className="flex items-end justify-between mb-6 max-w-[1440px] mx-auto px-4 md:px-8 w-full">
+        <div className="flex items-end justify-between mb-6 max-w-[1216px] mx-auto px-4 md:px-8 w-full">
           <div className="text-left">
             <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
               {title}
@@ -2768,17 +3421,9 @@ const LandingPage = () => {
         </div>
         
         {/* Slider */}
-        <div className="w-full max-w-[1440px] mx-auto relative px-4 md:px-8">
-          <div 
-            id={sectionId} 
-            onScroll={(e) => {
-              if (e.target.scrollLeft > 10 && !sliderInteracted[sectionId]) {
-                setSliderInteracted(prev => ({ ...prev, [sectionId]: true }));
-              }
-            }}
-            className="flex overflow-x-auto pb-4 gap-6 no-scrollbar snap-x scroll-smooth"
-          >
-            {displayItems.map((item, index) => (
+        <div className="w-full max-w-[1216px] mx-auto relative px-4 md:px-8">
+          <div id={sectionId} className="flex overflow-x-auto pb-4 gap-6 no-scrollbar snap-x scroll-smooth">
+            {false && displayItems.map((item, index) => (
               <Link 
                 key={item.property_id || index} 
                 to={getPropertyUrl(item)}
@@ -2808,18 +3453,6 @@ const LandingPage = () => {
                     </button>
                   </div>
 
-                  {/* Left Actions (Badges) */}
-                  <div className="absolute top-3 left-3 flex gap-2 z-20">
-                     <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal">
-                           {formatPropertyTypeLabel(item.property_type || item.type) || 'Stay'}
-                        </span>
-                     </div>
-                  </div>
-
-                  {/* Instant Booking / Rating bottom left */}
-                  <div className="absolute bottom-3 left-3 flex items-center gap-1.5 z-20">
-                  </div>
                 </div>
 
                 <div className="flex-1 flex flex-col px-0.5">
@@ -2850,19 +3483,16 @@ const LandingPage = () => {
                 </div>
               </Link>
             ))}
-            
-            {/* View All Card */}
-            {sliderInteracted[sectionId] && (
-              <Link 
-                to={getSeoUrlForFilters({ category: categoryKey })}
-                className="min-w-[160px] md:min-w-[180px] aspect-[4/3] border border-dashed border-gray-300 rounded-2xl flex flex-col items-center justify-center cursor-pointer hover:bg-gray-50 hover:border-gray-400 transition-all duration-300 snap-start group/viewall"
-              >
-                <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-2 group-hover/viewall:scale-105 transition-transform">
-                  <ArrowRight className="w-4 h-4 text-charcoal" />
-                </div>
-                <span className="font-semibold text-charcoal text-xs">View All</span>
-              </Link>
-            )}
+            {displayItems.map((item, index) => (
+              <RecentlyVisitedCard
+                key={item.property_id || index}
+                item={item}
+                index={index}
+                navigate={navigate}
+                wishlist={wishlist}
+                handleWishlistToggle={handleWishlistToggle}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -2895,13 +3525,13 @@ const LandingPage = () => {
       />
       {/* Navbar */}
       <nav
-        className={`fixed top-0 left-0 right-0 w-full z-50 h-20 md:h-24 transition-all duration-300 ${
+        className={`font-sans fixed top-0 left-0 right-0 w-full z-50 h-20 md:h-24 transition-all duration-300 ${
           isNavScrolled
             ? 'bg-white/95 text-charcoal shadow-subtle backdrop-blur-xl border-b border-gray-100'
             : 'bg-gradient-to-b from-black/70 via-black/30 to-transparent text-white drop-shadow-sm'
         } shadow-sm`}
       >
-        <div className="max-w-[1440px] mx-auto w-full h-full flex justify-between items-center px-4 md:px-8">
+        <div className="max-w-[1440px] mx-auto w-full h-full relative z-10 flex justify-between items-center px-4 md:px-8">
           {/* Left Logo */}
           <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
             <img
@@ -2912,7 +3542,7 @@ const LandingPage = () => {
           </div>
 
           {/* Center Menu Links (Flat Style) */}
-          <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[17px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
+          <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[14px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
             <Link
               to="/guest/browse"
               className="hover:text-terracotta transition-colors duration-200"
@@ -2997,12 +3627,11 @@ const LandingPage = () => {
                 </div>
               )}
             </div>
+            <LanguageSelector showPropertyTypes />
           </div>
 
           {/* Right Side Options */}
           <div className="hidden lg:flex items-center space-x-6">
-            <LanguageSelector showPropertyTypes />
-
             {/* Download App Button with APP badge and QR Scanner Popup */}
             <DownloadAppButton isNavScrolled={isNavScrolled} />
 
@@ -3205,10 +3834,10 @@ const LandingPage = () => {
 
       {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
       <section className="relative w-full z-30 bg-white px-0 pt-0 pb-0">
-      <div className="relative h-[68vh] min-h-[620px] max-h-[700px] md:h-[62vh] md:min-h-[560px] md:max-h-[640px] w-full z-30 overflow-visible bg-[#181818] bg-gradient-to-br from-charcoal via-slate-900 to-black shadow-premium rounded-b-[28px] md:rounded-b-[44px]">
+      <div className="relative h-[560px] min-h-[560px] md:h-[620px] md:min-h-[620px] w-full z-30 overflow-visible bg-[#181818] bg-gradient-to-br from-charcoal via-slate-900 to-black shadow-premium">
         
         {/* ── Background Sliding/Fading Images (Clipped with bottom rounded corners) ── */}
-        <div className="absolute inset-0 w-full h-full rounded-b-[28px] md:rounded-b-[44px] overflow-hidden z-0">
+        <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
           {heroSlides.map((slide, index) => (
             <div 
               key={index}
@@ -3226,13 +3855,16 @@ const LandingPage = () => {
 
           {/* ── 35% dark overlay ── */}
           <div className="absolute inset-0 bg-black/35 z-10 transition-opacity duration-1000" />
+
+          {/* ── Diwali Fireworks Animation ── */}
+          <DiwaliFireworks active={true} />
         </div>
 
         {/* ── Hero Slide Navigation Arrows (Floating Left & Right) ── */}
         <button
           type="button"
           onClick={() => setCurrentHeroSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length)}
-          className="absolute left-2.5 md:left-6 top-[48%] md:top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-11 md:h-11 min-w-[40px] min-h-[40px] rounded-full border border-white/40 bg-black/30 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition shadow-lg shrink-0 cursor-pointer"
+          className="absolute left-2.5 md:left-6 top-[48%] md:top-1/2 -translate-y-1/2 z-30 hidden w-10 h-10 min-w-[40px] min-h-[40px] items-center justify-center rounded-full border border-white/40 bg-black/30 text-white shadow-lg backdrop-blur-md transition hover:scale-105 hover:bg-white/20 md:flex md:h-11 md:w-11 cursor-pointer"
           aria-label="Previous hero slide"
         >
           <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
@@ -3241,67 +3873,47 @@ const LandingPage = () => {
         <button
           type="button"
           onClick={() => setCurrentHeroSlide((prev) => (prev + 1) % heroSlides.length)}
-          className="absolute right-2.5 md:right-6 top-[48%] md:top-1/2 -translate-y-1/2 z-30 w-10 h-10 md:w-11 md:h-11 min-w-[40px] min-h-[40px] rounded-full border border-white/40 bg-black/30 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/20 hover:scale-105 transition shadow-lg shrink-0 cursor-pointer"
+          className="absolute right-2.5 md:right-6 top-[48%] md:top-1/2 -translate-y-1/2 z-30 hidden w-10 h-10 min-w-[40px] min-h-[40px] items-center justify-center rounded-full border border-white/40 bg-black/30 text-white shadow-lg backdrop-blur-md transition hover:scale-105 hover:bg-white/20 md:flex md:h-11 md:w-11 cursor-pointer"
           aria-label="Next hero slide"
         >
           <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
         </button>
 
         {/* ── Hero Content (Centered with Spacing & font-lufga) ── */}
-        <div className="relative z-20 max-w-6xl mx-auto px-4 md:px-12 h-full flex flex-col justify-center md:justify-end items-center text-center pt-24 md:pt-36 pb-5 md:pb-12">
+        <div className="relative z-20 max-w-6xl mx-auto px-4 md:px-12 h-full flex flex-col justify-center items-center text-center pt-20 md:pt-24 pb-28 md:pb-24">
           {(() => {
             const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
             return (
-              <div className="flex flex-col items-center space-y-2.5 sm:space-y-4 w-full mb-0 md:mb-4 -mt-8 md:mt-0 max-w-4xl mx-auto">
-                 
-                 {/* Top Tagline with Side Accent Lines */}
-                 <div className="flex items-center justify-center gap-3 animate-fade-in" key={`tag-${currentHeroSlide}`}>
-                   <span className="h-[1px] w-6 sm:w-10 bg-white/40"></span>
-                   <span className="text-[10px] sm:text-xs md:text-sm uppercase tracking-[0.22em] font-semibold text-white/95 drop-shadow-sm select-none">
-                     {activeHero.subTag || activeHero.tag || 'RESORT VILLAS'}
-                   </span>
-                   <span className="h-[1px] w-6 sm:w-10 bg-white/40"></span>
-                 </div>
-
-                 {/* Main Headline (2-Line Headline, font-lufga, font-medium/semibold) */}
-                 <div className="w-full px-2 text-center animate-fade-in" key={`title-${currentHeroSlide}`}>
-                   <h1 className="text-[28px] sm:text-5xl md:text-6xl lg:text-[64px] font-medium leading-[1.08] text-white drop-shadow-premium font-lufga tracking-[-0.03em] max-w-4xl text-center mx-auto">
-                     Find Stays, Event Venues & Workspaces in Nashik
+              <div className="flex flex-col items-center space-y-3 md:space-y-4 w-full max-w-4xl mx-auto">
+                 <div className="w-screen px-2 text-center animate-fade-in" key={`title-${currentHeroSlide}`}>
+                   <h1 className="font-megafield whitespace-nowrap text-[clamp(18px,5vw,30px)] md:text-[clamp(32px,4.2vw,56px)] font-normal leading-[1.08] text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.45)] text-center mx-auto">
+                     {activeHero.title}
                    </h1>
                  </div>
-                 
-                 {/* Custom Badges / Batches */}
-                 <div className="flex flex-wrap justify-center gap-2 animate-fade-in" key={`badges-${currentHeroSlide}`}>
-                   {activeHero.badges && activeHero.badges.map((badge, idx) => (
-                     <span key={idx} className="border border-white/80 bg-white/10 backdrop-blur-md rounded-full px-4 md:px-6 py-1.5 text-white font-medium text-[11px] md:text-sm drop-shadow-sm select-none">
-                       {badge}
-                     </span>
-                   ))}
-                 </div>
-
-                 <div className="w-full mt-3 md:mt-5 relative max-w-4xl text-left mx-auto">
-                    {/* Transparent overlay to close active dropdowns on clicking outside */}
-                    {(activeDropdown || landingCalendarOpen) && (
-                      <div className="fixed inset-0 z-40 bg-transparent" onClick={() => { setActiveDropdown(null); setLandingCalendarOpen(false); }} />
-                    )}
-
+                 <p className="font-apple mx-auto w-full max-w-2xl px-4 text-center text-[14px] md:text-[18px] font-normal leading-relaxed text-white drop-shadow-md animate-fade-in" key={`subtitle-${currentHeroSlide}`}>
+                   {activeHero.subtitle}
+                 </p>
+                 <div className="absolute left-1/2 top-[76%] md:top-[88%] z-50 w-[calc(100vw-2rem)] max-w-6xl -translate-x-1/2 -translate-y-1/2 text-left">
                     {/* Capsule Search Bar */}
-                    <div className="relative z-50 overflow-visible rounded-[30px] lg:rounded-[40px]">
-                      <div className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[26px] lg:rounded-full w-full shadow-elevated border border-sand-200/80 p-2 lg:p-2 lg:pl-4 lg:pr-2 relative overflow-visible bg-white">
+                    <div ref={landingSearchRef} className="font-apple relative z-50 overflow-visible rounded-[32px] lg:rounded-full border border-white/45 bg-white/25 p-2 shadow-[0_18px_45px_rgba(10,25,30,0.28)] backdrop-blur-xl">
+                      <div className="diya diya-left" aria-hidden="true"><span className="diya-flame" /><span className="diya-bowl" /></div>
+                      <div className="diya diya-right" aria-hidden="true"><span className="diya-flame" /><span className="diya-bowl" /></div>
+                      <div className="grid grid-cols-2 lg:flex min-h-[72px] lg:flex-row items-stretch lg:items-center gap-1.5 rounded-[26px] lg:rounded-full w-full border border-white/90 bg-white/95 p-1.5 relative overflow-visible shadow-[0_4px_15px_rgba(20,30,20,0.08)]">
                         
                         {/* Search Input */}
-                        <div className="relative flex-1 w-full min-w-0 z-10">
+                        <div className="relative col-span-2 flex-1 lg:flex-none lg:w-[34%] w-full min-w-0 z-10">
                           <div 
                             onClick={() => {
                               const el = document.getElementById('landing-search-query');
+                              setActiveDropdown('location');
                               if (el) el.focus();
                             }}
-                            className="flex items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer group rounded-xl lg:rounded-full hover:bg-stone/50 transition duration-200"
+                            className="flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer group rounded-2xl lg:rounded-full bg-slate-50 hover:bg-slate-100 transition duration-200"
                           >
                             <Search className="w-4 h-4 text-gray-500 mr-2.5 group-hover:text-terracotta transition-colors shrink-0" />
-                            <div className="w-full text-left">
+                            <div className="w-full min-w-0 pr-2 text-left">
                               <label htmlFor="landing-search-query" className="sr-only">Search properties and destinations</label>
-                              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Search</p>
+                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-[0.12em] leading-none">Search</p>
                               <input
                                 id="landing-search-query"
                                 name="search"
@@ -3309,19 +3921,122 @@ const LandingPage = () => {
                                 value={locationQuery}
                                 onChange={(e) => {
                                   setLocationQuery(e.target.value);
+                                  setSelectedSearchCity('');
+                                  setSelectedSearchProperty(null);
+                                  setActiveDropdown('location');
                                 }}
-                                placeholder="Search properties..."
+                                onFocus={() => setActiveDropdown('location')}
+                                placeholder={`Search “${activeSearchPrompt}”`}
                                 aria-label="Search properties and destinations"
-                                className="bg-transparent border-none outline-none text-charcoal w-full placeholder-gray-600 font-extrabold text-sm focus:ring-0 focus:outline-none p-0 mt-0.5"
+                                className="font-apple bg-transparent border-none outline-none text-charcoal w-full placeholder-slate-500 font-semibold text-[14px] focus:ring-0 focus:outline-none p-0 mt-1"
                               />
                             </div>
+                            {activeDropdown === 'location' && (
+                              <div className="absolute left-0 top-[calc(100%+10px)] z-[70] max-h-[360px] w-full min-w-[320px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.18)]">
+                                <button
+                                  type="button"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    handleShowNearbyLocations();
+                                  }}
+                                  disabled={isDetectingNearby}
+                                  className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-slate-50 disabled:cursor-wait"
+                                >
+                                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-100 text-charcoal"><MapPin className="h-4 w-4" /></span>
+                                  <span className="min-w-0 flex-1">
+                                    <span className="block text-[11px] font-medium text-slate-500">Use current location</span>
+                                    <span className="block text-sm font-semibold text-charcoal">{isDetectingNearby ? 'Finding nearby stays…' : `Near Me · ${nearbyHub}`}</span>
+                                  </span>
+                                </button>
+
+                                <div className="mx-2 border-t border-slate-200" />
+
+                                {locationCitySuggestions.length > 0 && (
+                                  <div className="py-1">
+                                    <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Cities</p>
+                                    {locationCitySuggestions.map((city) => (
+                                      <button
+                                        key={city}
+                                        type="button"
+                                        onClick={() => {
+                                          setLocationQuery(city);
+                                          setSelectedSearchCity(city);
+                                          setSelectedSearchProperty(null);
+                                          setSearchCategory('all');
+                                          setIsExplicitCategorySelected(false);
+                                          setActiveDropdown(null);
+                                        }}
+                                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-slate-50"
+                                      >
+                                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-500"><MapPin className="h-4 w-4" /></span>
+                                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-charcoal">{city}</span>
+                                        <span className="text-[11px] text-slate-400">City</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {localPropertySuggestions.length > 0 && (
+                                  <div className="border-t border-slate-100 py-1">
+                                    <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Properties on X-Space</p>
+                                    {localPropertySuggestions.map((property) => (
+                                      <button
+                                        key={property.property_id}
+                                        type="button"
+                                        onClick={() => {
+                                          setLocationQuery(property.title);
+                                          setSelectedSearchProperty(property);
+                                          setSelectedSearchCity('');
+                                          setActiveDropdown(null);
+                                        }}
+                                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-slate-50"
+                                      >
+                                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-500"><Home className="h-4 w-4" /></span>
+                                        <span className="min-w-0 flex-1">
+                                          <span className="block truncate text-sm font-semibold text-charcoal">{property.title}</span>
+                                          <span className="block truncate text-[11px] text-slate-500">{property.city || 'Maharashtra'}</span>
+                                        </span>
+                                        <span className="text-[11px] text-slate-400">Property</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {(googlePlaceSuggestions.length > 0 || isGooglePlacesLoading) && (
+                                  <div className="border-t border-slate-100 py-1">
+                                    <p className="px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400">Google Maps</p>
+                                    {isGooglePlacesLoading ? <p className="px-3 py-2 text-xs text-slate-500">Searching places…</p> : googlePlaceSuggestions.map((place) => (
+                                      <button
+                                        key={place.placeId}
+                                        type="button"
+                                        onClick={() => {
+                                          setLocationQuery(place.description);
+                                          setSelectedSearchCity('');
+                                          setSelectedSearchProperty(null);
+                                          setSearchCategory('all');
+                                          setIsExplicitCategorySelected(false);
+                                          setActiveDropdown(null);
+                                        }}
+                                        className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition hover:bg-slate-50"
+                                      >
+                                        <span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-slate-500"><MapPin className="h-4 w-4" /></span>
+                                        <span className="min-w-0 flex-1">
+                                          <span className="block truncate text-sm font-medium text-charcoal">{place.description}</span>
+                                          <span className="block truncate text-[11px] text-slate-500">{place.secondaryText}</span>
+                                        </span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
-                        <div className="hidden lg:block w-[1px] h-7 bg-gray-200" />
+
                         
-                        <div className={`relative flex flex-row items-stretch lg:items-center shrink-0 w-full lg:w-auto ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
+                        <div className={`relative col-span-2 flex flex-row items-stretch lg:items-center shrink-0 w-full lg:w-[34%] rounded-2xl lg:rounded-full bg-slate-50 ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
                           {/* Check-in */}
-                          <div className="relative flex-1 flex items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group shrink-0">
+                          <div className="relative flex-1 flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-slate-100 rounded-2xl lg:rounded-l-full transition duration-200 group shrink-0">
                             <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
@@ -3331,8 +4046,8 @@ const LandingPage = () => {
                               }}
                               className="w-full text-left"
                             >
-                              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Check-in</p>
-                              <p className={`font-extrabold text-xs lg:text-xs mt-0.5 leading-none whitespace-nowrap ${dates.checkIn ? 'text-charcoal' : 'text-gray-600'}`}>
+                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-[0.12em] leading-none">Check-in</p>
+                              <p className={`font-semibold text-[13px] mt-1 leading-none whitespace-nowrap ${dates.checkIn ? 'text-charcoal' : 'text-slate-500'}`}>
                                 {dates.checkIn || 'Select Date'}
                               </p>
                             </button>
@@ -3343,7 +4058,7 @@ const LandingPage = () => {
                             <ArrowRight className="w-3.5 h-3.5" />
                           </div>
                           {/* Check-out */}
-                          <div className="relative flex-1 flex items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group shrink-0">
+                          <div className="relative flex-1 flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-slate-100 rounded-2xl lg:rounded-r-full transition duration-200 group shrink-0">
                             <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
@@ -3353,15 +4068,13 @@ const LandingPage = () => {
                               }}
                               className="w-full text-left"
                             >
-                              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Check-out</p>
-                              <p className={`font-extrabold text-xs lg:text-xs mt-0.5 leading-none whitespace-nowrap ${dates.checkOut ? 'text-charcoal' : 'text-gray-600'}`}>
+                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-[0.12em] leading-none">Check-out</p>
+                              <p className={`font-semibold text-[13px] mt-1 leading-none whitespace-nowrap ${dates.checkOut ? 'text-charcoal' : 'text-slate-500'}`}>
                                 {dates.checkOut || 'Select Date'}
                               </p>
                             </button>
                           </div>
                         </div>
-                        <div className="hidden lg:block w-[1px] h-7 bg-gray-200" />
-
                         {/* Centered Date Range Picker Popup */}
                         {landingCalendarOpen && (
                           <DateRangePicker
@@ -3376,22 +4089,22 @@ const LandingPage = () => {
                         )}
 
                         {/* Guests */}
-                        <div className={`relative shrink-0 w-auto ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
+                        <div className={`relative shrink-0 w-full lg:w-[16%] ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                            className="flex items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer hover:bg-stone/50 rounded-xl lg:rounded-full transition duration-200 group"
+                            className="flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-2xl lg:rounded-full transition duration-200 group"
                           >
                             <User className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
-                              <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider leading-none">Guests</p>
-                              <p className="text-charcoal font-extrabold text-sm mt-1 leading-none whitespace-nowrap">
+                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-[0.12em] leading-none">Guests</p>
+                              <p className="text-charcoal font-semibold text-[14px] mt-1 leading-none whitespace-nowrap">
                                 {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                               </p>
                             </div>
                           </div>
                           
                           {activeDropdown === 'guests' && (
-                            <div className="absolute right-0 top-full mt-3 w-72 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-6 space-y-5">
+                            <div className="mobile-guest-dropdown absolute right-0 top-full mt-3 w-72 bg-white border border-gray-100 rounded-3xl shadow-elevated z-50 p-6 space-y-5">
                               {/* Adults Row */}
                               <div className="flex items-center justify-between">
                                 <div className="text-left">
@@ -3446,10 +4159,10 @@ const LandingPage = () => {
                         </div>
 
                         {/* Search Button */}
-                        <div className="w-full lg:w-auto p-1 pt-1.5 lg:pt-1 shrink-0 z-[1]">
+                        <div className="w-full lg:w-auto p-0 lg:pl-2 lg:pr-2 shrink-0 z-[1]">
                           <button
                             onClick={handleSearch}
-                            className="w-full lg:w-auto bg-[#1A1A1A] hover:bg-black text-white font-bold text-xs uppercase tracking-widest px-8 py-3 lg:py-4 rounded-2xl lg:rounded-full transition duration-200 shadow-md cursor-pointer"
+                            className="font-apple w-full lg:w-[132px] min-h-[46px] lg:min-h-[54px] bg-[#1d2528] hover:bg-[#0e1517] text-white font-semibold text-[12px] tracking-[0.04em] px-4 lg:px-7 py-2 lg:py-3 rounded-2xl lg:rounded-full transition duration-200 shadow-[0_7px_16px_rgba(0,0,0,0.18)] hover:shadow-[0_10px_22px_rgba(0,0,0,0.26)] cursor-pointer"
                           >
                             SEARCH
                           </button>
@@ -3465,62 +4178,44 @@ const LandingPage = () => {
       </section>
 
       {/* ── TRUST & QUALITY GUARANTEE BADGES STRIP ── */}
-      <div className="w-full bg-white relative z-20 border-b border-sand-200/80 py-5 md:py-6">
-        <div className="max-w-[1440px] mx-auto px-4 md:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-6 divide-y sm:divide-y-0 sm:divide-x divide-sand-200/70">
-            
-            {/* Feature 1: Verified Spaces */}
-            <div className="flex items-center gap-3.5 pb-3 sm:pb-0 sm:px-4 first:px-0">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
-                <CheckCircle2 className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
-              </div>
-              <div>
-                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Verified Spaces</h4>
-                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Villas, venues & workspaces inspected</p>
-              </div>
+      {/* ── Category Shortcut Strip ── */}
+      <section className="relative z-20 w-full bg-white py-2.5 md:py-3">
+        <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
+          <p className="mb-2 text-[12px] font-semibold text-slate-500">Continue browsing...</p>
+          <div className="flex w-full min-w-0 items-center gap-2 overflow-x-auto rounded-full border border-slate-200 bg-[#F8FAFC] p-1.5 shadow-[0_2px_10px_rgba(15,23,42,0.05)] no-scrollbar">
+            <div className="flex min-w-0 items-center gap-2 overflow-x-auto no-scrollbar">
+              {recentSearchItems.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => openRecentSearch(item)}
+                  className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-[#E8ECF1] bg-white py-2 pl-2.5 pr-4 text-left shadow-[0_1px_4px_rgba(15,23,42,0.04)] transition hover:border-[#D4AF37] hover:bg-[#FFF9EC]"
+                >
+                  <span className="grid h-7 w-7 place-items-center rounded-full bg-[#F4F7FC]">
+                    <img src="/assets/ui/recent-search-home.webp" alt="" className="h-6 w-6 object-contain" />
+                  </span>
+                  <span className="text-[13px] font-medium text-charcoal group-hover:text-[#8B6512]">{item}</span>
+                </button>
+              ))}
             </div>
-
-            {/* Feature 2: Direct Host Rates */}
-            <div className="flex items-center gap-3.5 py-3 sm:py-0 sm:px-4">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
-                <IndianRupee className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
-              </div>
-              <div>
-                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Direct Host Rates</h4>
-                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Best prices with transparent quotes</p>
-              </div>
-            </div>
-
-            {/* Feature 3: Instant Confirmation */}
-            <div className="flex items-center gap-3.5 py-3 sm:py-0 sm:px-4">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
-                <Zap className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
-              </div>
-              <div>
-                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">Instant Confirmation</h4>
-                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Real-time booking with zero delays</p>
-              </div>
-            </div>
-
-            {/* Feature 4: 24/7 Concierge */}
-            <div className="flex items-center gap-3.5 pt-3 sm:pt-0 sm:px-4">
-              <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-sage/10 text-sage flex items-center justify-center shrink-0 shadow-subtle">
-                <Headphones className="w-4.5 h-4.5 md:w-5 md:h-5 stroke-[2.2]" />
-              </div>
-              <div>
-                <h4 className="text-xs md:text-sm font-bold text-charcoal tracking-tight">24/7 Concierge Care</h4>
-                <p className="text-[11px] md:text-xs text-charcoal-muted font-medium mt-0.5">Dedicated help for stays & event setups</p>
-              </div>
-            </div>
-
+            <ChevronRight className="mr-1 h-5 w-5 shrink-0 text-slate-500" aria-hidden="true" />
           </div>
+        </div>
+      </section>
+
+      <div className="relative z-20 w-full bg-[#FFF7E7] py-2.5 shadow-[0_6px_18px_rgba(64,47,20,0.06)]">
+        <div className="mx-auto flex w-full max-w-[1216px] flex-col gap-2 px-4 text-[12px] text-[#4A3824] sm:flex-row sm:items-center sm:justify-between md:px-8">
+          <p className="font-medium">Need help with a booking, a property enquiry or listing your space?</p>
+          <a href="tel:+919225586010" className="inline-flex w-fit items-center gap-1.5 font-semibold text-[#8B6512] transition hover:text-[#5F4308] hover:underline">
+            <Phone className="h-3.5 w-3.5" />
+            Call our space team: +91 92255 86010
+          </a>
         </div>
       </div>
 
-      {/* ── Category Shortcut Strip ── */}
       <ScrollReveal duration="duration-[800ms]">
         <div className="w-full bg-white relative z-20 py-8 md:py-12 border-b border-sand-100">
-          <div className="max-w-[1440px] mx-auto px-4 md:px-8">
+          <div className="max-w-[1216px] mx-auto px-4 md:px-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Pick a Destination</h2>
@@ -3569,7 +4264,7 @@ const LandingPage = () => {
       <div className="w-full bg-white relative z-20 overflow-x-hidden">
 
         {recentlyVisitedProperties.length > 0 && (
-          <div className="max-w-[1440px] mx-auto px-4 md:px-8 py-8 md:py-12 border-b border-sand-100">
+          <div className="max-w-[1216px] mx-auto px-4 md:px-8 py-8 md:py-12 border-b border-sand-100">
             <div className="flex items-end justify-between gap-4 mb-6">
               <div className="text-left">
                 <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Recently Visited</h2>
@@ -3603,62 +4298,14 @@ const LandingPage = () => {
               className="flex overflow-x-auto gap-4 md:gap-6 pb-4 no-scrollbar snap-x scroll-smooth"
             >
               {recentlyVisitedProperties.map((item, index) => (
-                <button
+                <RecentlyVisitedCard
                   key={item.property_id || index}
-                  type="button"
-                  onClick={() => navigate(getPropertyUrl(item))}
-                  className="min-w-[260px] md:min-w-[285px] w-[260px] md:w-[285px] bg-white rounded-xl overflow-hidden border border-gray-100 shadow-subtle hover:shadow-elevated transition text-left snap-start flex-shrink-0"
-                >
-                  <div className="relative aspect-[16/10] bg-stone overflow-hidden">
-                    <img
-                      src={getPropertyCardImage(item)}
-                      alt={item.title}
-                      loading="lazy"
-                      decoding="async"
-                      onError={({ currentTarget }) => {
-                        currentTarget.onerror = null;
-                        currentTarget.src = PROPERTY_IMAGE_FALLBACK;
-                      }}
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute top-3 left-3 flex gap-2 z-20">
-                      {item.rating > 0 && item.review_count > 0 && (
-                        <div className="bg-charcoal/70 text-white rounded-full px-3 py-1 text-xs font-bold flex items-center gap-1">
-                          <span>{Number(item.rating).toFixed(1)}</span>
-                          <Star className="w-3.5 h-3.5 text-[#E0A51B] fill-current" />
-                        </div>
-                      )}
-                      <div className="glass px-3 py-1 rounded-full shadow-sm bg-white/70 backdrop-blur-md">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-charcoal">
-                          {formatPropertyTypeLabel(item.property_type || item.type) || 'Stay'}
-                        </span>
-                      </div>
-                    </div>
-                    
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                      className="absolute top-3 right-3 text-white z-20"
-                      aria-label="Toggle wishlist"
-                    >
-                      <Heart className={`w-5 h-5 drop-shadow-md ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : 'text-white'}`} />
-                    </button>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-bold text-charcoal text-sm md:text-base line-clamp-1">{item.title}</h3>
-                    <p className="mt-2 flex items-center gap-1 text-xs font-semibold text-charcoal-muted">
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span>{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</span>
-                    </p>
-                    <div className="mt-4 pt-3 border-t border-gray-100 text-xs text-charcoal-muted font-semibold line-clamp-1">
-                      Up to {item.max_guests || item.guests || 4} Guests
-                      <span className="mx-1">-</span>
-                      {item.bedrooms || item.rooms || 1} Room{(item.bedrooms || item.rooms || 1) > 1 ? 's' : ''}
-                      <span className="mx-1">-</span>
-                      {item.bathrooms || item.baths || 1} Bath{(item.bathrooms || item.baths || 1) > 1 ? 's' : ''}
-                    </div>
-                  </div>
-                </button>
+                  item={item}
+                  index={index}
+                  navigate={navigate}
+                  wishlist={wishlist}
+                  handleWishlistToggle={handleWishlistToggle}
+                />
               ))}
             </div>
           </div>
@@ -3675,34 +4322,10 @@ const LandingPage = () => {
 
         {/* Property Sliders — also full-width, padded inline */}
         <div className="pb-4 md:pb-16 pt-2 md:pt-4">
-          {/* Residential Collection Slider */}
-          <ScrollReveal duration="duration-[900ms]">
-            {renderPropertySlider(
-              'slider-residential',
-              'Residential Collection',
-              'Luxury homes, apartments, and private stays.',
-              Building2,
-              'residential',
-              properties.residential
-            )}
-          </ScrollReveal>
-
-          {/* Commercial Spaces Slider */}
-          <ScrollReveal duration="duration-[900ms]">
-            {renderPropertySlider(
-              'slider-commercial',
-              'Commercial Spaces',
-              'Premium offices, co-working spaces, and retail.',
-              Briefcase,
-              'commercial',
-              properties.commercial
-            )}
-          </ScrollReveal>
-
           {/* ===== The X-Space360 Standard Banner (Full Width Landscape Slider) ===== */}
           {(() => {
             // Local stateful slider inside an IIFE
-            const StandardSlider = () => {
+            const LegacyStandardSlider = () => {
               const slides = [
                 {
                   id: 'standard',
@@ -3991,27 +4614,114 @@ const LandingPage = () => {
                 </div>
               );
             };
+            const StandardSlider = () => {
+              const experienceSlides = [
+                { image: '/assets/experiences/billiards.webp', label: 'Games & Recreation', detail: 'Unwind with indoor games and easy evenings.' },
+                { image: '/assets/experiences/shared-dining.webp', label: 'Shared Dining', detail: 'Gather around good food and better conversations.' },
+                { image: '/assets/experiences/cycling-trail.webp', label: 'Explore Outdoors', detail: 'Slow down and discover the neighbourhood on two wheels.' },
+                { image: '/assets/experiences/sunset-terrace.webp', label: 'Sunset Evenings', detail: 'Take in quiet golden-hour views from your stay.' },
+                { image: '/assets/experiences/garden-picnic.webp', label: 'Garden Picnics', detail: 'Make the most of open lawns, fresh air and unhurried time.' },
+                { image: '/assets/experiences/lakeside-picnic.webp', label: 'Lakeside Moments', detail: 'Spend the day by the water with the people you love.' },
+                { image: '/assets/experiences/barbecue-evening.webp', label: 'Barbecue Nights', detail: 'Settle into warm, relaxed evenings under the stars.' },
+              ];
+              const [currentIndex, setCurrentIndex] = useState(0);
+
+              useEffect(() => {
+                const interval = window.setInterval(() => {
+                  setCurrentIndex((index) => (index + 1) % experienceSlides.length);
+                }, 5000);
+                return () => window.clearInterval(interval);
+              }, [experienceSlides.length]);
+
+              const showPrevious = () => {
+                setCurrentIndex((index) => (index - 1 + experienceSlides.length) % experienceSlides.length);
+              };
+
+              const showNext = () => {
+                setCurrentIndex((index) => (index + 1) % experienceSlides.length);
+              };
+
+              return (
+                <section className="relative left-1/2 my-8 w-screen -translate-x-1/2 bg-[#F5F2EB] py-7 md:my-10 md:py-9">
+                    <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
+                    <div className="relative h-[420px] overflow-hidden rounded-2xl md:h-[520px]">
+                    {experienceSlides.map((slide, index) => (
+                      <img
+                        key={slide.image}
+                        src={slide.image}
+                        alt={slide.label}
+                        className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-700 ${index === currentIndex ? 'opacity-100' : 'opacity-0'}`}
+                      />
+                    ))}
+                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/25 to-black/10" />
+                    <button
+                      type="button"
+                      onClick={showPrevious}
+                      className="absolute left-4 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/25 text-white backdrop-blur-sm transition hover:bg-white hover:text-charcoal md:left-6"
+                      aria-label="Previous experience image"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={showNext}
+                      className="absolute right-4 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full border border-white/40 bg-black/25 text-white backdrop-blur-sm transition hover:bg-white hover:text-charcoal md:right-6"
+                      aria-label="Next experience image"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                    <div className="absolute bottom-10 left-5 z-10 w-[min(500px,calc(100%-88px))] p-3 text-left text-white md:bottom-14 md:left-7 md:p-4">
+                      <h3 className="font-megafield whitespace-nowrap text-[27px] font-normal leading-none tracking-tight text-white md:text-[34px]">More Than a Stay</h3>
+                      <p className="font-apple mt-3 max-w-[365px] text-[12px] leading-relaxed text-white/90 md:text-[13px]">Thoughtful comforts, local moments and space to make your stay your own.</p>
+                      <div className="mt-3 grid grid-cols-4 gap-x-4 gap-y-4">
+                        {[
+                          { label: 'Private Pool', position: '0% 0%' },
+                          { label: 'Chef Service', position: '33.333% 0%' },
+                          { label: 'Stay Support', position: '66.667% 0%' },
+                          { label: 'Local Trails', position: '100% 0%' },
+                          { label: 'Games & Fun', position: '0% 100%' },
+                          { label: 'Open Spaces', position: '33.333% 100%' },
+                          { label: 'Celebrations', position: '66.667% 100%' },
+                          { label: 'Barbecue Nights', position: '100% 100%' },
+                        ].map(({ label, position }) => (
+                          <div key={label} className="flex min-w-0 flex-col items-center gap-1.5 text-center">
+                            <span
+                              className="h-14 w-14 bg-[length:400%_200%] bg-no-repeat"
+                              style={{
+                                backgroundImage: "url('/assets/experiences/xspace-feature-icons-source.png')",
+                                backgroundPosition: position,
+                              }}
+                            />
+                            <span className="font-apple text-[10px] font-medium leading-tight text-white/95">{label}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="absolute bottom-5 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 md:bottom-7">
+                      {experienceSlides.map((slide, index) => (
+                        <button
+                          key={slide.label}
+                          type="button"
+                          onClick={() => setCurrentIndex(index)}
+                          className={`h-2 rounded-full transition-all duration-300 ${index === currentIndex ? 'w-6 bg-white' : 'w-2 bg-white/50 hover:bg-white/80'}`}
+                          aria-label={`Show ${slide.label}`}
+                        />
+                      ))}
+                    </div>
+                    </div>
+                    </div>
+                </section>
+              );
+            };
             return (
               <ScrollReveal duration="duration-[1000ms]">
-                <StandardSlider />
+                <MoreThanStaySlider />
               </ScrollReveal>
             );
           })()}
 
-          {/* Events & Functions Slider */}
-          <ScrollReveal duration="duration-[900ms]">
-            {renderPropertySlider(
-              'slider-events',
-              'Events & Functions',
-              'Banquet halls, garden lawns, and celebration venues.',
-              PartyPopper,
-              'event_venue',
-              properties.event_venue
-            )}
-          </ScrollReveal>
-
-
           {/* Post Property Free Banner */}
+          {false && (<>
           <ScrollReveal duration="duration-[800ms]">
             <div className="max-w-[1440px] mx-auto px-4 md:px-8 mb-8 md:mb-12">
               <div className="bg-[#FFF9EA] border border-[#FBEFCD] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
@@ -4074,7 +4784,8 @@ const LandingPage = () => {
                 </div>
               </div>
             </div>
-          </ScrollReveal>{/* end banner px-wrapper */}
+          </ScrollReveal>
+          </>)}{/* end deferred promo banners */}
 
           {/* ===== Signature Series Split Banner & Carousel Section ===== */}
           {(() => {
@@ -4086,6 +4797,91 @@ const LandingPage = () => {
                   slider.scrollBy({ left: scrollAmount, behavior: 'smooth' });
                 }
               };
+
+              return (
+                <>
+                  <div className="-mt-8 w-full bg-[#F5F2EB] pb-10 pt-6 md:-mt-10 md:pb-12 md:pt-8">
+                    <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
+                    <div className="mb-6 flex items-end justify-between gap-4">
+                      <div className="text-left">
+                        <h3 className="font-serif-hero text-[20px] font-semibold text-[#1E1E1E] md:text-[28px]">X-Space Series</h3>
+                        <p className="mt-1 text-xs font-medium text-slate-600 md:text-sm">Private villas curated for elevated weekends and unhurried stays.</p>
+                      </div>
+                      <button type="button" onClick={() => navigate('/guest/browse?signature=true')} className="hidden text-sm font-semibold text-charcoal transition hover:text-terracotta md:block">View all →</button>
+                    </div>
+                    <div id="signature-properties-scroll" className="flex snap-x gap-6 overflow-x-auto pb-4 scroll-smooth no-scrollbar">
+                      {signatureProperties.slice(0, 10).map((item, index) => (
+                        <RecentlyVisitedCard
+                          key={item.property_id || index}
+                          item={item}
+                          index={index}
+                          navigate={navigate}
+                          wishlist={wishlist}
+                          handleWishlistToggle={handleWishlistToggle}
+                          badgeLabel="X-Space Series"
+                        />
+                      ))}
+                    </div>
+                    </div>
+                  </div>
+
+                  <section className="w-full bg-white py-12 md:py-16">
+                    <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
+                      <div className="grid items-center gap-10 border-b border-slate-200 pb-10 md:grid-cols-[1.05fr_0.95fr] md:gap-14 md:pb-12">
+                        <div className="max-w-[590px] text-left">
+                          <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.2em] text-terracotta">Why X-Space360?</p>
+                          <h3 className="font-serif-hero text-[30px] font-semibold leading-[1.08] text-[#1E1E1E] md:text-[42px]">One place to find the right space for every plan.</h3>
+                          <p className="mt-4 text-sm leading-6 text-slate-600 md:text-[15px]">
+                            From quick getaways to workdays and special celebrations, discover spaces that work around your people, plans and pace.
+                          </p>
+                          <ul className="mt-6 space-y-3.5 text-sm leading-6 text-slate-600 md:text-[15px]">
+                            {[
+                              'Explore verified stays, workspaces and celebration venues in one place.',
+                              'See live properties across nearby destinations before you make a plan.',
+                              'Choose dates, guests and the space type that suits your occasion.',
+                              'Find villas, apartments, banquets and coworking spaces for every group.',
+                              'Book with clear property details, amenities and availability at a glance.',
+                            ].map((item) => (
+                              <li key={item} className="flex items-start gap-3">
+                                <CheckCircle2 className="mt-1 h-4 w-4 shrink-0 text-terracotta" aria-hidden="true" />
+                                <span>{item}</span>
+                              </li>
+                            ))}
+                          </ul>
+                          <button
+                            type="button"
+                            onClick={() => navigate('/guest/browse')}
+                            className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-charcoal transition hover:text-terracotta"
+                          >
+                            Explore all spaces <span aria-hidden="true">→</span>
+                          </button>
+                        </div>
+                        <div className="relative mx-auto flex w-full max-w-[500px] items-center justify-center">
+                          <div className="absolute inset-[10%] rounded-[42%] bg-terracotta/5 blur-3xl" aria-hidden="true" />
+                          <img
+                            src="/assets/illustrations/mob-booknew.png"
+                            alt="Discover and book stays, workspaces and celebration venues with X-Space360"
+                            className="relative z-10 h-auto w-full object-contain"
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-y-6 pt-7 text-center md:grid-cols-4 md:gap-0 md:pt-8">
+                        {[
+                          ['350+', 'live properties'],
+                          ['3', 'space categories'],
+                          ['4+', 'nearby destinations'],
+                          ['1', 'place to plan it all'],
+                        ].map(([value, label], index) => (
+                          <div key={label} className={`px-3 ${index > 0 ? 'md:border-l md:border-slate-200' : ''}`}>
+                            <p className="text-[29px] font-semibold leading-none text-[#1E1E1E] md:text-[36px]">{value}</p>
+                            <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                </>
+              );
 
               return (
                 <div className="w-full bg-[#F5F2EB] py-16 border-t border-b border-sand-200/60 mt-16 mb-24">
@@ -4139,11 +4935,11 @@ const LandingPage = () => {
                       <div>
                         <div className="flex items-center gap-3">
                           <h3 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
-                            Signature Series
+                            X-Space Series
                           </h3>
                           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black border border-[#D4AF37] text-[9px] font-serif font-bold uppercase tracking-[0.15em] text-[#D4AF37] shadow-lg shrink-0">
                             <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-                            SIGNATURE SERIES
+                            X-SPACE SERIES
                           </span>
                         </div>
                         <p className="text-gray-505 text-gray-500 font-medium text-xs md:text-sm mt-1.5">
@@ -4182,17 +4978,16 @@ const LandingPage = () => {
                             onClick={() => navigate(getPropertyUrl(item))}
                             className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-white rounded-3xl overflow-hidden border border-gray-150 shadow-subtle flex-shrink-0 group cursor-pointer"
                           >
-                            <div className="relative w-full h-48 md:h-52 overflow-hidden bg-stone-100">
-                              <img
-                                src={getPropertyCardImage(item)}
-                                alt={item.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                              />
+                            <PropertyImageCarousel
+                              item={item}
+                              className="h-48 w-full bg-stone-100 md:h-52"
+                              imageClassName="group-hover:scale-105"
+                            >
                               {/* Goldenblack Signature Badge */}
                               <div className="absolute top-3 left-3 z-10">
                                 <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-black/95 border border-[#D4AF37] text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow">
                                   <Crown className="w-2.5 h-2.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-                                  SIGNATURE SERIES
+                                  X-SPACE SERIES
                                 </span>
                               </div>
                               {/* Favorite Icon */}
@@ -4206,7 +5001,7 @@ const LandingPage = () => {
                                   />
                                 </div>
                               )}
-                            </div>
+                            </PropertyImageCarousel>
                             <div className="p-5 text-left">
                               <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">
                                 {item.title}
@@ -4224,7 +5019,7 @@ const LandingPage = () => {
                       ) : (
                         /* Placeholder when database has no 50k+ villas/resorts yet */
                         <div className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-gray-50 rounded-3xl overflow-hidden border border-dashed border-gray-250 p-6 flex flex-col justify-center items-center text-center text-gray-400 font-medium">
-                          <p className="text-xs">No active Signature Series properties currently available.</p>
+                          <p className="text-xs">No active X-Space Series properties currently available.</p>
                         </div>
                       )}
 
@@ -4262,7 +5057,7 @@ const LandingPage = () => {
           </ScrollReveal>
 
           {/* Testimonials (Loved by Guests & Hosts) */}
-          <ScrollReveal duration="duration-[900ms]">
+          {false && <ScrollReveal duration="duration-[900ms]">
             <div className="mb-12 md:mb-20 text-center">
             <span className="text-xs font-bold tracking-[0.2em] text-terracotta uppercase">{t('guestStories')}</span>
             <h3 className="text-3xl md:text-4xl font-bold text-charcoal mt-2 mb-6 tracking-tight">{t('lovedByGuests')}</h3>
@@ -4343,44 +5138,53 @@ const LandingPage = () => {
               </div>
             </div>
           </div>
-          </ScrollReveal>
-          {/* Blogs Section (Clean 2x2 Grid) */}
+          </ScrollReveal>}
+          {/* Blogs & Articles */}
           <ScrollReveal duration="duration-[900ms]">
-            <div className="mb-12 md:mb-32 text-left max-w-7xl mx-auto px-4 md:px-8">
-              <h3 className="text-3xl md:text-4xl font-bold text-charcoal tracking-tight mb-8">
-              Plan smart, explore more
-            </h3>
+            <section className="mx-auto mb-5 w-full max-w-[1216px] px-4 text-left md:mb-7 md:px-8">
+              <div className="mb-5 flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Stay informed</p>
+                  <h3 className="mt-1 font-serif-hero text-[23px] font-semibold text-[#1E1E1E] md:text-[29px]">Top Blogs</h3>
+                </div>
+                <button type="button" onClick={() => navigate('/blog')} className="hidden text-sm font-semibold text-charcoal transition hover:text-terracotta sm:block">View all <span aria-hidden="true">→</span></button>
+              </div>
 
-            <div className="flex gap-6 overflow-x-auto pb-3 no-scrollbar md:grid md:grid-cols-2 md:gap-x-12 md:gap-y-10 md:overflow-visible">
+            <div className="flex snap-x gap-3 overflow-x-auto pb-3 no-scrollbar md:gap-4">
               {landingBlogPosts.map((post, idx) => {
                 const slug = post.slug || String(post.title || `post-${idx}`).toLowerCase().replace(/&/g, 'and').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
                 return (
                   <div 
                     key={post.id || idx} 
                     onClick={() => navigate(`/blog/${slug}`)}
-                    className="group cursor-pointer flex min-w-[290px] max-w-[290px] flex-col text-left md:min-w-0 md:max-w-none"
+                    className="group flex min-w-[300px] snap-start cursor-pointer overflow-hidden rounded-xl border border-slate-100 bg-white text-left shadow-[0_2px_10px_rgba(15,23,42,0.07)] transition hover:-translate-y-0.5 hover:shadow-md sm:min-w-[360px] lg:min-w-0 lg:flex-1"
                   >
-                  {/* Rectangular Image */}
-                  <div className="aspect-[2/1] overflow-hidden rounded-xl bg-stone relative">
+                  <div className="h-[124px] w-[118px] shrink-0 overflow-hidden bg-stone sm:w-[132px]">
                     <img 
                       src={post.img} 
                       alt={post.title} 
-                      className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500" 
+                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                   </div>
                   
-                  {/* Metadata underneath */}
-                  <h4 className="font-bold text-lg md:text-xl text-charcoal mt-4 mb-2 leading-snug group-hover:text-terracotta transition-colors line-clamp-2">
+                  <div className="flex min-w-0 flex-1 flex-col justify-center px-3 py-3">
+                  <h4 className="line-clamp-2 text-[14px] font-semibold leading-[1.35] text-charcoal transition-colors group-hover:text-terracotta">
                     {post.title}
                   </h4>
-                  <p className="text-xs text-gray-500 font-semibold">
+                  <p className="mt-1 text-[11px] font-medium text-slate-500">
                     {post.date} &nbsp;•&nbsp; <span className="text-blue-600 hover:underline">{post.author}</span>
                   </p>
+                  <p className="mt-1 line-clamp-2 text-[11px] leading-[1.35] text-slate-500">{post.excerpt}</p>
+                  </div>
                 </div>
               );
             })}
             </div>
-          </div>
+            <div className="mt-2 flex justify-center gap-1.5" aria-hidden="true">
+              <span className="h-1 w-8 rounded-full bg-slate-300" />
+              <span className="h-1 w-8 rounded-full bg-slate-100" />
+            </div>
+            </section>
           </ScrollReveal>
 
           {false && (
@@ -4464,6 +5268,8 @@ const LandingPage = () => {
           
         </div>
       </div>
+
+      <FooterExploreSection properties={properties} navigate={navigate} />
 
       {/* Modern Sleek Dark Footer Section */}
       <Footer cmsContent={cmsContent} />
@@ -4690,23 +5496,6 @@ const LandingPage = () => {
           </>
         );
       })()}
-      {/* Floating Scroll Buttons - hidden on mobile to avoid blocking content */}
-      <div className="hidden md:flex fixed top-1/2 -translate-y-1/2 right-8 flex-col space-y-3 z-50">
-        <button 
-          onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-premium hover:bg-white/70 hover:-translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"
-          title="Scroll to Top"
-        >
-          <ChevronUp className="w-5 h-5 text-charcoal" />
-        </button>
-        <button 
-          onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}
-          className="w-10 h-10 rounded-full bg-white/40 backdrop-blur-md flex items-center justify-center shadow-premium hover:bg-white/70 hover:translate-y-1 transition-all duration-300 cursor-pointer border border-white/20"
-          title="Scroll to Bottom"
-        >
-          <ChevronDown className="w-5 h-5 text-charcoal" />
-        </button>
-      </div>
     </div>
   );
 };

@@ -35,6 +35,19 @@ const formatDate = (value) => {
   return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
+const monthKey = (value) => `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}`;
+
+const formatNightlyPrice = (value) => {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || amount <= 0) return '';
+  if (amount >= 100000) return `₹${Math.round(amount / 1000)}k`;
+  if (amount >= 1000) {
+    const thousands = amount / 1000;
+    return `₹${Number.isInteger(thousands) ? thousands : thousands.toFixed(1)}k`;
+  }
+  return `₹${Math.round(amount)}`;
+};
+
 export default function DateRangePicker({
   open,
   anchor = 'checkIn',
@@ -42,12 +55,17 @@ export default function DateRangePicker({
   checkOut,
   minDate,
   blockedDates = [],
+  nightlyPrices = {},
+  defaultNightlyPrice = 0,
   singleDate = false,
   onChange,
   onClose,
   desktopPosition = null,
+  onVisibleMonthsChange,
 }) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => (
+    typeof window !== 'undefined' && window.innerWidth < 768
+  ));
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -82,9 +100,14 @@ export default function DateRangePicker({
   );
   const cells = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   const nextMonthCells = useMemo(() => buildMonthGrid(nextVisibleMonth), [nextVisibleMonth]);
+
+  useEffect(() => {
+    if (open) onVisibleMonthsChange?.([monthKey(visibleMonth), monthKey(nextVisibleMonth)]);
+  }, [open, visibleMonth, nextVisibleMonth, onVisibleMonthsChange]);
+
   if (!open) return null;
 
-  const desktopStyle = desktopPosition
+  const desktopStyle = desktopPosition && !isMobile
     ? {
         position: 'fixed',
         top: `${desktopPosition.top}px`,
@@ -94,7 +117,7 @@ export default function DateRangePicker({
       }
     : undefined;
 
-  const DateGrid = ({ monthDate, monthCells, isSecondMonth = false }) => (
+  const DateGrid = ({ monthDate, monthCells }) => (
     <div className="min-w-0">
       <div className="mb-2 grid grid-cols-7 gap-1 text-center text-[11px] font-bold uppercase tracking-wider text-charcoal-muted">
         {WEEKDAYS.map((day) => <div key={`${monthDate.getMonth()}-${day}`}>{day}</div>)}
@@ -107,6 +130,11 @@ export default function DateRangePicker({
           const iso = toISO(day);
           const isBlocked = isDateBlocked(iso);
           const isDisabled = iso < minDate || isBlocked;
+          const price = nightlyPrices[iso];
+          const nightlyPrice = price?.final_price ?? defaultNightlyPrice;
+          const hasDynamicRate = Boolean(price?.is_dynamic);
+          const isHigherRate = Boolean(price?.is_higher);
+          const isLowerRate = Boolean(price?.is_lower);
           const isStart = iso === checkIn;
           const isEnd = iso === checkOut;
           const inRange = checkIn && checkOut && iso > checkIn && iso < checkOut;
@@ -118,15 +146,26 @@ export default function DateRangePicker({
               disabled={isDisabled}
               onClick={() => applyDate(iso)}
               className={[
-                'aspect-square w-full rounded-2xl text-xs sm:text-sm font-bold transition-all relative flex items-center justify-center',
+                'min-h-[48px] sm:min-h-[54px] w-full rounded-xl border text-xs sm:text-sm font-bold transition-all relative flex flex-col items-center justify-center leading-none',
                 isDisabled
-                  ? (isBlocked ? 'cursor-not-allowed text-gray-300 bg-gray-100/60 line-through' : 'cursor-not-allowed text-gray-300 bg-stone/30')
-                  : 'text-charcoal hover:bg-sand-100 active:scale-95',
-                inRange ? 'bg-sand-200/90 text-charcoal rounded-none font-bold' : '',
-                isStart || isEnd ? 'bg-[#1A1A1A] text-white shadow-md rounded-2xl z-10 font-extrabold' : '',
+                  ? (isBlocked ? 'cursor-not-allowed border-gray-100 text-gray-300 bg-gray-100/60 line-through' : 'cursor-not-allowed border-transparent text-gray-300 bg-stone/30')
+                  : hasDynamicRate
+                  ? (isHigherRate ? 'border-[#d4af37]/50 bg-[#fff7df] text-charcoal hover:bg-[#fff0bf] active:scale-95' : 'border-[#087f5b]/25 bg-[#f0faf6] text-charcoal hover:bg-[#e0f5ec] active:scale-95')
+                  : 'border-transparent text-charcoal hover:border-[#d4af37]/35 hover:bg-[#fffaf0] active:scale-95',
+                inRange ? 'border-[#d4af37]/25 bg-[#fff2ce] text-charcoal rounded-none font-bold' : '',
+                isStart || isEnd ? 'border-[#087f5b] bg-[#087f5b] text-white shadow-md rounded-xl z-10 font-extrabold' : '',
               ].join(' ')}
+              title={hasDynamicRate ? `${price.rule_label || 'Dynamic'} rate: ${formatNightlyPrice(price.final_price)} per night` : undefined}
             >
-              {day.getDate()}
+              <span>{day.getDate()}</span>
+              {!isDisabled && Number(nightlyPrice) > 0 && (
+                <span className={[
+                  'mt-1 text-[8px] sm:text-[9px] font-bold tracking-tight',
+                  isStart || isEnd ? 'text-white/85' : isHigherRate ? 'text-[#a46f00]' : isLowerRate ? 'text-[#087f5b]' : 'text-charcoal-muted',
+                ].join(' ')}>
+                  {formatNightlyPrice(nightlyPrice)}
+                </span>
+              )}
             </button>
           );
         })}
@@ -160,10 +199,10 @@ export default function DateRangePicker({
   const pickerContent = (
     <div
       style={desktopStyle}
-      className={`fixed inset-x-3 top-16 sm:top-20 bottom-auto max-h-[90vh] z-[90] overflow-y-auto rounded-[24px] border border-slate-200 bg-white p-4 sm:p-5 shadow-[0_20px_50px_rgba(15,23,42,0.16)] ${
+      className={`fixed inset-x-3 top-1/2 -translate-y-1/2 bottom-auto max-h-[90vh] z-[90] overflow-y-auto rounded-[24px] border border-[#d4af37]/25 bg-[#fffdfa] p-4 sm:p-5 shadow-[0_20px_50px_rgba(54,43,17,0.18)] ${
         desktopPosition
-          ? 'md:fixed md:bottom-auto md:h-auto md:z-[90] md:overflow-visible md:rounded-[28px] md:p-5 md:py-4'
-          : 'md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:mt-2.5 md:bottom-auto md:w-[580px] lg:w-[610px] md:overflow-visible md:rounded-[28px] md:p-5 md:py-4'
+          ? 'md:fixed md:translate-y-0 md:bottom-auto md:h-auto md:z-[90] md:overflow-visible md:rounded-[28px] md:p-5 md:py-4'
+          : 'md:absolute md:top-full md:left-1/2 md:-translate-x-1/2 md:translate-y-0 md:mt-2.5 md:bottom-auto md:w-[580px] lg:w-[610px] md:overflow-visible md:rounded-[28px] md:p-5 md:py-4'
       }`}
     >
       <div className="mb-3 flex flex-col gap-1">
@@ -189,11 +228,11 @@ export default function DateRangePicker({
       </div>
 
       {/* Navigation Header for Joined Dual-Month Calendar */}
-      <div className="mb-4 flex items-center justify-between pb-2.5 border-b border-gray-100">
+      <div className="mb-4 flex items-center justify-between pb-3 border-b border-[#d4af37]/25">
         <button
           type="button"
           onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-charcoal transition hover:bg-stone active:scale-95 shrink-0"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d4af37]/35 bg-white text-[#087f5b] transition hover:bg-[#fff4d8] active:scale-95 shrink-0"
           aria-label="Previous month"
         >
           <ChevronLeft className="h-4 w-4" />
@@ -211,7 +250,7 @@ export default function DateRangePicker({
         <button
           type="button"
           onClick={() => setVisibleMonth(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1))}
-          className="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-charcoal transition hover:bg-stone active:scale-95 shrink-0"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d4af37]/35 bg-white text-[#087f5b] transition hover:bg-[#fff4d8] active:scale-95 shrink-0"
           aria-label="Next month"
         >
           <ChevronRight className="h-4 w-4" />
@@ -227,14 +266,18 @@ export default function DateRangePicker({
       </div>
 
       {/* Calendar Legend / Key */}
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-[10px] font-bold uppercase tracking-wider text-gray-500">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-[#d4af37]/20 pt-3 text-[10px] font-bold uppercase tracking-wider text-gray-500">
         <div className="flex items-center space-x-1.5">
           <span className="h-2.5 w-2.5 rounded-full border border-gray-300 bg-white" />
           <span>Available</span>
         </div>
         <div className="flex items-center space-x-1.5">
-          <span className="h-2.5 w-2.5 rounded-full bg-[#1A1A1A]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#087f5b]" />
           <span>Selected</span>
+        </div>
+        <div className="flex items-center space-x-1.5">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#d4af37]" />
+          <span>Higher rate</span>
         </div>
         <div className="flex items-center space-x-1.5">
           <span className="h-2.5 w-2.5 rounded-full border border-dashed border-gray-300 bg-gray-100" />
@@ -259,14 +302,14 @@ export default function DateRangePicker({
         <button
           type="button"
           onClick={() => onChange({ checkIn: '', checkOut: '' })}
-          className="w-full rounded-full border border-gray-200 px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-charcoal transition hover:bg-stone md:w-auto md:min-w-[120px]"
+          className="w-full rounded-lg border border-[#d4af37]/35 bg-white px-4 py-2 text-[11px] font-bold uppercase tracking-widest text-charcoal transition hover:bg-[#fff4d8] md:w-auto md:min-w-[120px]"
         >
           Clear
         </button>
         <button
           type="button"
           onClick={() => onClose?.()}
-          className="w-full rounded-full bg-[#1A1A1A] px-5 py-2 text-[11px] font-bold uppercase tracking-widest text-white transition hover:bg-black md:w-auto md:min-w-[120px] flex items-center justify-center"
+          className="w-full rounded-lg bg-[#087f5b] px-5 py-2 text-[11px] font-bold uppercase tracking-widest text-white transition hover:bg-[#066548] md:w-auto md:min-w-[120px] flex items-center justify-center"
         >
           Done
         </button>
