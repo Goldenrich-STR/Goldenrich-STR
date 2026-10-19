@@ -335,6 +335,29 @@ async def _find_booking_for_transaction(db: AsyncIOMotorDatabase, t: dict) -> Op
 
 # --------------- Overview ----------------
 
+async def _configured_platform_revenue_paise(
+    db: AsyncIOMotorDatabase,
+    *,
+    host_id: Optional[str] = None,
+) -> int:
+    """Sum the platform fees persisted on paid booking snapshots.
+
+    Platform revenue is not a percentage of GMV. Historical bookings with an
+    explicit zero fee must remain zero even if an admin enables a fee later.
+    """
+    query: dict = {
+        "payment_status": {"$in": ["paid", "partially_paid", "success", "captured", "completed"]},
+        "booking_status": {"$nin": ["cancelled", "canceled", "failed", "refunded"]},
+    }
+    if host_id:
+        query["host_id"] = host_id
+    bookings = await db.bookings.find(query, {"_id": 0}).to_list(length=10000)
+    total_rupees = sum(
+        float((extract_booking_pricing_snapshot(booking).get("extra_charges") or {}).get("platform_fee") or 0)
+        for booking in bookings
+    )
+    return int(round(total_rupees * 100))
+
 @router.get("/overview")
 async def overview(
     current_user: dict = Depends(require_admin),
@@ -360,8 +383,9 @@ async def overview(
         refunds = agg.get(TransactionType.REFUND.value, {"amount_paise": 0, "count": 0})
         payouts = agg.get(TransactionType.PAYOUT.value, {"amount_paise": 0, "count": 0})
 
-        # Platform take = booking GMV * 10% (our margin)
-        platform_take = int(round(booking_rev["amount_paise"] * 0.10))
+        # Revenue comes only from the fee captured on each booking. Never
+        # infer a platform fee from GMV or from today's configuration.
+        platform_take = await _configured_platform_revenue_paise(db)
 
         total_gross = (
             booking_rev["amount_paise"] + reg_rev["amount_paise"] + sub_rev["amount_paise"]
@@ -540,7 +564,7 @@ async def top_hosts(
             "city": host.get("city"),
             "gross_paise": r["gross_paise"],
             "bookings": r["bookings"],
-            "platform_take_paise": int(round(r["gross_paise"] * 0.10)),
+            "platform_take_paise": await _configured_platform_revenue_paise(db, host_id=r["_id"]),
         })
     return {"hosts": out, "total": len(out)}
 
