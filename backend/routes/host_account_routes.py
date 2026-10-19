@@ -12,6 +12,7 @@ from middleware.auth_middleware import get_current_user
 from models.transaction import HostPayoutPreferenceUpdate, PayoutDestinationType
 from models.user import UserRole
 from services.account_service import sweep_payout_eligibility
+from services.booking_calculation_service import calculate_host_payout_breakdown
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/host", tags=["Host Payouts"])
@@ -162,28 +163,35 @@ async def list_my_payouts(
             {"property_id": p["property_id"]},
             {"_id": 0, "title": 1, "city": 1},
         )
-        booking = await db.bookings.find_one(
-            {"booking_id": p["booking_id"]},
-            {
-                "_id": 0,
-                "check_in_date": 1,
-                "check_out_date": 1,
-                "total_amount": 1,
-                "booking_status": 1,
-                "status": 1,
-                "payment_status": 1,
-                "refund_status": 1,
-                "cancelled_at": 1,
-                "canceled_at": 1,
-                "cancellation_date": 1,
-                "refund_initiated_at": 1,
-                "refunded_at": 1,
-            },
-        )
+        booking = await db.bookings.find_one({"booking_id": p["booking_id"]}, {"_id": 0})
         if _is_cancelled_settlement(booking, p):
             continue
+        if booking and p.get("status") not in {"paid", "processed", "completed"}:
+            try:
+                breakdown = await calculate_host_payout_breakdown(db, booking=booking)
+                refreshed = {
+                    "gross_amount": breakdown.get("gross_amount", p.get("gross_amount", 0)),
+                    "host_actual_value_amount": breakdown.get("host_actual_value_amount", p.get("host_actual_value_amount", 0)),
+                    "platform_fee": breakdown.get("platform_fee", 0),
+                    "gateway_charge": breakdown.get("gateway_charge", 0),
+                    "total_extra_charges_amount": breakdown.get("total_extra_charges_amount", 0),
+                    "customer_final_payable_amount": breakdown.get("customer_final_payable_amount", 0),
+                    "customer_charge_breakdown": breakdown.get("customer_charge_breakdown") or {},
+                    "tds_amount": breakdown.get("tds_amount", 0),
+                    "net_amount": breakdown.get("net_amount", 0),
+                    "deductions": breakdown.get("deductions") or [],
+                    "tds_breakdown": breakdown.get("tds_breakdown") or {},
+                    "updated_at": datetime.now(timezone.utc),
+                }
+                p.update(refreshed)
+                await db.payouts.update_one({"payout_id": p.get("payout_id")}, {"$set": refreshed})
+            except Exception as exc:
+                logger.warning("Could not refresh host payout %s: %s", p.get("payout_id"), exc)
         p["property"] = prop
-        p["booking"] = booking
+        p["booking"] = {
+            key: (booking or {}).get(key)
+            for key in ("check_in_date", "check_out_date", "total_amount", "booking_status", "status", "payment_status")
+        }
         visible_items.append(p)
     items = visible_items
     return {"payouts": items, "total": len(items)}
