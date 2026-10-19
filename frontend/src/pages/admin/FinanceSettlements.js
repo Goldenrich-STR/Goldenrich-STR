@@ -743,7 +743,7 @@ const FinanceSettlements = () => {
     const pending = state.overview?.pending_payouts || {};
     return [
       ['Gross Booking Value', paiseToMoney(revenue.booking_payments_paise), TrendingUp, 'Booking payments collected'],
-      ['Platform Revenue', paiseToMoney(revenue.platform_take_paise), CreditCard, 'Estimated platform take'],
+      ['Platform Revenue', paiseToMoney(revenue.platform_take_paise), CreditCard, 'Configured booking platform fees'],
       ['Pending Payout', paiseToMoney(pending.amount_paise), WalletCards, `${pending.count || 0} host payouts pending`],
       ['Refund Amount', paiseToMoney(revenue.refunds_paise), RefreshCcw, `${state.overview?.counts?.refunds || 0} refunds issued`],
       ['Tax Liability', paiseToMoney(revenue.total_tax_paise), FileText, 'Estimated tax reserve'],
