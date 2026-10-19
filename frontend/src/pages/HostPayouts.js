@@ -19,7 +19,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { accountAPI, bookingAPI } from '../services/api';
+import { accountAPI } from '../services/api';
 import HostSupportWidget from '../components/HostSupportWidget';
 import HostWorkspaceShell from '../components/HostWorkspaceShell';
 
@@ -72,7 +72,6 @@ const HostPayouts = () => {
   });
   const [masked, setMasked] = useState(null);
   const [payouts, setPayouts] = useState([]);
-  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
@@ -82,10 +81,9 @@ const HostPayouts = () => {
   const load = async () => {
     setLoading(true);
     try {
-      const [pr, py, bk] = await Promise.all([
+      const [pr, py] = await Promise.all([
         accountAPI.getHostPayoutPreference(),
         accountAPI.listMyPayouts(),
-        bookingAPI.getHostBookings(),
       ]);
       const p = pr.data.payout_preference || {};
       setPref({
@@ -98,7 +96,6 @@ const HostPayouts = () => {
       });
       setMasked(p.bank_account_number_masked || null);
       setPayouts(py.data.payouts || []);
-      setBookings(bk.data.bookings || []);
     } finally {
       setLoading(false);
     }
@@ -118,30 +115,17 @@ const HostPayouts = () => {
       return d && !Number.isNaN(d.getTime()) && d.getMonth() === month && d.getFullYear() === year;
     };
 
-    const isEarnedBooking = (b) =>
-      ['confirmed', 'completed'].includes(String(b.booking_status || '').toLowerCase()) &&
-      ['paid', 'captured'].includes(String(b.payment_status || '').toLowerCase());
-    const bookingDate = (b) => b.check_in_date || b.created_at;
-    const thisMonthBookings = bookings.filter((b) => isEarnedBooking(b) && inThisMonth(bookingDate(b)));
-    const allEarnedBookings = bookings.filter(isEarnedBooking);
+    const activePayouts = payouts.filter((p) => p.status !== 'failed');
+    const payoutDate = (p) => p.booking?.check_in_date || p.eligible_at || p.created_at;
+    const thisMonthPayouts = activePayouts.filter((p) => inThisMonth(payoutDate(p)));
     const paid = payouts.filter((p) => p.status === 'paid');
-    const upcoming = payouts.filter((p) => ['eligible', 'processing', 'needs_destination'].includes(p.status));
-    const totalGross = thisMonthBookings.reduce((sum, b) => sum + Math.round(Number(b.total_amount || 0) * 100), 0);
-    const totalFee = Math.round(totalGross * 0.10);
-    const totalTds = thisMonthBookings.reduce((sum, b) => {
-      const payout = payouts.find((p) => p.booking_id === b.booking_id);
-      if (payout?.tds_amount !== undefined && payout?.tds_amount !== null) return sum + Number(payout.tds_amount || 0);
-      return sum + Math.round(Number(b.total_amount || 0) * 100 * 0.01);
-    }, 0);
-    const totalNet = Math.max(0, totalGross - totalFee - totalTds);
-    const lifetimeGross = allEarnedBookings.reduce((sum, b) => sum + Math.round(Number(b.total_amount || 0) * 100), 0);
-    const lifetimeFee = Math.round(lifetimeGross * 0.10);
-    const lifetimeTds = Math.round(lifetimeGross * 0.01);
-    const lifetimeNet = Math.max(0, lifetimeGross - lifetimeFee - lifetimeTds);
+    const upcoming = payouts.filter((p) => ['pending', 'eligible', 'processing', 'needs_destination'].includes(p.status));
+    const totalGross = thisMonthPayouts.reduce((sum, p) => sum + Number(p.gross_amount || 0), 0);
+    const totalExtraCharges = thisMonthPayouts.reduce((sum, p) => sum + Number(p.total_extra_charges_amount || 0), 0);
+    const totalTds = thisMonthPayouts.reduce((sum, p) => sum + Number(p.tds_amount || 0), 0);
+    const totalNet = thisMonthPayouts.reduce((sum, p) => sum + Number(p.net_amount || 0), 0);
     const paidNet = paid.reduce((sum, p) => sum + (p.net_amount || 0), 0);
-    const payoutUpcomingNet = upcoming.reduce((sum, p) => sum + (p.net_amount || 0), 0);
-    const unpaidEarnedNet = Math.max(0, totalNet - paidNet);
-    const upcomingNet = Math.max(payoutUpcomingNet, unpaidEarnedNet);
+    const upcomingNet = upcoming.reduce((sum, p) => sum + Number(p.net_amount || 0), 0);
     const latestPaid = paid
       .map((p) => p.processed_at || p.updated_at || p.eligible_at)
       .filter(Boolean)
@@ -151,16 +135,14 @@ const HostPayouts = () => {
       .filter(Boolean)
       .sort((a, b) => new Date(a) - new Date(b))[0];
 
-    return { totalGross, totalFee, totalTds, totalNet, lifetimeGross, lifetimeFee, lifetimeTds, lifetimeNet, paidNet, upcomingNet, latestPaid, nextEligible, hasUnpaidEarnings: unpaidEarnedNet > 0 };
-  }, [payouts, bookings]);
+    return { totalGross, totalExtraCharges, totalTds, totalNet, paidNet, upcomingNet, latestPaid, nextEligible, hasUnpaidEarnings: upcomingNet > 0 };
+  }, [payouts]);
 
   const chartData = useMemo(() => {
     const buckets = new Map();
-    const sourceRows = payouts.length
-      ? payouts.map((p) => ({ date: p.processed_at || p.eligible_at || p.created_at, amount: p.net_amount || 0 }))
-      : bookings
-          .filter((b) => ['confirmed', 'completed'].includes(String(b.booking_status || '').toLowerCase()) && ['paid', 'captured'].includes(String(b.payment_status || '').toLowerCase()))
-          .map((b) => ({ date: b.check_in_date || b.created_at, amount: Math.round(Number(b.total_amount || 0) * 100 * 0.90) }));
+    const sourceRows = payouts
+      .filter((p) => p.status !== 'failed')
+      .map((p) => ({ date: p.processed_at || p.eligible_at || p.created_at, amount: p.net_amount || 0 }));
     sourceRows.forEach((row) => {
       const dateValue = row.date;
       const d = dateValue ? new Date(dateValue) : null;
@@ -171,7 +153,7 @@ const HostPayouts = () => {
     const rows = Array.from(buckets.entries()).slice(-6).map(([label, amount]) => ({ label, amount }));
     const max = Math.max(1, ...rows.map((r) => r.amount));
     return rows.map((r) => ({ ...r, height: Math.max(12, Math.round((r.amount / max) * 118)) }));
-  }, [payouts, bookings]);
+  }, [payouts]);
 
   const chartMaxRupees = useMemo(() => {
     const maxPaise = Math.max(1, ...chartData.map((r) => r.amount || 0));
@@ -204,7 +186,7 @@ const HostPayouts = () => {
         p.property?.title || p.property_id,
         ((p.gross_amount || 0) / 100).toFixed(2),
         ((p.platform_fee || 0) / 100).toFixed(2),
-        ((p.tds_amount || Math.round((p.gross_amount || 0) * 0.01)) / 100).toFixed(2),
+        (Number(p.tds_amount ?? 0) / 100).toFixed(2),
         ((p.net_amount || 0) / 100).toFixed(2),
         p.status,
       ]),
@@ -295,8 +277,8 @@ const HostPayouts = () => {
                         <p className="text-[11px] text-charcoal-muted font-semibold mt-1">This Month</p>
                         <div className="mt-5 space-y-3 text-xs">
                           <AmountLine label="Booking Revenue" amount={summary.totalGross} />
-                          <AmountLine label="Platform Commission (10%)" amount={-summary.totalFee} muted />
-                          <AmountLine label="TDS Deducted (1%)" amount={-summary.totalTds} muted />
+                          <AmountLine label="Extra Charges (customer-side)" amount={summary.totalExtraCharges} muted />
+                          <AmountLine label="TDS Deducted" amount={-summary.totalTds} muted />
                           <div className="border-t border-gray-100 pt-3">
                             <AmountLine label="Total Net Earnings" amount={summary.totalNet} strong />
                             <AmountLine label="Paid Payout Received" amount={summary.paidNet} muted />
@@ -359,7 +341,7 @@ const HostPayouts = () => {
                       title="Payout Information"
                       lines={[
                         'Payouts are released by admin from Account > Payouts.',
-                        '10% platform commission is deducted per booking.',
+                        'Host earnings match the booking settlement shown to finance.',
                         'Eligible payouts depend on your selected payout cycle.',
                       ]}
                     />
@@ -523,7 +505,7 @@ const EarningsInsightBanner = ({ onDownload }) => (
 const PreferencePanel = ({ pref, setPref, masked, save, saving, message, error }) => (
   <section className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
     <h2 className="text-sm font-bold text-charcoal">Payout Destination</h2>
-    <p className="text-[11px] text-charcoal-muted font-semibold mt-1">Platform fee is 10%; you keep 90% of each booking.</p>
+    <p className="text-[11px] text-charcoal-muted font-semibold mt-1">Payouts use the final host settlement value for each booking.</p>
 
     <div className="grid grid-cols-2 gap-2 mt-4">
       {[
