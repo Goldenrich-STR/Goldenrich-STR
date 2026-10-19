@@ -325,7 +325,7 @@ def _sanitize_platform_fee_overrides(raw: Optional[Dict[str, Any]], platform_fee
             "enabled": True,
             "charge_type": PERCENTAGE,
             "value": base_value,
-            "label": "RM Mapped Platform Fee",
+            "label": "RM, Telecaller & Other Platform Fee",
         },
     }
     overrides: Dict[str, Dict[str, Any]] = {}
@@ -476,8 +476,14 @@ def calculate_configured_charge(base: Decimal, config: Dict[str, Any]) -> Decima
 def resolve_platform_fee_charge(config: Dict[str, Any], context: Optional[str] = None) -> Dict[str, Any]:
     charge_config = dict(config["charges"]["platform_fee"])
     context = context if context in PLATFORM_FEE_CONTEXTS else PLATFORM_FEE_CONTEXT_DEFAULT
+    # There are exactly two configurable platform-fee buckets. Preserve the
+    # legacy rm_mapped storage key for existing settings, but route every
+    # non-broker source (RM, telecaller, employee, self-listed host, admin or
+    # any future role) through that bucket.
+    if context != PLATFORM_FEE_CONTEXT_BROKER:
+        context = PLATFORM_FEE_CONTEXT_RM
     override = dict((config.get("platform_fee_overrides") or {}).get(context) or {})
-    if context != PLATFORM_FEE_CONTEXT_DEFAULT and override.get("enabled"):
+    if override.get("enabled"):
         charge_config.update({
             "enabled": True,
             "charge_type": PERCENTAGE,

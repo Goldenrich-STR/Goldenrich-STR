@@ -375,7 +375,7 @@ async def _resolve_platform_fee_context(db: AsyncIOMotorDatabase, property_dict:
     ).strip().lower().replace("-", "_").replace(" ", "_")
     if explicit_role == "broker" or explicit_role.startswith("broker_"):
         return PLATFORM_FEE_CONTEXT_BROKER
-    if explicit_role in {"rm", "employee", "relationship_manager"} or explicit_role.startswith(("rm_", "employee_", "relationship_manager_")):
+    if explicit_role:
         return PLATFORM_FEE_CONTEXT_RM
     first_verifier_id = (
         property_dict.get("broker_id")
@@ -400,6 +400,8 @@ async def _resolve_platform_fee_context(db: AsyncIOMotorDatabase, property_dict:
             return PLATFORM_FEE_CONTEXT_RM
         if _is_broker_user(verifier):
             return PLATFORM_FEE_CONTEXT_BROKER
+        if verifier:
+            return PLATFORM_FEE_CONTEXT_RM
 
     if _mapped_value(
         property_dict.get("rm_id"),
@@ -422,7 +424,7 @@ async def _resolve_platform_fee_context(db: AsyncIOMotorDatabase, property_dict:
         owner.get("broker_lg_code"),
     ):
         return PLATFORM_FEE_CONTEXT_BROKER
-    return PLATFORM_FEE_CONTEXT_DEFAULT
+    return PLATFORM_FEE_CONTEXT_RM
 
 async def _get_booking_payment_config(db: AsyncIOMotorDatabase) -> dict:
     return await get_booking_payment_config(db)

@@ -68,3 +68,21 @@ def test_event_fee_uses_dynamic_broker_override(monkeypatch):
     assert result["service_fee_percent"] == 15
     assert result["service_fee"] == 1_500
     assert result["subtotal_before_discount"] == 59_500
+
+
+def test_default_and_future_roles_use_non_broker_platform_rule():
+    config = normalize_booking_payment_config({
+        "platform_fee_overrides": {
+            "broker_mapped": {"enabled": True, "value": 15},
+            "rm_mapped": {"enabled": True, "value": 7},
+        },
+    })
+
+    default_rule = pricing_service.resolve_platform_fee_charge(config, "default")
+    unknown_rule = pricing_service.resolve_platform_fee_charge(config, "future_role")
+
+    assert default_rule["context"] == "rm_mapped"
+    assert default_rule["enabled"] is True
+    assert default_rule["value"] == 7
+    assert unknown_rule["context"] == "rm_mapped"
+    assert unknown_rule["value"] == 7

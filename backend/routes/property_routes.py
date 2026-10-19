@@ -256,7 +256,7 @@ async def _property_platform_fee_context(db: AsyncIOMotorDatabase, prop: dict, o
     ).strip().lower().replace("-", "_").replace(" ", "_")
     if explicit_role == "broker" or explicit_role.startswith("broker_"):
         return PLATFORM_FEE_CONTEXT_BROKER
-    if explicit_role in {"rm", "employee", "relationship_manager"} or explicit_role.startswith(("rm_", "employee_", "relationship_manager_")):
+    if explicit_role:
         return PLATFORM_FEE_CONTEXT_RM
     first_verifier_id = (
         prop.get("broker_id")
@@ -281,6 +281,8 @@ async def _property_platform_fee_context(db: AsyncIOMotorDatabase, prop: dict, o
             return PLATFORM_FEE_CONTEXT_RM
         if _is_broker_user(verifier):
             return PLATFORM_FEE_CONTEXT_BROKER
+        if verifier:
+            return PLATFORM_FEE_CONTEXT_RM
 
     if _mapped_value(
         prop.get("rm_id"),
@@ -303,7 +305,7 @@ async def _property_platform_fee_context(db: AsyncIOMotorDatabase, prop: dict, o
         owner.get("broker_lg_code"),
     ):
         return PLATFORM_FEE_CONTEXT_BROKER
-    return PLATFORM_FEE_CONTEXT_DEFAULT
+    return PLATFORM_FEE_CONTEXT_RM
 
 
 async def _add_customer_display_price(db: AsyncIOMotorDatabase, prop: dict, config: Optional[dict] = None) -> dict:
