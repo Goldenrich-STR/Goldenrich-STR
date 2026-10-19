@@ -495,7 +495,7 @@ const defaultPlatformFeeOverride = (key, existing = {}, fallbackValue = 0) => ({
   enabled: Boolean(existing.enabled),
   charge_type: 'percentage',
   value: existing.value ?? existing.percent ?? fallbackValue,
-  label: existing.label || (key === 'broker_mapped' ? 'Broker Mapped Platform Fee' : 'RM Mapped Platform Fee'),
+  label: existing.label || (key === 'broker_mapped' ? 'Broker Mapped Platform Fee' : 'RM, Telecaller & Other Platform Fee'),
 });
 
 const defaultPayoutCharge = (key, existing = {}) => ({
@@ -627,7 +627,7 @@ const PlatformFeeRuleInputs = ({ overrides, onChange }) => (
   <div className="mt-4 grid gap-3 md:grid-cols-2">
     {[
       ['broker_mapped', 'Broker Mapped Property (%)', 'Applies this platform fee percentage to broker-mapped properties only.'],
-      ['rm_mapped', 'RM Mapped Property (%)', 'Applies this platform fee percentage to RM or employee-mapped properties only.'],
+      ['rm_mapped', 'RM, Telecaller & Others (%)', 'Applies to every non-broker property, including RM, telecaller, employee, admin-assisted and self-listed host properties.'],
     ].map(([key, title, help]) => {
       const row = overrides[key] || {};
       return (
@@ -841,7 +841,7 @@ const PaymentTaxCommission = ({
                     <div className="min-w-0">
                       <p className="font-black text-slate-900">{title}</p>
                       <p className="mt-1 text-xs leading-5 text-slate-500">
-                        Configure separate platform fee percentages for broker-mapped and RM-mapped properties.
+                        Configure one percentage for broker-mapped properties and one for every non-broker listing source.
                       </p>
                     </div>
                     <span className="text-xs font-black uppercase tracking-wide text-emerald-700">Mapped Rules</span>

@@ -27,6 +27,7 @@ def test_explicit_first_verification_role_has_priority(resolver):
     db = _Db()
     assert asyncio.run(resolver(db, {"first_verification_role": "broker", "rm_id": "rm-1"})) == "broker_mapped"
     assert asyncio.run(resolver(db, {"first_verification_role": "relationship manager", "broker_id": "broker-1"})) == "rm_mapped"
+    assert asyncio.run(resolver(db, {"first_verification_role": "telecaller", "broker_id": "broker-1"})) == "rm_mapped"
 
 
 @pytest.mark.parametrize("resolver", RESOLVERS)
@@ -45,3 +46,10 @@ def test_first_verifier_database_role_is_used(resolver):
     })
     assert asyncio.run(resolver(db, {"broker_id": "broker-1", "rm_id": "rm-1"})) == "broker_mapped"
     assert asyncio.run(resolver(db, {"broker_id": "rm-1"})) == "rm_mapped"
+
+
+@pytest.mark.parametrize("resolver", RESOLVERS)
+def test_self_listed_and_other_roles_use_non_broker_rule(resolver):
+    db = _Db({"telecaller-1": {"role": "admin", "admin_role_key": "telecaller"}})
+    assert asyncio.run(resolver(db, {}, {"role": "host"})) == "rm_mapped"
+    assert asyncio.run(resolver(db, {"created_by_user_id": "telecaller-1"})) == "rm_mapped"
