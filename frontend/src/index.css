@@ -441,6 +441,21 @@
   transform-origin: center;
 }
 
+@keyframes akash-kandil-sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50% { transform: rotate(2.5deg); }
+}
+
+.akash-kandil {
+  transform-origin: 50% 0;
+  animation: akash-kandil-sway 3.4s ease-in-out infinite;
+  filter: drop-shadow(0 5px 6px rgba(196, 109, 0, .2));
+}
+
+.akash-kandil-right {
+  animation-delay: -1.7s;
+}
+
 @media (max-width: 640px) {
   .mobile-guest-dropdown {
     left: 0;
