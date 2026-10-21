@@ -430,6 +430,17 @@
   animation: float-reverse 5s ease-in-out infinite;
 }
 
+@keyframes diwali-garland-glow {
+  0%, 100% { opacity: .72; filter: drop-shadow(0 0 2px rgba(255, 185, 45, .55)); }
+  50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(255, 183, 38, .95)); }
+}
+
+.diwali-garland-bulb {
+  animation: diwali-garland-glow 2.1s ease-in-out infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
 @media (max-width: 640px) {
   .mobile-guest-dropdown {
     left: 0;

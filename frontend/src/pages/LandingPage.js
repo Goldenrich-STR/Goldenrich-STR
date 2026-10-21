@@ -2237,6 +2237,33 @@ const PREMIUM_COLLECTIONS = [
   }
 ];
 
+const DIWALI_BULBS = [
+  [40, 48], [108, 73], [178, 90], [248, 73], [316, 48],
+  [1284, 48], [1352, 73], [1422, 90], [1492, 73], [1560, 48],
+  [70, 112], [155, 124], [244, 112],
+  [1356, 112], [1445, 124], [1530, 112],
+];
+
+const DiwaliStringLights = () => (
+  <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[130px] overflow-hidden md:h-[155px]" aria-hidden="true">
+    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,211,120,0.24),transparent_68%)]" />
+    <svg viewBox="0 0 1600 150" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
+      <path d="M-20 12 C95 88 218 104 335 15" fill="none" stroke="#d89b35" strokeWidth="1.8" opacity="0.8" />
+      <path d="M-15 72 C90 142 205 148 320 72" fill="none" stroke="#e1a442" strokeWidth="1.5" opacity="0.7" />
+      <path d="M1265 15 C1382 104 1505 88 1620 12" fill="none" stroke="#d89b35" strokeWidth="1.8" opacity="0.8" />
+      <path d="M1280 72 C1395 148 1510 142 1615 72" fill="none" stroke="#e1a442" strokeWidth="1.5" opacity="0.7" />
+      {DIWALI_BULBS.map(([x, y], index) => (
+        <g key={`${x}-${y}`} className="diwali-garland-bulb" style={{ animationDelay: `${(index % 5) * 0.32}s` }}>
+          <rect x={x - 4} y={y - 8} width="8" height="7" rx="2" fill="#c68a2d" />
+          <circle cx={x} cy={y + 5} r="13" fill="#ffd66b" opacity="0.14" />
+          <circle cx={x} cy={y + 3} r="8" fill="#fff4bd" />
+          <circle cx={x - 2} cy={y} r="3" fill="#fffef0" />
+        </g>
+      ))}
+    </svg>
+  </div>
+);
+
 const STANDARD_FEATURES = [
   { label: 'Personalised Celebrations', icon: PartyPopper },
   { label: 'Caretaker Onsite', icon: UserCheck },
@@ -2321,8 +2348,9 @@ const CollectionsSection = ({
     <section className="relative w-full overflow-hidden bg-white py-10 md:py-12">
       <div className="relative z-10 mx-auto w-full max-w-[1216px] px-4 md:px-8">
         <ScrollReveal duration="duration-[800ms]">
-          <div className="relative left-1/2 mb-10 w-screen -translate-x-1/2 bg-[#F5F2EB] py-10 md:mb-12 md:py-12">
-            <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
+          <div className="relative left-1/2 mb-10 w-screen -translate-x-1/2 overflow-hidden bg-[#F8F3E8] py-10 md:mb-12 md:py-12">
+            <DiwaliStringLights />
+            <div className="relative z-10 mx-auto w-full max-w-[1216px] px-4 md:px-8">
             <div className="mb-6 flex items-end justify-between gap-4">
               <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
                 Discover Our Collection
