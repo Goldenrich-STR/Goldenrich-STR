@@ -2238,18 +2238,20 @@ const PREMIUM_COLLECTIONS = [
 ];
 
 const DIWALI_BULBS = [
-  [45, 30], [145, 48], [245, 62], [345, 72], [445, 79], [545, 84], [645, 87], [745, 89],
-  [855, 89], [955, 87], [1055, 84], [1155, 79], [1255, 72], [1355, 62], [1455, 48], [1555, 30],
-  [80, 80], [200, 99], [320, 113], [440, 123], [560, 130], [680, 134], [800, 136],
-  [920, 134], [1040, 130], [1160, 123], [1280, 113], [1400, 99], [1520, 80],
+  [42, 52], [112, 76], [185, 82], [255, 66], [318, 33],
+  [52, 127], [126, 109], [198, 80], [263, 43],
+  [1282, 33], [1345, 66], [1415, 82], [1488, 76], [1558, 52],
+  [1337, 43], [1402, 80], [1474, 109], [1548, 127],
 ];
 
 const DiwaliStringLights = () => (
   <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[130px] overflow-hidden md:h-[155px]" aria-hidden="true">
     <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,211,120,0.24),transparent_68%)]" />
     <svg viewBox="0 0 1600 150" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
-      <path d="M-20 12 C310 116 1290 116 1620 12" fill="none" stroke="#d89b35" strokeWidth="1.8" opacity="0.82" />
-      <path d="M-20 58 C330 162 1270 162 1620 58" fill="none" stroke="#e1a442" strokeWidth="1.5" opacity="0.72" />
+      <path d="M-20 24 C100 94 225 112 365 -18" fill="none" stroke="#d89b35" strokeWidth="1.8" opacity="0.82" />
+      <path d="M-20 142 C105 126 220 72 310 -18" fill="none" stroke="#e1a442" strokeWidth="1.5" opacity="0.72" />
+      <path d="M1235 -18 C1375 112 1500 94 1620 24" fill="none" stroke="#d89b35" strokeWidth="1.8" opacity="0.82" />
+      <path d="M1290 -18 C1380 72 1495 126 1620 142" fill="none" stroke="#e1a442" strokeWidth="1.5" opacity="0.72" />
       {DIWALI_BULBS.map(([x, y], index) => (
         <g key={`${x}-${y}`} className="diwali-garland-bulb" style={{ animationDelay: `${(index % 5) * 0.32}s` }}>
           <rect x={x - 4} y={y - 8} width="8" height="7" rx="2" fill="#c68a2d" />
