@@ -180,7 +180,7 @@ $deviceId = Ensure-Emulator
 Ensure-AdbReverse $deviceId
 
 Write-Host "Flutter detected! Installing dependencies..." -ForegroundColor Green
-Set-Location -Path (Join-Path $PSScriptRoot "mobile")
+Set-Location -Path "mobile"
 flutter pub get
 
 Write-Host "Launching Flutter App on emulator/device..." -ForegroundColor Green
