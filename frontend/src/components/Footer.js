@@ -9,6 +9,47 @@ const WhatsAppIcon = ({ className }) => (
   </svg>
 );
 
+const HangingDiya = ({ className = '' }) => (
+  <svg viewBox="0 0 44 112" className={className} aria-hidden="true">
+    <defs>
+      <linearGradient id="hanging-diya-bowl" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stopColor="#ffc928" />
+        <stop offset="0.55" stopColor="#ff9800" />
+        <stop offset="1" stopColor="#ed6c00" />
+      </linearGradient>
+      <linearGradient id="hanging-diya-flame" x1="0" y1="1" x2="0.7" y2="0">
+        <stop offset="0" stopColor="#ff7b00" />
+        <stop offset="0.55" stopColor="#ffc400" />
+        <stop offset="1" stopColor="#fff3a0" />
+      </linearGradient>
+    </defs>
+    <path d="M22 0V55" stroke="#f0a000" strokeWidth="1.6" />
+    <circle cx="22" cy="53" r="2.3" fill="#ffd23f" />
+    <path d="M22 57c-5.4 7.4-4.6 13.3 0 17.2 4.6-3.9 5.4-9.8 0-17.2Z" fill="url(#hanging-diya-flame)" />
+    <path d="M3 76c6.2 2.4 12.5 3.6 19 3.6s12.8-1.2 19-3.6c-1.8 15.2-9 23-19 23S4.8 91.2 3 76Z" fill="url(#hanging-diya-bowl)" />
+    <path d="M3 76c6.4 1.7 12.7 2.5 19 2.5s12.6-.8 19-2.5" fill="none" stroke="#ffdf46" strokeWidth="2.2" />
+    <path d="M10 84h24M13 90h18" stroke="#b94200" strokeWidth="1.6" strokeLinecap="round" opacity="0.9" />
+    <circle cx="12" cy="82" r="1.7" fill="#fff2a6" />
+    <circle cx="22" cy="85" r="1.7" fill="#fff2a6" />
+    <circle cx="32" cy="82" r="1.7" fill="#fff2a6" />
+  </svg>
+);
+
+const FooterDiyaCorners = () => (
+  <div className="pointer-events-none absolute inset-x-0 top-0 z-20 hidden h-32 overflow-hidden sm:block" aria-hidden="true">
+    <div className="absolute -top-7 left-2 flex items-start gap-0.5 md:left-5 md:gap-2">
+      <HangingDiya className="h-28 w-10 translate-y-5" />
+      <HangingDiya className="h-28 w-10 -translate-y-1" />
+      <HangingDiya className="h-28 w-10 translate-y-3" />
+    </div>
+    <div className="absolute -top-7 right-2 flex items-start gap-0.5 md:right-5 md:gap-2">
+      <HangingDiya className="h-28 w-10 translate-y-3" />
+      <HangingDiya className="h-28 w-10 -translate-y-1" />
+      <HangingDiya className="h-28 w-10 translate-y-5" />
+    </div>
+  </div>
+);
+
 const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals and spaces in India through technology, curation, and verified service.',
   location: 'Nashik, Maharashtra',
@@ -70,6 +111,7 @@ export default function Footer({ cmsContent }) {
     <>
       {/* Modern Sleek Dark Footer Section */}
       <footer className="relative overflow-hidden bg-[#0A121D] text-white border-t border-white/10">
+        <FooterDiyaCorners />
         <div className="relative z-10 mx-auto max-w-7xl px-6 py-20 md:px-10 lg:px-12 lg:py-24">
           {/* Main Grid Layout */}
           <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:gap-10">
