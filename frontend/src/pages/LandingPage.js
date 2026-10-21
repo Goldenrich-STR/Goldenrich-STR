@@ -2264,6 +2264,24 @@ const DiwaliStringLights = () => (
   </div>
 );
 
+const AkashKandil = ({ className = '', style }) => (
+  <svg viewBox="0 0 72 112" className={className} style={style} aria-hidden="true">
+    <path d="M36 0v13" stroke="#d79a22" strokeWidth="1.8" />
+    <path d="M22 13h28l-5 7H27Z" fill="#ff4fa1" />
+    <path d="M20 22 36 14l16 8-5 28H25Z" fill="#ffc900" />
+    <path d="m20 22 16 14L25 50Z" fill="#ff7b00" />
+    <path d="m52 22-16 14 11 14Z" fill="#ff4f91" />
+    <path d="M20 22h32L36 36Z" fill="#18d7c2" />
+    <path d="M25 50h22l-4 7H29Z" fill="#8f4fff" />
+    <path d="M29 57v34M36 57v43M43 57v34" stroke="#ffad00" strokeWidth="2" strokeLinecap="round" />
+    <path d="m27 88 2 9 2-9m3 9 2 11 2-11m3-9 2 9 2-9" fill="#ff4f91" />
+    <circle cx="10" cy="24" r="2" fill="#22d3c5" />
+    <circle cx="61" cy="19" r="2" fill="#ff4f91" />
+    <circle cx="62" cy="39" r="1.8" fill="#ffc400" />
+    <path d="M11 39h6M14 36v6M56 29h7M59.5 25.5v7" stroke="#ffae00" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+);
+
 const STANDARD_FEATURES = [
   { label: 'Personalised Celebrations', icon: PartyPopper },
   { label: 'Caretaker Onsite', icon: UserCheck },
@@ -3707,6 +3725,18 @@ const LandingPage = () => {
             </button>
           </div>
         </div>
+        {isNavScrolled && (
+          <>
+            <AkashKandil
+              className="akash-kandil absolute top-full hidden h-[76px] w-[50px] sm:block"
+              style={{ left: 'max(20px, calc((100vw - 1440px) / 2 + 20px))' }}
+            />
+            <AkashKandil
+              className="akash-kandil akash-kandil-right absolute top-full hidden h-[76px] w-[50px] sm:block"
+              style={{ right: 'max(20px, calc((100vw - 1440px) / 2 + 20px))' }}
+            />
+          </>
+        )}
       </nav>
 
       {/* Mobile Menu Overlay */}
