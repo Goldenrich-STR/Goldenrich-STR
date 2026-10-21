@@ -4863,7 +4863,12 @@ const LandingPage = () => {
                     <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
                     <div className="mb-6 flex items-end justify-between gap-4">
                       <div className="text-left">
-                        <h3 className="font-serif-hero text-[20px] font-semibold text-[#1E1E1E] md:text-[28px]">X-Space Series</h3>
+                        <div className="flex items-center gap-2.5 md:gap-3">
+                          <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-[#D4AF37]/80 bg-[#171717] shadow-[0_3px_8px_rgba(125,91,16,0.25)] md:h-8 md:w-8" title="X-Space Series">
+                            <Crown className="h-4 w-4 fill-[#D4AF37]/25 text-[#D4AF37] md:h-[18px] md:w-[18px]" />
+                          </span>
+                          <h3 className="font-serif-hero text-[20px] font-semibold text-[#1E1E1E] md:text-[28px]">X-Space Series</h3>
+                        </div>
                         <p className="mt-1 text-xs font-medium text-slate-600 md:text-sm">Private villas curated for elevated weekends and unhurried stays.</p>
                       </div>
                       <button type="button" onClick={() => navigate('/guest/browse?signature=true')} className="hidden text-sm font-semibold text-charcoal transition hover:text-terracotta md:block">View all →</button>
