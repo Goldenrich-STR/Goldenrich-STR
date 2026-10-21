@@ -2304,7 +2304,7 @@ const CollectionsSection = ({
 }) => {
   const sliderRef = React.useRef(null);
   const [activeCity, setActiveCity] = React.useState('All');
-  const [activeCategory, setActiveCategory] = React.useState('All');
+  const [activeCategory, setActiveCategory] = React.useState('residential');
   const [activePartnerStrip, setActivePartnerStrip] = React.useState(0);
   const activePartner = NASHIK_PARTNER_STRIPS[activePartnerStrip];
 
@@ -2324,7 +2324,6 @@ const CollectionsSection = ({
   }, [properties]);
 
   const categoryTabs = [
-    { id: 'All', label: 'All' },
     { id: 'residential', label: 'Residential' },
     { id: 'commercial', label: 'Commercial' },
     { id: 'event_venue', label: 'Event Venues' },
@@ -2341,12 +2340,11 @@ const CollectionsSection = ({
     return collectionProperties.filter((item) => String(item.city || '').trim().toLowerCase() === activeCity.toLowerCase()).slice(0, 10);
   }, [activeCity, collectionProperties]);
 
-  const filteredCollections = React.useMemo(() => {
-    if (activeCategory === 'All') {
-      return collectionProperties.slice(0, 10);
-    }
-    return (properties?.[activeCategory] || []).slice(0, 10);
-  }, [activeCategory, collectionProperties, properties]);
+  const filteredCollections = React.useMemo(
+    () => (properties?.[activeCategory] || []).slice(0, 8),
+    [activeCategory, properties]
+  );
+  const activeCategoryLabel = categoryTabs.find((tab) => tab.id === activeCategory)?.label || 'Spaces';
 
   const handleCardClick = (col) => {
     if (!col?.property_id) {
@@ -2632,7 +2630,6 @@ const CollectionsSection = ({
                       </button>
                     );
                   })}
-                  <button type="button" onClick={() => navigate('/guest/browse')} className="pb-2 transition-colors hover:text-charcoal">Discover All</button>
                 </div>
               </div>
               <div className="hidden space-x-2 pb-2 md:flex">
@@ -2644,6 +2641,26 @@ const CollectionsSection = ({
               {filteredCollections.map((item, index) => (
                 <RecentlyVisitedCard key={item.property_id || index} item={item} index={index} navigate={navigate} wishlist={wishlist} handleWishlistToggle={handleWishlistToggle} />
               ))}
+              <button
+                type="button"
+                onClick={() => navigate(`/guest/browse?category=${activeCategory}`)}
+                className="recently-visited-card group snap-start text-left outline-none"
+                aria-label={`Discover all ${activeCategoryLabel}`}
+              >
+                <div className="flex aspect-[16/10] items-center justify-center rounded-xl border border-[#d4af37]/50 bg-[linear-gradient(135deg,#1c1a16,#55411b)] p-6 shadow-sm transition duration-300 group-hover:border-[#d4af37] group-hover:shadow-lg">
+                  <div className="text-center text-white">
+                    <span className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-[#d4af37]/70 bg-[#d4af37]/15 text-[#f6d77d] transition-transform duration-300 group-hover:translate-x-1">
+                      <ArrowRight className="h-5 w-5" />
+                    </span>
+                    <p className="text-base font-semibold">Discover all</p>
+                    <p className="mt-1 text-xs text-white/75">{activeCategoryLabel} spaces</p>
+                  </div>
+                </div>
+                <div className="pt-3">
+                  <p className="text-[15px] font-semibold text-charcoal transition-colors group-hover:text-terracotta">View the full collection</p>
+                  <p className="mt-1.5 text-[12px] text-charcoal-muted">Explore every {activeCategoryLabel.toLowerCase()} listing</p>
+                </div>
+              </button>
             </div>
             </div>
         </ScrollReveal>
