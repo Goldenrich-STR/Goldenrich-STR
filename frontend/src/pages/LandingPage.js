@@ -2644,22 +2644,10 @@ const CollectionsSection = ({
               <button
                 type="button"
                 onClick={() => navigate(`/guest/browse?category=${activeCategory}`)}
-                className="recently-visited-card group snap-start text-left outline-none"
-                aria-label={`Discover all ${activeCategoryLabel}`}
+                className="my-auto shrink-0 self-center rounded-full border border-slate-300/90 bg-transparent px-4 py-2 text-sm font-semibold text-charcoal transition hover:border-charcoal hover:bg-slate-50"
+                aria-label={`View all ${activeCategoryLabel}`}
               >
-                <div className="flex aspect-[16/10] items-center justify-center rounded-xl border border-[#d4af37]/50 bg-[linear-gradient(135deg,#1c1a16,#55411b)] p-6 shadow-sm transition duration-300 group-hover:border-[#d4af37] group-hover:shadow-lg">
-                  <div className="text-center text-white">
-                    <span className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-[#d4af37]/70 bg-[#d4af37]/15 text-[#f6d77d] transition-transform duration-300 group-hover:translate-x-1">
-                      <ArrowRight className="h-5 w-5" />
-                    </span>
-                    <p className="text-base font-semibold">Discover all</p>
-                    <p className="mt-1 text-xs text-white/75">{activeCategoryLabel} spaces</p>
-                  </div>
-                </div>
-                <div className="pt-3">
-                  <p className="text-[15px] font-semibold text-charcoal transition-colors group-hover:text-terracotta">View the full collection</p>
-                  <p className="mt-1.5 text-[12px] text-charcoal-muted">Explore every {activeCategoryLabel.toLowerCase()} listing</p>
-                </div>
+                View all <span aria-hidden="true">→</span>
               </button>
             </div>
             </div>
