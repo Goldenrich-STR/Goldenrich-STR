@@ -3728,12 +3728,12 @@ const LandingPage = () => {
         {isNavScrolled && (
           <>
             <AkashKandil
-              className="akash-kandil absolute top-full hidden h-[76px] w-[50px] sm:block"
-              style={{ left: 'max(20px, calc((100vw - 1440px) / 2 + 20px))' }}
+              className="akash-kandil absolute top-full block h-[58px] w-[38px] sm:h-[76px] sm:w-[50px]"
+              style={{ left: 'max(12px, calc((100vw - 1440px) / 2 + 20px))' }}
             />
             <AkashKandil
-              className="akash-kandil akash-kandil-right absolute top-full hidden h-[76px] w-[50px] sm:block"
-              style={{ right: 'max(20px, calc((100vw - 1440px) / 2 + 20px))' }}
+              className="akash-kandil akash-kandil-right absolute top-full block h-[58px] w-[38px] sm:h-[76px] sm:w-[50px]"
+              style={{ right: 'max(12px, calc((100vw - 1440px) / 2 + 20px))' }}
             />
           </>
         )}
