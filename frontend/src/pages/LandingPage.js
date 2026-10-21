@@ -2641,14 +2641,16 @@ const CollectionsSection = ({
               {filteredCollections.map((item, index) => (
                 <RecentlyVisitedCard key={item.property_id || index} item={item} index={index} navigate={navigate} wishlist={wishlist} handleWishlistToggle={handleWishlistToggle} />
               ))}
-              <button
-                type="button"
-                onClick={() => navigate(`/guest/browse?category=${activeCategory}`)}
-                className="my-auto shrink-0 self-center rounded-full border border-slate-300/90 bg-transparent px-4 py-2 text-sm font-semibold text-charcoal transition hover:border-charcoal hover:bg-slate-50"
-                aria-label={`View all ${activeCategoryLabel}`}
-              >
-                View all <span aria-hidden="true">→</span>
-              </button>
+              <div className="flex shrink-0 self-stretch items-center px-1">
+                <button
+                  type="button"
+                  onClick={() => navigate(`/guest/browse?category=${activeCategory}`)}
+                  className="rounded-full border border-slate-300/90 bg-transparent px-4 py-2 text-sm font-semibold text-charcoal transition hover:border-charcoal hover:bg-slate-50"
+                  aria-label={`View all ${activeCategoryLabel}`}
+                >
+                  View all <span aria-hidden="true">→</span>
+                </button>
+              </div>
             </div>
             </div>
         </ScrollReveal>
