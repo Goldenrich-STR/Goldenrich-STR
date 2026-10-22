@@ -1,19 +1,17 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
-import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
-import DownloadAppButton from '../components/ui/DownloadAppButton';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText, formatPropertyDescription, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import ShareDropdown from '../components/ShareDropdown';
 import { getPropertySlug, extractPropertyId, getPropertyUrl } from '../lib/propertySlug';
 import { getSeoUrlForFilters } from '../lib/seoRoutes';
 import {
-  ArrowLeft,
+  Crown,
   Building2,
   MapPin,
   Star,
@@ -44,7 +42,6 @@ import {
   Camera,
   Sparkles,
   Tag,
-  Crown,
   Lock,
   Minus,
   Plus,
@@ -52,6 +49,7 @@ import {
   Share2,
   Phone,
   Percent,
+  Search,
 } from 'lucide-react';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
@@ -640,9 +638,11 @@ const PropertyDetail = () => {
   const [bookingCalendarOpen, setBookingCalendarOpen] = useState(false);
   const [bookingCalendarAnchor, setBookingCalendarAnchor] = useState('checkIn');
   const [bookingCalendarPosition, setBookingCalendarPosition] = useState(null);
+  const [calendarNightlyPrices, setCalendarNightlyPrices] = useState({});
   const checkInButtonRef = useRef(null);
   const checkOutButtonRef = useRef(null);
   const bookingCardRef = useRef(null);
+  const headerSearchRef = useRef(null);
   const restoredHourlyTimeRef = useRef(false);
   const [guests, setGuests] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -655,6 +655,7 @@ const PropertyDetail = () => {
   const [childrenGuests, setChildrenGuests] = useState(0);
   const [infantGuests, setInfantGuests] = useState(0);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
+  const [showHeaderGuestDropdown, setShowHeaderGuestDropdown] = useState(false);
   const [foodPreference, setFoodPreference] = useState('veg');
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
@@ -728,6 +729,7 @@ const PropertyDetail = () => {
   };
 
   useEffect(() => {
+    setCalendarNightlyPrices({});
     setImgIdx(0);
     setChildrenGuests(0);
     setInfantGuests(0);
@@ -1091,6 +1093,28 @@ const PropertyDetail = () => {
     }
   };
 
+  const fetchCalendarNightlyPrices = useCallback(async (months) => {
+    const uniqueMonths = [...new Set((months || []).filter(Boolean))];
+    if (!id || uniqueMonths.length === 0) return;
+    try {
+      const results = await Promise.all(uniqueMonths.map((month) => (
+        calendarAPI.getPublicNightlyPrices(id, month)
+      )));
+      setCalendarNightlyPrices((current) => {
+        const next = { ...current };
+        results.forEach((result) => {
+          (result.data?.days || []).forEach((day) => {
+            next[day.date] = day;
+          });
+        });
+        return next;
+      });
+    } catch (error) {
+      // The booking flow remains usable even if the optional calendar-rate display cannot load.
+      console.error('calendar nightly prices load failed', error);
+    }
+  }, [id]);
+
   const isBlocked = (iso) =>
     blockedDates.some((b) => {
       if (property?.category === 'event_venue' && b.source === 'booking') {
@@ -1150,7 +1174,10 @@ const PropertyDetail = () => {
   const updateCalendarPosition = () => {
     const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 0;
     const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
-    const bookingCardNode = bookingCardRef.current || checkInButtonRef.current;
+    const isHeaderCalendar = bookingCalendarAnchor === 'header';
+    const bookingCardNode = isHeaderCalendar
+      ? headerSearchRef.current
+      : (bookingCardRef.current || checkInButtonRef.current);
     
     if (bookingCardNode && viewportWidth) {
       const cardRect = bookingCardNode.getBoundingClientRect();
@@ -1169,9 +1196,11 @@ const PropertyDetail = () => {
         if (left + popupWidth > viewportWidth - 16) left = viewportWidth - popupWidth - 16;
       }
 
-      // Center vertically relative to property price card
-      const cardCenterY = cardRect.top + (cardRect.height / 2);
-      let top = cardCenterY - (popupHeight / 2);
+      // Header dates open directly under the top search bar; booking-card dates
+      // remain vertically centered alongside the card.
+      let top = isHeaderCalendar
+        ? cardRect.bottom + 12
+        : (cardRect.top + (cardRect.height / 2)) - (popupHeight / 2);
 
       // Clamp vertical top position within viewport margins
       if (top < 70) top = 70;
@@ -1199,7 +1228,7 @@ const PropertyDetail = () => {
         window.removeEventListener('resize', updateCalendarPosition);
       };
     }
-  }, [bookingCalendarOpen]);
+  }, [bookingCalendarOpen, bookingCalendarAnchor]);
 
   const openBookingCalendar = (anchor) => {
     setBookingCalendarAnchor(anchor);
@@ -1832,8 +1861,8 @@ const PropertyDetail = () => {
         seo={property?.seo}
       />
       {/* Header */}
-      <header className="glass px-4 md:px-8 py-4 sticky top-0 z-50">
-        <div className="w-full flex justify-between items-center gap-2">
+      <header className="glass py-4 sticky top-0 z-50">
+        <div className="relative mx-auto flex w-full max-w-[1440px] items-center justify-between gap-3 px-4 md:px-8">
           {/* Left Logo */}
           <div 
             className="flex items-center space-x-2 sm:space-x-3 cursor-pointer group shrink-0" 
@@ -1842,102 +1871,83 @@ const PropertyDetail = () => {
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain" />
           </div>
 
-          {/* Right Side Options (including Navigation Links) */}
-          <div className="hidden lg:flex items-center space-x-6">
-            <Link
-              to="/guest/browse"
-              className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
-            >
-              Discover
-            </Link>
-
-            <Link
-              to={user ? '/host/list-property' : '/list-your-property'}
-              className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
-            >
-              List your Property
-            </Link>
-
-            <LanguageSelector
-              currentLang={lang}
-              onLanguageChange={(newLang) => {
-                setLang(newLang);
-                localStorage.setItem('preferredLanguage', newLang);
-              }}
-            />
-
-            <DownloadAppButton isNavScrolled={true} />
-
-            {/* Back Button */}
-            <button
-              onClick={() => navigate(-1)}
-              className="text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-2"
-              data-testid="back-btn"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>{t('back')}</span>
+          <div ref={headerSearchRef} className="absolute left-1/2 hidden h-11 w-[540px] max-w-[48vw] -translate-x-1/2 xl:flex items-center rounded-full border border-gray-200 bg-[#f8f8f8] px-2 shadow-sm">
+            <div className="flex min-w-0 flex-1 items-center px-4 text-sm font-medium text-charcoal">
+              <span className="truncate">{propertyName}</span>
+            </div>
+            <button type="button" onClick={() => openBookingCalendar('header')} className="border-l border-gray-300 px-7 text-left text-sm font-medium text-charcoal transition hover:text-terracotta">
+              <span className="block whitespace-nowrap">{checkIn && checkOut ? `${new Date(`${checkIn}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${new Date(`${checkOut}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}` : 'Select Date'}</span>
             </button>
-
-            {user ? (
-              <button onClick={logout} className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-5 py-2 rounded-full transition shadow-premium">
-                {t('signOut')}
+            <div className="relative border-l border-gray-300 px-7">
+              <button type="button" onClick={() => setShowHeaderGuestDropdown((value) => !value)} className="flex text-left text-sm font-medium text-charcoal transition hover:text-terracotta">
+                <span className="whitespace-nowrap">{adultGuests} {property.category === 'commercial' ? 'Staff' : adultGuests === 1 ? 'Guest' : 'Guests'}</span>
               </button>
-            ) : (
-              <button onClick={() => navigate('/login')} className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-6 py-2 rounded-full transition shadow-premium">
-                Sign In
-              </button>
-            )}
+              {showHeaderGuestDropdown && (
+                <>
+                  <button type="button" aria-label="Close guest picker" className="fixed inset-0 z-40 cursor-default" onClick={() => setShowHeaderGuestDropdown(false)} />
+                  <div className="absolute right-0 top-[calc(100%+14px)] z-50 w-64 rounded-2xl border border-gray-100 bg-white p-4 shadow-premium">
+                    <p className="text-sm font-bold text-charcoal">{property.category === 'commercial' ? 'Staff' : 'Guests'}</p>
+                    <p className="mt-1 text-xs text-charcoal-muted">Choose who will be visiting.</p>
+                    <div className="mt-4 flex items-center justify-between">
+                      <button type="button" onClick={() => updateAdultGuests(-1)} disabled={adultGuests <= 1} className="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-charcoal disabled:opacity-40">−</button>
+                      <span className="text-base font-bold text-charcoal">{adultGuests}</span>
+                      <button type="button" onClick={() => updateAdultGuests(1)} disabled={!canAddChargeableGuest} className="grid h-8 w-8 place-items-center rounded-full border border-gray-200 text-charcoal disabled:opacity-40">+</button>
+                    </div>
+                    <button type="button" onClick={() => setShowHeaderGuestDropdown(false)} className="mt-4 w-full rounded-xl bg-charcoal py-2 text-xs font-bold uppercase tracking-wider text-white">Done</button>
+                  </div>
+                </>
+              )}
+            </div>
+            <button type="button" onClick={() => openBookingCalendar('header')} className="grid h-9 w-9 place-items-center rounded-full bg-charcoal text-white transition hover:bg-terracotta" aria-label="Search availability">
+              <Search className="h-4 w-4" />
+            </button>
           </div>
 
-          {/* Mobile Back Button */}
-          <div className="lg:hidden flex items-center space-x-3">
+          <div className="flex items-center">
             <button
-              onClick={() => navigate(-1)}
-              className="text-sm font-bold tracking-tight text-charcoal-muted hover:text-terracotta uppercase tracking-widest transition-colors flex items-center space-x-1"
-              data-testid="back-btn"
+              type="button"
+              onClick={() => user ? logout() : navigate('/login')}
+              className="grid h-10 w-10 place-items-center rounded-full border border-gray-200 bg-white text-charcoal transition hover:border-terracotta hover:text-terracotta"
+              aria-label={user ? t('signOut') : 'Sign in'}
+              title={user ? t('signOut') : 'Sign in'}
             >
-              <ArrowLeft className="w-4 h-4" />
-              <span>{t('back')}</span>
+              <Users className="h-5 w-5" />
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-8 py-8">
+      <div className="mx-auto w-full max-w-[1216px] px-4 py-8 md:px-8">
         <div className="relative z-30 mb-8 animate-fade-in">
-           <div className="flex items-center gap-2 flex-wrap mb-3">
-              <span className="px-3 py-1 bg-terracotta/10 text-terracotta text-[10px] font-bold tracking-tight uppercase tracking-[0.2em] rounded-full">
-                {formatCategoryLabel(property.category)}
-              </span>
-              {isSignatureSeries && (
-                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-black border border-[#D4AF37] text-[9px] font-serif font-bold uppercase tracking-[0.15em] text-[#D4AF37] shadow-lg shrink-0">
-                  <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-                  Signature Series
-                </span>
-              )}
-              {property.instant_booking && (
-                <span className="flex items-center text-amber-700 text-[10px] font-bold tracking-tight uppercase tracking-wider bg-amber-50 px-3 py-1 rounded-full border border-amber-200" title="Instant Booking: Confirmed instantly upon payment without waiting for host approval">
-                  <Zap className="w-3 h-3 mr-1 fill-current text-amber-500" /> Instant Booking
-                </span>
-              )}
-           </div>
+           <nav aria-label="Breadcrumb" className="mb-4 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs font-medium">
+             <Link to="/" className="shrink-0 text-terracotta transition-colors hover:text-charcoal">Home</Link>
+             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-charcoal-muted/60" />
+             <Link to={`/guest/browse?category=${encodeURIComponent(property.category || '')}`} className="shrink-0 text-terracotta transition-colors hover:text-charcoal">
+               {formatCategoryLabel(property.category) || 'Spaces'}
+             </Link>
+             <ChevronRight className="h-3.5 w-3.5 shrink-0 text-charcoal-muted/60" />
+             <span className="truncate text-charcoal-muted">{formatPropertyTypeLabel(property.property_type || property.property_subtype || property.category) || 'Space'}</span>
+           </nav>
            <div className="relative z-30 flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-             <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight" data-testid="property-title">
-               {propertyName}
-             </h1>
+             <div>
+               <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight" data-testid="property-title">
+                 {propertyName}
+               </h1>
+             </div>
              <div className="flex items-center gap-3 shrink-0 mt-2 md:mt-0">
-               {/* Share Option */}
                <ShareDropdown
                  property={property}
                  align="right"
                  trigger={
-                   <button className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm text-charcoal hover:text-terracotta text-xs font-bold cursor-pointer">
+                   <button
+                     type="button"
+                     className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm text-charcoal hover:text-terracotta text-xs font-bold cursor-pointer"
+                   >
                      <Share2 className="w-4 h-4" />
                      <span>Share</span>
                    </button>
                  }
                />
-               
                {/* Save (Wishlist) Option */}
                <button
                  onClick={() => handleWishlistToggle(property.property_id)}
@@ -1948,22 +1958,24 @@ const PropertyDetail = () => {
                </button>
              </div>
            </div>
-           <div className="flex items-center text-charcoal-muted font-bold text-sm flex-wrap gap-6">
+           <div className="hidden">
              <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{formatAddress(property.address, property.city)}</span>
-             {property.rating > 0 && property.review_count > 0 ? (
+             <span className="flex items-center">
+               <Building2 className="mr-2 h-4 w-4 text-terracotta" />
+               {`${formatPropertyTypeLabel(property.property_type || property.property_subtype || property.category) || 'Space'} · ${formatCategoryLabel(property.category)}`}
+             </span>
+             {property.rating > 0 && property.review_count > 0 && (
                <div className="flex items-center space-x-1">
                   <Star className="w-4 h-4 text-amber-500 fill-current" />
                   <span className="text-charcoal font-bold tracking-tight">{property.rating.toFixed(1)}</span>
                   <span className="text-charcoal-muted ml-1 underline cursor-pointer">({property.review_count} {property.review_count === 1 ? 'Review' : 'Reviews'})</span>
                </div>
-             ) : (
-               <span className="px-3 py-1 rounded-full bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold uppercase tracking-wider">New</span>
              )}
            </div>
         </div>
 
         {/* Premium Gallery */}
-        <div className="relative group mb-12 animate-slide-up" data-testid="gallery">
+        <div className="relative group mb-5 animate-slide-up" data-testid="gallery">
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 rounded-3xl overflow-hidden shadow-elevated bg-white p-2">
             <div className="lg:col-span-2 lg:row-span-2 relative overflow-hidden group/main bg-stone-200 aspect-[4/3] lg:aspect-auto">
               {/* Skeleton / Placeholder state while image is loading */}
@@ -1983,6 +1995,15 @@ const PropertyDetail = () => {
                   event.currentTarget.src = PROPERTY_IMAGE_FALLBACK;
                 }}
               />
+              {isSignatureSeries && (
+                <Link
+                  to="/guest/browse?signature=true"
+                  className="absolute left-3 top-3 z-30 inline-flex items-center gap-1 rounded border border-[#D4AF37] bg-black/95 px-2.5 py-1 text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow transition hover:scale-[1.02]"
+                >
+                  <Crown className="h-2.5 w-2.5 fill-[#D4AF37]/20 text-[#D4AF37]" />
+                  X-Space Series
+                </Link>
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/main:opacity-100 transition-opacity duration-500 z-10"></div>
               
               {resolvedImages.length > 1 && (
@@ -2042,6 +2063,11 @@ const PropertyDetail = () => {
                <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">{t('showAllPhotos')}</span>
             </button>
           </div>
+        </div>
+
+        <div className="mb-12 flex items-center gap-2 text-sm font-semibold text-charcoal-muted">
+          <MapPin className="h-4 w-4 shrink-0 text-terracotta" />
+          <span>{formatAddress(property.address, property.city, property.state)}</span>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
@@ -2758,12 +2784,6 @@ const PropertyDetail = () => {
                     </>
                   )}
                 </div>
-                {property.instant_booking && (
-                   <div className="flex items-center space-x-1.5 text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full border border-amber-200/80">
-                      <Zap className="w-3.5 h-3.5 fill-current text-amber-500" />
-                      <span className="text-[10px] font-bold tracking-tight uppercase tracking-wider">Instant Booking</span>
-                   </div>
-                )}
               </div>
               {['villa', 'homestay', 'home_stay'].includes(String(property.property_type || property.property_subtype || '').toLowerCase()) && pricingBadgeText && (
                 <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-emerald-800">
@@ -3297,8 +3317,11 @@ const PropertyDetail = () => {
                 checkOut={checkOut}
                 minDate={todayISO}
                 blockedDates={blockedDates}
+                nightlyPrices={calendarNightlyPrices}
+                defaultNightlyPrice={displayPricePerNight}
                 singleDate={isHourlySingleDay}
                 desktopPosition={bookingCalendarPosition}
+                onVisibleMonthsChange={fetchCalendarNightlyPrices}
                 onChange={({ checkIn: nextCheckIn, checkOut: nextCheckOut }) => {
                   setCheckIn(nextCheckIn);
                   setCheckOut(nextCheckOut);
@@ -3607,13 +3630,7 @@ const PropertyDetail = () => {
           </div>
           {checkIn && checkOut && (
             <div 
-              onClick={() => {
-                const widget = document.getElementById('cal-trigger');
-                if (widget) {
-                  widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                  widget.focus();
-                }
-              }} 
+              onClick={() => openBookingCalendar('checkIn')}
               className="text-[10px] font-bold text-terracotta underline cursor-pointer mt-0.5"
             >
               {`${new Date(checkIn).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})} - ${new Date(checkOut).toLocaleDateString('en-IN', {month: 'short', day: 'numeric'})}`}
@@ -3623,11 +3640,7 @@ const PropertyDetail = () => {
         <button
           onClick={() => {
             if (!checkIn || !checkOut) {
-              const widget = document.getElementById('cal-trigger');
-              if (widget) {
-                widget.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                widget.focus();
-              }
+              openBookingCalendar('checkIn');
             } else {
               handleBookNow(null, bookingPaymentType);
             }
@@ -3650,6 +3663,3 @@ const PropertyDetail = () => {
 };
 
 export default PropertyDetail;
-
-
-

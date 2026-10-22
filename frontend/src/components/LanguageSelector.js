@@ -166,7 +166,7 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
             openDropdown();
           }
         }}
-        className="flex items-center space-x-1 font-sans font-semibold text-[17px] tracking-tight hover:text-terracotta transition-colors duration-200 cursor-pointer group bg-transparent border-none p-0 text-inherit"
+        className="flex items-center space-x-1 font-sans font-semibold text-[14px] tracking-tight hover:text-terracotta transition-colors duration-200 cursor-pointer group bg-transparent border-none p-0 text-inherit"
       >
         <span>Property Types</span>
         <ChevronDown 

@@ -240,7 +240,7 @@ const AboutUs = () => {
       />
 
       {/* Header / Navbar */}
-      <nav className="absolute top-0 left-0 right-0 w-full z-50 flex justify-between items-center text-charcoal px-6 md:px-12 lg:px-20 h-20 bg-white/80 backdrop-blur-md border-b border-stone">
+      <nav className="sticky top-0 z-50 flex h-20 w-full items-center justify-between border-b border-stone bg-white/95 px-6 text-charcoal shadow-sm backdrop-blur-md md:px-12 lg:px-20">
         <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
           <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
         </div>
@@ -382,16 +382,17 @@ const AboutUs = () => {
       )}
 
       {/* Hero Header Section - Clean Trulia Style */}
-      <div className="relative pt-32 pb-16 md:pt-44 md:pb-20 bg-[#FBFBFA] border-b border-gray-200">
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-6">
-          <div className="inline-flex items-center space-x-2 bg-emerald-50 text-emerald-800 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest">
+      <div className="relative overflow-hidden border-b border-[#d9cfbd] bg-[#f8f5ee] pb-16 pt-16 md:pb-20 md:pt-20">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full border-[28px] border-[#d8b149]/15" />
+        <div className="relative z-10 mx-auto max-w-4xl space-y-6 border-l-4 border-[#c89e2b] px-6 pl-7 md:px-8 md:pl-10">
+          <div className="inline-flex items-center space-x-2 rounded-full border border-[#d8c27c] bg-[#fffaf0] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#8a6811]">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Discover X-Space360</span>
           </div>
-          <h1 className="text-4xl md:text-5xl lg:text-[56px] font-black tracking-tight font-sans text-[#0F4A33] leading-[1.1]">
+          <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-[#0F4A33] md:text-5xl lg:text-[56px]">
             About X-Space360
           </h1>
-          <p className="text-xl md:text-2xl text-gray-500 font-light leading-relaxed max-w-3xl mx-auto">
+          <p className="max-w-3xl text-xl font-light leading-relaxed text-gray-500 md:text-2xl">
             {t('aboutSubtitle')}
           </p>
         </div>

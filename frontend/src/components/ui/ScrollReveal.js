@@ -12,7 +12,7 @@ export default function ScrollReveal({
   duration = 'duration-1000',
   threshold = 0.05,
   rootMargin = '50px 0px 0px 0px',
-  fallbackDelay = 1200,
+  fallbackDelay = null,
   direction = 'up' // 'up', 'down', 'left', 'right', 'none'
 }) {
   const [isVisible, setIsVisible] = useState(() => {
@@ -37,13 +37,17 @@ export default function ScrollReveal({
       }
     }
 
-    const fallbackTimer = setTimeout(() => {
-      setIsVisible(true);
-    }, fallbackDelay + delay);
+    // Do not reveal every section on a timer: that finishes the animation
+    // before the visitor has scrolled to it. IntersectionObserver is the
+    // normal reveal trigger; the no-observer branch below remains the
+    // accessibility fallback.
+    const fallbackTimer = typeof fallbackDelay === 'number' && fallbackDelay > 0
+      ? setTimeout(() => setIsVisible(true), fallbackDelay + delay)
+      : null;
 
     if (typeof IntersectionObserver === 'undefined') {
       setIsVisible(true);
-      clearTimeout(fallbackTimer);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       return;
     }
 
@@ -51,7 +55,7 @@ export default function ScrollReveal({
       ([entry]) => {
         if (entry.isIntersecting) {
           setIsVisible(true);
-          clearTimeout(fallbackTimer);
+          if (fallbackTimer) clearTimeout(fallbackTimer);
           if (elementRef.current) {
             observer.unobserve(elementRef.current);
           }
@@ -69,7 +73,7 @@ export default function ScrollReveal({
     }
 
     return () => {
-      clearTimeout(fallbackTimer);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       if (currentRef) {
         observer.unobserve(currentRef);
       }

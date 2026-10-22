@@ -450,6 +450,9 @@ export const calendarAPI = {
       params: { month, year },
     }),
 
+  getPublicNightlyPrices: (propertyId, month) =>
+    apiClient.get(`/v1/price-engine/public-calendar/${propertyId}`, { params: { month } }),
+
   listExternalCalendars: (propertyId) =>
     apiClient.get(`/calendar/properties/${propertyId}/external-calendars`),
 
