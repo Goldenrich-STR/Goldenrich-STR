@@ -35,7 +35,7 @@ function StoreBadges() {
 
 function PhonePreview() {
   return (
-    <div className="relative mx-auto h-[315px] w-[196px] rounded-[28px] border-[3px] border-[#4b5668] bg-white p-[9px] shadow-[0_13px_28px_rgba(24,39,60,0.24)] sm:h-[330px] sm:w-[205px]">
+    <div className="relative mx-auto h-[290px] w-[180px] rounded-[26px] border-[3px] border-[#4b5668] bg-white p-[8px] shadow-[0_13px_28px_rgba(24,39,60,0.24)] sm:h-[305px] sm:w-[190px]">
       <div className="absolute left-1/2 top-[5px] z-20 h-[13px] w-[50px] -translate-x-1/2 rounded-full bg-[#182334]" />
       <div className="h-full overflow-hidden rounded-[19px] border border-[#e1e6ec] bg-[#f7f8f9] text-[#17243b]">
         <div className="bg-white px-3 pb-2 pt-5">
@@ -80,8 +80,8 @@ function PhonePreview() {
         </div>
       </div>
 
-      <div className="absolute -right-[31px] top-[75px] flex h-11 w-11 items-center justify-center rounded-full bg-[#087f5b] text-white shadow-[0_6px_16px_rgba(8,127,91,0.35)] ring-[5px] ring-white/85">
-        <Bell className="h-5 w-5 fill-white" />
+      <div className="absolute -right-[27px] top-[68px] flex h-10 w-10 items-center justify-center rounded-full bg-[#087f5b] text-white shadow-[0_6px_16px_rgba(8,127,91,0.35)] ring-[5px] ring-white/85">
+        <Bell className="h-[18px] w-[18px] fill-white" />
         <span className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full bg-[#e32727] ring-2 ring-white" />
       </div>
     </div>
@@ -128,7 +128,7 @@ export default function AppPromoSection() {
             </div>
           </div>
 
-          <div className="relative hidden h-full items-end justify-center lg:flex">
+          <div className="relative hidden h-full items-end justify-center lg:flex lg:-translate-x-10">
             <PhonePreview />
             <div className="absolute bottom-[20px] left-1/2 z-30 flex -translate-x-[24%] items-center gap-2 whitespace-nowrap rounded-full bg-white px-4 py-2 text-[14px] font-semibold text-[#24364f] shadow-[0_4px_15px_rgba(25,47,75,0.17)]">
               <span className="text-[#0795c9]">↓</span>

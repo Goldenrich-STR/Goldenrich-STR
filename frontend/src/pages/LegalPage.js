@@ -394,36 +394,36 @@ const LegalPage = () => {
       )}
 
       {/* Hero Header Section */}
-      <div className="relative pt-14 pb-14 md:pt-20 md:pb-20 bg-[#0C121D] text-white overflow-hidden border-b border-[#E0A51B]/20">
-        <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1450133064473-71024230f91b?q=80&w=2070')] bg-cover bg-center" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/95 to-[#1E293B]/80" />
+      <div className="relative overflow-hidden border-b border-[#d9cfbd] bg-[#f8f5ee] pb-14 pt-14 md:pb-20 md:pt-20">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full border-[28px] border-[#d8b149]/15" />
+        <div className="pointer-events-none absolute right-28 top-20 h-36 w-36 rounded-full border border-[#0f4a33]/10" />
         
-        <div className="relative z-10 max-w-5xl mx-auto px-6 text-center space-y-4">
-          <div className="inline-flex items-center space-x-2 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-[#E0A51B]">
+        <div className="relative z-10 mx-auto max-w-5xl space-y-4 border-l-4 border-[#c89e2b] px-6 pl-7 md:px-8 md:pl-10">
+          <div className="inline-flex items-center space-x-2 rounded-full border border-[#d8c27c] bg-[#fffaf0] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#8a6811]">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Platform Governance</span>
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold tracking-tight text-white font-serif">
+          <h1 className="max-w-3xl text-4xl font-black leading-[1.08] tracking-tight text-[#0F4A33] md:text-6xl">
             {isLegalIndex ? 'X-Space360 Legal Policies' : (selectedDoc?.title || legalData.title || 'Legal Terms & Platform Policies')}
           </h1>
-          <p className="text-xs md:text-sm text-white/70 max-w-2xl mx-auto font-medium">
+          <p className="max-w-2xl text-xs font-semibold text-charcoal-muted md:text-sm">
             Version {legalData.version || '2026.1'} · Effective Date {legalData.effective_date || '2026-07-03'}
           </p>
         </div>
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-6 md:px-10 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-[300px_1fr] gap-8">
+      <main className="flex-1 bg-[#fcfbf8] py-10 md:py-14">
+        <div className="mx-auto grid w-full max-w-7xl grid-cols-1 gap-8 px-6 md:px-10 lg:grid-cols-[290px_minmax(0,1fr)] lg:gap-12">
           
           {/* Document Selector Sidebar */}
-          <aside className="lg:sticky lg:top-28 h-fit rounded-3xl border border-sand-200 bg-white p-5 shadow-premium">
-            <div className="flex items-center gap-3 pb-4 border-b border-sand-100 mb-3">
-              <div className="w-10 h-10 rounded-2xl bg-terracotta/10 text-terracotta flex items-center justify-center">
+          <aside className="h-fit rounded-[28px] border border-[#e8e1d4] bg-white p-4 shadow-[0_14px_38px_rgba(27,38,31,0.06)] lg:sticky lg:top-28">
+            <div className="mb-3 flex items-center gap-3 border-b border-[#eee9df] px-2 pb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#f5edda] text-[#9b7518]">
                 <Shield className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-extrabold uppercase tracking-widest text-charcoal">Legal Policies</p>
+                <p className="text-xs font-extrabold uppercase tracking-widest text-[#0F4A33]">Policy Library</p>
                 <p className="text-[11px] text-charcoal-muted font-semibold">{documents.length} Published Documents</p>
               </div>
             </div>
@@ -450,8 +450,8 @@ const LegalPage = () => {
                     to={href}
                     className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all ${
                       active
-                        ? 'bg-terracotta text-white shadow-premium'
-                        : 'text-charcoal-light hover:bg-stone hover:text-charcoal'
+                        ? 'bg-[#0F4A33] text-white shadow-[0_8px_18px_rgba(15,74,51,0.18)]'
+                        : 'text-charcoal-light hover:bg-[#f8f4ea] hover:text-[#0F4A33]'
                     }`}
                   >
                     <span className="flex items-center gap-2.5 min-w-0">
@@ -466,23 +466,23 @@ const LegalPage = () => {
           </aside>
 
           {/* Document Content View */}
-          <section className="rounded-3xl border border-sand-200 bg-white p-6 md:p-10 shadow-premium">
+          <section className="rounded-[30px] border border-[#e8e1d4] bg-white p-6 shadow-[0_14px_38px_rgba(27,38,31,0.06)] md:p-10 lg:p-12">
             {loading ? (
               <p className="text-charcoal-muted text-sm font-semibold">Loading legal document...</p>
             ) : selectedDoc ? (
               <>
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 mb-8 border-b border-sand-100">
+                <div className="mb-8 flex flex-col justify-between gap-4 border-b border-[#eee9df] pb-7 md:flex-row md:items-center">
                   <div>
-                    <span className="inline-block text-[10px] font-extrabold uppercase tracking-widest text-terracotta bg-terracotta/10 px-3 py-1 rounded-full mb-2">
+                    <span className="mb-3 inline-block rounded-full bg-[#f5edda] px-3 py-1 text-[10px] font-extrabold uppercase tracking-widest text-[#8a6811]">
                       {selectedDoc?.type === 'agreement' ? 'Platform Agreement' : 'Official Policy'}
                     </span>
-                    <h2 className="text-2xl md:text-3xl font-extrabold text-charcoal tracking-tight">
+                    <h2 className="text-2xl font-extrabold tracking-tight text-[#0F4A33] md:text-4xl">
                       {selectedDoc?.title}
                     </h2>
                   </div>
-                  <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold w-fit">
-                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                    Verified Active
+                  <span className="inline-flex w-fit items-center gap-2 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700">
+                    <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                    Current policy
                   </span>
                 </div>
 
