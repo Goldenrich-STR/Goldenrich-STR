@@ -8,7 +8,6 @@ import { cmsAPI } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import SEO from '../components/SEO';
 import LanguageSelector from '../components/LanguageSelector';
-import ChatbotWidget from '../components/ChatbotWidget';
 import Footer from '../components/Footer';
 
 const DEFAULT_SUPPORT_DATA = {
@@ -455,30 +454,26 @@ const SupportPage = () => {
       )}
 
       {/* Hero Section */}
-      <main id="main-content" className="relative bg-[#0C121D] text-white py-24 px-6 md:px-12 lg:px-20 overflow-hidden border-b border-[#E0A51B]/20">
-        {/* Subtle mesh background grid */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] opacity-20" />
-        <div className="absolute inset-0 bg-gradient-to-tr from-[#0F172A] via-[#0F172A]/90 to-[#1E293B]/70" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#0F172A]/10 to-[#0F172A]" />
-        <div className="absolute top-1/3 left-1/4 w-[30rem] h-[30rem] bg-terracotta/5 rounded-full blur-[120px] pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-[30rem] h-[30rem] bg-[#E0A51B]/5 rounded-full blur-[120px] pointer-events-none" />
+      <main id="main-content" className="relative overflow-hidden border-b border-[#d9cfbd] bg-[#f8f5ee] px-6 py-16 md:px-12 md:py-20 lg:px-20">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full border-[28px] border-[#d8b149]/15" />
+        <div className="pointer-events-none absolute right-28 top-20 h-36 w-36 rounded-full border border-[#0f4a33]/10" />
 
-        <div className="relative max-w-4xl mx-auto text-center space-y-8 z-10">
+        <div className="relative z-10 mx-auto max-w-4xl space-y-8 border-l-4 border-[#c89e2b] pl-6 md:pl-8">
           <div className="space-y-4">
-            <span className="inline-block px-4 py-1.5 bg-terracotta/15 text-terracotta border border-terracotta/30 text-[10px] font-black uppercase tracking-widest rounded-full">
+            <span className="inline-block rounded-full border border-[#d8c27c] bg-[#fffaf0] px-4 py-1.5 text-[10px] font-black uppercase tracking-widest text-[#8a6811]">
               Support Center
             </span>
-            <h1 className="text-4xl md:text-6xl font-black tracking-tight leading-tight text-white">
-              X-Space360 <span className="text-terracotta italic font-serif">Help Center</span>
+            <h1 className="text-4xl font-black leading-[1.08] tracking-tight text-[#0F4A33] md:text-6xl">
+              X-Space360 <span className="font-serif italic text-[#9b7518]">Help Center</span>
             </h1>
-            <p className="text-sm md:text-base text-white/70 font-medium max-w-xl mx-auto leading-relaxed">
+            <p className="max-w-xl text-sm font-medium leading-relaxed text-charcoal-light md:text-base">
               {supportData.subtitle}
             </p>
           </div>
 
           {/* Search Form - Robust flex row prevents button clipping */}
           <div className="max-w-2xl mx-auto">
-            <div className="flex bg-white shadow-premium rounded-2xl border border-sand-200 overflow-hidden p-1">
+            <div className="flex overflow-hidden rounded-2xl border border-[#dfd5c5] bg-white p-1 shadow-[0_12px_28px_rgba(27,38,31,0.08)]">
               <div className="flex items-center pl-4 text-gray-400">
                 <Search className="w-5 h-5" />
               </div>
@@ -495,7 +490,7 @@ const SupportPage = () => {
               <button
                 type="button"
                 onClick={scrollToFaq}
-                className="bg-terracotta hover:bg-terracotta-hover text-white px-8 text-xs font-black uppercase tracking-widest rounded-xl transition-all flex items-center justify-center shrink-0"
+                className="flex shrink-0 items-center justify-center rounded-xl bg-[#0F4A33] px-8 text-xs font-black uppercase tracking-widest text-white transition-all hover:bg-[#173f2d]"
               >
                 Search
               </button>
@@ -505,7 +500,7 @@ const SupportPage = () => {
       </main>
 
       {/* Grid: 4 Support Channel Cards */}
-      <section className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 -mt-10 relative z-20">
+      <section className="relative z-20 mx-auto max-w-7xl px-6 pb-2 pt-10 md:px-12 lg:px-20">
         <h3 className="text-xs font-black text-charcoal-muted uppercase tracking-widest text-center mb-6 hidden md:block">
           {supportData.assist_heading}
         </h3>
@@ -807,7 +802,6 @@ const SupportPage = () => {
 
       {/* Footer Branding */}
       <Footer />
-      <ChatbotWidget />
     </div>
   );
 };
