@@ -19,6 +19,8 @@ class OTPService:
         """Initialize Redis connection — fall back to in-memory on any failure."""
         self.otp_expiry = int(os.getenv("OTP_EXPIRY_MINUTES", "2")) * 60
         self.max_attempts = int(os.getenv("MAX_OTP_ATTEMPTS", "5"))
+        self.resend_cooldown = int(os.getenv("OTP_RESEND_COOLDOWN_SECONDS", "30"))
+        self.max_sends = int(os.getenv("MAX_OTP_SENDS_PER_WINDOW", "3"))
         self.otp_storage: Dict[str, tuple] = {}  # key -> (value, expires_at_epoch)
         self.redis_client = None
 
@@ -44,6 +46,12 @@ class OTPService:
 
     def _get_attempts_key(self, identifier: str, purpose: str = "login") -> str:
         return f"otp:attempts:{purpose}:{identifier}"
+
+    def _get_resend_key(self, identifier: str, purpose: str = "login") -> str:
+        return f"otp:resend:{purpose}:{identifier}"
+
+    def _get_send_count_key(self, identifier: str, purpose: str = "login") -> str:
+        return f"otp:send-count:{purpose}:{identifier}"
 
     # -------- in-memory helpers (TTL-aware) --------
 
@@ -86,7 +94,8 @@ class OTPService:
                 self._mem_set(otp_key, otp, self.otp_expiry)
                 self._mem_delete(attempts_key)
 
-            logger.info(f"OTP generated for {identifier} (purpose: {purpose}): {otp}")
+            # OTPs are secrets. Never put them in application logs.
+            logger.info("OTP generated for identifier ending %s (purpose: %s)", identifier[-4:], purpose)
             return {
                 "success": True,
                 "otp": otp,
@@ -99,6 +108,62 @@ class OTPService:
                 "success": False,
                 "error": f"Failed to generate OTP: {str(e)}",
             }
+
+    def check_and_record_send(self, identifier: str, purpose: str = "login") -> Dict:
+        """Apply a per-OTP resend cooldown and bounded send window.
+
+        Redis is used where available. The in-memory fallback keeps the same
+        behaviour for development, but production must use Redis so limits are
+        shared by every application worker.
+        """
+        resend_key = self._get_resend_key(identifier, purpose)
+        count_key = self._get_send_count_key(identifier, purpose)
+        try:
+            if self.redis_client:
+                try:
+                    cooldown_ttl = self.redis_client.ttl(resend_key)
+                    if cooldown_ttl > 0:
+                        return {"success": False, "retry_after": cooldown_ttl, "rate_limited": True}
+                    sends = int(self.redis_client.get(count_key) or 0)
+                    if sends >= self.max_sends:
+                        window_ttl = max(self.redis_client.ttl(count_key), 1)
+                        return {"success": False, "retry_after": window_ttl, "rate_limited": True}
+                    pipe = self.redis_client.pipeline()
+                    pipe.set(resend_key, "1", ex=self.resend_cooldown)
+                    pipe.incr(count_key)
+                    pipe.expire(count_key, self.otp_expiry)
+                    pipe.execute()
+                    return {"success": True, "resend_after": self.resend_cooldown, "sends_remaining": self.max_sends - sends - 1}
+                except Exception as redis_err:
+                    logger.warning("Redis OTP send-limit check failed (%s), using in-memory fallback.", redis_err)
+                    self.redis_client = None
+
+            cooldown = self._mem_get(resend_key)
+            if cooldown:
+                entry = self.otp_storage.get(resend_key)
+                retry_after = max(1, int(entry[1] - time.time())) if entry else self.resend_cooldown
+                return {"success": False, "retry_after": retry_after, "rate_limited": True}
+            sends = int(self._mem_get(count_key) or 0)
+            if sends >= self.max_sends:
+                entry = self.otp_storage.get(count_key)
+                retry_after = max(1, int(entry[1] - time.time())) if entry else self.otp_expiry
+                return {"success": False, "retry_after": retry_after, "rate_limited": True}
+            self._mem_set(resend_key, "1", self.resend_cooldown)
+            self._mem_set(count_key, str(sends + 1), self.otp_expiry)
+            return {"success": True, "resend_after": self.resend_cooldown, "sends_remaining": self.max_sends - sends - 1}
+        except Exception:
+            logger.exception("OTP send-limit check failed")
+            return {"success": False, "error": "Unable to send OTP at this time."}
+
+    def discard_otp(self, identifier: str, purpose: str = "login") -> None:
+        """Remove an OTP that could not be handed to the messaging provider."""
+        otp_key = self._get_otp_key(identifier, purpose)
+        if self.redis_client:
+            try:
+                self.redis_client.delete(otp_key)
+            except Exception:
+                logger.warning("Could not remove undelivered OTP from Redis")
+        self._mem_delete(otp_key)
 
     def verify_otp(self, identifier: str, submitted_otp: str, purpose: str = "login") -> Dict:
         """Verify submitted OTP against stored value."""
@@ -135,20 +200,6 @@ class OTPService:
             else:
                 stored_otp = self._mem_get(otp_key)
 
-            # Allow mock OTP "123456" in demo mode
-            is_demo = os.getenv("MSG91_DEMO_MODE", "").strip().lower() in {"1", "true", "yes", "on"}
-            if is_demo and submitted_otp.strip() == "123456":
-                if self.redis_client:
-                    try:
-                        self.redis_client.delete(otp_key)
-                        self.redis_client.delete(attempts_key)
-                    except Exception:
-                        pass
-                self._mem_delete(otp_key)
-                self._mem_delete(attempts_key)
-                logger.info(f"OTP verified successfully using mock fallback for {identifier}")
-                return {"success": True, "message": "OTP verified successfully"}
-
             if not stored_otp:
                 return {
                     "success": False,
@@ -178,7 +229,7 @@ class OTPService:
                 self._mem_set(attempts_key, str(new_attempts), self.otp_expiry)
 
             remaining = self.max_attempts - new_attempts
-            logger.warning(f"Invalid OTP attempt for {identifier}. Attempts remaining: {remaining}")
+            logger.warning("Invalid OTP attempt for identifier ending %s. Attempts remaining: %s", identifier[-4:], remaining)
             return {
                 "success": False,
                 "error": "Invalid OTP. Please try again.",
