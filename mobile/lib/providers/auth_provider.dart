@@ -11,7 +11,9 @@ class AuthProvider with ChangeNotifier {
   String? _token;
   bool _isLoading = false;
   String? _lastError;
-  String? _lastDemoOtp;
+  int? _otpExpiresIn;
+  int? _otpResendAfter;
+  String? _otpDeliveryStatus;
 
   UserModel? get currentUser => _currentUser;
   String? get token => _token;
@@ -19,7 +21,9 @@ class AuthProvider with ChangeNotifier {
   String? get lastError => _lastError;
   bool get isAuthenticated => _token != null;
   bool get isPromoClaimed => _currentUser?.isPromoClaimed ?? false;
-  String? get lastDemoOtp => _lastDemoOtp;
+  int? get otpExpiresIn => _otpExpiresIn;
+  int? get otpResendAfter => _otpResendAfter;
+  String? get otpDeliveryStatus => _otpDeliveryStatus;
 
   String _authErrorMessage(DioException e, String fallback) {
     final data = e.response?.data;
@@ -58,7 +62,9 @@ class AuthProvider with ChangeNotifier {
   Future<bool> sendOTP(String phone, {String purpose = 'registration'}) async {
     _isLoading = true;
     _lastError = null;
-    _lastDemoOtp = null;
+    _otpExpiresIn = null;
+    _otpResendAfter = null;
+    _otpDeliveryStatus = null;
     notifyListeners();
     try {
       final response = await _apiService.dio.post('/api/auth/send-otp', data: {
@@ -67,8 +73,10 @@ class AuthProvider with ChangeNotifier {
       });
       if (response.statusCode == 200) {
         final data = response.data;
-        if (data is Map && data['demo_mode'] == true && data['otp'] != null) {
-          _lastDemoOtp = data['otp'].toString();
+        if (data is Map) {
+          _otpExpiresIn = _asInt(data['expires_in']);
+          _otpResendAfter = _asInt(data['resend_after']);
+          _otpDeliveryStatus = data['delivery_status']?.toString();
         }
         return true;
       }
@@ -86,9 +94,12 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
+  int? _asInt(dynamic value) => value is int ? value : int.tryParse('$value');
+
   Future<bool> verifyOTP(String phone, String otp,
       {String purpose = 'registration'}) async {
     _isLoading = true;
+    _lastError = null;
     notifyListeners();
     try {
       final response =
@@ -98,7 +109,11 @@ class AuthProvider with ChangeNotifier {
         'purpose': purpose,
       });
       return response.statusCode == 200;
+    } on DioException catch (e) {
+      _lastError = _authErrorMessage(e, 'Unable to verify OTP.');
+      return false;
     } catch (e) {
+      _lastError = 'Unable to verify OTP.';
       return false;
     } finally {
       _isLoading = false;
