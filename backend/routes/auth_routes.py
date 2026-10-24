@@ -379,13 +379,27 @@ async def send_otp(request: SendOTPRequest):
             phonenumbers.PhoneNumberFormat.E164
         )
         
-        # Generate and store OTP
-        result = otp_service.generate_and_store_otp(raw_phone, request.purpose)
+        # Always use the canonical value as the OTP key. This fixes failures
+        # when a user enters the same Indian number in 10-digit and +91 forms.
+        limit = otp_service.check_and_record_send(normalized_phone, request.purpose)
+        if not limit.get("success"):
+            if limit.get("rate_limited"):
+                retry_after = int(limit.get("retry_after", 30))
+                raise HTTPException(
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                    detail=f"Please wait {retry_after} seconds before requesting another OTP.",
+                    headers={"Retry-After": str(retry_after)},
+                )
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="OTP service is temporarily unavailable.")
+
+        # Generate and store OTP only for a rate-limited, canonical recipient.
+        result = otp_service.generate_and_store_otp(normalized_phone, request.purpose)
         
         if result["success"]:
             delivery = msg91_service.send_otp_sms(normalized_phone, result["otp"])
             if not delivery.get("success"):
                 logger.error("OTP SMS delivery failed for %s: %s", normalized_phone, delivery.get("error"))
+                otp_service.discard_otp(normalized_phone, request.purpose)
                 raise HTTPException(
                     status_code=status.HTTP_502_BAD_GATEWAY,
                     detail="OTP delivery failed. Please check SMS gateway configuration."
@@ -393,10 +407,13 @@ async def send_otp(request: SendOTPRequest):
 
             return {
                 "message": "OTP sent successfully",
-                "otp": result["otp"] if delivery.get("demo_mode") else None,
                 "expires_in": result["expires_in"],
                 "phone": normalized_phone,
-                "demo_mode": bool(delivery.get("demo_mode"))
+                "delivery_status": "accepted" if not delivery.get("demo_mode") else "simulated",
+                "provider_message_id": delivery.get("message_id"),
+                "resend_after": limit.get("resend_after", 0),
+                "sends_remaining": limit.get("sends_remaining"),
+                "demo_mode": bool(delivery.get("demo_mode")),
             }
         else:
             raise HTTPException(
@@ -417,7 +434,12 @@ async def send_otp(request: SendOTPRequest):
 async def verify_otp(request: VerifyOTPRequest):
     """Verify OTP submitted by user."""
     try:
-        result = otp_service.verify_otp(request.phone, request.otp, request.purpose)
+        try:
+            parsed = phonenumbers.parse(request.phone.strip(), "IN")
+            normalized_phone = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+        except NumberParseException:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid phone number")
+        result = otp_service.verify_otp(normalized_phone, request.otp, request.purpose)
         
         if result["success"]:
             return {

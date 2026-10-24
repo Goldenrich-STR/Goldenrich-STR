@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
@@ -32,6 +33,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _acceptTerms = false;
   bool _obscurePassword = true;
   bool _assignmentLoading = false;
+  Timer? _otpTimer;
+  int _otpExpiresRemaining = 0;
+  int _resendRemaining = 0;
   List<Map<String, dynamic>> _primaryAssignments = [];
   List<Map<String, dynamic>> _branchManagerAssignments = [];
 
@@ -201,6 +205,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
+    _otpTimer?.cancel();
     _termsRecognizer.dispose();
     _privacyRecognizer.dispose();
     _checkinRecognizer.dispose();
@@ -222,11 +227,38 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.sendOTP(_phoneController.text.trim());
     if (success) {
+      _startOtpTimer(
+        expiresIn: auth.otpExpiresIn ?? 120,
+        resendAfter: auth.otpResendAfter ?? 30,
+      );
       setState(() => _step = 2);
     } else {
       setState(() => _errorMessage =
           auth.lastError ?? 'Failed to send OTP. Please check the number.');
     }
+  }
+
+  void _startOtpTimer({required int expiresIn, required int resendAfter}) {
+    _otpTimer?.cancel();
+    _otpExpiresRemaining = expiresIn;
+    _resendRemaining = resendAfter;
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      setState(() {
+        if (_otpExpiresRemaining > 0) _otpExpiresRemaining--;
+        if (_resendRemaining > 0) _resendRemaining--;
+        if (_otpExpiresRemaining == 0) timer.cancel();
+      });
+    });
+  }
+
+  String _formatDuration(int seconds) {
+    final minutes = seconds ~/ 60;
+    final remainder = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${remainder.toString().padLeft(2, '0')}';
   }
 
   Future<void> _verifyOTP() async {
@@ -237,9 +269,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final success = await auth.verifyOTP(
         _phoneController.text.trim(), _otpController.text.trim());
     if (success) {
+      _otpTimer?.cancel();
       setState(() => _step = 3);
     } else {
-      setState(() => _errorMessage = 'Invalid OTP. Please try again.');
+      setState(() => _errorMessage = auth.lastError ?? 'Invalid OTP. Please try again.');
     }
   }
 
@@ -524,11 +557,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildHeader('Enter Verification Code',
-            'Enter the OTP sent to ${_phoneController.text}.'),
-        if (auth.lastDemoOtp != null) ...[
-          const SizedBox(height: 16),
-          _buildDemoOtpNotice(auth.lastDemoOtp!),
-        ],
+            'Code request ${auth.otpDeliveryStatus == 'accepted' ? 'accepted by our SMS provider' : 'created'}. Enter the OTP sent to ${_phoneController.text}.'),
+        const SizedBox(height: 12),
+        Text(
+          _otpExpiresRemaining > 0
+              ? 'Code expires in ${_formatDuration(_otpExpiresRemaining)}.'
+              : 'This code has expired. Request a new one.',
+          style: GoogleFonts.inter(color: _otpExpiresRemaining > 0 ? AppTheme.charcoalMuted : Colors.redAccent, fontSize: 13),
+        ),
         const SizedBox(height: 24),
         _buildTextField(
           controller: _otpController,
@@ -540,6 +576,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
         const SizedBox(height: 22),
         _buildPrimaryButton(auth, 'Verify OTP', _verifyOTP),
         const SizedBox(height: 12),
+        TextButton(
+          onPressed: auth.isLoading || _resendRemaining > 0 ? null : _sendOTP,
+          child: Text(
+            _resendRemaining > 0
+                ? 'Resend OTP in ${_formatDuration(_resendRemaining)}'
+                : 'Resend OTP',
+          ),
+        ),
         TextButton(
           onPressed: () => setState(() => _step = 1),
           child: const Text('Back to phone number'),
@@ -1167,33 +1211,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
       child: Text(_errorMessage!,
           style: GoogleFonts.inter(color: Colors.red.shade900, fontSize: 13)),
-    );
-  }
-
-  Widget _buildDemoOtpNotice(String otp) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7DF),
-        border: Border.all(color: const Color(0xFFF0C65E)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline_rounded, color: Color(0xFF9A6A00)),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Demo OTP: $otp',
-              style: GoogleFonts.inter(
-                color: const Color(0xFF6D4B00),
-                fontSize: 13,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
