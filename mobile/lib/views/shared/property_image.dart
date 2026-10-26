@@ -150,27 +150,37 @@ class _Placeholder extends StatelessWidget {
         color: AppTheme.stone,
         alignment: Alignment.center,
         padding: const EdgeInsets.all(12),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/images/logo.png',
-              width: 42,
-              height: 42,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Property image unavailable',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                color: AppTheme.charcoalMuted,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+        child: LayoutBuilder(
+          builder: (context, constraints) => Center(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: SizedBox(
+                width: constraints.hasBoundedWidth ? constraints.maxWidth : 180,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 42,
+                      height: 42,
+                      fit: BoxFit.contain,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Property image unavailable',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: AppTheme.charcoalMuted,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ],
+          ),
         ),
       ),
     );

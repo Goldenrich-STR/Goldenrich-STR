@@ -6,7 +6,9 @@ import '../services/api_service.dart';
 import '../services/session_storage.dart';
 
 class AuthProvider with ChangeNotifier {
-  final ApiService _apiService = ApiService();
+  final Dio _dio;
+
+  AuthProvider({Dio? dio}) : _dio = dio ?? ApiService().dio;
   UserModel? _currentUser;
   String? _token;
   bool _isLoading = false;
@@ -14,6 +16,15 @@ class AuthProvider with ChangeNotifier {
   int? _otpExpiresIn;
   int? _otpResendAfter;
   String? _otpDeliveryStatus;
+  String? _lastDemoOtp;
+  DateTime? _otpExpiresAt;
+
+  int get otpSecondsRemaining {
+    final expiry = _otpExpiresAt;
+    if (expiry == null) return 0;
+    final milliseconds = expiry.difference(DateTime.now()).inMilliseconds;
+    return milliseconds > 0 ? (milliseconds / 1000).ceil() : 0;
+  }
 
   UserModel? get currentUser => _currentUser;
   String? get token => _token;
@@ -21,6 +32,7 @@ class AuthProvider with ChangeNotifier {
   String? get lastError => _lastError;
   bool get isAuthenticated => _token != null;
   bool get isPromoClaimed => _currentUser?.isPromoClaimed ?? false;
+  String? get lastDemoOtp => _lastDemoOtp;
   int? get otpExpiresIn => _otpExpiresIn;
   int? get otpResendAfter => _otpResendAfter;
   String? get otpDeliveryStatus => _otpDeliveryStatus;
@@ -34,7 +46,7 @@ class AuthProvider with ChangeNotifier {
         e.type == DioExceptionType.connectionTimeout ||
         e.type == DioExceptionType.receiveTimeout ||
         (e.message ?? '').toLowerCase().contains('connection refused')) {
-      return 'Backend server is not reachable. Start the backend on port 8001, then try again.';
+      return 'Unable to connect. Check your internet connection and try again.';
     }
     return e.message ?? fallback;
   }
@@ -62,21 +74,32 @@ class AuthProvider with ChangeNotifier {
   Future<bool> sendOTP(String phone, {String purpose = 'registration'}) async {
     _isLoading = true;
     _lastError = null;
+    _lastDemoOtp = null;
+    _otpExpiresAt = null;
     _otpExpiresIn = null;
     _otpResendAfter = null;
     _otpDeliveryStatus = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/api/auth/send-otp', data: {
-        'phone': phone,
-        'purpose': purpose,
-      });
+      final response = await _dio.post(
+        '/api/auth/send-otp',
+        data: {'phone': phone.trim(), 'purpose': purpose},
+      );
       if (response.statusCode == 200) {
         final data = response.data;
+        final seconds = data is Map
+            ? int.tryParse('${data['expires_in']}')
+            : null;
         if (data is Map) {
-          _otpExpiresIn = _asInt(data['expires_in']);
-          _otpResendAfter = _asInt(data['resend_after']);
+          _otpExpiresIn = seconds;
+          _otpResendAfter = int.tryParse('${data['resend_after']}');
           _otpDeliveryStatus = data['delivery_status']?.toString();
+        }
+        _otpExpiresAt = DateTime.now().add(
+          Duration(seconds: seconds != null && seconds > 0 ? seconds : 120),
+        );
+        if (data is Map && data['demo_mode'] == true && data['otp'] != null) {
+          _lastDemoOtp = data['otp'].toString();
         }
         return true;
       }
@@ -94,26 +117,36 @@ class AuthProvider with ChangeNotifier {
     }
   }
 
-  int? _asInt(dynamic value) => value is int ? value : int.tryParse('$value');
-
-  Future<bool> verifyOTP(String phone, String otp,
-      {String purpose = 'registration'}) async {
+  Future<bool> verifyOTP(
+    String phone,
+    String otp, {
+    String purpose = 'registration',
+  }) async {
     _isLoading = true;
     _lastError = null;
     notifyListeners();
     try {
-      final response =
-          await _apiService.dio.post('/api/auth/verify-otp', data: {
-        'phone': phone,
-        'otp': otp,
-        'purpose': purpose,
-      });
-      return response.statusCode == 200;
-    } on DioException catch (e) {
-      _lastError = _authErrorMessage(e, 'Unable to verify OTP.');
+      final response = await _dio.post(
+        '/api/auth/verify-otp',
+        data: {'phone': phone.trim(), 'otp': otp.trim(), 'purpose': purpose},
+      );
+      if (response.statusCode == 200 &&
+          response.data is Map &&
+          response.data['verified'] == true) {
+        _lastDemoOtp = null;
+        _otpExpiresAt = null;
+        return true;
+      }
+      _lastError = 'Unable to verify OTP. Please try again.';
       return false;
-    } catch (e) {
-      _lastError = 'Unable to verify OTP.';
+    } on DioException catch (e) {
+      _lastError = _authErrorMessage(
+        e,
+        'Unable to verify OTP. Please try again.',
+      );
+      return false;
+    } catch (_) {
+      _lastError = 'Unable to verify OTP. Please try again.';
       return false;
     } finally {
       _isLoading = false;
@@ -126,8 +159,7 @@ class AuthProvider with ChangeNotifier {
     _lastError = null;
     notifyListeners();
     try {
-      final response =
-          await _apiService.dio.post('/api/auth/register', data: userData);
+      final response = await _dio.post('/api/auth/register', data: userData);
       if (response.statusCode == 200 || response.statusCode == 201) {
         final data = response.data;
         _token = data['access_token'];
@@ -155,10 +187,10 @@ class AuthProvider with ChangeNotifier {
     _lastError = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/api/auth/login', data: {
-        'email': email,
-        'password': password,
-      });
+      final response = await _dio.post(
+        '/api/auth/login',
+        data: {'email': email, 'password': password},
+      );
 
       if (response.statusCode == 200) {
         final data = response.data;
@@ -186,7 +218,7 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post(
+      final response = await _dio.post(
         '/auth/forgot-password',
         data: {'email': email},
       );
@@ -211,12 +243,9 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post(
+      final response = await _dio.post(
         '/auth/reset-password',
-        data: {
-          'token': token,
-          'password': password,
-        },
+        data: {'token': token, 'password': password},
       );
       if (response.statusCode == 200) {
         return response.data['login_path']?.toString();
@@ -237,7 +266,7 @@ class AuthProvider with ChangeNotifier {
   Future<void> refreshProfile() async {
     if (_token == null) return;
     try {
-      final response = await _apiService.dio.get('/api/auth/me');
+      final response = await _dio.get('/api/auth/me');
       if (response.statusCode == 200) {
         _currentUser = UserModel.fromJson(response.data);
         await SessionStorage.writeUser(json.encode(_currentUser!.toJson()));
@@ -253,8 +282,10 @@ class AuthProvider with ChangeNotifier {
     _lastError = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio
-          .post('/api/host/submit-verification', data: payload);
+      final response = await _dio.post(
+        '/api/host/submit-verification',
+        data: payload,
+      );
       if (response.statusCode == 200) {
         await refreshProfile();
         return true;
@@ -278,7 +309,7 @@ class AuthProvider with ChangeNotifier {
     _isLoading = true;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/api/auth/claim-promo');
+      final response = await _dio.post('/api/auth/claim-promo');
       if (response.statusCode == 200) {
         await refreshProfile();
         return true;
@@ -298,7 +329,7 @@ class AuthProvider with ChangeNotifier {
     _lastError = null;
     notifyListeners();
     try {
-      final response = await _apiService.dio.post('/api/auth/delete-account');
+      final response = await _dio.post('/api/auth/delete-account');
       if (response.statusCode == 200) {
         await logout();
         return true;

@@ -94,8 +94,7 @@ class OTPService:
                 self._mem_set(otp_key, otp, self.otp_expiry)
                 self._mem_delete(attempts_key)
 
-            # OTPs are secrets. Never put them in application logs.
-            logger.info("OTP generated for identifier ending %s (purpose: %s)", identifier[-4:], purpose)
+            logger.info("OTP generated (purpose: %s)", purpose)
             return {
                 "success": True,
                 "otp": otp,
