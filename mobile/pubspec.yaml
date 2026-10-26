@@ -3,7 +3,8 @@ description: A production-ready mobile application for Goldenrich STR platform.
 version: 1.0.2+8
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
+  sdk: '>=3.12.0 <4.0.0'
+  flutter: '>=3.44.0'
 
 dependencies:
   flutter:

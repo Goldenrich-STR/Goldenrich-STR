@@ -226,6 +226,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.sendOTP(_phoneController.text.trim());
+    if (!mounted) return;
     if (success) {
       _startOtpTimer(
         expiresIn: auth.otpExpiresIn ?? 120,
@@ -268,11 +269,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.verifyOTP(
         _phoneController.text.trim(), _otpController.text.trim());
+    if (!mounted) return;
     if (success) {
       _otpTimer?.cancel();
       setState(() => _step = 3);
     } else {
-      setState(() => _errorMessage = auth.lastError ?? 'Invalid OTP. Please try again.');
+      setState(() => _errorMessage =
+          auth.lastError ?? 'Unable to verify OTP. Please try again.');
     }
   }
 

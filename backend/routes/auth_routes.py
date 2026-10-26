@@ -394,37 +394,25 @@ async def _upsert_goldenrich_user(db: AsyncIOMotorDatabase, profile: dict) -> di
     await db.users.insert_one(user_dict)
     return user_dict
 
+def _normalize_otp_phone(phone: str) -> str:
+    raw_phone = phone.strip()
+    if not raw_phone:
+        raise HTTPException(status_code=400, detail="Phone number is required")
+    try:
+        parsed = phonenumbers.parse(raw_phone, "IN")
+    except NumberParseException:
+        raise HTTPException(status_code=400, detail="Invalid phone number")
+    if not phonenumbers.is_valid_number(parsed):
+        raise HTTPException(status_code=400, detail="Invalid phone number")
+    return phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
+
+
 @router.post("/send-otp")
 async def send_otp(request: SendOTPRequest):
     """Send OTP to phone number for verification."""
     try:
-        raw_phone = request.phone.strip()
-        if not raw_phone:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Phone number is required"
-            )
+        normalized_phone = _normalize_otp_phone(request.phone)
 
-        # Validate phone number. Accept both 10-digit Indian numbers and +91 format.
-        try:
-            parsed = phonenumbers.parse(raw_phone, "IN")
-        except NumberParseException:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid phone number"
-            )
-
-        if not phonenumbers.is_valid_number(parsed):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid phone number"
-            )
-
-        normalized_phone = phonenumbers.format_number(
-            parsed,
-            phonenumbers.PhoneNumberFormat.E164
-        )
-        
         # Always use the canonical value as the OTP key. This fixes failures
         # when a user enters the same Indian number in 10-digit and +91 forms.
         limit = otp_service.check_and_record_send(normalized_phone, request.purpose)
@@ -480,11 +468,7 @@ async def send_otp(request: SendOTPRequest):
 async def verify_otp(request: VerifyOTPRequest):
     """Verify OTP submitted by user."""
     try:
-        try:
-            parsed = phonenumbers.parse(request.phone.strip(), "IN")
-            normalized_phone = phonenumbers.format_number(parsed, phonenumbers.PhoneNumberFormat.E164)
-        except NumberParseException:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid phone number")
+        normalized_phone = _normalize_otp_phone(request.phone)
         result = otp_service.verify_otp(normalized_phone, request.otp, request.purpose)
         
         if result["success"]:
