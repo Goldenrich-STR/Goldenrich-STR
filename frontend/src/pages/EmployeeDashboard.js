@@ -567,6 +567,7 @@ const VerificationReviewSection = () => {
   const [bmChecklist, setBmChecklist] = useState({});
   const [approving, setApproving] = useState(false);
   const [reviewNotice, setReviewNotice] = useState('');
+  const [recordingLoading, setRecordingLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   const isBranchManager = user?.admin_role_key === 'branch_manager'
@@ -581,6 +582,26 @@ const VerificationReviewSection = () => {
     }
     // For RM stage (whether 1st or 2nd verification level), allow RM review if not yet reviewed by RM
     return !verification.rm_reviewed;
+  };
+
+  const handleWatchRecording = async (verification) => {
+    if (!verification?.verification_id) return;
+    setRecordingLoading(true);
+    setReviewNotice('');
+    try {
+      const response = await apiClient.get(
+        `/verification-cases/${verification.verification_id}/recording/file`,
+        { responseType: 'blob', timeout: 120000 },
+      );
+      const videoUrl = URL.createObjectURL(response.data);
+      const opened = window.open(videoUrl, '_blank', 'noopener,noreferrer');
+      if (!opened) setReviewNotice('Allow pop-ups to open the verification recording.');
+      window.setTimeout(() => URL.revokeObjectURL(videoUrl), 5 * 60 * 1000);
+    } catch (error) {
+      setReviewNotice(error?.response?.data?.detail || error.message || 'Unable to open recording.');
+    } finally {
+      setRecordingLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -1069,9 +1090,14 @@ const VerificationReviewSection = () => {
                       <div><p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Time</p><p className="font-bold text-charcoal">{selectedVerification.scheduled_start_time || 'N/A'}{selectedVerification.scheduled_end_time ? ` - ${selectedVerification.scheduled_end_time}` : ''}</p></div>
                       <div><p className="text-[10px] font-bold text-blue-500 uppercase tracking-wider">Status</p><p className="font-bold text-charcoal">{selectedVerification.telecaller_checklist?.video_completed ? 'Completed' : 'Pending / Not marked'}</p></div>
                     </div>
-                    {(selectedVerification.telecaller_video_url || selectedVerification.video_url) && (
-                      <button type="button" onClick={() => window.open(selectedVerification.telecaller_video_url || selectedVerification.video_url, '_blank')} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white">
-                        <Eye className="w-4 h-4" /> Watch Video
+                    {selectedVerification.recording_status && (
+                      <p className="mt-3 text-xs font-bold uppercase tracking-wider text-blue-700">
+                        Secure recording: {String(selectedVerification.recording_status).replace(/_/g, ' ')}
+                      </p>
+                    )}
+                    {(selectedVerification.recording_object_key || selectedVerification.recording_url || selectedVerification.telecaller_video_url || selectedVerification.video_url) && (
+                      <button type="button" disabled={recordingLoading} onClick={() => selectedVerification.recording_object_key ? handleWatchRecording(selectedVerification) : window.open(selectedVerification.recording_url || selectedVerification.telecaller_video_url || selectedVerification.video_url, '_blank')} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-50">
+                        <Eye className="w-4 h-4" /> {recordingLoading ? 'Loading Recording...' : 'Watch Video'}
                       </button>
                     )}
                   </div>

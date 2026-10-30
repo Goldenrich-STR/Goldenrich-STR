@@ -72,7 +72,13 @@ const ScreenLoading = () => (
 
 // Protected Route Component
 const normalizeRoleKey = (value) => String(value || '').toLowerCase().replace(/[\s-]+/g, '_');
-const isRoleKey = (user, keys = []) => keys.includes(normalizeRoleKey(user?.admin_role_key || user?.designation || user?.role));
+const isRoleKey = (user, keys = []) => {
+  const allowedKeys = keys.map(normalizeRoleKey);
+  const userRoleKeys = [user?.admin_role_key, user?.designation, user?.role]
+    .map(normalizeRoleKey)
+    .filter(Boolean);
+  return userRoleKeys.some((roleKey) => allowedKeys.includes(roleKey));
+};
 
 const ProtectedRoute = ({ children, allowedRoles, allowedRoleKeys }) => {
   const { user, loading } = useAuth();
@@ -422,7 +428,7 @@ function AppRoutes() {
           path="/telecaller/verification/:verificationId"
           element={
             <ProtectedRoute allowedRoleKeys={["telecaller"]}>
-              <TelecallerDashboard />
+              <VideoVerificationRoom role="telecaller" />
             </ProtectedRoute>
           }
         />
@@ -430,7 +436,7 @@ function AppRoutes() {
           path="/verification/video/:verificationId"
           element={
             <ProtectedRoute allowedRoles={["host", "admin"]} allowedRoleKeys={["telecaller"]}>
-              <RoleAwareVideoVerificationRoom />
+              <VideoVerificationRoom role="telecaller" />
             </ProtectedRoute>
           }
         />

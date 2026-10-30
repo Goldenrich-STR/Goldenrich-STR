@@ -1,6 +1,7 @@
 import logging
 import mimetypes
 import os
+import shutil
 from pathlib import Path, PurePosixPath
 
 import boto3
@@ -106,6 +107,57 @@ def store_upload(
         (LOCAL_UPLOAD_DIR / filename).write_bytes(contents)
 
     return object_key if bucket or use_azure else filename
+
+
+def store_upload_fileobj(
+    fileobj,
+    filename: str,
+    folder: str,
+    content_type: str | None = None,
+    cache_control: str = "private,no-store",
+) -> str:
+    """Stream a potentially large upload to configured durable storage."""
+    object_key = _safe_object_key(f"{folder}/{filename}")
+    bucket = uploads_bucket()
+    use_azure = azure_enabled()
+    resolved_content_type = (
+        content_type
+        or mimetypes.guess_type(filename)[0]
+        or "application/octet-stream"
+    )
+
+    fileobj.seek(0)
+    if use_azure:
+        _azure_container_client().upload_blob(
+            name=object_key,
+            data=fileobj,
+            overwrite=True,
+            content_settings=ContentSettings(
+                content_type=resolved_content_type,
+                cache_control=cache_control,
+            ),
+        )
+    elif bucket:
+        _client().upload_fileobj(
+            fileobj,
+            bucket,
+            object_key,
+            ExtraArgs={
+                "ContentType": resolved_content_type,
+                "CacheControl": cache_control,
+                "ServerSideEncryption": "AES256",
+            },
+        )
+
+    dual_write = os.getenv("S3_UPLOADS_DUAL_WRITE_LOCAL", "true").strip().lower()
+    if (not bucket and not use_azure) or dual_write in {"1", "true", "yes", "on"}:
+        local_file = LOCAL_UPLOAD_DIR / object_key
+        local_file.parent.mkdir(parents=True, exist_ok=True)
+        fileobj.seek(0)
+        with local_file.open("wb") as destination:
+            shutil.copyfileobj(fileobj, destination, length=1024 * 1024)
+
+    return object_key if bucket or use_azure else object_key
 
 
 def find_s3_object(object_path: str) -> tuple[str, dict] | None:

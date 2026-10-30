@@ -7,13 +7,19 @@ import shutil
 import subprocess
 import threading
 import time
+from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import jwt
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from fastapi.responses import StreamingResponse
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from pydantic import BaseModel
+from starlette.concurrency import run_in_threadpool
 
 from middleware.auth_middleware import get_current_user
 from services.audit_service import write_audit_log
+from services.object_storage import open_s3_object, store_upload_fileobj
 from services.verification_case_workflow import (
     ADMIN_APPROVED,
     ADMIN_CORRECTION_REQUIRED,
@@ -101,6 +107,21 @@ class HostDocumentFinalPayload(BaseModel):
 class ReplacementDocumentPayload(BaseModel):
     document_url: str
     remarks: str = ""
+
+
+class RecordingStartPayload(BaseModel):
+    consent_confirmed: bool = False
+
+
+class RecordingCallbackPayload(BaseModel):
+    session_id: str
+    status: str
+    recording_url: str = ""
+    recording_object_key: str = ""
+    duration_seconds: int = 0
+    started_at: str = ""
+    completed_at: str = ""
+    error_message: str = ""
 
 
 class CallPayload(BaseModel):
@@ -294,6 +315,64 @@ def _is_telecaller(user: dict) -> bool:
     designation = str(user.get("designation") or "").lower()
     return role == "telecaller" or (role == "employee" and (role_key == "telecaller" or "telecaller" in designation))
 
+
+def _jitsi_meet_base_url() -> str:
+    return os.getenv("JITSI_MEET_BASE_URL", "https://meet.jit.si").strip().rstrip("/")
+
+
+def _jitsi_recording_enabled() -> bool:
+    return os.getenv("JITSI_RECORDING_ENABLED", "false").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _recording_callback_secret() -> str:
+    return os.getenv("JITSI_RECORDING_CALLBACK_SECRET", "").strip()
+
+
+def _recording_callback_authorized(request: Request) -> bool:
+    secret = _recording_callback_secret()
+    supplied = request.headers.get("X-XSpace-Recording-Secret", "")
+    return bool(secret and supplied and __import__("hmac").compare_digest(secret, supplied))
+
+
+def _jitsi_moderator_token(current_user: dict, case: dict) -> str:
+    """Return a short-lived room-scoped token only for the assigned Telecaller/Admin."""
+    if not (_is_admin(current_user) or _is_telecaller(current_user)):
+        return ""
+    assigned_telecaller = str(case.get("telecaller_id") or "").strip()
+    if assigned_telecaller and not _is_admin(current_user):
+        if assigned_telecaller not in _telecaller_identity_terms(current_user):
+            return ""
+    room_name = str(case.get("jitsi_room_name") or "").strip()
+    app_id = os.getenv("JITSI_APP_ID", "").strip()
+    app_secret = os.getenv("JITSI_APP_SECRET", "").strip()
+    if not room_name or not app_id or not app_secret:
+        return ""
+    now = now_utc()
+    domain = urlparse(_jitsi_meet_base_url()).hostname or "meet-uat.x-space360.in"
+    user_id = str(current_user.get("user_id") or current_user.get("uid") or "telecaller")
+    display_name = str(current_user.get("full_name") or current_user.get("name") or "Telecaller")
+    payload = {
+        "aud": app_id,
+        "iss": app_id,
+        "sub": domain,
+        "room": room_name,
+        "nbf": int((now - timedelta(seconds=10)).timestamp()),
+        "exp": int((now + timedelta(minutes=90)).timestamp()),
+        "context": {
+            "user": {
+                "id": user_id,
+                "name": display_name,
+                "email": str(current_user.get("email") or ""),
+                "moderator": True,
+            },
+            "features": {
+                "recording": True,
+                "livestreaming": False,
+                "transcription": False,
+            },
+        },
+    }
+    return jwt.encode(payload, app_secret, algorithm="HS256")
 
 def _is_branch_manager(user: dict) -> bool:
     role = str(user.get("role") or "").lower()
@@ -1790,8 +1869,224 @@ async def get_case(verification_id: str, current_user: dict = Depends(get_curren
             {"$set": {"jitsi_room_name": room_name, "updated_at": now_utc()}},
         )
         case["jitsi_room_name"] = room_name
-    return await _enrich_case(db, case)
+    enriched = await _enrich_case(db, case)
+    enriched["jitsi_meet_base_url"] = _jitsi_meet_base_url()
+    enriched["jitsi_recording_enabled"] = _jitsi_recording_enabled()
+    enriched["jitsi_jwt"] = _jitsi_moderator_token(current_user, case)
+    return enriched
 
+
+@router.post("/{verification_id}/recording/start")
+async def start_video_recording(
+    verification_id: str,
+    payload: RecordingStartPayload,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    if not (_is_admin(current_user) or _is_telecaller(current_user)):
+        raise HTTPException(status_code=403, detail="Telecaller access required")
+    if not _jitsi_recording_enabled():
+        raise HTTPException(status_code=409, detail="Server-side Jitsi recording is not configured")
+    if not payload.consent_confirmed:
+        raise HTTPException(status_code=400, detail="Recording consent is required before starting verification")
+    case = await _case_or_404(db, verification_id)
+    if case.get("telecaller_id") and not _is_admin(current_user) and case.get("telecaller_id") not in _telecaller_identity_terms(current_user):
+        raise HTTPException(status_code=403, detail="This verification is assigned to another telecaller")
+    if not case.get("jitsi_room_name"):
+        raise HTTPException(status_code=400, detail="Video room is not ready")
+
+    now = now_utc()
+    existing = case.get("recording_session") or {}
+    if existing.get("status") in {"RECORDING", "START_REQUESTED"}:
+        return {"recording_session": existing, "jitsi_recording_enabled": True}
+    session = {
+        "session_id": workflow_id("XSP-REC"),
+        "status": "START_REQUESTED",
+        "verification_id": verification_id,
+        "room_name": case.get("jitsi_room_name"),
+        "consent_confirmed": True,
+        "consent_confirmed_at": now.isoformat(),
+        "started_by": current_user.get("user_id"),
+        "started_at": now.isoformat(),
+        "recording_url": "",
+        "recording_object_key": "",
+        "duration_seconds": 0,
+    }
+    await db.property_verifications.update_one(
+        {"verification_id": verification_id},
+        {"$set": {
+            "recording_session": session,
+            "recording_status": "START_REQUESTED",
+            "recording_consent_confirmed": True,
+            "recording_consent_confirmed_at": now,
+            "updated_at": now,
+        }},
+    )
+    await _history(db, case, current_user, "VIDEO_RECORDING_START_REQUESTED", {"session_id": session["session_id"]})
+    return {"recording_session": session, "jitsi_recording_enabled": True}
+
+
+@router.post("/{verification_id}/recording/stop")
+async def stop_video_recording(
+    verification_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    if not (_is_admin(current_user) or _is_telecaller(current_user)):
+        raise HTTPException(status_code=403, detail="Telecaller access required")
+    case = await _case_or_404(db, verification_id)
+    session = case.get("recording_session") or {}
+    if not session.get("session_id"):
+        raise HTTPException(status_code=400, detail="No active recording session")
+    now = now_utc()
+    session["status"] = "STOP_REQUESTED"
+    session["stop_requested_at"] = now.isoformat()
+    session["stopped_by"] = current_user.get("user_id")
+    await db.property_verifications.update_one(
+        {"verification_id": verification_id},
+        {"$set": {"recording_session": session, "recording_status": "STOP_REQUESTED", "updated_at": now}},
+    )
+    await _history(db, case, current_user, "VIDEO_RECORDING_STOP_REQUESTED", {"session_id": session["session_id"]})
+    return {"message": "Recording stop requested", "recording_session": session}
+
+
+@router.post("/recording-callback")
+async def recording_callback(
+    payload: RecordingCallbackPayload,
+    request: Request,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    if not _recording_callback_authorized(request):
+        raise HTTPException(status_code=401, detail="Invalid recording callback credentials")
+    status_value = payload.status.strip().upper()
+    if status_value not in {"RECORDING", "COMPLETED", "FAILED"}:
+        raise HTTPException(status_code=400, detail="Invalid recording callback status")
+    case = await db.property_verifications.find_one({"recording_session.session_id": payload.session_id}, {"_id": 0})
+    if not case:
+        raise HTTPException(status_code=404, detail="Recording session not found")
+    session = case.get("recording_session") or {}
+    now = now_utc()
+    session.update({
+        "status": status_value,
+        "recording_url": payload.recording_url.strip(),
+        "recording_object_key": payload.recording_object_key.strip(),
+        "duration_seconds": max(0, int(payload.duration_seconds or 0)),
+        "jibri_started_at": payload.started_at or session.get("jibri_started_at", ""),
+        "completed_at": payload.completed_at or (now.isoformat() if status_value in {"COMPLETED", "FAILED"} else ""),
+        "error_message": payload.error_message.strip(),
+        "updated_at": now.isoformat(),
+    })
+    await db.property_verifications.update_one(
+        {"verification_id": case["verification_id"]},
+        {"$set": {
+            "recording_session": session,
+            "recording_status": status_value,
+            "recording_url": session["recording_url"],
+            "recording_object_key": session["recording_object_key"],
+            "updated_at": now,
+        }},
+    )
+    await write_audit_log(db, user_id="jibri", role="system", module="verification_recording", action=f"recording_{status_value.lower()}", record_id=case["verification_id"], new_value=session)
+    return {"message": "Recording callback processed"}
+
+
+@router.post("/recording-upload")
+async def upload_completed_recording(
+    request: Request,
+    session_id: str = Form(...),
+    verification_id: str = Form(""),
+    recording: UploadFile = File(...),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    if not _recording_callback_authorized(request):
+        raise HTTPException(status_code=401, detail="Invalid recording upload credentials")
+    case = await db.property_verifications.find_one(
+        {"recording_session.session_id": session_id}, {"_id": 0}
+    )
+    if not case or (verification_id and case.get("verification_id") != verification_id):
+        raise HTTPException(status_code=404, detail="Recording session not found")
+    suffix = Path(recording.filename or "recording.mp4").suffix.lower()
+    if suffix not in {".mp4", ".webm"}:
+        raise HTTPException(status_code=400, detail="Only MP4 or WebM recordings are accepted")
+    safe_filename = f"recording{suffix}"
+    object_key = await run_in_threadpool(
+        store_upload_fileobj,
+        recording.file,
+        safe_filename,
+        f"verification-recordings/{session_id}",
+        recording.content_type or ("video/mp4" if suffix == ".mp4" else "video/webm"),
+    )
+    now = now_utc()
+    session = case.get("recording_session") or {}
+    playback_path = f"/api/verification-cases/{case['verification_id']}/recording/file"
+    session.update({
+        "status": "COMPLETED",
+        "recording_url": playback_path,
+        "recording_object_key": object_key,
+        "completed_at": now.isoformat(),
+        "updated_at": now.isoformat(),
+    })
+    await db.property_verifications.update_one(
+        {"verification_id": case["verification_id"]},
+        {"$set": {
+            "recording_session": session,
+            "recording_status": "COMPLETED",
+            "recording_url": playback_path,
+            "recording_object_key": object_key,
+            "updated_at": now,
+        }},
+    )
+    await write_audit_log(
+        db,
+        user_id="jibri",
+        role="system",
+        module="verification_recording",
+        action="recording_completed",
+        record_id=case["verification_id"],
+        new_value={"session_id": session_id, "recording_object_key": object_key},
+    )
+    return {"message": "Recording uploaded", "recording_object_key": object_key}
+
+
+@router.get("/{verification_id}/recording/file")
+async def stream_verification_recording(
+    verification_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    case = await _case_or_404(db, verification_id)
+    if not (
+        _is_admin(current_user)
+        or _is_telecaller(current_user)
+        or _is_branch_manager(current_user)
+        or await _case_belongs_to_user(db, case, current_user.get("user_id"))
+    ):
+        raise HTTPException(status_code=403, detail="Not authorized to view this recording")
+    object_key = str(case.get("recording_object_key") or "").strip()
+    if not object_key:
+        raise HTTPException(status_code=404, detail="Recording is not available")
+    stored = await run_in_threadpool(open_s3_object, object_key)
+    if not stored:
+        raise HTTPException(status_code=404, detail="Recording file not found")
+    body = stored["Body"]
+
+    def stream_body():
+        if isinstance(body, (bytes, bytearray)):
+            yield bytes(body)
+            return
+        try:
+            yield from body.iter_chunks(chunk_size=1024 * 1024)
+        finally:
+            body.close()
+
+    return StreamingResponse(
+        stream_body(),
+        media_type=stored.get("ContentType") or "video/mp4",
+        headers={
+            "Cache-Control": "private,no-store",
+            "Content-Disposition": 'inline; filename="verification-recording.mp4"',
+        },
+    )
 
 @router.post("/schedule")
 async def schedule_case(payload: SchedulePayload, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):

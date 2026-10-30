@@ -966,24 +966,13 @@ const TelecallerDashboard = () => {
     }
   };
 
-  const openVideoCallInModal = async (lead) => {
+  const openVideoCallInModal = (lead) => {
     const c = caseOf(lead);
     if (!c?.verification_id) {
       setNotice('This lead does not have a verification case yet.');
       return;
     }
-    try {
-      const response = await verificationAPI.getCase(c.verification_id);
-      const freshCase = response.data || c;
-      const enrichedLead = { ...lead, verification_case: freshCase };
-      setSelected(enrichedLead);
-      setVideoCallLead(enrichedLead);
-      setChecklist(freshCase?.telecaller_checklist || checklist || {});
-      setRemarks(freshCase?.telecaller_remarks || remarks || '');
-      setTelecallerVideoUrl(freshCase?.telecaller_video_url || '');
-    } catch (err) {
-      setNotice(getApiErrorMessage(err, 'Unable to open video verification room.'));
-    }
+    navigate(`/verification/video/${c.verification_id}`);
   };
 
   const uploadTelecallerVerificationVideo = async (file) => {
@@ -1351,7 +1340,7 @@ const TelecallerDashboard = () => {
                                 <td className="px-4 py-3">
                                   <div className="relative flex items-center justify-end gap-1.5">
                                     {activeNav === 'video' && (
-                                      <button type="button" title="Open video verification" onClick={() => openVideoModal(lead)} className="rounded-md border border-blue-200 bg-blue-50 p-1.5 text-blue-700 hover:bg-blue-100"><Video className="h-4 w-4" /></button>
+                                      <button type="button" title="Open video verification" onClick={() => openVideoCallInModal(lead)} className="rounded-md border border-blue-200 bg-blue-50 p-1.5 text-blue-700 hover:bg-blue-100"><Video className="h-4 w-4" /></button>
                                     )}
                                     {activeNav === 'calls' && (
                                       <button type="button" title="Call host" onClick={() => openCallModal(lead)} className="rounded-md border border-slate-200 p-1.5 hover:bg-slate-50"><Phone className="h-4 w-4" /></button>
