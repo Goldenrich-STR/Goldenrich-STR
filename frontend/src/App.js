@@ -428,7 +428,7 @@ function AppRoutes() {
           path="/telecaller/verification/:verificationId"
           element={
             <ProtectedRoute allowedRoleKeys={["telecaller"]}>
-              <VideoVerificationRoom role="telecaller" />
+              <TelecallerDashboard />
             </ProtectedRoute>
           }
         />
