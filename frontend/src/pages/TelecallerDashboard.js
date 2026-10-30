@@ -214,6 +214,9 @@ const documentUrlOf = (doc) => {
   if (/^https?:\/\//i.test(rawUrl)) return rawUrl;
   return getImageUrl(rawUrl) || rawUrl;
 };
+const hasSubmittedDocumentValue = (doc) => Boolean(
+  String(doc?.document_url || doc?.url || doc?.text_value || doc?.value || '').trim()
+);
 const APPROVED_DOCUMENT_STATUSES = ['approved', 'verified'];
 const documentStatusOf = (doc) => String(doc?.status || doc?.review_status || doc?.verification_status || 'pending').toLowerCase();
 const documentsOf = (lead, docQueue = []) => {
@@ -1076,6 +1079,13 @@ const TelecallerDashboard = () => {
       setNotice('Reason is required for approve, reject and re-upload.');
       return;
     }
+    const targetDocument = documentsOf(targetLead, docs).find(
+      (doc) => (doc.document_type || doc.type) === documentType
+    );
+    if (result === 'approve' && !hasSubmittedDocumentValue(targetDocument)) {
+      setNotice(`${targetDocument?.document_name || targetDocument?.label || human(documentType)} must be uploaded before approval.`);
+      return;
+    }
     setSaving(true);
     try {
       await verificationAPI.reviewHostDocument(hostId, documentType, { result, remarks: remarksText });
@@ -1103,9 +1113,26 @@ const TelecallerDashboard = () => {
       setNotice('Reason is required for document approval/rejection.');
       return;
     }
-    const actionableDocs = modalDocuments
-      .map((doc) => doc.document_type || doc.type)
-      .filter(Boolean);
+    const uniqueDocuments = Array.from(
+      new Map(
+        modalDocuments
+          .map((doc) => [doc.document_type || doc.type, doc])
+          .filter(([documentType]) => Boolean(documentType))
+      ).values()
+    );
+    const missingRequiredDocuments = uniqueDocuments.filter(
+      (doc) => result === 'approve' && doc.required && !hasSubmittedDocumentValue(doc)
+    );
+    if (missingRequiredDocuments.length) {
+      const missingLabels = missingRequiredDocuments
+        .map((doc) => doc.document_name || doc.label || human(doc.document_type || doc.type))
+        .join(', ');
+      setNotice(`Upload required document(s) before approval: ${missingLabels}.`);
+      return;
+    }
+    const actionableDocs = uniqueDocuments
+      .filter((doc) => hasSubmittedDocumentValue(doc))
+      .map((doc) => doc.document_type || doc.type);
     if (!actionableDocs.length) {
       setNotice('No documents found for this host.');
       return;
@@ -1891,7 +1918,7 @@ const TelecallerDashboard = () => {
                             >
                               Open
                             </a>
-                            <button disabled={saving || !documentType} onClick={() => startDocumentAction(documentType, 'approve')} className="rounded-md bg-emerald-600 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-50">Approve</button>
+                            <button disabled={saving || !documentType || !hasSubmittedDocumentValue(doc)} title={!hasSubmittedDocumentValue(doc) ? 'Upload this document before approval' : 'Approve document'} onClick={() => startDocumentAction(documentType, 'approve')} className="rounded-md bg-emerald-600 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-white disabled:opacity-50">Approve</button>
                             <button disabled={saving || !documentType} onClick={() => startDocumentAction(documentType, 'reject')} className="rounded-md border border-red-200 bg-red-50 px-2.5 py-2 text-[10px] font-black uppercase tracking-wider text-red-700 disabled:opacity-50">Reject</button>
                           </div>
                         </div>
