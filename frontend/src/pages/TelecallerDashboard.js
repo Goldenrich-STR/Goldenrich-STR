@@ -1340,7 +1340,7 @@ const TelecallerDashboard = () => {
                                 <td className="px-4 py-3">
                                   <div className="relative flex items-center justify-end gap-1.5">
                                     {activeNav === 'video' && (
-                                      <button type="button" title="Open video verification" onClick={() => openVideoModal(lead)} className="rounded-md border border-blue-200 bg-blue-50 p-1.5 text-blue-700 hover:bg-blue-100"><Video className="h-4 w-4" /></button>
+                                      <button type="button" title="Open video verification" onClick={() => openVideoCallInModal(lead)} className="rounded-md border border-blue-200 bg-blue-50 p-1.5 text-blue-700 hover:bg-blue-100"><Video className="h-4 w-4" /></button>
                                     )}
                                     {activeNav === 'calls' && (
                                       <button type="button" title="Call host" onClick={() => openCallModal(lead)} className="rounded-md border border-slate-200 p-1.5 hover:bg-slate-50"><Phone className="h-4 w-4" /></button>
