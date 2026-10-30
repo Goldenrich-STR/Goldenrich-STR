@@ -197,6 +197,39 @@ async def price_calendar(property_id: str, month: str = Query(..., pattern=r"^\d
     return {"property_id": property_id, "property_title": prop.get("title"), "month": month, "days": days}
 
 
+@router.get("/public-calendar/{property_id}")
+async def public_price_calendar(
+    property_id: str,
+    month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
+    db=Depends(get_db),
+):
+    """Expose nightly guest prices without exposing host-only price rules."""
+    prop = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
+    if not prop or str(prop.get("status") or "").lower() not in {"live", "approved", "active"}:
+        raise HTTPException(status_code=404, detail="Property not found")
+    if not is_eligible_property(prop):
+        return {"property_id": property_id, "month": month, "days": []}
+
+    year, number = [int(part) for part in month.split("-")]
+    cursor = date(year, number, 1)
+    next_month = date(year + (number == 12), 1 if number == 12 else number + 1, 1)
+    rules = await property_rules(db, property_id)
+    days = []
+    while cursor < next_month:
+        price = calculate_price(prop, cursor, rules)
+        days.append({
+            "date": price["date"],
+            "final_price": price["final_price"],
+            "base_price": price["base_price"],
+            "is_dynamic": price["rule_type"] != "BASE",
+            "is_higher": price["final_price"] > price["base_price"],
+            "is_lower": price["final_price"] < price["base_price"],
+            "rule_label": price["rule_name"] if price["rule_type"] != "BASE" else None,
+        })
+        cursor += timedelta(days=1)
+    return {"property_id": property_id, "month": month, "days": days}
+
+
 @router.post("/bulk-update")
 async def bulk_update(payload: BulkPriceUpdate, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
     require_price_user(current_user)

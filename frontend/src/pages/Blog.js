@@ -14,15 +14,6 @@ import LegalDocument from '../components/LegalDocument';
 import Footer from '../components/Footer';
 import { extractFaqsFromMarkdown, formatContentWithBullets, markdownComponents } from '../lib/formatContent';
 
-const FALLBACK_BLOG_IMAGES = [
-  'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1540555700478-4be289fbecef?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1537996194471-e657df975ab4?auto=format&fit=crop&q=80&w=800',
-  'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&q=80&w=800'
-];
-
 const blogSchema = {
   "@context": "https://schema.org",
   "@type": "Blog",
@@ -59,7 +50,7 @@ const DEFAULT_BLOG_POSTS = [
     excerpt: 'How shifting preferences and hybrid work models are driving growth in STR spaces.',
     date: 'June 10, 2026',
     author: 'Amit Sharma',
-    image_url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+    image_url: '',
     read_time: '6 min read'
   },
   {
@@ -68,7 +59,7 @@ const DEFAULT_BLOG_POSTS = [
     excerpt: 'Curate your space to appeal to high-end travelers with styling and amenity upgrades.',
     date: 'June 05, 2026',
     author: 'Neha Patel',
-    image_url: 'https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?auto=format&fit=crop&q=80&w=800',
+    image_url: '',
     read_time: '5 min read'
   },
   {
@@ -77,7 +68,7 @@ const DEFAULT_BLOG_POSTS = [
     excerpt: 'Explore the most beautiful villa retreats and holiday home collections for your next vacation.',
     date: 'May 28, 2026',
     author: 'Vikram Singh',
-    image_url: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&q=80&w=800',
+    image_url: '',
     read_time: '7 min read'
   }
 ];
@@ -238,7 +229,7 @@ const Blog = () => {
     page_eyebrow: 'X-SPACE360 JOURNAL',
     page_title: 'The Journal',
     page_subtitle: 'Curated insights, local travel guides, and operational updates for short-term renting and event planning.',
-    page_hero_image_url: 'https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&q=80&w=800',
+    page_hero_image_url: '',
     ...(cmsContent?.blog || {})
   };
 
@@ -247,8 +238,8 @@ const Blog = () => {
       const visibleCmsBlogPosts = cmsContent.blog.posts.filter(post => post?.is_active !== false);
       return visibleCmsBlogPosts.map((post, idx) => {
         const parsedContent = extractFaqsFromMarkdown(post.content || '');
-        const fallbackImg = FALLBACK_BLOG_IMAGES[idx % FALLBACK_BLOG_IMAGES.length];
-        const postImg = post.image_url || post.imageUrl || post.img || post.featuredImage || fallbackImg;
+        // Keep CMS-uploaded article covers, but never substitute generic stock/AI imagery.
+        const postImg = post.image_url || post.imageUrl || post.img || post.featuredImage || '';
         return {
           id: post.id || `cms-post-${idx}`,
           title: post.title || 'Untitled',
@@ -498,17 +489,17 @@ const Blog = () => {
       )}
 
       {/* Premium Warm Hero Header Section */}
-      <div className="relative pt-32 pb-16 md:pt-40 md:pb-24 bg-gradient-to-b from-[#FAF8F5] via-[#F5F2EB] to-[#FAF8F5] text-charcoal overflow-hidden border-b border-stone-200">
-        <div className="absolute inset-0 bg-[radial-gradient(#E0A51B_1px,transparent_1px)] [background-size:24px_24px] opacity-15" />
-        <div className="relative z-10 max-w-4xl mx-auto px-6 text-center space-y-5">
-          <div className="inline-flex items-center space-x-2 bg-terracotta/10 border border-terracotta/20 px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest text-terracotta">
+      <div className="relative overflow-hidden border-b border-[#d9cfbd] bg-[#f8f5ee] pb-16 pt-32 text-charcoal md:pb-20 md:pt-40">
+        <div className="pointer-events-none absolute -right-20 -top-24 h-80 w-80 rounded-full border-[28px] border-[#d8b149]/15" />
+        <div className="relative z-10 mx-auto max-w-4xl space-y-5 border-l-4 border-[#c89e2b] px-6 pl-7 md:px-8 md:pl-10">
+          <div className="inline-flex items-center space-x-2 rounded-full border border-[#d8c27c] bg-[#fffaf0] px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-[#8a6811]">
             <BookOpen className="w-3.5 h-3.5" />
             <span>{blogSettings.page_eyebrow || 'X-SPACE360 JOURNAL'}</span>
           </div>
-          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight font-serif text-charcoal">
+          <h1 className="text-4xl font-black tracking-tight text-[#0F4A33] md:text-6xl">
             {selectedPost ? (blogSettings.page_title || 'The Journal') : 'X-Space360 Blog'}
           </h1>
-          <p className="text-base md:text-xl text-charcoal-light max-w-2xl mx-auto leading-relaxed font-normal">
+          <p className="max-w-2xl text-base leading-relaxed text-charcoal-light md:text-xl">
             {blogSettings.page_subtitle || 'Curated insights, local travel guides, and operational updates for short-term renting.'}
           </p>
         </div>
@@ -625,13 +616,25 @@ const Blog = () => {
               onClick={() => openPost(post)}
               className="cursor-pointer group flex flex-col space-y-3"
             >
-              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-stone border border-stone-200 shadow-sm">
-                <img 
-                  src={getImageUrl(post.image_url)} 
-                  alt={post.title} 
-                  className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-500"
-                />
-              </div>
+              {post.image_url ? (
+                <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-[#e5dccb] bg-stone shadow-sm">
+                  <img
+                    src={getImageUrl(post.image_url)}
+                    alt={post.title}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  />
+                </div>
+              ) : (
+                <div className="relative flex aspect-[16/10] flex-col justify-between overflow-hidden rounded-2xl border border-[#e5dccb] bg-[#f8f5ee] p-6 shadow-sm transition-transform duration-300 group-hover:-translate-y-1">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0F4A33] text-[#f2c75c]">
+                    <BookOpen className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#9b7518]">{post.category || 'X-Space360 Journal'}</p>
+                    <div className="mt-3 h-px w-16 bg-[#c89e2b]" />
+                  </div>
+                </div>
+              )}
               <div className="space-y-1 pt-1">
                 <h3 className="text-xl md:text-2xl font-bold text-charcoal leading-snug group-hover:text-terracotta transition-colors duration-200">
                   {post.title}
