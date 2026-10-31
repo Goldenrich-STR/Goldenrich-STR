@@ -345,19 +345,13 @@ async def razorpay_webhook(
                 subscription_id,
             )
 
-            # Record transaction
             try:
-                from models.transaction import TransactionType
-                from services.account_service import record_transaction
-                await record_transaction(
+                from routes.subscription_routes import _record_subscription_transaction
+                await _record_subscription_transaction(
                     db,
-                    type=TransactionType.SUBSCRIPTION,
-                    amount=int(amount_paise or round(subscription.get("amount", 0) * 100)),
-                    razorpay_order_id=order_id,
-                    razorpay_payment_id=payment_id,
-                    user_id=subscription["user_id"],
-                    subscription_id=subscription_id,
-                    is_mock=razorpay_service.is_mock,
+                    {**subscription, "status": SubscriptionStatus.ACTIVE.value, "payment_status": "paid", "razorpay_payment_id": payment_id, "razorpay_subscription_id": payment_id},
+                    payment_id=payment_id,
+                    order_id=order_id,
                 )
             except Exception as txn_err:
                 logger.warning(f"Webhook failed to record subscription transaction: {txn_err}")
@@ -376,6 +370,16 @@ async def razorpay_webhook(
             # moving the property out of draft.
             from routes.subscription_routes import _activate_property_after_subscription_payment
             await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+            try:
+                from routes.subscription_routes import _record_subscription_transaction
+                await _record_subscription_transaction(
+                    db,
+                    subscription,
+                    payment_id=payment_id,
+                    order_id=order_id,
+                )
+            except Exception as txn_err:
+                logger.warning("Webhook failed to reconcile subscription transaction: %s", txn_err)
             logger.info(f"Subscription {subscription_id} was already active. No-op.")
             return {"status": "already_processed", "resolved_entity": "subscription", "id": subscription_id}
 
