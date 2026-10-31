@@ -1953,6 +1953,51 @@ async def stop_video_recording(
     return {"message": "Recording stop requested", "recording_session": session}
 
 
+@router.post("/{verification_id}/recording/reset")
+async def reset_incomplete_video_recording(
+    verification_id: str,
+    current_user: dict = Depends(get_current_user),
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Clear an incomplete Jitsi/Jibri attempt without touching a manual upload."""
+    if not (_is_admin(current_user) or _is_telecaller(current_user)):
+        raise HTTPException(status_code=403, detail="Telecaller access required")
+    case = await _case_or_404(db, verification_id)
+    if case.get("telecaller_id") and not _is_admin(current_user) and case.get("telecaller_id") not in _telecaller_identity_terms(current_user):
+        raise HTTPException(status_code=403, detail="This verification is assigned to another telecaller")
+
+    session = case.get("recording_session") or {}
+    status_value = str(session.get("status") or case.get("recording_status") or "NOT_STARTED").upper()
+    if status_value == "COMPLETED" or case.get("recording_object_key") or case.get("recording_url"):
+        raise HTTPException(status_code=409, detail="Completed secure recording cannot be reset")
+    if status_value not in {"START_REQUESTED", "RECORDING", "STOP_REQUESTED", "FAILED"}:
+        return {"message": "No incomplete recording session found", "recording_status": "NOT_STARTED"}
+
+    now = now_utc()
+    await db.property_verifications.update_one(
+        {"verification_id": verification_id},
+        {
+            "$set": {
+                "recording_status": "NOT_STARTED",
+                "recording_consent_confirmed": False,
+                "updated_at": now,
+            },
+            "$unset": {
+                "recording_session": "",
+                "recording_consent_confirmed_at": "",
+            },
+        },
+    )
+    await _history(
+        db,
+        case,
+        current_user,
+        "INCOMPLETE_VIDEO_RECORDING_RESET",
+        {"session_id": session.get("session_id", ""), "previous_status": status_value},
+    )
+    return {"message": "Incomplete recording session cleared", "recording_status": "NOT_STARTED"}
+
+
 @router.post("/recording-callback")
 async def recording_callback(
     payload: RecordingCallbackPayload,
