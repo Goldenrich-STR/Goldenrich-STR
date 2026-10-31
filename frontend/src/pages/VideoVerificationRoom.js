@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlertCircle, Loader2, Video, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { verificationAPI } from '../services/api';
+import { uploadAPI, verificationAPI } from '../services/api';
 
 const CHECKLIST = [
   ['host_identity_confirmed', 'Host identity confirmed'],
@@ -59,6 +59,8 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
   const [recordingBusy, setRecordingBusy] = useState(false);
   const [checklist, setChecklist] = useState({});
   const [remarks, setRemarks] = useState('');
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState('');
+  const [videoUploading, setVideoUploading] = useState(false);
   const [checklistSaving, setChecklistSaving] = useState(false);
   const [submittingToBm, setSubmittingToBm] = useState(false);
   const [checklistNotice, setChecklistNotice] = useState('');
@@ -79,6 +81,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
           setRecordingStatus(selected.recording_status || 'NOT_STARTED');
           setChecklist(selected.telecaller_checklist || {});
           setRemarks(selected.telecaller_remarks || '');
+          setUploadedVideoUrl(selected.telecaller_video_url || '');
         }
       } catch (err) {
         if (active) setError(err?.response?.data?.detail || err.message || 'Unable to open video verification.');
@@ -159,6 +162,27 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
   const recordingEnabled = effectiveRole === 'telecaller' && verification?.jitsi_recording_enabled;
   const checklistDone = CHECKLIST.filter(([key]) => isChecked(checklist[key])).length;
 
+  const uploadVerificationVideo = async (file) => {
+    if (!file || !verification?.verification_id) return;
+    setVideoUploading(true);
+    setChecklistNotice('');
+    try {
+      const uploaded = await uploadAPI.uploadVideo(file);
+      await verificationAPI.saveTelecallerChecklist(verification.verification_id, {
+        checklist,
+        remarks,
+        video_url: uploaded.url,
+      });
+      setUploadedVideoUrl(uploaded.url);
+      setVerification((current) => current ? { ...current, telecaller_video_url: uploaded.url } : current);
+      setChecklistNotice('Verification video uploaded and attached successfully.');
+    } catch (err) {
+      setChecklistNotice(err?.response?.data?.detail || err.message || 'Unable to upload verification video.');
+    } finally {
+      setVideoUploading(false);
+    }
+  };
+
   const saveChecklist = async () => {
     if (!verification?.verification_id) return;
     setChecklistSaving(true);
@@ -167,7 +191,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
       await verificationAPI.saveTelecallerChecklist(verification.verification_id, {
         checklist,
         remarks,
-        video_url: verification.telecaller_video_url || '',
+        video_url: uploadedVideoUrl || verification.telecaller_video_url || '',
       });
       setChecklistNotice('Checklist saved successfully.');
     } catch (err) {
@@ -193,12 +217,12 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
       await verificationAPI.saveTelecallerChecklist(verification.verification_id, {
         checklist,
         remarks: remarks.trim(),
-        video_url: verification.telecaller_video_url || '',
+        video_url: uploadedVideoUrl || verification.telecaller_video_url || '',
       });
       await verificationAPI.telecallerDecision(verification.verification_id, {
         result: 'VERIFIED',
         remarks: remarks.trim(),
-        video_url: verification.telecaller_video_url || '',
+        video_url: uploadedVideoUrl || verification.telecaller_video_url || '',
       });
       setChecklistNotice('Verification sent to Branch Manager successfully.');
       setVerification((current) => current ? {
@@ -229,8 +253,14 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
             <div className="mb-3 flex items-center justify-between gap-3"><p className="text-sm font-black">Verification Checklist</p><p className="text-xs font-bold text-slate-500">{checklistDone}/{CHECKLIST.length}</p></div>
             <div className="space-y-1.5">{CHECKLIST.map(([key, label]) => <label key={key} className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={isChecked(checklist[key])} onChange={(event) => setChecklist((current) => ({ ...current, [key]: event.target.checked ? 'yes' : 'no' }))} className="h-3.5 w-3.5 accent-blue-600" /><span>{label}</span></label>)}</div>
             <div className="mt-3"><div className="mb-1 flex items-center justify-between"><p className="text-xs font-black">Telecaller Notes</p><p className="text-[10px] font-bold text-slate-400">{remarks.length}/500</p></div><textarea value={remarks} maxLength={500} onChange={(event) => setRemarks(event.target.value)} placeholder="Add your notes here..." className="min-h-[92px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" /></div>
-            <button type="button" disabled={checklistSaving} onClick={saveChecklist} className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{checklistSaving ? 'Saving...' : 'Save Checklist'}</button>
-            <button type="button" disabled={submittingToBm || checklistDone !== CHECKLIST.length || !remarks.trim()} onClick={submitToBranchManager} className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{submittingToBm ? 'Sending...' : 'Save & Send to BM'}</button>
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs font-black text-slate-900">Verification Video Upload</p>
+              <p className="mt-1 text-[11px] font-semibold text-slate-500">Choose a recorded MP4, MOV, AVI, WEBM or MKV file to attach for Branch Manager review.</p>
+              <input type="file" accept="video/*,.mp4,.mov,.avi,.webm,.mkv" disabled={videoUploading} onChange={(event) => uploadVerificationVideo(event.target.files?.[0])} className="mt-2 block w-full text-xs font-semibold text-slate-600 file:mr-3 file:rounded-md file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-xs file:font-black file:uppercase file:tracking-wider file:text-white disabled:opacity-50" />
+              {videoUploading ? <p className="mt-2 text-xs font-bold text-blue-700">Uploading video...</p> : uploadedVideoUrl ? <a href={uploadedVideoUrl} target="_blank" rel="noreferrer" className="mt-2 block truncate text-xs font-bold text-blue-700">Uploaded video attached</a> : null}
+            </div>
+            <button type="button" disabled={checklistSaving || videoUploading} onClick={saveChecklist} className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{checklistSaving ? 'Saving...' : 'Save Checklist'}</button>
+            <button type="button" disabled={submittingToBm || videoUploading || checklistDone !== CHECKLIST.length || !remarks.trim()} onClick={submitToBranchManager} className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{submittingToBm ? 'Sending...' : 'Save & Send to BM'}</button>
             {checklistNotice && <p className="mt-2 text-xs font-bold text-blue-700">{checklistNotice}</p>}
           </aside>}
           </div></section>}
