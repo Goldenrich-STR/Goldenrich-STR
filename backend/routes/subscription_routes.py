@@ -142,6 +142,44 @@ async def _activate_property_after_subscription_payment(
     return property_id
 
 
+async def _record_subscription_transaction(
+    db: AsyncIOMotorDatabase,
+    subscription: dict,
+    *,
+    payment_id: Optional[str] = None,
+    order_id: Optional[str] = None,
+) -> bool:
+    """Idempotently repair/create the finance ledger row for a paid subscription."""
+    resolved_payment_id = str(
+        payment_id
+        or subscription.get("upi_transaction_id")
+        or subscription.get("razorpay_payment_id")
+        or subscription.get("razorpay_subscription_id")
+        or ""
+    ).strip()
+    subscription_id = str(subscription.get("subscription_id") or "").strip()
+    if not subscription_id or not resolved_payment_id:
+        return False
+
+    from models.transaction import TransactionType
+    from services.account_service import record_transaction
+
+    is_upi = bool(subscription.get("upi_transaction_id"))
+    await record_transaction(
+        db,
+        type=TransactionType.SUBSCRIPTION,
+        amount=int(round(float(subscription.get("amount") or 0) * 100)),
+        razorpay_order_id=order_id or subscription.get("razorpay_order_id"),
+        razorpay_payment_id=resolved_payment_id,
+        upi_transaction_id=resolved_payment_id if is_upi else None,
+        user_id=subscription.get("user_id"),
+        subscription_id=subscription_id,
+        notes="Host subscription paid by UPI QR" if is_upi else None,
+        is_mock=razorpay_service.is_mock,
+    )
+    return True
+
+
 def _subscription_checkout_payload(subscription: dict, plan: dict, amount_breakdown: dict, coupon_code: Optional[str], already_active: bool = False) -> dict:
     amount = float(subscription.get("amount") or amount_breakdown.get("total_amount") or 0)
     return {
@@ -693,6 +731,12 @@ async def confirm_subscription_payment(
         if subscription.get("status") == SubscriptionStatus.ACTIVE.value:
             if existing_payment_id == razorpay_payment_id:
                 await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+                await _record_subscription_transaction(
+                    db,
+                    subscription,
+                    payment_id=razorpay_payment_id,
+                    order_id=razorpay_order_id,
+                )
                 return {
                     "message": "Subscription already activated",
                     "subscription_id": subscription_id,
@@ -786,22 +830,11 @@ async def confirm_subscription_payment(
 
         # Phase 15 — subscription revenue ledger
         try:
-            from models.transaction import TransactionType
-            from services.account_service import record_transaction
-            sub_plan = await db.subscription_plans.find_one(
-                {"plan_id": subscription.get("plan_id")}, {"_id": 0, "price_monthly": 1}
-            )
-            # amount was stored in subscription object
-            sub_amount = int(round(subscription.get("amount", 0) * 100))
-            await record_transaction(
+            await _record_subscription_transaction(
                 db,
-                type=TransactionType.SUBSCRIPTION,
-                amount=sub_amount,
-                razorpay_order_id=razorpay_order_id,
-                razorpay_payment_id=razorpay_payment_id,
-                user_id=subscription["user_id"],
-                subscription_id=subscription_id,
-                is_mock=razorpay_service.is_mock,
+                updated_subscription,
+                payment_id=razorpay_payment_id,
+                order_id=razorpay_order_id,
             )
         except Exception as txn_err:
             logger.warning(f"Failed to record subscription transaction: {txn_err}")
@@ -853,6 +886,7 @@ async def mock_pay_subscription(
 
     if subscription.get("status") == SubscriptionStatus.ACTIVE.value:
         await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+        await _record_subscription_transaction(db, subscription, order_id=razorpay_order_id)
         return {
             "message": "Subscription already activated",
             "subscription_id": subscription_id,
@@ -882,17 +916,11 @@ async def mock_pay_subscription(
     await _activate_property_after_subscription_payment(db, updated_subscription, subscription_id)
 
     try:
-        from models.transaction import TransactionType
-        from services.account_service import record_transaction
-        await record_transaction(
+        await _record_subscription_transaction(
             db,
-            type=TransactionType.SUBSCRIPTION,
-            amount=int(round(float(subscription.get("amount") or 0) * 100)),
-            razorpay_order_id=razorpay_order_id,
-            razorpay_payment_id=mock_payment["razorpay_payment_id"],
-            user_id=subscription["user_id"],
-            subscription_id=subscription_id,
-            is_mock=True,
+            updated_subscription,
+            payment_id=mock_payment["razorpay_payment_id"],
+            order_id=razorpay_order_id,
         )
     except Exception as txn_err:
         logger.warning("Failed to record mock subscription transaction: %s", txn_err)
@@ -959,20 +987,11 @@ async def confirm_subscription_upi_payment(
     await _activate_property_after_subscription_payment(db, updated_subscription, payload.subscription_id)
 
     try:
-        from models.transaction import TransactionType
-        from services.account_service import record_transaction
-        sub_amount = int(round(subscription.get("amount", 0) * 100))
-        await record_transaction(
+        await _record_subscription_transaction(
             db,
-            type=TransactionType.SUBSCRIPTION,
-            amount=sub_amount,
-            razorpay_order_id=payload.razorpay_order_id,
-            razorpay_payment_id=upi_transaction_id,
-            upi_transaction_id=upi_transaction_id,
-            user_id=subscription["user_id"],
-            subscription_id=payload.subscription_id,
-            notes="Host subscription paid by UPI QR",
-            is_mock=razorpay_service.is_mock,
+            updated_subscription,
+            payment_id=upi_transaction_id,
+            order_id=payload.razorpay_order_id,
         )
     except Exception as txn_err:
         logger.warning(f"Failed to record UPI subscription transaction: {txn_err}")

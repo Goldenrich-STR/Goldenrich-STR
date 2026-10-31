@@ -818,6 +818,104 @@ async def _enrich_case(db, case: dict):
     }
 
 
+async def _reconcile_paid_draft_property(db, item: dict) -> dict:
+    """Repair a paid listing left in draft and its missing subscription ledger row."""
+    prop = item.get("property") or {}
+    if str(prop.get("status") or "").lower() != "draft" or not prop.get("property_id"):
+        return item
+    subscription = await db.subscriptions.find_one(
+        {
+            "property_id": prop["property_id"],
+            "is_deleted": {"$ne": True},
+            "$or": [{"status": "active"}, {"payment_status": "paid"}],
+        },
+        {"_id": 0},
+        sort=[("updated_at", -1), ("created_at", -1)],
+    )
+    if not subscription:
+        return item
+    try:
+        from routes.subscription_routes import (
+            _activate_property_after_subscription_payment,
+            _record_subscription_transaction,
+        )
+        await _activate_property_after_subscription_payment(
+            db,
+            subscription,
+            subscription["subscription_id"],
+        )
+        await _record_subscription_transaction(db, subscription)
+        item["property"] = await db.properties.find_one(
+            _active_property_filter({"property_id": prop["property_id"]}),
+            {"_id": 0},
+        ) or prop
+    except Exception as reconcile_err:
+        logger.warning(
+            "Paid property reconciliation failed for %s: %s",
+            prop.get("property_id"),
+            reconcile_err,
+        )
+    return item
+
+
+async def _close_stale_live_case(db, item: dict) -> bool:
+    """Keep already-live properties out of operational verification queues."""
+    prop = item.get("property") or {}
+    if str(prop.get("status") or "").lower() != "live":
+        return False
+    if item.get("current_stage") not in {LIVE, COMPLETED}:
+        await db.property_verifications.update_one(
+            {"verification_id": item.get("verification_id")},
+            {"$set": {
+                "current_stage": LIVE,
+                "current_status": COMPLETED,
+                "workflow_status": LIVE,
+                "status": "approved",
+                "updated_at": now_utc(),
+            }},
+        )
+    return True
+
+
+async def _requeue_legacy_bm_rejections(db) -> None:
+    """Move BM-rejected/rework cases created by the old flow back to Telecaller."""
+    legacy_rows = await db.property_verifications.find(
+        {
+            "$or": [
+                {"current_stage": {"$in": [BM_REJECTED, BM_REWORK_REQUIRED]}},
+                {"current_status": {"$in": [BM_REJECTED, BM_REWORK_REQUIRED]}},
+                {"workflow_status": {"$in": [BM_REJECTED, BM_REWORK_REQUIRED]}},
+            ],
+        },
+        {"_id": 0, "verification_id": 1, "property_id": 1},
+    ).to_list(length=500)
+    if not legacy_rows:
+        return
+    now = now_utc()
+    verification_ids = [row["verification_id"] for row in legacy_rows if row.get("verification_id")]
+    property_ids = [row["property_id"] for row in legacy_rows if row.get("property_id")]
+    if verification_ids:
+        await db.property_verifications.update_many(
+            {"verification_id": {"$in": verification_ids}},
+            {"$set": {
+                "current_stage": TELECALLER_REWORK_REQUIRED,
+                "current_status": TELECALLER_REWORK_REQUIRED,
+                "workflow_status": TELECALLER_REWORK_REQUIRED,
+                "updated_at": now,
+            }},
+        )
+    if property_ids:
+        await db.properties.update_many(
+            {"property_id": {"$in": property_ids}, "status": {"$ne": "live"}},
+            {"$set": {
+                "status": "pending_verification",
+                "workflow_status": TELECALLER_REWORK_REQUIRED,
+                "verification_stage": TELECALLER_REWORK_REQUIRED,
+                "updated_at": now,
+            }},
+        )
+
+
 async def _history(db, case: dict, user: dict, action: str, details: dict | None = None):
     event = {
         "action": action,
@@ -1198,6 +1296,7 @@ def _update_host_kyc_status(host: dict, doc_summary: dict) -> str:
 
 @router.get("")
 async def list_cases(stage: Optional[str] = None, current_user: dict = Depends(get_current_user), db: AsyncIOMotorDatabase = Depends(get_db)):
+    await _requeue_legacy_bm_rejections(db)
     await _ensure_missing_cases_for_submitted_properties(db, current_user)
     query = {}
     if stage:
@@ -1247,6 +1346,9 @@ async def list_cases(stage: Optional[str] = None, current_user: dict = Depends(g
         if _is_telecaller(current_user) and not _visible_to_telecaller(row, telecaller_profile):
             continue
         item = await _enrich_case(db, row)
+        item = await _reconcile_paid_draft_property(db, item)
+        if (_is_telecaller(current_user) or _is_branch_manager(current_user)) and await _close_stale_live_case(db, item):
+            continue
         if not _case_has_active_entities(item):
             continue
         if _is_branch_manager(current_user):
@@ -2502,6 +2604,13 @@ async def telecaller_decision(verification_id: str, payload: DecisionPayload, cu
         "required_action": payload.required_action or "",
         "updated_at": now_utc(),
     }
+    if result == "VERIFIED":
+        updates.update({
+            "branch_manager_reviewed": False,
+            "branch_manager_approved": None,
+            "bm_checklist": {},
+            "bm_approved_at": None,
+        })
     await db.property_verifications.update_one({"verification_id": verification_id}, {"$set": updates})
     await db.properties.update_one(
         {"property_id": case["property_id"]},
@@ -2580,7 +2689,7 @@ async def bm_decision(verification_id: str, payload: DecisionPayload, current_us
     checklist = case.get("bm_checklist") or {}
     if result == "APPROVE" and not all_required_done(checklist, BM_CHECKLIST_KEYS):
         raise HTTPException(status_code=400, detail="Complete mandatory BM checklist before approval")
-    next_stage = ADMIN_REVIEW_PENDING if result == "APPROVE" else BM_REWORK_REQUIRED if result == "REWORK" else BM_REJECTED
+    next_stage = ADMIN_REVIEW_PENDING if result == "APPROVE" else TELECALLER_REWORK_REQUIRED
     updates = {
         "current_stage": next_stage,
         "current_status": next_stage,
@@ -2597,7 +2706,7 @@ async def bm_decision(verification_id: str, payload: DecisionPayload, current_us
     await db.properties.update_one(
         {"property_id": case["property_id"]},
         {"$set": {
-            "status": "under_review" if result == "APPROVE" else "draft" if result == "REWORK" else "rejected",
+            "status": "under_review" if result == "APPROVE" else "pending_verification",
             "workflow_status": next_stage,
             "verification_stage": next_stage,
             "verification_remarks": payload.remarks if result in {"REWORK", "REJECT"} else "",
