@@ -290,6 +290,12 @@ const RecentlyVisitedCard = ({ item, index, navigate, wishlist, handleWishlistTo
         className="aspect-[16/10] rounded-xl bg-sand-200"
         imageClassName="group-hover/card:scale-[1.025]"
       >
+        {badgeLabel && (
+          <span className="absolute left-3 top-3 z-20 inline-flex items-center gap-1 rounded border border-[#D4AF37] bg-black/90 px-2 py-1 text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow">
+            <Crown className="h-2.5 w-2.5 fill-[#D4AF37]/20 text-[#D4AF37]" />
+            {badgeLabel}
+          </span>
+        )}
 
         <button
           type="button"
@@ -2404,6 +2410,7 @@ const CollectionsSection = ({
                         navigate('/guest/browse?signature=true');
                         return;
                       }
+                      if (col.id === 'commercial-spaces') { navigate('/guest/browse?category=commercial'); return; }
                       navigate(getSeoUrlForFilters({ category: col.query, property_type: col.property_type }));
                     }}
                     className="group relative aspect-[3/4] w-[220px] min-w-[220px] snap-start cursor-pointer overflow-hidden rounded-xl shadow-sm transition-all duration-500 hover:shadow-lg md:w-[250px] md:min-w-[250px] bg-stone-800"

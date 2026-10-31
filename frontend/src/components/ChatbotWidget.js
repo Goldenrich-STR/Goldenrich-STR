@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  X, MessageSquare, Sparkles,
+  X, MessageSquare,
   User, Home, Phone, Search, Layers, CreditCard, HelpCircle, FileText, ShieldCheck, DollarSign, Mail, ArrowLeft,
   Calendar, ShieldAlert, BadgeInfo, PencilLine, AlertTriangle, Landmark, Scale, Clock, RefreshCw, Landmark as Bank, LifeBuoy
 } from 'lucide-react';
@@ -369,127 +369,133 @@ const ChatbotWidget = () => {
     <div className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div 
+        <div
           ref={chatContainerRef}
           role="dialog"
           aria-label="Support Chat Assistant"
           aria-modal="true"
-          className="w-[380px] h-[600px] max-h-[85vh] max-w-[calc(100vw-2rem)] bg-white border border-gray-200 shadow-elevated rounded-3xl flex flex-col mb-4 overflow-hidden animate-scale-up z-50 focus:outline-none"
+          className="w-[400px] h-[620px] max-h-[85vh] max-w-[calc(100vw-2rem)] bg-white border border-gray-100 shadow-[0_24px_70px_-12px_rgba(20,20,20,0.35)] rounded-[28px] flex flex-col mb-4 overflow-hidden animate-scale-up z-50 focus:outline-none"
           tabIndex="-1"
         >
-          
+
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 bg-[#1E1E1E] text-white shadow-md z-10">
-            <div className="flex items-center space-x-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-terracotta to-amber-500 flex items-center justify-center shadow-lg animate-pulse-slow">
-                <Sparkles className="w-5 h-5 text-white" />
+          <div className="flex items-center justify-between px-5 pt-4 pb-3 bg-white z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-white border border-gray-200 shadow-sm overflow-hidden flex items-center justify-center shadow-sm">
+                <img src="/favicon.svg" alt="X-Space360" className="w-full h-full object-cover" />
               </div>
-              <div className="text-left">
-                <div className="flex items-center space-x-1.5">
-                  <h3 className="text-[15px] font-bold tracking-tight leading-tight text-white">X-Space360 Assistant</h3>
-                  <div className="relative flex h-2 w-2">
+              <div className="text-left leading-tight">
+                <h3 className="text-[15px] font-semibold text-[#1f1f1f]">X-Space360 Assistant</h3>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </div>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                  </span>
+                  <p className="text-[11px] text-gray-500">Online · replies instantly</p>
                 </div>
-                <p className="text-[10px] font-semibold text-gray-400 mt-0.5 tracking-wider">Typically replies instantly</p>
               </div>
             </div>
-            <button 
-              onClick={() => {
-                setIsOpen(false);
-                toggleBtnRef.current?.focus();
-              }}
-              aria-label="Close support chat assistant"
-              className="p-2 hover:bg-white/10 rounded-full transition-colors cursor-pointer text-gray-400 hover:text-white border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-amber-500"
-            >
-              <X className="w-4.5 h-4.5" />
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleRestart}
+                disabled={isTyping}
+                aria-label="Restart assistant"
+                title="Restart"
+                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer border-none bg-transparent disabled:opacity-40 focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <RefreshCw className="w-[18px] h-[18px]" />
+              </button>
+              <button
+                onClick={() => {
+                  setIsOpen(false);
+                  toggleBtnRef.current?.focus();
+                }}
+                aria-label="Close support chat assistant"
+                className="p-2 rounded-full text-gray-500 hover:bg-gray-100 transition-colors cursor-pointer border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
           </div>
 
           {/* Messages Area */}
-          <div className="flex-1 p-5 overflow-y-auto bg-gray-50/50 space-y-6 relative flex flex-col no-scrollbar">
+          <div className="flex-1 px-5 py-4 overflow-y-auto bg-white space-y-6 relative flex flex-col no-scrollbar">
             {messages.map((msg, idx) => (
-              <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} w-full`}>
-                {msg.role === 'model' && (
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-terracotta to-amber-500 flex items-center justify-center shrink-0 mr-3 mt-1 shadow-sm">
-                    <Sparkles className="w-3.5 h-3.5 text-white" />
+              <div key={idx} className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                {msg.role === 'user' ? (
+                  <div className="max-w-[80%] rounded-3xl rounded-br-lg bg-[#F0F4F9] text-[#1f1f1f] px-4 py-2.5 text-[14px] leading-relaxed animate-fade-in-left">
+                    {msg.content}
+                  </div>
+                ) : (
+                  <div className="flex gap-3 w-full animate-fade-in-right">
+                    <div className="w-7 h-7 rounded-full bg-white border border-gray-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0 mt-0.5">
+                      <img src="/favicon.svg" alt="" className="w-full h-full object-cover" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="prose prose-sm max-w-none text-[14px] leading-relaxed text-[#1f1f1f] prose-p:my-1.5 prose-headings:my-1 prose-headings:text-[17px] prose-headings:font-semibold prose-a:text-terracotta prose-a:no-underline hover:prose-a:underline prose-strong:text-current">
+                        <ReactMarkdown>{msg.content}</ReactMarkdown>
+                      </div>
+
+                      {msg.options && msg.options.length > 0 && (
+                        <div className="mt-3 flex flex-col items-start gap-2">
+                          {msg.options.map((opt, i) => {
+                            const IconComponent = IconMap[opt.icon] || HelpCircle;
+                            return (
+                              <button
+                                key={i}
+                                disabled={isTyping}
+                                onClick={() => handleOptionClick(opt)}
+                                className="group inline-flex max-w-full items-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-3.5 py-2 text-left text-[13px] font-medium text-[#1f1f1f] transition-all duration-200 hover:border-[#E39A2D]/60 hover:bg-[#FFF8EC] hover:shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-amber-400"
+                              >
+                                <IconComponent className="w-4 h-4 shrink-0 text-[#C8651B]" />
+                                <span className="leading-snug">{opt.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
-                <div 
-                  className={`max-w-[85%] rounded-2xl px-5 py-3.5 text-[14px] leading-relaxed shadow-sm ${
-                    msg.role === 'user' 
-                      ? 'bg-[#1E1E1E] text-white rounded-tr-sm animate-fade-in-left' 
-                      : 'bg-[#F9F6F0] text-gray-800 border border-[#EBE5D9]/60 rounded-tl-sm animate-fade-in-right'
-                  }`}
-                >
-                  <div className="prose prose-sm max-w-none prose-p:my-1 prose-a:text-terracotta prose-a:no-underline hover:prose-a:underline prose-strong:text-current">
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
-                  </div>
-                  
-                  {msg.options && msg.options.length > 0 && (
-                    <div className="mt-4 pt-3 border-t border-gray-150 flex flex-col gap-2">
-                      {msg.options.map((opt, i) => {
-                        const IconComponent = IconMap[opt.icon] || HelpCircle;
-                        return (
-                          <button
-                            key={i}
-                            disabled={isTyping}
-                            onClick={() => handleOptionClick(opt)}
-                            className="w-full text-left px-4 py-2.5 bg-white hover:bg-terracotta hover:text-white text-charcoal font-bold text-xs rounded-xl border border-[#EAE3D2] transition-all duration-300 transform hover:-translate-y-0.5 hover:shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-between shadow-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                          >
-                            <div className="flex items-center space-x-2">
-                               <IconComponent className="w-4 h-4 shrink-0 transition-colors duration-200" />
-                               <span>{opt.label}</span>
-                            </div>
-                            <span className="text-gray-400 font-normal transition-colors hover:text-white">→</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
               </div>
             ))}
-            
+
             {isTyping && (
-              <div className="flex justify-start">
-                <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-terracotta to-amber-500 flex items-center justify-center shrink-0 mr-3 mt-1 shadow-sm">
-                  <Sparkles className="w-3.5 h-3.5 text-white" />
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-full bg-white border border-gray-200 shadow-sm overflow-hidden flex items-center justify-center shrink-0 mt-0.5 animate-pulse">
+                  <img src="/favicon.svg" alt="" className="w-full h-full object-cover" />
                 </div>
-                <div className="bg-[#F9F6F0] border border-[#EBE5D9]/60 rounded-2xl rounded-tl-sm px-5 py-4 shadow-sm flex items-center space-x-1.5">
-                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                  <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+                <div className="flex items-center gap-1.5 pt-2.5">
+                  <div className="w-2 h-2 bg-[#E39A2D] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                  <div className="w-2 h-2 bg-[#E39A2D] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                  <div className="w-2 h-2 bg-[#E39A2D] rounded-full animate-bounce"></div>
                 </div>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Footer Navigation Bar */}
-          <div className="p-4 bg-white border-t border-gray-100 flex flex-col space-y-3 z-10 shadow-inner">
-            <div className="flex items-center justify-between gap-3">
+          {/* Footer */}
+          <div className="px-4 pb-4 pt-2 bg-white z-10">
+            <div className="flex items-center gap-2 rounded-full bg-[#F0F4F9] p-1.5">
               <button
                 onClick={handleRestart}
                 disabled={isTyping}
-                className="flex-1 py-2 px-3 bg-gray-100 hover:bg-[#1E1E1E] text-charcoal hover:text-white font-bold text-xs rounded-xl transition duration-200 cursor-pointer disabled:opacity-50 border border-gray-200 flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="flex-1 py-2 px-3 rounded-full text-[13px] font-medium text-[#1f1f1f] hover:bg-white hover:shadow-sm transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 border-none bg-transparent focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Restart Assistant</span>
+                <span>Restart</span>
               </button>
               <button
                 onClick={() => handleOptionClick({ label: "Contact Support Desk", next: "support" })}
                 disabled={isTyping}
-                className="flex-1 py-2 px-3 bg-terracotta/10 hover:bg-terracotta text-terracotta hover:text-white font-bold text-xs rounded-xl transition duration-200 cursor-pointer disabled:opacity-50 border border-terracotta/20 flex items-center justify-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="flex-1 py-2 px-3 rounded-full text-[13px] font-semibold text-white bg-gradient-to-r from-[#C8651B] to-[#E39A2D] hover:shadow-md transition cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 border-none focus:outline-none focus:ring-2 focus:ring-amber-400"
               >
                 <Phone className="w-3.5 h-3.5" />
                 <span>Call Support</span>
               </button>
             </div>
-            <div className="text-center">
-              <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Powered by X-Space360 Helpdesk</span>
-            </div>
+            <p className="mt-2 text-center text-[10px] text-gray-400">X-Space360 Helpdesk · Tap an option to continue</p>
           </div>
         </div>
       )}

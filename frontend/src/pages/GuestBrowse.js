@@ -91,7 +91,7 @@ const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest' },
 ];
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 20;
 const SIGNATURE_MIN_NIGHTLY_PRICE = 50000;
 
 const VIEW_MODES = {
@@ -530,6 +530,9 @@ const GuestBrowse = () => {
           delete queryParams[key];
         }
       });
+      // Commercial spaces (desks, meeting rooms) often seat fewer than the default 2 guests,
+      // so the default guest count must not hide them.
+      if (collectionFilters.category === 'commercial' && String(collectionFilters.guests) === '2') delete queryParams.guests;
       if (!collectionFilters.instant_booking) delete queryParams.instant_booking;
       if (!collectionFilters.pet_friendly) delete queryParams.pet_friendly;
 
@@ -902,10 +905,10 @@ const GuestBrowse = () => {
 
         <div className="w-full max-w-6xl mx-auto lg:relative z-50">
           {/* Capsule Search Bar */}
-          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-full border border-slate-200 bg-[#EEF2F6] p-2 shadow-[0_14px_32px_rgba(15,23,42,0.12)]">
+          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-full border border-slate-200 bg-white p-1 shadow-sm">
             <form
               onSubmit={handleSearch}
-              className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[28px] lg:rounded-full w-full border border-white bg-white/95 p-1.5 relative overflow-visible z-50"
+              className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[28px] lg:rounded-full w-full bg-white p-1 relative overflow-visible z-50"
             >
               {/* Search Input */}
               <div className="relative w-full lg:w-[31%] lg:shrink-0 z-10">
@@ -914,7 +917,7 @@ const GuestBrowse = () => {
                     const el = document.getElementById('browse-search-query');
                     if (el) el.focus();
                   }}
-                  className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full cursor-pointer group rounded-2xl lg:rounded-full bg-slate-50 hover:bg-slate-100 transition duration-200"
+                  className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full cursor-pointer group rounded-2xl lg:rounded-full bg-transparent hover:bg-slate-100 transition duration-200"
                 >
                   <Search className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                   <div className="w-full text-left">
@@ -936,7 +939,7 @@ const GuestBrowse = () => {
               <div className="hidden lg:block w-[1px] h-8 bg-slate-200" />
               
               {/* Check-in & Check-out Date Range Section */}
-              <div className={`relative flex flex-col lg:flex-row items-stretch lg:items-center w-full lg:w-[31%] lg:shrink-0 rounded-2xl lg:rounded-full bg-slate-50 ${activeDropdown === 'dates' ? 'z-50' : 'z-10'}`}>
+              <div className={`relative flex flex-col lg:flex-row items-stretch lg:items-center w-full lg:w-[31%] lg:shrink-0 rounded-2xl lg:rounded-full bg-transparent ${activeDropdown === 'dates' ? 'z-50' : 'z-10'}`}>
                 {/* Check-in */}
                 <div className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full lg:w-1/2 border-b border-slate-200 lg:border-none hover:bg-slate-100 transition duration-200 group">
                   <Calendar className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
@@ -1000,7 +1003,7 @@ const GuestBrowse = () => {
               <div className="relative w-full lg:w-[14%] lg:shrink-0 z-10">
                 <div 
                   onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                  className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full cursor-pointer bg-slate-50 hover:bg-slate-100 transition duration-200 rounded-2xl lg:rounded-full"
+                  className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full cursor-pointer bg-transparent hover:bg-slate-100 transition duration-200 rounded-2xl lg:rounded-full"
                 >
                   <User className="w-4.5 h-4.5 text-gray-500 mr-3 shrink-0" />
                   <div className="text-left">
