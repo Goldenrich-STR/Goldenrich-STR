@@ -188,6 +188,32 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
     } finally { setRecordingBusy(false); }
   };
 
+  const resetIncompleteRecording = async () => {
+    if (!verification?.verification_id) return false;
+    setRecordingBusy(true);
+    setError('');
+    try {
+      await verificationAPI.resetVideoRecording(verification.verification_id);
+      recordingRef.current = null;
+      setRecordingStatus('NOT_STARTED');
+      setConsent(false);
+      setVerification((current) => current ? {
+        ...current,
+        recording_status: 'NOT_STARTED',
+        recording_session: null,
+      } : current);
+      setChecklistNotice('Incomplete secure recording status cleared. Your manual upload is still attached.');
+      return true;
+    } catch (err) {
+      const message = err?.response?.data?.detail || err.message || 'Unable to clear incomplete recording status.';
+      setError(message);
+      setChecklistNotice(message);
+      return false;
+    } finally {
+      setRecordingBusy(false);
+    }
+  };
+
   const recordingEnabled = effectiveRole === 'telecaller' && verification?.jitsi_recording_enabled;
   const checklistDone = CHECKLIST.filter(([key]) => isChecked(checklist[key])).length;
   const secureRecordingAttached = Boolean(
@@ -258,7 +284,10 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
         || latestRecordingStatus === 'COMPLETED'
       );
       const latestManualVideoUrl = uploadedVideoUrl || latest.telecaller_video_url || '';
-      if (RECORDING_ACTIVE_STATUSES.includes(latestRecordingStatus)) {
+      if (latestRecordingStatus === 'STOP_REQUESTED' && latestManualVideoUrl && !latestSecureRecordingAttached) {
+        const reset = await resetIncompleteRecording();
+        if (!reset) return;
+      } else if (RECORDING_ACTIVE_STATUSES.includes(latestRecordingStatus)) {
         setVerification(latest);
         setRecordingStatus(latestRecordingStatus);
         setChecklistNotice('Stop the secure recording and wait until it is attached before sending to Branch Manager.');
@@ -294,6 +323,10 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
     }
   };
 
+  const manualVideoAttached = Boolean(uploadedVideoUrl || verification?.telecaller_video_url);
+  const canUseManualVideoForStoppedAttempt = recordingStatus === 'STOP_REQUESTED' && manualVideoAttached && !secureRecordingAttached;
+  const recordingBlocksSubmission = recordingIsActive && !canUseManualVideoForStoppedAttempt;
+
   return <div className="min-h-screen bg-slate-50 p-3 text-slate-950"><main className="mx-auto max-w-6xl">
     {loading ? <div className="flex h-[62vh] items-center justify-center rounded-lg bg-slate-950 text-white"><div className="text-center"><Loader2 className="mx-auto mb-3 h-8 w-8 animate-spin" /><p className="font-black">Preparing secure video verification...</p></div></div>
       : !verification ? <div className="rounded-lg border border-red-200 bg-red-50 p-4 font-bold text-red-700">{error}</div>
@@ -301,7 +334,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
           <div className={effectiveRole === 'telecaller' ? 'grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]' : ''}>
           <div className="rounded-lg border border-slate-200 bg-white p-2 shadow-sm"><div ref={containerRef} className="h-[58vh] w-full overflow-hidden rounded-lg bg-black" />
             <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">This verification call may be recorded for verification, fraud prevention and compliance.</div>
-            {recordingEnabled && <div className="mt-2 flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3"><label className="flex max-w-xl items-start gap-2 text-xs font-semibold"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />I confirm the host has been informed and consented to recording.</label><button type="button" disabled={recordingBusy || !joined || ['START_REQUESTED', 'RECORDING'].includes(recordingStatus)} onClick={startRecording} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-black uppercase text-white disabled:opacity-50">Start secure recording</button>{['START_REQUESTED', 'RECORDING'].includes(recordingStatus) && <button type="button" disabled={recordingBusy} onClick={stopRecording} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black uppercase text-red-700">Stop recording</button>}<span className="text-xs font-black text-blue-700">Recording: {recordingStatus.replace(/_/g, ' ')}</span><p className="w-full text-[11px] font-semibold text-blue-800">Secure Jitsi/Jibri recordings are attached automatically after processing. Do not upload them manually.</p>{secureRecordingAttached && <p className="w-full text-xs font-black text-emerald-700">Secure recording attached automatically for BM review.</p>}{recordingStatus === 'STOP_REQUESTED' && <p className="w-full text-xs font-bold text-amber-700">Recording is processing. Keep this page open until attachment is confirmed.</p>}</div>}
+            {recordingEnabled && <div className="mt-2 flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3"><label className="flex max-w-xl items-start gap-2 text-xs font-semibold"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />I confirm the host has been informed and consented to recording.</label><button type="button" disabled={recordingBusy || !joined || RECORDING_ACTIVE_STATUSES.includes(recordingStatus)} onClick={startRecording} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-black uppercase text-white disabled:opacity-50">Start secure recording</button>{['START_REQUESTED', 'RECORDING'].includes(recordingStatus) && recordingRef.current && <button type="button" disabled={recordingBusy} onClick={stopRecording} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black uppercase text-red-700">Stop recording</button>}{recordingIsActive && !recordingRef.current && <button type="button" disabled={recordingBusy} onClick={resetIncompleteRecording} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-black uppercase text-amber-800">Clear stuck recording</button>}<span className="text-xs font-black text-blue-700">Recording: {recordingStatus.replace(/_/g, ' ')}</span><p className="w-full text-[11px] font-semibold text-blue-800">Camera access does not start recording. Secure recording starts only after you click Start secure recording.</p><p className="w-full text-[11px] font-semibold text-blue-800">Secure Jitsi/Jibri recordings are attached automatically after processing. Do not upload them manually.</p>{secureRecordingAttached && <p className="w-full text-xs font-black text-emerald-700">Secure recording attached automatically for BM review.</p>}{recordingStatus === 'STOP_REQUESTED' && <p className="w-full text-xs font-bold text-amber-700">Recording is processing. If this is an old/stuck attempt, clear it above. A separate manual upload remains attached.</p>}</div>}
             {error && <div className="mt-2 flex gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}</div>
           {effectiveRole === 'telecaller' && <aside className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:max-h-[72vh] lg:overflow-y-auto">
             <div className="mb-3 flex items-center justify-between gap-3"><p className="text-sm font-black">Verification Checklist</p><p className="text-xs font-bold text-slate-500">{checklistDone}/{CHECKLIST.length}</p></div>
@@ -314,7 +347,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
               {videoUploading ? <p className="mt-2 text-xs font-bold text-blue-700">Uploading video...</p> : uploadedVideoUrl ? <a href={uploadedVideoUrl} target="_blank" rel="noreferrer" className="mt-2 block truncate text-xs font-bold text-blue-700">Uploaded video attached</a> : null}
             </div>
             <button type="button" disabled={checklistSaving || videoUploading} onClick={saveChecklist} className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{checklistSaving ? 'Saving...' : 'Save Checklist'}</button>
-            <button type="button" disabled={submittingToBm || videoUploading || recordingIsActive || checklistDone !== CHECKLIST.length || !remarks.trim()} onClick={submitToBranchManager} className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{submittingToBm ? 'Sending...' : recordingStatus === 'STOP_REQUESTED' ? 'Waiting for recording...' : 'Save & Send to BM'}</button>
+            <button type="button" disabled={submittingToBm || videoUploading || recordingBlocksSubmission || checklistDone !== CHECKLIST.length || !remarks.trim()} onClick={submitToBranchManager} className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{submittingToBm ? 'Sending...' : recordingStatus === 'STOP_REQUESTED' && !canUseManualVideoForStoppedAttempt ? 'Waiting for recording...' : 'Save & Send to BM'}</button>
             {checklistNotice && <p className="mt-2 text-xs font-bold text-blue-700">{checklistNotice}</p>}
           </aside>}
           </div></section>}

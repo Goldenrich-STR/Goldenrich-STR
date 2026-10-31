@@ -544,6 +544,9 @@ export const verificationAPI = {
   stopVideoRecording: (verificationId) =>
     apiClient.post(`/verification-cases/${verificationId}/recording/stop`),
 
+  resetVideoRecording: (verificationId) =>
+    apiClient.post(`/verification-cases/${verificationId}/recording/reset`),
+
   saveTelecallerChecklist: (verificationId, payload) =>
     apiClient.patch(`/verification-cases/${verificationId}/telecaller-checklist`, payload),
 
