@@ -492,6 +492,7 @@ class HostAgreementVerificationPayload(BaseModel):
 class AssignmentPayload(BaseModel):
     broker_id: Optional[str] = ""
     rm_id: Optional[str] = ""
+    branch_manager_id: Optional[str] = ""
     telecaller_id: Optional[str] = ""
     primary_assignment_type: Optional[str] = ""
     reason: str
@@ -2776,6 +2777,7 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
     requested_assignments = getattr(payload, "model_fields_set", getattr(payload, "__fields_set__", set()))
     broker_value = (payload.broker_id or "").strip()
     rm_value = (payload.rm_id or "").strip()
+    branch_manager_value = (payload.branch_manager_id or "").strip()
     telecaller_value = (payload.telecaller_id or "").strip()
     primary_assignment_type = (payload.primary_assignment_type or "").strip().lower()
     effective_primary_type = primary_assignment_type
@@ -2791,8 +2793,6 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
         if broker:
             effective_primary_type = "broker"
             set_updates["broker_id"] = broker["user_id"]
-            unset_updates["branch_manager_id"] = ""
-            unset_updates["branch_manager_code"] = ""
         elif primary_rm:
             effective_primary_type = "rm"
             set_updates["rm_id"] = primary_rm["user_id"]
@@ -2801,27 +2801,22 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
             raise HTTPException(status_code=400, detail="Broker / RM not found or inactive")
     elif "broker_id" in requested_assignments:
         unset_updates["broker_id"] = ""
-        unset_updates["branch_manager_id"] = ""
-        unset_updates["branch_manager_code"] = ""
-    if "rm_id" in requested_assignments and rm_value and effective_primary_type == "rm":
-        branch_manager = await _resolve_assignee_user(db, rm_value, "employee")
-        if not branch_manager or not _is_branch_manager_user(branch_manager):
-            raise HTTPException(status_code=400, detail="Branch Manager not found or inactive")
-        set_updates["branch_manager_id"] = branch_manager["user_id"]
-        set_updates["branch_manager_code"] = _team_code(branch_manager)
-    elif "rm_id" in requested_assignments and rm_value:
+    if "rm_id" in requested_assignments and rm_value:
         rm = await _resolve_assignee_user(db, rm_value, "employee")
         if not rm or not _is_rm_user(rm):
             raise HTTPException(status_code=400, detail="RM not found or inactive")
         set_updates["rm_id"] = rm["user_id"]
+    elif "rm_id" in requested_assignments and effective_primary_type != "rm":
+        unset_updates["rm_id"] = ""
+    if "branch_manager_id" in requested_assignments and branch_manager_value:
+        branch_manager = await _resolve_assignee_user(db, branch_manager_value, "employee")
+        if not branch_manager or not _is_branch_manager_user(branch_manager):
+            raise HTTPException(status_code=400, detail="Branch Manager not found or inactive")
+        set_updates["branch_manager_id"] = branch_manager["user_id"]
+        set_updates["branch_manager_code"] = _team_code(branch_manager)
+    elif "branch_manager_id" in requested_assignments:
         unset_updates["branch_manager_id"] = ""
         unset_updates["branch_manager_code"] = ""
-    elif "rm_id" in requested_assignments:
-        if effective_primary_type == "rm":
-            unset_updates["branch_manager_id"] = ""
-            unset_updates["branch_manager_code"] = ""
-        else:
-            unset_updates["rm_id"] = ""
     if "telecaller_id" in requested_assignments and telecaller_value:
         telecaller = await db.users.find_one({
             "user_id": telecaller_value,
@@ -2862,26 +2857,35 @@ async def assign_host_team(host_id: str, payload: AssignmentPayload, current_use
 
     await db.users.update_one({"user_id": host_id}, update_doc)
     await db.properties.update_many({"owner_id": host_id}, property_update_doc)
+    verification_set_updates = {"updated_at": now}
+    verification_unset_updates = {}
+
     if telecaller_value:
         case_assignment_meta = {
             "policy": "manual_host_assignment",
             "assigned_by": current_user["user_id"],
         }
-        await db.property_verifications.update_many(
-            {"$or": [{"host_id": host_id}, {"owner_id": host_id}]},
-            {"$set": {
-                "telecaller_id": telecaller["user_id"],
-                "telecaller_assignment_policy": case_assignment_meta,
-                "updated_at": now,
-            }},
-        )
+        verification_set_updates["telecaller_id"] = telecaller["user_id"]
+        verification_set_updates["telecaller_assignment_policy"] = case_assignment_meta
     elif "telecaller_id" in requested_assignments:
+        verification_unset_updates["telecaller_id"] = ""
+        verification_unset_updates["telecaller_assignment_policy"] = ""
+
+    if branch_manager_value:
+        verification_set_updates["branch_manager_id"] = set_updates["branch_manager_id"]
+        verification_set_updates["branch_manager_code"] = set_updates["branch_manager_code"]
+    elif "branch_manager_id" in requested_assignments:
+        verification_unset_updates["branch_manager_id"] = ""
+        verification_unset_updates["branch_manager_code"] = ""
+
+    if len(verification_set_updates) > 1 or verification_unset_updates:
+        verification_update_doc = {"$set": verification_set_updates}
+        if verification_unset_updates:
+            verification_update_doc["$unset"] = verification_unset_updates
+
         await db.property_verifications.update_many(
             {"$or": [{"host_id": host_id}, {"owner_id": host_id}]},
-            {"$unset": {
-                "telecaller_id": "",
-                "telecaller_assignment_policy": "",
-            }, "$set": {"updated_at": now}},
+            verification_update_doc,
         )
     audit_new_value = {**set_updates, **{key: None for key in unset_updates}}
     await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="host_management", action="host_team_assigned", record_id=host_id, old_value={"broker_id": host.get("broker_id"), "rm_id": host.get("rm_id"), "branch_manager_id": host.get("branch_manager_id"), "lg_code": host.get("lg_code"), "employee_code": host.get("employee_code")}, new_value=audit_new_value, reason=payload.reason)

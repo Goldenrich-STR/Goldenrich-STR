@@ -483,11 +483,20 @@ const TelecallerDashboard = () => {
       : (['leads', 'tasks'].includes(activeNav) ? leadRows : merged);
     return baseRows.filter((lead) => {
       const stage = stageOf(lead);
+      const kycStatus = String(lead.kyc_status || lead.host?.kyc_status || '').toLowerCase();
+      const kycApproved = ['approved', 'verified', 'complete', 'completed'].includes(kycStatus)
+        || documentsApproved(lead, docs);
       const text = [hostName(lead), leadPhone(lead), leadEmail(lead), propertyTitle(lead), lead.lead_id, lead.lg_code, sourceRoleOf(lead), sourceNameOf(lead), sourceCodeOf(lead), stage].join(' ').toLowerCase();
       if (search && !text.includes(search.toLowerCase())) return false;
-      if (activeTab === 'calls') {
-        const kycStatus = String(lead.kyc_status || '').toLowerCase();
-        return ['approved', 'verified'].includes(kycStatus) || documentsApproved(lead, docs) || nextAction(lead, docs).toLowerCase().includes('call');
+      if (activeNav === 'calls') {
+        if (!kycApproved || stage !== 'TELECALLER_CALL_PENDING') return false;
+        if (activeTab === 'today') return caseOf(lead)?.scheduled_call_date === today();
+        return true;
+      }
+      if (activeNav === 'video') {
+        if (!['VERIFICATION_SCHEDULED', 'TELECALLER_VERIFICATION_IN_PROGRESS'].includes(stage)) return false;
+        if (activeTab === 'today') return caseOf(lead)?.scheduled_date === today();
+        return true;
       }
       if (activeTab === 'today') return caseOf(lead)?.scheduled_call_date === today() || caseOf(lead)?.scheduled_date === today();
       if (activeTab === 'followups') return Boolean(caseOf(lead)?.next_follow_up || caseOf(lead)?.scheduled_call_date);

@@ -2345,8 +2345,6 @@ async def save_call_outcome(verification_id: str, payload: CallPayload, current_
     ) or {}
     if str(host.get("kyc_status") or "").lower() not in {"approved", "verified", "complete", "completed"}:
         raise HTTPException(status_code=400, detail="Complete host document verification before the normal call.")
-    if case.get("verification_path") == "VIDEO_ONLY":
-        raise HTTPException(status_code=400, detail="This existing host listing requires video verification only.")
     outcome = payload.outcome.strip().upper().replace(" ", "_")
     valid = {"CONNECTED", "NO_ANSWER", "BUSY", "WRONG_NUMBER", "CALLBACK_REQUESTED", "HOST_NOT_INTERESTED", "COMPLETED", "SCHEDULED", "RESCHEDULED"}
     if outcome not in valid:
