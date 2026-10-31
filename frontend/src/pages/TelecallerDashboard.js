@@ -1555,7 +1555,7 @@ const TelecallerDashboard = () => {
         const roomName = c?.jitsi_room_name;
         const displayName = encodeURIComponent(user?.full_name || user?.name || 'Telecaller');
         const meetingUrl = roomName
-          ? `https://meet.jit.si/${encodeURIComponent(roomName)}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false&config.requireDisplayName=false&config.disableDeepLinking=true&config.startWithAudioMuted=true&config.startWithVideoMuted=true&interfaceConfig.SHOW_JITSI_WATERMARK=true`
+          ? `https://meet.jit.si/${encodeURIComponent(roomName)}#userInfo.displayName="${displayName}"&config.prejoinPageEnabled=false&config.requireDisplayName=false&config.disableDeepLinking=true&config.startWithAudioMuted=true&config.startWithVideoMuted=false&interfaceConfig.SHOW_JITSI_WATERMARK=true`
           : '';
         return (
           <div className="fixed inset-0 z-[10002] flex items-center justify-center bg-slate-950/70 p-4">
