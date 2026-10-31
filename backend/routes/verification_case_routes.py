@@ -1967,6 +1967,7 @@ async def get_case(verification_id: str, current_user: dict = Depends(get_curren
     if case.get("current_stage") in {
         VERIFICATION_SCHEDULED,
         TELECALLER_VERIFICATION_IN_PROGRESS,
+        TELECALLER_REWORK_REQUIRED,
     } and not case.get("jitsi_room_name"):
         room_name = workflow_id("XSPACE-VER")
         await db.property_verifications.update_one(
