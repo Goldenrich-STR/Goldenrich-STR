@@ -1862,7 +1862,10 @@ async def get_case(verification_id: str, current_user: dict = Depends(get_curren
         or await _case_belongs_to_user(db, case, current_user.get("user_id"))
     ):
         raise HTTPException(status_code=403, detail="Not authorized")
-    if case.get("current_stage") == VERIFICATION_SCHEDULED and not case.get("jitsi_room_name"):
+    if case.get("current_stage") in {
+        VERIFICATION_SCHEDULED,
+        TELECALLER_VERIFICATION_IN_PROGRESS,
+    } and not case.get("jitsi_room_name"):
         room_name = workflow_id("XSPACE-VER")
         await db.property_verifications.update_one(
             {"verification_id": verification_id},
@@ -2386,6 +2389,8 @@ async def save_call_outcome(verification_id: str, payload: CallPayload, current_
         "workflow_status": next_stage,
         "updated_at": now,
     }
+    if outcome in {"CONNECTED", "COMPLETED"} and not case.get("jitsi_room_name"):
+        updates["jitsi_room_name"] = workflow_id("XSPACE-VER")
     if payload.scheduled_date:
         updates["scheduled_call_date"] = payload.scheduled_date
     if payload.scheduled_time:
