@@ -33,10 +33,17 @@ const STAGES = [
   'TELECALLER_CALL_PENDING',
   'VERIFICATION_SCHEDULED',
   'TELECALLER_VERIFICATION_IN_PROGRESS',
+  'TELECALLER_REWORK_REQUIRED',
   'BM_REVIEW_PENDING',
   'BM_APPROVED',
   'LIVE',
   'COMPLETED',
+];
+
+const VIDEO_QUEUE_STAGES = [
+  'VERIFICATION_SCHEDULED',
+  'TELECALLER_VERIFICATION_IN_PROGRESS',
+  'TELECALLER_REWORK_REQUIRED',
 ];
 
 const CHECKLIST = [
@@ -494,7 +501,7 @@ const TelecallerDashboard = () => {
         return true;
       }
       if (activeNav === 'video') {
-        if (!['VERIFICATION_SCHEDULED', 'TELECALLER_VERIFICATION_IN_PROGRESS'].includes(stage)) return false;
+        if (!VIDEO_QUEUE_STAGES.includes(stage)) return false;
         if (activeTab === 'today') return caseOf(lead)?.scheduled_date === today();
         return true;
       }
@@ -502,7 +509,7 @@ const TelecallerDashboard = () => {
       if (activeTab === 'followups') return Boolean(caseOf(lead)?.next_follow_up || caseOf(lead)?.scheduled_call_date);
       if (activeTab === 'documents') return hasPendingDocuments(lead, docs);
       if (activeTab === 'docs_verified') return documentsApproved(lead, docs);
-      if (activeTab === 'video') return ['VERIFICATION_SCHEDULED', 'TELECALLER_VERIFICATION_IN_PROGRESS'].includes(stage);
+      if (activeTab === 'video') return VIDEO_QUEUE_STAGES.includes(stage);
       if (activeTab === 'video_verified') return isVideoVerifiedLead(lead);
       if (activeTab === 'verified') return isVideoVerifiedLead(lead);
       if (activeTab === 'bm') return stage === 'BM_REVIEW_PENDING';
