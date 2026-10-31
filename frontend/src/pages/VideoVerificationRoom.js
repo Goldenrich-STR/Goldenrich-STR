@@ -101,7 +101,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
         parentNode: containerRef.current,
         ...(verification.jitsi_jwt ? { jwt: verification.jitsi_jwt } : {}),
         userInfo: { displayName: user?.full_name || (effectiveRole === 'host' ? hostName(verification) : 'Telecaller') },
-        configOverwrite: { prejoinPageEnabled: false, requireDisplayName: false, disableDeepLinking: true, startWithAudioMuted: true, startWithVideoMuted: true },
+        configOverwrite: { prejoinPageEnabled: false, requireDisplayName: false, disableDeepLinking: true, startWithAudioMuted: true, startWithVideoMuted: false },
         interfaceConfigOverwrite: { SHOW_JITSI_WATERMARK: true },
       });
       apiRef.current = api;
