@@ -57,6 +57,7 @@ from routes.admin_account_routes import router as admin_account_router
 from routes.host_account_routes import router as host_account_router
 from routes.review_routes import router as review_router
 from routes.webhook_routes import router as webhook_router
+from routes.deylaxy_routes import router as deylaxy_router
 from routes.coupon_routes import router as coupon_router
 from routes.ai_agent_routes import router as ai_agent_router
 from routes.support_ticket_routes import router as support_ticket_router
@@ -81,6 +82,7 @@ app.include_router(admin_account_router, prefix="/api")
 app.include_router(host_account_router, prefix="/api")
 app.include_router(review_router, prefix="/api")
 app.include_router(webhook_router, prefix="/api")
+app.include_router(deylaxy_router, prefix="/api")
 app.include_router(coupon_router, prefix="/api")
 app.include_router(ai_agent_router, prefix="/api")
 app.include_router(support_ticket_router, prefix="/api")

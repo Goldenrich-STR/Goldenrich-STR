@@ -970,12 +970,18 @@ async def create_cms_content(
             "updated_at": datetime.now(timezone.utc)
         }
         
-        await db.cms_content.insert_one(cms_content)
+        from services.deylaxy_service import enabled, create_team_blog_section
+        if page == 'landing' and section == 'blog' and enabled():
+            await create_team_blog_section(db, cms_content)
+        else:
+            await db.cms_content.insert_one(cms_content)
         await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"], module="marketing_cms", action="cms_content_created", record_id=content_id, new_value={k: v for k, v in cms_content.items() if k != "content_data"}, reason=f"Created {page}/{section}")
         
         logger.info(f"CMS content created: {content_id}")
         return {"message": "CMS content created successfully", "content_id": content_id}
     
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error creating CMS content: {str(e)}")
         raise HTTPException(
@@ -1006,10 +1012,14 @@ async def update_cms_content(
         if update_data.is_active is not None:
             update_fields["is_active"] = update_data.is_active
         
-        result = await db.cms_content.update_one(
-            {"content_id": content_id},
-            {"$set": update_fields}
-        )
+        from services.deylaxy_service import enabled, update_team_blog
+        if existing.get('page') == 'landing' and existing.get('section') == 'blog' and (enabled() or existing.get('deylaxy_state')):
+            await update_team_blog(db, existing, update_fields, update_data.expected_updated_at)
+        else:
+            await db.cms_content.update_one(
+                {"content_id": content_id},
+                {"$set": update_fields}
+            )
         
         await write_audit_log(
             db,
@@ -1044,6 +1054,8 @@ async def delete_cms_content(
     """Delete CMS content."""
     try:
         existing = await db.cms_content.find_one({"content_id": content_id}, {"_id": 0})
+        if existing and existing.get('deylaxy_state'):
+            raise HTTPException(409, 'This blog contains delivery history; deactivate the section or individual posts instead')
         result = await db.cms_content.delete_one({"content_id": content_id})
         
         if result.deleted_count == 0:

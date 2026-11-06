@@ -251,13 +251,14 @@ const Blog = () => {
           category: post.category || 'Travel and Property',
           image_url: postImg,
           featuredImage: postImg,
-          metaTitle: post.metaTitle || post.seo?.title || post.title || 'X-Space360 Blog',
-          metaDescription: post.metaDescription || post.seo?.description || post.excerpt || 'Read travel guides, property booking tips, host resources, workspace insights and event venue ideas.',
+          metaTitle: post.seoTitle || post.metaTitle || post.seo?.title || post.title || 'X-Space360 Blog',
+          metaDescription: post.seoDescription || post.metaDescription || post.seo?.description || post.excerpt || 'Read travel guides, property booking tips, host resources, workspace insights and event venue ideas.',
           keywords: Array.isArray(post.keywords) ? post.keywords : (Array.isArray(post.seo?.keywords) ? post.seo.keywords : DEFAULT_BLOG_KEYWORDS),
           publishedAt: post.publishedAt || post.date || new Date().toISOString(),
           updatedAt: post.updatedAt || post.updated_at || post.publishedAt || post.date,
           slug: post.slug,
-          read_time: post.read_time || '5 min read',
+          read_time: post.readTime || post.read_time || '5 min read',
+          tableData: post.tableData,
           faqs: parsedContent.faqs.length ? parsedContent.faqs : (post.faqs || [])
         };
       });
@@ -561,7 +562,7 @@ const Blog = () => {
             ) : null}
           </div>
 
-          {selectedPost.tableData && selectedPost.tableData.headers && (
+          {selectedPost.tableData?.headers?.length > 0 && (
             <div className="my-10 overflow-x-auto border border-gray-200 rounded-2xl shadow-sm bg-white p-5">
               {selectedPost.tableData.title && (
                 <h3 className="text-lg font-bold text-charcoal mb-4">{selectedPost.tableData.title}</h3>
