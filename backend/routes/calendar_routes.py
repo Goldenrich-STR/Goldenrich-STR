@@ -173,10 +173,14 @@ async def get_blocked_dates(
     property_id: str,
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    unit_id: Optional[str] = None,
     current_user: Optional[dict] = Depends(get_optional_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
-    """Get blocked dates for a property (public availability check)."""
+    """Get blocked dates for a property (public availability check).
+
+    For multi-unit properties pass unit_id so bookings of other units do not block the calendar.
+    """
     try:
         query = {"property_id": property_id}
 
@@ -196,6 +200,18 @@ async def get_blocked_dates(
         cursor = db.blocked_dates.find(query, {"_id": 0})
         blocked_dates = await cursor.to_list(length=1000)
 
+        other_unit_booking_ids: set = set()
+        if unit_id:
+            unit_rows = await db.bookings.find(
+                {"property_id": property_id, "unit_id": {"$nin": [None, unit_id]}},
+                {"_id": 0, "booking_id": 1},
+            ).to_list(length=5000)
+            other_unit_booking_ids = {row.get("booking_id") for row in unit_rows}
+            blocked_dates = [
+                row for row in blocked_dates
+                if not (row.get("source") == "booking" and row.get("source_id") in other_unit_booking_ids)
+            ]
+
         if property_data and property_data.get("category") != "event_venue" and not is_hourly_commercial:
             booking_query = {
                 "property_id": property_id,
@@ -212,7 +228,7 @@ async def get_blocked_dates(
             existing_sources = {row.get("source_id") for row in blocked_dates if row.get("source") == "booking"}
             for booking in booking_rows:
                 booking_id = booking.get("booking_id")
-                if not booking_id or booking_id in existing_sources:
+                if not booking_id or booking_id in existing_sources or booking_id in other_unit_booking_ids:
                     continue
                 blocked_dates.append({
                     "blocked_date_id": f"booking_{booking_id}",

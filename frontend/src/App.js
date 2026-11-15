@@ -453,7 +453,7 @@ function AppRoutes() {
 
       {/* Render AuthPage as a modal overlay on top of the background route */}
       {isAuthRoute && (
-        <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-md flex items-end justify-center p-0 md:items-center md:p-4">
           <AuthPage isAdminLogin={location.pathname.startsWith("/admin") || location.pathname.startsWith("/md")} isMdLogin={location.pathname.startsWith("/md")} />
         </div>
       )}

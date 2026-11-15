@@ -63,6 +63,15 @@ class BHKType(str, Enum):
     LARGE_EVENT = "large_event"
     MEGA_EVENT = "mega_event"
 
+class PropertyUnit(BaseModel):
+    """A bookable unit inside a property (e.g. one room/flat/office of a hotel or building)."""
+    unit_id: str = Field(default_factory=lambda: f"unit_{uuid4().hex[:10]}")
+    name: str
+    area_sqft: Optional[int] = None
+    max_guests: int = 2
+    bhk_type: Optional[str] = None
+    price_per_night: Optional[float] = None
+
 class Property(BaseModel):
     property_id: str = Field(default_factory=lambda: f"prop_{uuid4().hex[:14]}")
     owner_id: str
@@ -95,6 +104,8 @@ class Property(BaseModel):
     # Property details
     area_sqft: int
     max_guests: int = 6
+    has_units: bool = False
+    units: List[PropertyUnit] = []
     
     # Pricing
     price_per_night: Optional[float] = None
@@ -181,6 +192,8 @@ class PropertyCreate(BaseModel):
     nearby_places: List[str] = []
     area_sqft: int
     max_guests: int = 6
+    has_units: bool = False
+    units: List[PropertyUnit] = []
     price_per_night: Optional[float] = None
     pricing_cycle: Optional[str] = "day"
     pricing_display_mode: Optional[str] = "per_night"
@@ -228,6 +241,8 @@ class PropertyUpdate(BaseModel):
     nearby_places: Optional[List[str]] = None
     area_sqft: Optional[int] = None
     max_guests: Optional[int] = None
+    has_units: Optional[bool] = None
+    units: Optional[List[PropertyUnit]] = None
     price_per_night: Optional[float] = None
     pricing_cycle: Optional[str] = None
     pricing_display_mode: Optional[str] = None

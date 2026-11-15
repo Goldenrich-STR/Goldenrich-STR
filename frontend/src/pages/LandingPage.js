@@ -9,8 +9,10 @@ import SEO from '../components/SEO';
 import ShareDropdown from '../components/ShareDropdown';
 import ChatbotWidget from '../components/ChatbotWidget';
 import LanguageSelector from '../components/LanguageSelector';
+import { MobileSearchPill, MobileSearchSheet } from '../components/MobileSearch';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatAddress } from '../lib/displayLabels';
 import { getPropertySlug, getPropertyUrl } from '../lib/propertySlug';
+import { RatingPill, RatingCorner, TypeRibbon, SeriesRibbon, CardBadges, BestRatedTag } from '../components/PropertyBadges';
 import { getSeoUrlForFilters } from '../lib/seoRoutes';
 import { getRecentlyVisitedProperties, RECENTLY_VISITED_PROPERTIES_EVENT } from '../lib/recentlyVisitedProperties';
 import { organizationSchema, websiteSchema } from '../lib/seoSchemas';
@@ -145,7 +147,7 @@ const MORE_THAN_STAY_SLIDES = [
   { image: '/assets/experiences/sunset-terrace.webp', label: 'Sunset Evenings' },
   { image: '/assets/experiences/garden-picnic.webp', label: 'Garden Picnics' },
   { image: '/assets/experiences/lakeside-picnic.webp', label: 'Lakeside Moments' },
-  { image: '/assets/experiences/barbecue-evening.webp', label: 'Barbecue Nights' },
+  { image: '/assets/experiences/barbecue-evening.webp', label: 'Barbeque Nights' },
 ];
 
 const MORE_THAN_STAY_FEATURES = [
@@ -156,7 +158,7 @@ const MORE_THAN_STAY_FEATURES = [
   { label: 'Games & Fun', position: '0% 100%' },
   { label: 'Open Spaces', position: '33.333% 100%' },
   { label: 'Celebrations', position: '66.667% 100%' },
-  { label: 'Barbecue Nights', position: '100% 100%' },
+  { label: 'Barbeque Nights', position: '100% 100%' },
 ];
 
 function MoreThanStaySlider() {
@@ -218,6 +220,9 @@ function PropertyImageCarousel({ item, className = '', imageClassName = '', chil
   const [isHovered, setIsHovered] = useState(false);
   const imageIndex = Math.min(activeImage, Math.max(images.length - 1, 0));
   const hasMultipleImages = images.length > 1;
+  // At most 5 dots: a window that follows the active photo.
+  const dotStart = Math.max(0, Math.min(imageIndex - 2, images.length - 5));
+  const dotIndexes = images.slice(dotStart, dotStart + 5).map((_, i) => dotStart + i);
 
   const changeImage = (event, direction) => {
     event.preventDefault();
@@ -247,7 +252,7 @@ function PropertyImageCarousel({ item, className = '', imageClassName = '', chil
           <button
             type="button"
             onClick={(event) => changeImage(event, -1)}
-            className={`absolute left-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-charcoal shadow-md transition ${isHovered ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            className={`absolute left-3 top-1/2 z-20 -mt-5 grid h-10 w-10 !transform-none place-items-center rounded-full bg-white/90 text-charcoal shadow-md transition ${isHovered ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
             aria-label="Previous property photo"
           >
             <ChevronLeft className="h-5 w-5" />
@@ -255,14 +260,21 @@ function PropertyImageCarousel({ item, className = '', imageClassName = '', chil
           <button
             type="button"
             onClick={(event) => changeImage(event, 1)}
-            className={`absolute right-3 top-1/2 z-20 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/90 text-charcoal shadow-md transition ${isHovered ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
+            className={`absolute right-3 top-1/2 z-20 -mt-5 grid h-10 w-10 !transform-none place-items-center rounded-full bg-white/90 text-charcoal shadow-md transition ${isHovered ? 'opacity-100' : 'pointer-events-none opacity-0'}`}
             aria-label="Next property photo"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
-          <span className={`absolute bottom-3 right-3 z-20 rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-bold tracking-wide text-charcoal shadow-sm transition ${isHovered ? 'opacity-100' : 'opacity-0'}`}>
-            {imageIndex + 1} / {images.length} PHOTOS
-          </span>
+          <div className="pointer-events-none absolute inset-x-0 bottom-3 z-20 flex justify-center" aria-label={`Photo ${imageIndex + 1} of ${images.length}`}>
+            <div className="flex items-center gap-1.5 rounded-full bg-black/25 px-2 py-1 backdrop-blur-sm">
+              {dotIndexes.map((dot) => (
+                <span
+                  key={dot}
+                  className={`block h-1.5 rounded-full transition-all duration-300 ${dot === imageIndex ? 'w-4 bg-white' : 'w-1.5 bg-white/60'}`}
+                />
+              ))}
+            </div>
+          </div>
         </>
       )}
       {children}
@@ -283,20 +295,17 @@ const RecentlyVisitedCard = ({ item, index, navigate, wishlist, handleWishlistTo
           navigate(getPropertyUrl(item));
         }
       }}
-      className="recently-visited-card group/card bg-transparent cursor-pointer text-left snap-start outline-none"
+      className="recently-visited-card group/card relative bg-transparent cursor-pointer text-left snap-start outline-none"
     >
+      {!badgeLabel && (item.property_type || item.type) && (
+        <CardBadges type={item.property_type || item.type} />
+      )}
       <PropertyImageCarousel
         item={item}
         className="aspect-[16/10] rounded-xl bg-sand-200"
         imageClassName="group-hover/card:scale-[1.025]"
       >
-        {badgeLabel && (
-          <span className="absolute left-3 top-3 z-20 inline-flex items-center gap-1 rounded border border-[#D4AF37] bg-black/90 px-2 py-1 text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow">
-            <Crown className="h-2.5 w-2.5 fill-[#D4AF37]/20 text-[#D4AF37]" />
-            {badgeLabel}
-          </span>
-        )}
-
+        {!badgeLabel && <RatingCorner rating={item.rating} />}
         <button
           type="button"
           onClick={(event) => { event.preventDefault(); event.stopPropagation(); handleWishlistToggle(item.property_id); }}
@@ -316,14 +325,90 @@ const RecentlyVisitedCard = ({ item, index, navigate, wishlist, handleWishlistTo
           )}
         </div>
         <p className="mt-1.5 flex items-center gap-1 text-[12px] text-charcoal-muted"><MapPin className="h-3.5 w-3.5 shrink-0" />{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</p>
-        <p className="mt-3 text-[15px] font-semibold text-charcoal">₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}<span className="ml-1 text-[11px] font-normal text-charcoal-muted">/ night</span></p>
+        <p className="mt-3 text-[15px] font-semibold text-charcoal">{item.has_units && <span className="mr-1 text-[11px] font-normal text-charcoal-muted">Starting from</span>}₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}<span className="ml-1 text-[11px] font-normal text-charcoal-muted">/ night</span></p>
       </div>
     </article>
   );
 };
 
+const ShowcaseCard = ({ item, navigate, wishlist, handleWishlistToggle, badgeLabel }) => {
+  const price = Math.round(Number(
+    item.display_price_per_night ??
+    item.customer_price_per_night ??
+    item.price_per_night ??
+    item.price ??
+    0
+  ));
+  const rating = Number(item.rating || 0);
+  const hasRating = rating > 0;
+  const isBestRated = rating >= 4.5;
+  const openProperty = () => navigate(getPropertyUrl(item));
+
+  return (
+    <div className="relative w-[250px] min-w-[250px] shrink-0 snap-start md:w-[285px] md:min-w-[285px]">
+    <article
+      role="link"
+      tabIndex={0}
+      onClick={openProperty}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          openProperty();
+        }
+      }}
+      className="group flex h-full w-full cursor-pointer flex-col overflow-hidden rounded-xl bg-white text-left shadow-md outline-none transition-shadow duration-300 hover:shadow-xl focus-visible:ring-2 focus-visible:ring-charcoal/30"
+    >
+      <PropertyImageCarousel
+        item={item}
+        className="aspect-[16/10]"
+        imageClassName="group-hover:scale-[1.04]"
+      >
+        <button
+          type="button"
+          onClick={(event) => { event.preventDefault(); event.stopPropagation(); handleWishlistToggle(item.property_id); }}
+          className="absolute right-3 top-3 z-20 rounded-full p-1.5 text-white drop-shadow-md transition hover:scale-105"
+          aria-label="Toggle wishlist"
+        >
+          <Heart className={`h-5 w-5 ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
+        </button>
+        <RatingCorner rating={rating} />
+      </PropertyImageCarousel>
+
+      <div className="flex flex-1 flex-col p-[14px]">
+        <h3 className="line-clamp-1 font-sans text-[17px] font-semibold leading-tight text-charcoal">{item.title}</h3>
+        <p className="mt-2.5 flex items-center gap-1.5 text-[13px] font-medium text-slate-600">
+          <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-700" />
+          <span className="truncate">{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</span>
+        </p>
+        <p className="mt-2.5 truncate text-[12px] text-slate-700 sm:text-[13px]">
+          Upto {item.max_guests || item.guests || 4} Guests
+          <span className="mx-1.5 text-slate-800">✦</span>
+          {item.bedrooms || item.rooms || 1} Rooms
+          <span className="mx-1.5 text-slate-800">✦</span>
+          {item.bathrooms || item.baths || 1} Baths
+        </p>
+        <div className="flex-1" />
+        <div className="mt-3.5 border-t border-slate-100 pt-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              {item.has_units && <p className="mb-0.5 text-[11px] font-medium text-slate-500">Starting from</p>}
+              <p className="text-[21px] font-semibold leading-none tracking-tight text-charcoal">₹{price.toLocaleString('en-IN')}</p>
+              <p className="mt-2 text-[12px] font-medium text-slate-500">For Per Night + Taxes</p>
+            </div>
+            <ArrowRight className="h-5 w-5 shrink-0 text-charcoal transition-transform duration-300 group-hover:translate-x-1" />
+          </div>
+        </div>
+      </div>
+    </article>
+    {badgeLabel ? <SeriesRibbon label={badgeLabel} /> : <CardBadges type={item.property_type || item.type} />}
+    {isBestRated && <BestRatedTag />}
+    </div>
+  );
+};
+
 const FooterExploreSection = ({ properties, navigate }) => {
   const [activeCategory, setActiveCategory] = useState('all');
+  const [showAllLinks, setShowAllLinks] = useState(false);
   const categories = [
     { id: 'all', label: 'All Spaces' },
     { id: 'residential', label: 'Residential' },
@@ -385,7 +470,7 @@ const FooterExploreSection = ({ properties, navigate }) => {
   if (!links.length) return null;
 
   return (
-    <section className="border-y border-slate-100 bg-white py-9 md:py-11">
+    <section className="border-y border-slate-100 bg-white py-7 md:py-11">
       <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8">
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div>
@@ -395,36 +480,50 @@ const FooterExploreSection = ({ properties, navigate }) => {
           <button type="button" onClick={() => navigate('/guest/browse')} className="w-fit text-sm font-semibold text-charcoal transition hover:text-terracotta">View all spaces <span aria-hidden="true">→</span></button>
         </div>
 
-        <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 border-b border-slate-200 pb-3">
+        <div className="no-scrollbar -mx-4 mt-5 flex gap-2 overflow-x-auto px-4 md:mx-0 md:flex-wrap md:gap-x-5 md:gap-y-2 md:overflow-visible md:border-b md:border-slate-200 md:px-0 md:pb-3">
           {categories.map((category) => (
             <button
               key={category.id}
               type="button"
               onClick={() => setActiveCategory(category.id)}
-              className={`relative pb-1 text-sm font-medium transition ${activeCategory === category.id ? 'text-charcoal' : 'text-slate-500 hover:text-charcoal'}`}
+              className={`relative shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium transition md:rounded-none md:px-0 md:py-0 md:pb-1 md:text-sm ${activeCategory === category.id ? 'bg-charcoal text-white md:bg-transparent md:text-charcoal' : 'bg-slate-100 text-slate-600 hover:text-charcoal md:bg-transparent md:text-slate-500'}`}
             >
               {category.label}
-              {activeCategory === category.id ? <span className="absolute inset-x-0 -bottom-[13px] h-[2px] bg-charcoal" /> : null}
+              {activeCategory === category.id ? <span className="absolute inset-x-0 -bottom-[13px] hidden h-[2px] bg-charcoal md:block" /> : null}
             </button>
           ))}
         </div>
 
-        <div className="mt-5 grid grid-cols-1 gap-x-8 gap-y-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
-          {links.map((link) => (
+        <div className="mt-4 flex flex-wrap gap-2 sm:mt-5 sm:grid sm:grid-cols-2 sm:gap-x-8 sm:gap-y-3 lg:grid-cols-4 xl:grid-cols-5">
+          {links.map((link, index) => (
             <button
               key={link.key}
               type="button"
               onClick={() => navigate(getSeoUrlForFilters(link.filters))}
-              className="w-fit text-left text-[13px] font-medium text-slate-600 transition hover:text-charcoal hover:underline"
+              className={`w-fit rounded-full border border-slate-200 bg-white px-3.5 py-2 text-left text-[13px] font-medium text-slate-600 transition hover:text-charcoal sm:rounded-none sm:border-0 sm:bg-transparent sm:p-0 sm:hover:underline ${!showAllLinks && index >= 8 ? 'hidden sm:block' : ''}`}
             >
               {link.label}
             </button>
           ))}
         </div>
+        {links.length > 8 && !showAllLinks && (
+          <button type="button" onClick={() => setShowAllLinks(true)} className="mt-4 rounded-full border border-slate-200 px-4 py-2 text-[13px] font-semibold text-charcoal sm:hidden">
+            Show all {links.length} places
+          </button>
+        )}
       </div>
     </section>
   );
 };
+
+/** One row of the phone menu: icon, label and an optional trailing element. */
+const DrawerRow = ({ icon: Icon, label, onClick, trailing = null, bare = false }) => (
+  <button type="button" onClick={onClick} className={`flex w-full items-center gap-3 py-3.5 text-left text-[16px] font-medium text-charcoal ${bare ? '' : 'border-b border-gray-100'}`}>
+    <Icon className="h-5 w-5 shrink-0" />
+    <span className="flex-1">{label}</span>
+    {trailing}
+  </button>
+);
 
 const homeSchema = {
   "@context": "https://schema.org",
@@ -451,18 +550,6 @@ const homeSchema = {
 
 const DEFAULT_HERO_SLIDES = [
   {
-    src: '/assets/hero/diwali-sky-lanterns.jpg',
-    mobilePosition: 'center center',
-    title: '#ApnoWaliDiwali',
-    subtitle: 'Iss Diwali, ghar se door bhi apno ke kareeb rahiye.'
-  },
-  {
-    src: '/assets/hero/diwali-family-dinner.jpg',
-    mobilePosition: 'center center',
-    title: 'Diwali Special: Save up to 20%',
-    subtitle: 'Jahan apne hon, wahi har pal ghar jaisa lagta hai.'
-  },
-  {
     src: '/assets/hero/workamp-stay.avif',
     mobilePosition: 'center center',
     title: 'Workspaces for Every Workday',
@@ -487,22 +574,40 @@ const DEFAULT_HERO_SLIDES = [
     subtitle: 'Spacious homes for friends, families and celebrations.'
   },
   {
-    src: '/assets/hero/wedding-celebration.webp',
-    mobilePosition: 'center center',
-    title: 'Wedding Venues for Your Big Day',
-    subtitle: 'Explore beautiful spaces for ceremonies, celebrations and family gatherings.'
-  },
-  {
     src: '/assets/hero/heritage-homestay.webp',
     mobilePosition: 'center center',
     title: 'Homestays with a Personal Touch',
     subtitle: 'Comfortable homes for relaxed family stays and longer visits.'
   },
   {
-    src: '/assets/hero/poolside-villa.webp',
+    src: '/assets/hero/courtyard-villa.webp',
     mobilePosition: 'center center',
-    title: 'Poolside Villas for Easy Weekends',
-    subtitle: 'Plan a relaxed stay with open views, a private pool and good company.'
+    title: 'Courtyard Villas with Old-World Charm',
+    subtitle: 'Quiet courtyards, tall pillars and rooms that open to the garden.'
+  },
+  {
+    src: '/assets/hero/garden-gate-bungalow.webp',
+    mobilePosition: 'center center',
+    title: 'Heritage Homes Behind Garden Gates',
+    subtitle: 'Step through the arch into a calm, tree-lined bungalow.'
+  },
+  {
+    src: '/assets/hero/game-room-villa.webp',
+    mobilePosition: 'center center',
+    title: 'Game Rooms for Every Get-Together',
+    subtitle: 'Pool tables, music and a pool view for friends and families.'
+  },
+  {
+    src: '/assets/hero/sunset-garden-villa.webp',
+    mobilePosition: 'center center',
+    title: 'Garden Sunsets near the Hills',
+    subtitle: 'Stone paths, flower beds and golden evenings away from the city.'
+  },
+  {
+    src: '/assets/hero/heritage-hall-stay.webp',
+    mobilePosition: 'center center',
+    title: 'Rustic Heritage Stays with Hill Views',
+    subtitle: 'Brick walls, wooden beams and a long verandah to sit back on.'
   }
 ];
 
@@ -2486,10 +2591,10 @@ const CollectionsSection = ({
               </div>
             </div>
 
-            <div className="overflow-hidden">
+            <div className="-ml-2 overflow-hidden">
             <div
               id="slider-getaway"
-              className="flex snap-x gap-5 overflow-x-auto pb-5 scroll-smooth no-scrollbar"
+              className="flex snap-x gap-5 overflow-x-auto pb-5 pl-2 scroll-pl-2 scroll-smooth no-scrollbar"
             >
               {filteredAvailable.map((item, index) => {
                 const price = Math.round(Number(
@@ -2500,9 +2605,12 @@ const CollectionsSection = ({
                   0
                 ));
                 return (
-                  <article
+                  <div
                     key={item.property_id || `${item.title}-${index}`}
-                    className="group flex w-[250px] min-w-[250px] snap-start flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-shadow duration-500 hover:shadow-lg md:w-[280px] md:min-w-[280px]"
+                    className="relative w-[250px] min-w-[250px] snap-start md:w-[280px] md:min-w-[280px]"
+                  >
+                  <article
+                    className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm transition-shadow duration-500 hover:shadow-lg"
                   >
                     <div
                       role="button"
@@ -2522,11 +2630,6 @@ const CollectionsSection = ({
                         imageClassName="group-hover:scale-[1.04]"
                       >
 
-                        <div className="absolute left-3 top-3 z-10 flex items-center gap-1.5">
-                          <span className="inline-flex h-6 items-center rounded-[4px] border border-white/90 bg-white/95 px-2.5 text-[9px] font-bold uppercase leading-none tracking-[0.08em] text-charcoal shadow-sm">
-                            {formatPropertyTypeLabel(item.property_type || item.type) || 'Stay'}
-                          </span>
-                        </div>
                         <div className="absolute right-3 top-3 z-10">
                           <button
                             type="button"
@@ -2540,9 +2643,7 @@ const CollectionsSection = ({
                             <Heart className={`h-5 w-5 ${wishlist.includes(item.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
                           </button>
                         </div>
-                        <div className="absolute bottom-3 right-0 z-10 rounded-l-[3px] border border-white/25 bg-charcoal/60 px-2 py-1 text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-white shadow-sm backdrop-blur-md">
-                          Best Rated
-                        </div>
+                        <RatingCorner rating={item.rating} />
                       </PropertyImageCarousel>
                       <div className="flex flex-1 flex-col p-3.5">
                         <h3 className="font-sans line-clamp-1 text-[16px] font-semibold leading-tight text-charcoal">
@@ -2559,9 +2660,11 @@ const CollectionsSection = ({
                           <span className="mx-2 text-slate-300">✦</span>
                           {item.bathrooms || item.baths || 1} Baths
                         </p>
+                        <div className="flex-1" />
                         <div className="mt-3 border-t border-slate-100 pt-3">
                           <div className="flex items-end justify-between gap-3">
                             <div>
+                              {item.has_units && <p className="mb-0.5 text-[11px] font-medium text-slate-500">Starting from</p>}
                               <p className="text-[20px] font-bold tracking-tight text-charcoal">
                                 ₹{price.toLocaleString('en-IN')}
                               </p>
@@ -2575,6 +2678,9 @@ const CollectionsSection = ({
                       </div>
                     </div>
                   </article>
+                  <CardBadges type={item.property_type || item.type || 'stay'} />
+                  <BestRatedTag />
+                  </div>
                 );
               })}
             </div>
@@ -2644,9 +2750,9 @@ const CollectionsSection = ({
                 <button onClick={() => scrollSlider('right', 'slider-explore-spaces')} className="grid h-11 w-11 place-items-center rounded-full border border-gray-200 text-gray-500 transition hover:bg-gray-50 hover:text-charcoal" aria-label="Next spaces"><ChevronRight className="h-4 w-4" /></button>
               </div>
             </div>
-            <div id="slider-explore-spaces" className="flex snap-x gap-6 overflow-x-auto pb-4 scroll-smooth no-scrollbar">
+            <div id="slider-explore-spaces" className="-ml-2 flex snap-x gap-6 overflow-x-auto pb-4 pl-2 scroll-pl-2 scroll-smooth no-scrollbar">
               {filteredCollections.map((item, index) => (
-                <RecentlyVisitedCard key={item.property_id || index} item={item} index={index} navigate={navigate} wishlist={wishlist} handleWishlistToggle={handleWishlistToggle} />
+                <ShowcaseCard key={item.property_id || index} item={item} navigate={navigate} wishlist={wishlist} handleWishlistToggle={handleWishlistToggle} />
               ))}
               <div className="flex shrink-0 self-stretch items-center px-1">
                 <button
@@ -2758,6 +2864,15 @@ const LandingPage = () => {
     event_venue: []
   });
   const [signatureProperties, setSignatureProperties] = useState([]);
+  const [siteStats, setSiteStats] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    propertyAPI.getPublicStats()
+      .then((res) => { if (!cancelled) setSiteStats(res.data || null); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
   const minSignaturePrice = useMemo(() => {
     if (!signatureProperties || signatureProperties.length === 0) return 50000;
     const prices = signatureProperties
@@ -2778,6 +2893,8 @@ const LandingPage = () => {
   const [activeBlog, setActiveBlog] = useState(0);
   const [recentlyVisitedProperties, setRecentlyVisitedProperties] = useState(() => getRecentlyVisitedProperties());
   const [isNavScrolled, setIsNavScrolled] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [stickyPill, setStickyPill] = useState(false);
   const [isExploreMenuOpen, setIsExploreMenuOpen] = useState(false);
   const [activeExploreTab, setActiveExploreTab] = useState(EXPLORE_MENU_TABS[0]?.key || 'nashik');
   const [isMobileExploreOpen, setIsMobileExploreOpen] = useState(false);
@@ -2813,8 +2930,19 @@ const LandingPage = () => {
       clearTimeout(exploreMenuCloseTimerRef.current);
       exploreMenuCloseTimerRef.current = null;
     }
+    window.dispatchEvent(new CustomEvent('xs-nav-open', { detail: 'explore' }));
     setIsExploreMenuOpen(true);
   };
+
+  React.useEffect(() => {
+    const closeWhenOtherOpens = (event) => {
+      if (event.detail === 'explore') return;
+      if (exploreMenuCloseTimerRef.current) clearTimeout(exploreMenuCloseTimerRef.current);
+      setIsExploreMenuOpen(false);
+    };
+    window.addEventListener('xs-nav-open', closeWhenOtherOpens);
+    return () => window.removeEventListener('xs-nav-open', closeWhenOtherOpens);
+  }, []);
 
   const closeExploreMenuWithDelay = () => {
     if (exploreMenuCloseTimerRef.current) {
@@ -2822,7 +2950,7 @@ const LandingPage = () => {
     }
     exploreMenuCloseTimerRef.current = setTimeout(() => {
       setIsExploreMenuOpen(false);
-    }, 180);
+    }, 260);
   };
 
   useEffect(() => {
@@ -2865,9 +2993,31 @@ const LandingPage = () => {
     setLoadedHeroSlides(new Set([0]));
   }, [heroSlides]);
 
+  // phones: keep every hero title on one line by shrinking the font only as much as the longest titles need
+  const heroTitleRef = React.useRef(null);
+  React.useLayoutEffect(() => {
+    const el = heroTitleRef.current;
+    if (!el) return undefined;
+    const fit = () => {
+      el.style.fontSize = '';
+      if (window.innerWidth >= 768 || el.scrollWidth <= el.clientWidth) return;
+      const base = parseFloat(getComputedStyle(el).fontSize);
+      el.style.fontSize = `${Math.max(12, (base * el.clientWidth) / el.scrollWidth - 0.3)}px`;
+    };
+    fit();
+    window.addEventListener('resize', fit);
+    return () => window.removeEventListener('resize', fit);
+  }, [currentHeroSlide]);
+
+  const loadedHeroRef = React.useRef(loadedHeroSlides);
+  loadedHeroRef.current = loadedHeroSlides;
+
   React.useEffect(() => {
     const timer = setInterval(() => {
-      setCurrentHeroSlide((prev) => (prev + 1) % heroSlides.length);
+      setCurrentHeroSlide((prev) => {
+        const next = (prev + 1) % heroSlides.length;
+        return loadedHeroRef.current.has(next) ? next : prev;
+      });
     }, 5000);
     return () => clearInterval(timer);
   }, [heroSlides.length]);
@@ -3118,6 +3268,7 @@ const LandingPage = () => {
   React.useEffect(() => {
     const handleScroll = () => {
       setIsNavScrolled(window.scrollY > 24);
+      setStickyPill(window.innerWidth < 1024 && window.scrollY > 330);
     };
 
     handleScroll();
@@ -3586,12 +3737,16 @@ const LandingPage = () => {
       />
       {/* Navbar */}
       <nav
-        className={`font-sans fixed top-0 left-0 right-0 w-full z-50 h-20 md:h-24 transition-all duration-300 ${
+        className={`font-sans fixed top-0 left-0 right-0 w-full z-50 h-20 md:h-24 transition-[box-shadow,transform] duration-300 ${stickyPill ? 'max-lg:-translate-y-full' : ''} ${
           isNavScrolled
-            ? 'bg-white/95 text-charcoal shadow-subtle backdrop-blur-xl border-b border-gray-100'
-            : 'bg-gradient-to-b from-black/70 via-black/30 to-transparent text-white drop-shadow-sm'
-        } shadow-sm`}
+            ? 'bg-white/95 text-charcoal shadow-subtle backdrop-blur-xl'
+            : 'text-white drop-shadow-sm'
+        }`}
       >
+        {/* the dark top fade follows the boxed hero width, so wide screens do not get a dark band over the white margins */}
+        {!isNavScrolled && (
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-1/2 w-full max-w-[1600px] -translate-x-1/2 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
+        )}
         <div className="max-w-[1440px] mx-auto w-full h-full relative z-10 flex justify-between items-center px-4 md:px-8">
           {/* Left Logo */}
           <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
@@ -3603,16 +3758,16 @@ const LandingPage = () => {
           </div>
 
           {/* Center Menu Links (Flat Style) */}
-          <div className={`hidden lg:flex items-center space-x-8 font-sans font-semibold text-[14px] tracking-tight transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
+          <div className={`hidden lg:flex items-center space-x-1 font-sans font-medium text-[16px] tracking-normal transition-colors duration-300 ${isNavScrolled ? 'text-charcoal' : 'text-white/90'}`}>
             <Link
               to="/guest/browse"
-              className="hover:text-terracotta transition-colors duration-200"
+              className="rounded-xl px-2.5 py-2.5 leading-[21px] hover:text-terracotta transition-colors duration-200"
             >
               Discover
             </Link>
             <Link
               to={user ? '/host/list-property' : '/list-your-property'}
-              className="hover:text-terracotta transition-colors duration-200"
+              className="rounded-xl px-2.5 py-2.5 leading-[21px] hover:text-terracotta transition-colors duration-200"
             >
               List your Property
             </Link>
@@ -3630,7 +3785,7 @@ const LandingPage = () => {
                     openExploreMenu();
                   }
                 }}
-                className="hover:text-terracotta transition-colors duration-200 flex items-center gap-1"
+                className="flex items-center gap-1 rounded-xl px-2.5 py-2.5 leading-[21px] hover:text-terracotta transition-colors duration-200"
               >
                 <span>Explore</span>
                 <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isExploreMenuOpen ? 'rotate-180' : ''}`} />
@@ -3638,7 +3793,7 @@ const LandingPage = () => {
 
               {isExploreMenuOpen && (
                 <div
-                  className="absolute left-1/2 -translate-x-1/2 top-full mt-4 w-[860px] rounded-[28px] bg-white border border-gray-200 shadow-elevated ring-1 ring-black/5 px-6 py-5 z-[999] text-gray-900"
+                  className="absolute left-1/2 -translate-x-1/2 top-full mt-4 before:absolute before:inset-x-0 before:-top-5 before:h-5 before:content-[''] w-[860px] rounded-[28px] bg-white border border-gray-200 shadow-elevated ring-1 ring-black/5 px-6 py-5 z-[999] text-gray-900"
                   onMouseEnter={openExploreMenu}
                   onMouseLeave={closeExploreMenuWithDelay}
                 >
@@ -3742,175 +3897,128 @@ const LandingPage = () => {
         {isNavScrolled && (
           <>
             <AkashKandil
-              className="akash-kandil absolute top-full block h-[58px] w-[38px] sm:h-[76px] sm:w-[50px]"
+              className="akash-kandil absolute top-full hidden h-[58px] w-[38px] sm:block sm:h-[76px] sm:w-[50px]"
               style={{ left: 'max(12px, calc((100vw - 1440px) / 2 + 20px))' }}
             />
             <AkashKandil
-              className="akash-kandil akash-kandil-right absolute top-full block h-[58px] w-[38px] sm:h-[76px] sm:w-[50px]"
+              className="akash-kandil akash-kandil-right absolute top-full hidden h-[58px] w-[38px] sm:block sm:h-[76px] sm:w-[50px]"
               style={{ right: 'max(12px, calc((100vw - 1440px) / 2 + 20px))' }}
             />
           </>
         )}
       </nav>
 
-      {/* Mobile Menu Overlay */}
+      {/* Phones: once the hero is scrolled away, the search pill stays pinned at the top */}
+      {stickyPill && (
+        <div className="fixed inset-x-0 top-0 z-[60] bg-white/95 px-4 py-2.5 shadow-[0_6px_20px_rgba(20,20,20,0.08)] backdrop-blur animate-fade-in lg:hidden">
+          <MobileSearchPill
+            onOpen={() => setMobileSearchOpen(true)}
+            value={{ query: locationQuery, checkIn: dates.checkIn, checkOut: dates.checkOut, guests: guestCounts.adults + guestCounts.children }}
+          />
+        </div>
+      )}
+
+      {/* Mobile menu: a drawer from the right, with an icon for every row */}
       {isMobileMenuOpen && (
-        <div className="fixed inset-0 z-[100] bg-black/30 backdrop-blur-[2px] flex lg:hidden animate-fade-in">
-          <div className="w-[76px] bg-[#1f1f1f]" onClick={() => setIsMobileMenuOpen(false)} />
-          <div className="flex-1 max-w-[calc(100vw-76px)] bg-white min-h-full overflow-y-auto">
-            <div className="bg-[#1f1f1f] px-5 pt-5 pb-6 text-white">
-              <div className="flex items-start justify-between">
-                <div className="space-y-5">
-                  <div className="cursor-pointer" onClick={() => { setIsMobileMenuOpen(false); navigate('/'); }}>
-                    <img src="/logo.png" alt="X-Space360 Logo" className="h-8 w-auto object-contain logo-white" />
+        <div className="fixed inset-0 z-[100] flex justify-end bg-black/45 animate-fade-in lg:hidden" onClick={() => setIsMobileMenuOpen(false)}>
+          <aside className="flex h-full w-[86%] max-w-[360px] flex-col overflow-y-auto bg-white shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="bg-[#1f1f1f] px-5 pb-7 pt-5 text-white">
+              <div className="flex justify-end">
+                <button type="button" onClick={() => setIsMobileMenuOpen(false)} aria-label="Close menu" className="text-white/70 transition hover:text-white"><X className="h-6 w-6" /></button>
+              </div>
+              <div className="mt-3 flex items-center gap-4">
+                <div className="grid h-12 w-12 place-items-center rounded-full bg-white text-charcoal"><User className="h-6 w-6" /></div>
+                {!user ? (
+                  <button type="button" onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }} className="rounded-xl border border-white/80 px-4 py-2 text-[14px] font-semibold">Login/Sign up</button>
+                ) : (
+                  <div className="min-w-0">
+                    <p className="truncate text-[15px] font-semibold">{user.full_name || user.name || 'Welcome'}</p>
+                    <button type="button" onClick={() => { setIsMobileMenuOpen(false); navigate(user.role === 'guest' ? '/guest/bookings' : '/dashboard'); }} className="mt-1.5 rounded-xl border border-white/80 px-3.5 py-1.5 text-[13px] font-semibold">{user.role === 'guest' ? 'My Bookings' : 'Open Dashboard'}</button>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full bg-white flex items-center justify-center text-charcoal">
-                      <User className="w-6 h-6" />
+                )}
+              </div>
+            </div>
+
+            <nav className="flex-1 px-5 py-1 text-charcoal">
+              <DrawerRow icon={Compass} label="Discover" onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse'); }} />
+              <DrawerRow icon={Building2} label="List your Property" onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/list-your-property'); }} />
+
+              <div className="border-b border-gray-100">
+                <DrawerRow icon={MapPin} label="Explore" bare trailing={<ChevronDown className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${isMobileExploreOpen ? 'rotate-180' : ''}`} />} onClick={() => setIsMobileExploreOpen((prev) => !prev)} />
+                {isMobileExploreOpen && (
+                  <div className="mb-3 space-y-4 rounded-[18px] border border-[#eee6d8] bg-[#faf7f2] px-4 py-4">
+                    <div className="no-scrollbar flex gap-4 overflow-x-auto border-b border-[#e9dfcf] pb-3">
+                      {EXPLORE_MENU_TABS.map((tab) => (
+                        <button
+                          key={tab.key}
+                          type="button"
+                          onClick={() => setActiveExploreTab(tab.key)}
+                          className={`whitespace-nowrap text-[15px] font-semibold transition ${activeExploreTab === tab.key ? 'text-charcoal underline underline-offset-8' : 'text-charcoal-muted'}`}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
                     </div>
-                    {!user ? (
-                      <button
-                        onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
-                        className="border border-white rounded-xl px-4 py-2 text-sm font-semibold"
-                      >
-                        Login/Sign up
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => { setIsMobileMenuOpen(false); navigate('/dashboard'); }}
-                        className="border border-white rounded-xl px-4 py-2 text-sm font-semibold"
-                      >
-                        Open Dashboard
-                      </button>
-                    )}
+                    <div className="max-h-[300px] space-y-3 overflow-y-auto pr-1">
+                      {activeMobileExploreMenu?.columns?.flat().map((item) => (
+                        <button
+                          key={`${activeMobileExploreMenu.key}-${item.label}`}
+                          type="button"
+                          onClick={() => { setIsMobileMenuOpen(false); setIsMobileExploreOpen(false); handleExploreNavigate(item.params); }}
+                          className="block w-full text-left text-[15px] text-charcoal transition hover:text-terracotta"
+                        >
+                          {item.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-                <button onClick={() => setIsMobileMenuOpen(false)} className="text-white/80 hover:text-white transition">
-                  <X className="w-6 h-6" />
-                </button>
+                )}
               </div>
-            </div>
 
-            <div className="px-5 py-5 text-charcoal">
-              <div className="flex flex-col">
-            <button
-              onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse'); }}
-              className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
-            >
-              Discover
-            </button>
-            <button
-              onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/list-your-property'); }}
-              className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
-            >
-              List your Property
-            </button>
-            <div className="border-b border-gray-200 py-4">
-              <button
-                type="button"
-                onClick={() => setIsMobileExploreOpen((prev) => !prev)}
-                className="w-full text-left text-[17px] font-medium transition flex items-center justify-between"
+              <div className="flex items-center gap-3 border-b border-gray-100 py-3.5">
+                <Home className="h-5 w-5 shrink-0 text-charcoal" />
+                <div className="min-w-0 flex-1"><LanguageSelector mode="inline" showPropertyTypes /></div>
+              </div>
+
+              <a
+                href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-3 border-b border-gray-100 py-3.5 text-[16px] font-medium text-charcoal"
               >
-                <span>Explore</span>
-                <ChevronDown className={`w-5 h-5 transition-transform duration-200 text-gray-500 ${isMobileExploreOpen ? 'rotate-180' : ''}`} />
-              </button>
+                <Smartphone className="h-5 w-5 shrink-0" />
+                <span className="flex-1">Download App</span>
+                <span className="rounded-sm bg-[#ff4e6d] px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">App</span>
+              </a>
 
-              {isMobileExploreOpen && (
-                <div className="mt-4 rounded-[20px] bg-[#faf7f2] text-charcoal px-4 py-4 space-y-4 border border-[#eee6d8]">
-                  <div className="flex gap-4 overflow-x-auto no-scrollbar border-b border-[#e9dfcf] pb-3">
-                    {EXPLORE_MENU_TABS.map((tab) => (
-                      <button
-                        key={tab.key}
-                        type="button"
-                        onClick={() => setActiveExploreTab(tab.key)}
-                        className={`whitespace-nowrap text-base font-semibold transition ${
-                          activeExploreTab === tab.key ? 'text-charcoal underline underline-offset-8' : 'text-charcoal-muted'
-                        }`}
-                      >
-                        {tab.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
-                    {activeMobileExploreMenu?.columns?.flat().map((item) => (
-                      <button
-                        key={`${activeMobileExploreMenu.key}-${item.label}`}
-                        type="button"
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          setIsMobileExploreOpen(false);
-                          handleExploreNavigate(item.params);
-                        }}
-                        className="block w-full text-left text-[15px] text-charcoal hover:text-terracotta transition"
-                      >
-                        {item.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {user ? (
+                <>
+                  {user.role === 'guest' ? (
+                    <>
+                      <DrawerRow icon={Calendar} label="My Bookings" onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/bookings'); }} />
+                      <DrawerRow icon={Heart} label="Wishlist" onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=1'); }} />
+                      <DrawerRow icon={Headphones} label="Help & Support" onClick={() => { setIsMobileMenuOpen(false); navigate('/support'); }} />
+                    </>
+                  ) : (
+                    <DrawerRow icon={User} label="Dashboard" onClick={() => { setIsMobileMenuOpen(false); navigate('/dashboard'); }} />
+                  )}
+                  <button type="button" onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }} className="mt-5 w-full rounded-xl bg-[#1f1f1f] py-3.5 text-center text-[15px] font-semibold text-white">Sign Out</button>
+                </>
+              ) : (
+                <button type="button" onClick={() => { setIsMobileMenuOpen(false); navigate('/register/host'); }} className="mt-5 w-full rounded-xl bg-[#d9b233] py-3.5 text-center text-[15px] font-semibold text-white transition hover:bg-[#cda62b]">Become a Host</button>
               )}
-            </div>
-            <a
-              href="https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share"
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={() => setIsMobileMenuOpen(false)}
-              className="text-left text-[17px] font-medium flex items-center justify-between py-4 border-b border-gray-200 text-charcoal"
-            >
-              <div className="flex items-center gap-2">
-                <Smartphone className="w-5 h-5 text-terracotta" />
-                <span>Download App</span>
-              </div>
-              <span className="bg-[#ff4e6d] text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">APP</span>
-            </a>
-            <div className="py-4 border-b border-gray-200 flex flex-col items-start">
-              <LanguageSelector mode="inline" showPropertyTypes />
-            </div>
-
-            {user ? (
-              <>
-                <button
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/dashboard'); }}
-                  className="text-left text-[17px] font-medium py-4 border-b border-gray-200"
-                >
-                  Dashboard
-                </button>
-                <button
-                  onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }}
-                  className="mt-6 bg-[#1f1f1f] text-white font-semibold py-4 rounded-xl text-center transition"
-                >
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/login'); }}
-                  className="text-left text-[17px] font-medium transition py-4 border-b border-gray-200"
-                >
-                  Sign In
-                </button>
-                <button
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/register/host'); }}
-                  className="mt-6 bg-[#d9b233] hover:bg-[#cda62b] text-white font-semibold py-4 rounded-xl text-center transition"
-                >
-                  Become a Host
-                </button>
-              </>
-            )}
-              </div>
-            </div>
-          </div>
+            </nav>
+          </aside>
         </div>
       )}
 
       {/* ===== PREMIUM SLIDING IMAGE HERO ===== */}
-      <section className="relative w-full z-30 bg-white px-0 pt-0 pb-0">
-      <div className="relative h-[560px] min-h-[560px] md:h-[620px] md:min-h-[620px] w-full z-30 overflow-visible bg-[#181818] bg-gradient-to-br from-charcoal via-slate-900 to-black shadow-premium">
+      <section className="relative w-full z-30 bg-white px-0 pt-0 pb-12 lg:pb-[84px]">
+      <div className="relative mx-auto h-[360px] min-h-[360px] md:h-[580px] md:min-h-[580px] w-full max-w-[1600px] z-30 overflow-visible rounded-b-[28px] md:rounded-b-[36px]">
         
         {/* ── Background Sliding/Fading Images (Clipped with bottom rounded corners) ── */}
-        <div className="absolute inset-0 w-full h-full overflow-hidden z-0">
+        <div className="absolute inset-0 z-0 h-full w-full transform-gpu overflow-hidden rounded-b-[28px] bg-[#181818] md:rounded-b-[36px]">
           {heroSlides.map((slide, index) => (
             <div 
               key={index}
@@ -3952,26 +4060,56 @@ const LandingPage = () => {
           <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
         </button>
 
+        {/* Phones: a compact search pill that opens the step-by-step search screens */}
+        <div className="absolute inset-x-4 -bottom-7 z-50 lg:hidden">
+          <MobileSearchPill
+            onOpen={() => setMobileSearchOpen(true)}
+            value={{ query: locationQuery, checkIn: dates.checkIn, checkOut: dates.checkOut, guests: guestCounts.adults + guestCounts.children }}
+          />
+        </div>
+        <MobileSearchSheet
+          open={mobileSearchOpen}
+          onClose={() => setMobileSearchOpen(false)}
+          value={{ query: locationQuery, checkIn: dates.checkIn, checkOut: dates.checkOut, adults: guestCounts.adults, children: guestCounts.children }}
+          minDate={todayISO}
+          onNearMe={handleShowNearbyLocations}
+          onSearch={(v) => {
+            setLocationQuery(v.query || '');
+            setDates({ checkIn: v.checkIn || '', checkOut: v.checkOut || '' });
+            setGuestCounts({ adults: v.adults, children: v.children });
+            const searchParams = new URLSearchParams();
+            if (v.city) searchParams.set('city', v.city);
+            else if (v.query) searchParams.set('search', v.query);
+            if (v.checkIn) searchParams.set('checkIn', v.checkIn);
+            if (v.checkOut) searchParams.set('checkOut', v.checkOut);
+            searchParams.set('guests', String(v.guests || 2));
+            navigate(`/guest/browse?${searchParams.toString()}`);
+          }}
+        />
+
+        {/* phones: a soft dark fade under the text so it reads clearly on busy photos */}
+        <div aria-hidden="true" className="pointer-events-none absolute inset-x-0 bottom-0 z-10 h-[62%] rounded-b-[28px] bg-gradient-to-t from-black/70 via-black/35 to-transparent md:hidden" />
+
         {/* ── Hero Content (Centered with Spacing & font-lufga) ── */}
-        <div className="relative z-20 max-w-6xl mx-auto px-4 md:px-12 h-full flex flex-col justify-center items-center text-center pt-20 md:pt-24 pb-28 md:pb-24">
+        <div className="relative z-20 max-w-6xl mx-auto px-4 md:px-12 h-full flex flex-col justify-end md:justify-center items-center text-center pt-20 md:pt-24 pb-14 md:pb-24">
           {(() => {
             const activeHero = heroSlides[currentHeroSlide] || heroSlides[0] || DEFAULT_HERO_SLIDES[0];
             return (
               <div className="flex flex-col items-center space-y-3 md:space-y-4 w-full max-w-4xl mx-auto">
-                 <div className="w-screen px-2 text-center animate-fade-in" key={`title-${currentHeroSlide}`}>
-                   <h1 className="font-megafield whitespace-nowrap text-[clamp(18px,5vw,30px)] md:text-[clamp(32px,4.2vw,56px)] font-normal leading-[1.08] text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.45)] text-center mx-auto">
+                 <div className="w-full px-2 text-center animate-fade-in md:w-screen" key={`title-${currentHeroSlide}`}>
+                   <h1 ref={heroTitleRef} className="font-megafield whitespace-nowrap text-[clamp(14px,4.5vw,18px)] md:text-[clamp(26px,3.1vw,42px)] font-normal leading-[1.14] md:leading-[1.08] text-white drop-shadow-[0_2px_16px_rgba(0,0,0,0.55)] text-center mx-auto">
                      {activeHero.title}
                    </h1>
                  </div>
-                 <p className="font-apple mx-auto w-full max-w-2xl px-4 text-center text-[14px] md:text-[18px] font-normal leading-relaxed text-white drop-shadow-md animate-fade-in" key={`subtitle-${currentHeroSlide}`}>
+                 <p className="font-apple mx-auto w-full max-w-[320px] px-2 text-center text-[12px] leading-snug md:max-w-2xl md:px-4 md:text-[18px] md:leading-relaxed font-normal text-white drop-shadow-md animate-fade-in" key={`subtitle-${currentHeroSlide}`}>
                    {activeHero.subtitle}
                  </p>
-                 <div className="absolute left-1/2 top-[76%] md:top-[88%] z-50 w-[calc(100vw-2rem)] max-w-6xl -translate-x-1/2 -translate-y-1/2 text-left">
+                 <div className="absolute left-1/2 top-[95%] z-50 hidden lg:block w-[calc(100vw-2rem)] max-w-6xl -translate-x-1/2 -translate-y-1/2 text-left">
                     {/* Capsule Search Bar */}
-                    <div ref={landingSearchRef} className="font-apple relative z-50 overflow-visible rounded-[32px] lg:rounded-full border border-white/45 bg-white/25 p-2 shadow-[0_18px_45px_rgba(10,25,30,0.28)] backdrop-blur-xl">
-                      <FestiveDiya className="pointer-events-none absolute -left-[62px] top-1/2 z-[70] hidden h-14 w-14 -translate-y-1/2 drop-shadow-[0_5px_8px_rgba(0,0,0,0.55)] md:block" label="Left festive diya" />
-                      <FestiveDiya className="pointer-events-none absolute -right-[62px] top-1/2 z-[70] hidden h-14 w-14 -translate-y-1/2 drop-shadow-[0_5px_8px_rgba(0,0,0,0.55)] md:block" label="Right festive diya" />
-                      <div className="grid grid-cols-2 lg:flex min-h-[72px] lg:flex-row items-stretch lg:items-center gap-1.5 rounded-[26px] lg:rounded-full w-full border border-white/90 bg-white/95 p-1.5 relative overflow-visible shadow-[0_4px_15px_rgba(20,30,20,0.08)]">
+                    <div ref={landingSearchRef} className="font-sans relative z-50 overflow-visible rounded-[28px] bg-white px-3 pt-3 pb-0">
+                      <FestiveDiya className="pointer-events-none absolute -left-[62px] top-[41px] z-[70] hidden h-14 w-14 -translate-y-1/2 drop-shadow-[0_5px_8px_rgba(0,0,0,0.55)] md:block" label="Left festive diya" />
+                      <FestiveDiya className="pointer-events-none absolute -right-[62px] top-[41px] z-[70] hidden h-14 w-14 -translate-y-1/2 drop-shadow-[0_5px_8px_rgba(0,0,0,0.55)] md:block" label="Right festive diya" />
+                      <div className="grid grid-cols-2 lg:flex lg:flex-row items-stretch lg:items-center gap-2 lg:gap-3 w-full relative overflow-visible">
                         
                         {/* Search Input */}
                         <div className="relative col-span-2 flex-1 lg:flex-none lg:w-[34%] w-full min-w-0 z-10">
@@ -3981,12 +4119,12 @@ const LandingPage = () => {
                               setActiveDropdown('location');
                               if (el) el.focus();
                             }}
-                            className="flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer group rounded-2xl lg:rounded-full bg-slate-50 hover:bg-slate-100 transition duration-200"
+                            className="flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer group rounded-2xl bg-[#f6f6f6] hover:bg-slate-100 transition duration-200"
                           >
                             <Search className="w-4 h-4 text-gray-500 mr-2.5 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full min-w-0 pr-2 text-left">
                               <label htmlFor="landing-search-query" className="sr-only">Search properties and destinations</label>
-                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-[0.12em] leading-none">Search</p>
+                              <p className="text-[12px] text-slate-600 font-normal leading-none">Search</p>
                               <input
                                 id="landing-search-query"
                                 name="search"
@@ -4001,11 +4139,13 @@ const LandingPage = () => {
                                 onFocus={() => setActiveDropdown('location')}
                                 placeholder={`Search “${activeSearchPrompt}”`}
                                 aria-label="Search properties and destinations"
-                                className="font-apple bg-transparent border-none outline-none text-charcoal w-full placeholder-slate-500 font-semibold text-[14px] focus:ring-0 focus:outline-none p-0 mt-1"
+                                className="font-sans bg-transparent border-none outline-none text-charcoal w-full placeholder-slate-500 font-light text-[14px] focus:ring-0 focus:outline-none p-0 mt-1"
                               />
                             </div>
                             {activeDropdown === 'location' && (
-                              <div className="absolute left-0 top-[calc(100%+10px)] z-[70] max-h-[360px] w-full min-w-[320px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.18)]">
+                              <div className="relative z-[70] mt-2 max-h-[300px] w-full lg:absolute lg:left-0 lg:top-[calc(100%+10px)] lg:mt-0 lg:max-h-[360px] lg:min-w-[320px] overflow-y-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-[0_18px_42px_rgba(15,23,42,0.18)]">
+                                {!locationQuery.trim() && (
+                                  <>
                                 <button
                                   type="button"
                                   onClick={(event) => {
@@ -4023,6 +4163,8 @@ const LandingPage = () => {
                                 </button>
 
                                 <div className="mx-2 border-t border-slate-200" />
+                                  </>
+                                )}
 
                                 {locationCitySuggestions.length > 0 && (
                                   <div className="py-1">
@@ -4107,9 +4249,9 @@ const LandingPage = () => {
                         </div>
 
                         
-                        <div className={`relative col-span-2 flex flex-row items-stretch lg:items-center shrink-0 w-full lg:w-[34%] rounded-2xl lg:rounded-full bg-slate-50 ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
+                        <div className={`relative col-span-2 flex flex-row items-stretch lg:items-center shrink-0 w-full lg:w-[34%] rounded-2xl bg-[#f6f6f6] ${landingCalendarOpen ? 'z-[60]' : 'z-[1]'}`}>
                           {/* Check-in */}
-                          <div className="relative flex-1 flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-slate-100 rounded-2xl lg:rounded-l-full transition duration-200 group shrink-0">
+                          <div className="relative flex-1 flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-slate-100 rounded-2xl  transition duration-200 group shrink-0">
                             <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
@@ -4119,8 +4261,8 @@ const LandingPage = () => {
                               }}
                               className="w-full text-left"
                             >
-                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-[0.12em] leading-none">Check-in</p>
-                              <p className={`font-semibold text-[13px] mt-1 leading-none whitespace-nowrap ${dates.checkIn ? 'text-charcoal' : 'text-slate-500'}`}>
+                              <p className="text-[12px] text-slate-600 font-normal leading-none">Check-in</p>
+                              <p className={`font-light text-[14px] mt-1 leading-none whitespace-nowrap ${dates.checkIn ? 'text-charcoal' : 'text-slate-500'}`}>
                                 {dates.checkIn || 'Select Date'}
                               </p>
                             </button>
@@ -4131,7 +4273,7 @@ const LandingPage = () => {
                             <ArrowRight className="w-3.5 h-3.5" />
                           </div>
                           {/* Check-out */}
-                          <div className="relative flex-1 flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-slate-100 rounded-2xl lg:rounded-r-full transition duration-200 group shrink-0">
+                          <div className="relative flex-1 flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 hover:bg-slate-100 rounded-2xl  transition duration-200 group shrink-0">
                             <Calendar className="w-4 h-4 text-gray-500 mr-2 group-hover:text-terracotta transition-colors z-0 shrink-0" />
                             <button
                               type="button"
@@ -4141,8 +4283,8 @@ const LandingPage = () => {
                               }}
                               className="w-full text-left"
                             >
-                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-[0.12em] leading-none">Check-out</p>
-                              <p className={`font-semibold text-[13px] mt-1 leading-none whitespace-nowrap ${dates.checkOut ? 'text-charcoal' : 'text-slate-500'}`}>
+                              <p className="text-[12px] text-slate-600 font-normal leading-none">Check-out</p>
+                              <p className={`font-light text-[14px] mt-1 leading-none whitespace-nowrap ${dates.checkOut ? 'text-charcoal' : 'text-slate-500'}`}>
                                 {dates.checkOut || 'Select Date'}
                               </p>
                             </button>
@@ -4165,12 +4307,12 @@ const LandingPage = () => {
                         <div className={`relative shrink-0 w-full lg:w-[16%] ${activeDropdown === 'guests' ? 'z-[60]' : 'z-[1]'}`}>
                           <div 
                             onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                            className="flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer bg-slate-50 hover:bg-slate-100 rounded-2xl lg:rounded-full transition duration-200 group"
+                            className="flex min-h-[46px] lg:min-h-[58px] items-center px-3 lg:px-4 py-2 lg:py-2.5 w-full cursor-pointer bg-[#f6f6f6] hover:bg-[#eeeeee] rounded-2xl transition duration-200 group"
                           >
                             <User className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                             <div className="w-full text-left">
-                              <p className="text-[10px] text-slate-500 font-semibold uppercase tracking-[0.12em] leading-none">Guests</p>
-                              <p className="text-charcoal font-semibold text-[14px] mt-1 leading-none whitespace-nowrap">
+                              <p className="text-[12px] text-slate-600 font-normal leading-none">Guests</p>
+                              <p className="text-charcoal font-light text-[14px] mt-1 leading-none whitespace-nowrap">
                                 {guestCounts.adults + guestCounts.children} Guest{(guestCounts.adults + guestCounts.children) > 1 ? 's' : ''}
                               </p>
                             </div>
@@ -4232,14 +4374,21 @@ const LandingPage = () => {
                         </div>
 
                         {/* Search Button */}
-                        <div className="w-full lg:w-auto p-0 lg:pl-2 lg:pr-2 shrink-0 z-[1]">
+                        <div className="col-span-2 w-full lg:w-auto p-0 shrink-0 z-[1]">
                           <button
                             onClick={handleSearch}
-                            className="font-apple w-full lg:w-[132px] min-h-[46px] lg:min-h-[54px] bg-[#1d2528] hover:bg-[#0e1517] text-white font-semibold text-[12px] tracking-[0.04em] px-4 lg:px-7 py-2 lg:py-3 rounded-2xl lg:rounded-full transition duration-200 shadow-[0_7px_16px_rgba(0,0,0,0.18)] hover:shadow-[0_10px_22px_rgba(0,0,0,0.26)] cursor-pointer"
+                            className="font-sans w-full lg:w-[150px] min-h-[46px] lg:min-h-[58px] bg-[#1d2528] hover:bg-[#0e1517] text-white font-semibold text-[15px] tracking-[0.02em] px-4 lg:px-7 py-2 lg:py-3 rounded-2xl transition duration-200 shadow-[0_7px_16px_rgba(0,0,0,0.18)] hover:shadow-[0_10px_22px_rgba(0,0,0,0.26)] cursor-pointer"
                           >
                             SEARCH
                           </button>
                         </div>
+                      </div>
+                      <div className="-mx-3 mt-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-b-[28px] bg-gradient-to-r from-[#fbf3e1] via-[#f9e6e0] to-[#f8dede] px-7 py-3 text-[13px] text-charcoal">
+                        <span className="font-medium">Need help with a booking, a property enquiry or listing your space?</span>
+                        <a href="tel:+919225586010" className="inline-flex items-center gap-1.5 font-semibold text-[#8B6512] transition hover:text-[#5F4308] hover:underline">
+                          <Phone className="h-3.5 w-3.5" />
+                          Call our space team: +91 92255 86010
+                        </a>
                       </div>
                     </div>
                   </div>
@@ -4262,7 +4411,7 @@ const LandingPage = () => {
                   key={item}
                   type="button"
                   onClick={() => openRecentSearch(item)}
-                  className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-[#E8ECF1] bg-white py-2 pl-2.5 pr-4 text-left shadow-[0_1px_4px_rgba(15,23,42,0.04)] transition hover:border-[#D4AF37] hover:bg-[#FFF9EC]"
+                  className="group inline-flex shrink-0 items-center gap-2 rounded-full border border-[#E8ECF1] bg-white py-2 pl-2.5 pr-4 text-left shadow-[0_1px_4px_rgba(15,23,42,0.04)] !transform-none transition-colors hover:!transform-none hover:border-[#D4AF37] hover:bg-[#FFF9EC]"
                 >
                   <span className="grid h-7 w-7 place-items-center rounded-full bg-[#F4F7FC]">
                     <img src="/assets/ui/recent-search-home.webp" alt="" className="h-6 w-6 object-contain" />
@@ -4276,26 +4425,16 @@ const LandingPage = () => {
         </div>
       </section>
 
-      <div className="relative z-20 w-full bg-[#FFF7E7] py-2.5 shadow-[0_6px_18px_rgba(64,47,20,0.06)]">
-        <div className="mx-auto flex w-full max-w-[1216px] flex-col gap-2 px-4 text-[12px] text-[#4A3824] sm:flex-row sm:items-center sm:justify-between md:px-8">
-          <p className="font-medium">Need help with a booking, a property enquiry or listing your space?</p>
-          <a href="tel:+919225586010" className="inline-flex w-fit items-center gap-1.5 font-semibold text-[#8B6512] transition hover:text-[#5F4308] hover:underline">
-            <Phone className="h-3.5 w-3.5" />
-            Call our space team: +91 92255 86010
-          </a>
-        </div>
-      </div>
-
       <ScrollReveal duration="duration-[800ms]">
         <div className="w-full bg-white relative z-20 py-8 md:py-12 border-b border-sand-100">
           <div className="max-w-[1216px] mx-auto px-4 md:px-8">
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6 md:mb-8">
               <div className="flex items-baseline gap-2 flex-wrap">
                 <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">Pick a Destination</h2>
-              </div>
-              <div className="flex md:hidden items-center gap-3 text-charcoal self-end pr-20 md:pr-0">
-                <span className="text-[11px] font-semibold text-charcoal-muted">Swipe</span>
-                <ChevronRight className="w-4 h-4" />
+                <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-charcoal-muted md:hidden">
+                  Swipe
+                  <ChevronRight className="h-3.5 w-3.5 text-charcoal" />
+                </span>
               </div>
               <div className="hidden md:flex items-center gap-3 text-charcoal">
                 <ChevronLeft className="w-5 h-5" />
@@ -4368,13 +4507,12 @@ const LandingPage = () => {
 
             <div
               id="slider-recently-visited"
-              className="flex overflow-x-auto gap-4 md:gap-6 pb-4 no-scrollbar snap-x scroll-smooth"
+              className="-ml-2 flex overflow-x-auto gap-4 pb-4 pl-2 scroll-pl-2 no-scrollbar snap-x scroll-smooth md:gap-6"
             >
               {recentlyVisitedProperties.map((item, index) => (
-                <RecentlyVisitedCard
+                <ShowcaseCard
                   key={item.property_id || index}
                   item={item}
-                  index={index}
                   navigate={navigate}
                   wishlist={wishlist}
                   handleWishlistToggle={handleWishlistToggle}
@@ -4695,7 +4833,7 @@ const LandingPage = () => {
                 { image: '/assets/experiences/sunset-terrace.webp', label: 'Sunset Evenings', detail: 'Take in quiet golden-hour views from your stay.' },
                 { image: '/assets/experiences/garden-picnic.webp', label: 'Garden Picnics', detail: 'Make the most of open lawns, fresh air and unhurried time.' },
                 { image: '/assets/experiences/lakeside-picnic.webp', label: 'Lakeside Moments', detail: 'Spend the day by the water with the people you love.' },
-                { image: '/assets/experiences/barbecue-evening.webp', label: 'Barbecue Nights', detail: 'Settle into warm, relaxed evenings under the stars.' },
+                { image: '/assets/experiences/barbecue-evening.webp', label: 'Barbeque Nights', detail: 'Settle into warm, relaxed evenings under the stars.' },
               ];
               const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -4755,7 +4893,7 @@ const LandingPage = () => {
                           { label: 'Games & Fun', position: '0% 100%' },
                           { label: 'Open Spaces', position: '33.333% 100%' },
                           { label: 'Celebrations', position: '66.667% 100%' },
-                          { label: 'Barbecue Nights', position: '100% 100%' },
+                          { label: 'Barbeque Nights', position: '100% 100%' },
                         ].map(({ label, position }) => (
                           <div key={label} className="flex min-w-0 flex-col items-center gap-1.5 text-center">
                             <span
@@ -4787,7 +4925,7 @@ const LandingPage = () => {
               );
             };
             return (
-              <ScrollReveal duration="duration-[1000ms]">
+              <ScrollReveal flat duration="duration-[600ms]">
                 <MoreThanStaySlider />
               </ScrollReveal>
             );
@@ -4887,12 +5025,11 @@ const LandingPage = () => {
                       </div>
                       <button type="button" onClick={() => navigate('/guest/browse?signature=true')} className="hidden text-sm font-semibold text-charcoal transition hover:text-terracotta md:block">View all →</button>
                     </div>
-                    <div id="signature-properties-scroll" className="flex snap-x gap-6 overflow-x-auto pb-4 scroll-smooth no-scrollbar">
+                    <div id="signature-properties-scroll" className="-ml-2 flex snap-x gap-6 overflow-x-auto pb-4 pl-2 scroll-pl-2 scroll-smooth no-scrollbar">
                       {signatureProperties.slice(0, 10).map((item, index) => (
-                        <RecentlyVisitedCard
+                        <ShowcaseCard
                           key={item.property_id || index}
                           item={item}
-                          index={index}
                           navigate={navigate}
                           wishlist={wishlist}
                           handleWishlistToggle={handleWishlistToggle}
@@ -4945,10 +5082,10 @@ const LandingPage = () => {
                       </div>
                       <div className="grid grid-cols-2 gap-y-6 pt-7 text-center md:grid-cols-4 md:gap-0 md:pt-8">
                         {[
-                          ['350+', 'live properties'],
-                          ['3', 'space categories'],
-                          ['4+', 'nearby destinations'],
-                          ['1', 'place to plan it all'],
+                          [siteStats ? siteStats.live_properties.toLocaleString('en-IN') : '—', 'live properties'],
+                          [siteStats ? siteStats.hosts.toLocaleString('en-IN') : '—', 'hosts with us'],
+                          [siteStats ? siteStats.cities.toLocaleString('en-IN') : '—', 'cities covered'],
+                          [siteStats ? siteStats.categories.toLocaleString('en-IN') : '—', 'space categories'],
                         ].map(([value, label], index) => (
                           <div key={label} className={`px-3 ${index > 0 ? 'md:border-l md:border-slate-200' : ''}`}>
                             <p className="text-[29px] font-semibold leading-none text-[#1E1E1E] md:text-[36px]">{value}</p>
@@ -5047,52 +5184,18 @@ const LandingPage = () => {
                     {/* Scrollable list */}
                     <div
                       id="signature-properties-scroll"
-                      className="flex gap-6 overflow-x-auto no-scrollbar pb-4"
+                      className="-ml-2 flex gap-6 overflow-x-auto pl-2 no-scrollbar pb-4"
                     >
                       {signatureProperties.length > 0 ? (
                         signatureProperties.map((item) => (
-                          <div
+                          <ShowcaseCard
                             key={item.property_id}
-                            onClick={() => navigate(getPropertyUrl(item))}
-                            className="min-w-[280px] md:min-w-[310px] max-w-[310px] bg-white rounded-3xl overflow-hidden border border-gray-150 shadow-subtle flex-shrink-0 group cursor-pointer"
-                          >
-                            <PropertyImageCarousel
-                              item={item}
-                              className="h-48 w-full bg-stone-100 md:h-52"
-                              imageClassName="group-hover:scale-105"
-                            >
-                              {/* Goldenblack Signature Badge */}
-                              <div className="absolute top-3 left-3 z-10">
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-black/95 border border-[#D4AF37] text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow">
-                                  <Crown className="w-2.5 h-2.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-                                  X-SPACE SERIES
-                                </span>
-                              </div>
-                              {/* Favorite Icon */}
-                              {(!user || user.role === 'guest') && (
-                                <div className="absolute top-3 right-3 p-2 bg-white/90 rounded-full hover:bg-white shadow-sm transition-all duration-300 z-10">
-                                  <Heart 
-                                    className={`w-4 h-4 transition-colors ${
-                                      wishlist.includes(item.property_id) ? 'text-red-500 fill-red-500' : 'text-charcoal hover:text-red-500'
-                                    }`} 
-                                    onClick={(e) => { e.stopPropagation(); handleWishlistToggle(item.property_id); }}
-                                  />
-                                </div>
-                              )}
-                            </PropertyImageCarousel>
-                            <div className="p-5 text-left">
-                              <h4 className="font-bold text-sm text-charcoal truncate mb-1 group-hover:text-amber-600 transition-colors">
-                                {item.title}
-                              </h4>
-                              <p className="text-[10px] font-bold text-charcoal-muted uppercase tracking-wider mb-3 truncate" title={`${formatPropertyTypeLabel(item.property_type || item.type)} in ${formatAddress(item.address, item.city)}`}>
-                                {formatPropertyTypeLabel(item.property_type || item.type) || 'Villa'} in {formatAddress(item.address, item.city)}
-                              </p>
-                              <div className="flex items-baseline gap-1">
-                                <span className="font-black text-sm text-charcoal">₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}</span>
-                                <span className="text-[10px] text-gray-500 font-semibold">/ night</span>
-                              </div>
-                            </div>
-                          </div>
+                            item={item}
+                            navigate={navigate}
+                            wishlist={wishlist}
+                            handleWishlistToggle={handleWishlistToggle}
+                            badgeLabel="X-Space Series"
+                          />
                         ))
                       ) : (
                         /* Placeholder when database has no 50k+ villas/resorts yet */

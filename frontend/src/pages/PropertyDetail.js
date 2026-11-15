@@ -3,6 +3,8 @@ import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import SEO from '../components/SEO';
+import { SeriesRibbon } from '../components/PropertyBadges';
+import { UnitCards, getPropertyUnits } from '../components/PropertyUnits';
 import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText, formatPropertyDescription, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
@@ -50,6 +52,7 @@ import {
   Phone,
   Percent,
   Search,
+  Bath,
 } from 'lucide-react';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
@@ -540,7 +543,82 @@ const getYouTubeEmbedUrl = (url) => {
   return '';
 };
 
+/** Thumbnail with a play button; the video plays right here after one tap. Links that are not YouTube open in a new tab. */
+const VideoTour = ({ url, vertical = false }) => {
+  const [playing, setPlaying] = useState(false);
+  const embed = getYouTubeEmbedUrl(url);
+  const videoId = (embed.match(/embed\/([a-zA-Z0-9_-]+)/) || [])[1];
+  if (!embed || !videoId) {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#fff0e6] via-[#fcf8f5] to-[#e4effb] px-6 text-center text-charcoal" style={{ textDecoration: 'none' }}>
+        <span className="grid h-12 w-12 place-items-center rounded-full border border-gray-300 bg-white"><Camera className="h-5 w-5" strokeWidth={1.5} /></span>
+        <span className="text-[14px] font-semibold">Watch the video tour</span>
+        <span className="text-[12px] text-gray-600">Opens in a new tab</span>
+      </a>
+    );
+  }
+  if (playing) {
+    return (
+      <iframe
+        src={`${embed}?autoplay=1&rel=0&modestbranding=1&playsinline=1`}
+        title="Property video"
+        frameBorder="0"
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        className="h-full w-full"
+      />
+    );
+  }
+  return (
+    <button type="button" onClick={() => setPlaying(true)} aria-label="Play video" className="group relative block h-full w-full overflow-hidden !transform-none">
+      <img
+        src={`https://i.ytimg.com/vi/${videoId}/${vertical ? 'hqdefault' : 'maxresdefault'}.jpg`}
+        alt=""
+        className={`h-full w-full object-cover transition duration-500 ${vertical ? 'scale-[1.35] group-hover:scale-[1.45]' : 'group-hover:scale-105'}`}
+        loading="lazy"
+        onError={(event) => {
+          if (!event.currentTarget.dataset.fallback) {
+            event.currentTarget.dataset.fallback = '1';
+            event.currentTarget.src = `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`;
+          }
+        }}
+      />
+      <span className="absolute inset-0 bg-gradient-to-t from-black/45 via-black/5 to-transparent" />
+      <span className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-white/95 shadow-lg transition group-hover:scale-110">
+        <svg viewBox="0 0 24 24" className="ml-1 h-7 w-7 text-charcoal" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z" /></svg>
+      </span>
+    </button>
+  );
+};
+
 const BOOKING_INTENT_KEY = 'xspace360_booking_intent';
+
+/** Amenity shown the way booking sites do: a thin outlined circle with the icon, and the name underneath or beside it. */
+const AmenityBadge = ({ icon: Icon, label, stacked = false }) => (
+  <div className={stacked ? 'flex w-[78px] shrink-0 flex-col items-center gap-2 text-center' : 'flex items-center gap-3'}>
+    <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gray-300 bg-white text-charcoal">
+      <Icon className="h-5 w-5" strokeWidth={1.5} />
+    </span>
+    <span className={`text-[13px] font-medium leading-tight text-charcoal ${stacked ? 'line-clamp-2' : ''}`}>{label}</span>
+  </div>
+);
+
+/** Meals are shown when the venue sells plates (veg / non-veg) or the home has a cook or a kitchen guests can use. */
+const propertyHasMeals = (property) => {
+  const sellsPlates = (property?.category === 'event_venue' || property?.has_cook) && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0);
+  return Boolean(sellsPlates || property?.has_cook || property?.has_self_cook);
+};
+
+const DETAIL_TABS = [
+  { id: 'pd-overview', label: 'Overview' },
+  { id: 'pd-units', label: 'Units', needs: 'units' },
+  { id: 'pd-policy', label: 'Refund Policy' },
+  { id: 'pd-reviews', label: 'Reviews' },
+  { id: 'pd-amenities', label: 'Amenities' },
+  { id: 'pd-meals', label: 'Meals', needs: 'meals' },
+  { id: 'pd-location', label: 'Location' },
+  { id: 'property-faq', label: "FAQ's" },
+];
 
 const PropertyDetail = () => {
   const navigate = useNavigate();
@@ -596,7 +674,31 @@ const PropertyDetail = () => {
     });
   };
 
-  const [property, setProperty] = useState(null);
+  const [baseProperty, setProperty] = useState(null);
+  const [selectedUnitId, setSelectedUnitId] = useState(null);
+  const [unitNotice, setUnitNotice] = useState(false);
+  const [unitAttention, setUnitAttention] = useState(false);
+  const propertyUnits = useMemo(() => getPropertyUnits(baseProperty), [baseProperty]);
+  const selectedUnit = propertyUnits.find((u) => u.unit_id === selectedUnitId) || null;
+  const activeUnitId = (selectedUnit || propertyUnits[0])?.unit_id;
+  // For multi-unit properties the page shows the selected unit's price/capacity
+  // (the first unit until the guest picks one).
+  const property = useMemo(() => {
+    if (!baseProperty || !propertyUnits.length) return baseProperty;
+    const unit = selectedUnit || propertyUnits[0];
+    const price = unit.price_per_night;
+    const display = unit.display_price_per_night ?? price;
+    return {
+      ...baseProperty,
+      price_per_night: price ?? baseProperty.price_per_night,
+      display_price_per_night: display ?? baseProperty.display_price_per_night,
+      customer_price_per_night: display ?? baseProperty.customer_price_per_night,
+      host_price_per_night: price ?? baseProperty.host_price_per_night,
+      max_guests: unit.max_guests || baseProperty.max_guests,
+      area_sqft: unit.area_sqft || baseProperty.area_sqft,
+      bhk_type: unit.bhk_type || baseProperty.bhk_type,
+    };
+  }, [baseProperty, propertyUnits, selectedUnit]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [imgIdx, setImgIdx] = useState(0);
@@ -659,6 +761,26 @@ const PropertyDetail = () => {
   const [foodPreference, setFoodPreference] = useState('veg');
   const [booking, setBooking] = useState(false);
   const [bookingError, setBookingError] = useState('');
+  const [showAllAmenities, setShowAllAmenities] = useState(false);
+  const [activeTab, setActiveTab] = useState('pd-overview');
+
+  // highlight the tab of the section that is currently under the header
+  useEffect(() => {
+    let frame = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        let current = DETAIL_TABS[0].id;
+        DETAIL_TABS.forEach((tab) => {
+          const el = document.getElementById(tab.id);
+          if (el && el.getBoundingClientRect().top <= 190) current = tab.id;
+        });
+        setActiveTab(current);
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('scroll', onScroll); };
+  }, []);
   const [selectedSlot, setSelectedSlot] = useState('');
   const [selectedStartTime, setSelectedStartTime] = useState('09:00');
   const [selectedEndTime, setSelectedEndTime] = useState('10:00');
@@ -740,6 +862,8 @@ const PropertyDetail = () => {
     setOpenTimeDropdown('');
     setHourlyBookingMode('single');
 
+    setSelectedUnitId(null);
+    setUnitNotice(false);
     fetchProperty();
     fetchBlockedDates();
     fetchReviews();
@@ -1086,11 +1210,30 @@ const PropertyDetail = () => {
       // Fetch a wide window so calendar widget shows blocks for any nav month
       const start = toISO(new Date());
       const end = `${new Date().getFullYear() + 2}-12-31`;
-      const res = await calendarAPI.getBlockedDates(id, { start_date: start, end_date: end });
+      const res = await calendarAPI.getBlockedDates(id, {
+        start_date: start,
+        end_date: end,
+        ...(selectedUnitId ? { unit_id: selectedUnitId } : {}),
+      });
       setBlockedDates(res.data.blocked_dates || []);
     } catch (e) {
       console.error('blocked dates load failed', e);
     }
+  };
+
+  useEffect(() => {
+    if (selectedUnitId) fetchBlockedDates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedUnitId]);
+
+  const handleSelectUnit = (unit) => {
+    if (unit.unit_id !== selectedUnitId) {
+      setSelectedUnitId(unit.unit_id);
+      setCalendarNightlyPrices({});
+      setCheckIn('');
+      setCheckOut('');
+    }
+    setUnitNotice(false);
   };
 
   const fetchCalendarNightlyPrices = useCallback(async (months) => {
@@ -1098,7 +1241,7 @@ const PropertyDetail = () => {
     if (!id || uniqueMonths.length === 0) return;
     try {
       const results = await Promise.all(uniqueMonths.map((month) => (
-        calendarAPI.getPublicNightlyPrices(id, month)
+        calendarAPI.getPublicNightlyPrices(id, month, activeUnitId)
       )));
       setCalendarNightlyPrices((current) => {
         const next = { ...current };
@@ -1113,7 +1256,7 @@ const PropertyDetail = () => {
       // The booking flow remains usable even if the optional calendar-rate display cannot load.
       console.error('calendar nightly prices load failed', error);
     }
-  }, [id]);
+  }, [id, activeUnitId]);
 
   const isBlocked = (iso) =>
     blockedDates.some((b) => {
@@ -1230,7 +1373,20 @@ const PropertyDetail = () => {
     }
   }, [bookingCalendarOpen, bookingCalendarAnchor]);
 
+  // Guests must pick a unit before dates: scroll to the units and flash them red.
+  const requireUnitSelection = () => {
+    setUnitNotice(true);
+    setUnitAttention(false);
+    window.requestAnimationFrame(() => setUnitAttention(true));
+    window.setTimeout(() => setUnitAttention(false), 1800);
+    document.getElementById('property-units')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  };
+
   const openBookingCalendar = (anchor) => {
+    if (propertyUnits.length > 0 && !selectedUnitId) {
+      requireUnitSelection();
+      return;
+    }
     setBookingCalendarAnchor(anchor);
     setBookingCalendarOpen(true);
   };
@@ -1329,6 +1485,7 @@ const PropertyDetail = () => {
 
     bookingAPI.getPricingQuote({
       property_id: property?.property_id || id,
+      unit_id: activeUnitId,
       host_amount: effectiveHostAmount,
       tax_slab_base_amount: Number(taxSlabBaseAmount) || effectiveHostAmount,
       charge_base_amount: property?.category === 'event_venue'
@@ -1361,7 +1518,7 @@ const PropertyDetail = () => {
           });
       });
     return () => { cancelled = true; };
-  }, [baseAmount, taxSlabBaseAmount, bookingUnits, checkIn, checkOut, extraGuestTotal, id, nights, property?.category, property?.price_per_night, property?.property_id]);
+  }, [baseAmount, taxSlabBaseAmount, bookingUnits, checkIn, checkOut, extraGuestTotal, id, nights, property?.category, property?.price_per_night, property?.property_id, activeUnitId]);
 
   const quoteNumber = (value, fallback = 0) => {
     const parsed = Number(value);
@@ -1517,11 +1674,16 @@ const PropertyDetail = () => {
   const handleBookNow = async (e, paymentType = 'full') => {
     if (!user) {
       saveBookingIntent();
-      navigate(`/login?next=${encodeURIComponent(location.pathname)}`);
+      navigate(`/login?next=${encodeURIComponent(location.pathname)}`, { state: { backgroundLocation: location } });
       return;
     }
     if (user.role !== 'guest') {
       setBookingError('Only guests can make bookings. Please log in with a guest account.');
+      return;
+    }
+    if (propertyUnits.length > 0 && !selectedUnitId) {
+      setBookingError('');
+      requireUnitSelection();
       return;
     }
     if (property?.category === 'commercial' && Number(guests) > maxGuests) {
@@ -1553,6 +1715,7 @@ const PropertyDetail = () => {
     try {
       const res = await bookingAPI.createBooking({
         property_id: id,
+        unit_id: selectedUnitId || undefined,
         check_in_date: checkIn,
         check_out_date: checkOut,
         number_of_guests: property?.category === 'event_venue' ? Number(guests) : chargeableGuests,
@@ -1918,8 +2081,8 @@ const PropertyDetail = () => {
       </header>
 
       <div className="mx-auto w-full max-w-[1216px] px-4 py-8 md:px-8">
-        <div className="relative z-30 mb-8 animate-fade-in">
-           <nav aria-label="Breadcrumb" className="mb-4 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs font-medium">
+        <div className="relative z-30 mb-4 animate-fade-in">
+           <nav aria-label="Breadcrumb" className="mb-1 flex min-w-0 items-center gap-1.5 overflow-hidden whitespace-nowrap text-xs font-medium">
              <Link to="/" className="shrink-0 text-terracotta transition-colors hover:text-charcoal">Home</Link>
              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-charcoal-muted/60" />
              <Link to={`/guest/browse?category=${encodeURIComponent(property.category || '')}`} className="shrink-0 text-terracotta transition-colors hover:text-charcoal">
@@ -1928,56 +2091,30 @@ const PropertyDetail = () => {
              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-charcoal-muted/60" />
              <span className="truncate text-charcoal-muted">{formatPropertyTypeLabel(property.property_type || property.property_subtype || property.category) || 'Space'}</span>
            </nav>
-           <div className="relative z-30 flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-4">
-             <div>
-               <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-charcoal tracking-tight leading-tight" data-testid="property-title">
-                 {propertyName}
-               </h1>
-             </div>
-             <div className="flex items-center gap-3 shrink-0 mt-2 md:mt-0">
-               <ShareDropdown
-                 property={property}
-                 align="right"
-                 trigger={
-                   <button
-                     type="button"
-                     className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm text-charcoal hover:text-terracotta text-xs font-bold cursor-pointer"
-                   >
-                     <Share2 className="w-4 h-4" />
-                     <span>Share</span>
-                   </button>
-                 }
-               />
-               {/* Save (Wishlist) Option */}
-               <button
-                 onClick={() => handleWishlistToggle(property.property_id)}
-                 className="flex items-center gap-2 px-3.5 py-2 rounded-full border border-gray-200 bg-white hover:bg-gray-50 transition shadow-sm text-charcoal hover:text-red-500 text-xs font-bold cursor-pointer"
-               >
-                 <Heart className={`w-4 h-4 ${wishlist.includes(property.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
-                 <span>{wishlist.includes(property.property_id) ? 'Saved' : 'Save'}</span>
-               </button>
-             </div>
-           </div>
-           <div className="hidden">
-             <span className="flex items-center"><MapPin className="w-4 h-4 mr-2 text-terracotta" />{formatAddress(property.address, property.city)}</span>
-             <span className="flex items-center">
-               <Building2 className="mr-2 h-4 w-4 text-terracotta" />
-               {`${formatPropertyTypeLabel(property.property_type || property.property_subtype || property.category) || 'Space'} · ${formatCategoryLabel(property.category)}`}
-             </span>
-             {property.rating > 0 && property.review_count > 0 && (
-               <div className="flex items-center space-x-1">
-                  <Star className="w-4 h-4 text-amber-500 fill-current" />
-                  <span className="text-charcoal font-bold tracking-tight">{property.rating.toFixed(1)}</span>
-                  <span className="text-charcoal-muted ml-1 underline cursor-pointer">({property.review_count} {property.review_count === 1 ? 'Review' : 'Reviews'})</span>
-               </div>
-             )}
-           </div>
         </div>
 
         {/* Premium Gallery */}
         <div className="relative group mb-5 animate-slide-up" data-testid="gallery">
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-3 rounded-3xl overflow-hidden shadow-elevated bg-white p-2">
-            <div className="lg:col-span-2 lg:row-span-2 relative overflow-hidden group/main bg-stone-200 aspect-[4/3] lg:aspect-auto">
+          {isSignatureSeries && <SeriesRibbon className="absolute left-0.5 top-5 z-30" />}
+          {!isSignatureSeries && propertyType && (
+            <span className="pointer-events-none absolute left-3 top-3 z-30 rounded-full bg-white/95 px-3 py-1 text-[12px] font-medium text-charcoal shadow">{propertyType}</span>
+          )}
+          <div className="absolute right-3 top-3 z-30 flex items-center gap-2">
+            <ShareDropdown
+              property={property}
+              align="right"
+              trigger={
+                <button type="button" aria-label="Share" className="grid h-10 w-10 place-items-center rounded-full bg-white/90 text-charcoal shadow transition hover:bg-white">
+                  <Share2 className="h-[18px] w-[18px]" />
+                </button>
+              }
+            />
+            <button type="button" onClick={() => handleWishlistToggle(property.property_id)} aria-label={wishlist.includes(property.property_id) ? 'Remove from wishlist' : 'Save to wishlist'} className="grid h-10 w-10 place-items-center rounded-full bg-white/90 text-charcoal shadow transition hover:bg-white">
+              <Heart className={`h-[18px] w-[18px] ${wishlist.includes(property.property_id) ? 'fill-red-500 text-red-500' : ''}`} />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 gap-2 overflow-hidden rounded-2xl lg:grid-cols-4">
+            <div className="lg:col-span-2 lg:row-span-2 relative overflow-hidden group/main bg-stone-200 aspect-[4/3] lg:aspect-auto rounded-xl">
               {/* Skeleton / Placeholder state while image is loading */}
               <div className="absolute inset-0 bg-stone-200 animate-pulse flex items-center justify-center pointer-events-none z-0">
                 <Camera className="w-10 h-10 text-stone-400 opacity-40" />
@@ -1985,7 +2122,7 @@ const PropertyDetail = () => {
               <img
                 src={mainImage.src}
                 alt={property.title}
-                className="relative z-10 w-full h-80 lg:h-[32rem] object-cover transition-transform duration-1000 group-hover/main:scale-105"
+                className="relative z-10 w-full h-80 lg:h-[27rem] object-cover transition-transform duration-1000 group-hover/main:scale-105"
                 data-testid="gallery-main-image"
                 loading="eager"
                 decoding="async"
@@ -1995,15 +2132,6 @@ const PropertyDetail = () => {
                   event.currentTarget.src = PROPERTY_IMAGE_FALLBACK;
                 }}
               />
-              {isSignatureSeries && (
-                <Link
-                  to="/guest/browse?signature=true"
-                  className="absolute left-3 top-3 z-30 inline-flex items-center gap-1 rounded border border-[#D4AF37] bg-black/95 px-2.5 py-1 text-[8px] font-serif font-bold uppercase tracking-wider text-[#D4AF37] shadow transition hover:scale-[1.02]"
-                >
-                  <Crown className="h-2.5 w-2.5 fill-[#D4AF37]/20 text-[#D4AF37]" />
-                  X-Space Series
-                </Link>
-              )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover/main:opacity-100 transition-opacity duration-500 z-10"></div>
               
               {resolvedImages.length > 1 && (
@@ -2025,7 +2153,7 @@ const PropertyDetail = () => {
                 </div>
               )}
               
-              <div className="absolute bottom-6 right-6 glass px-4 py-2 rounded-full border border-white/30 shadow-premium z-20">
+              <div className="absolute bottom-6 right-6 glass px-4 py-2 rounded-full border border-white/30 shadow-premium z-20 hidden">
                  <span className="text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">
                     {imgIdx + 1} / {resolvedImages.length || 1} {t('photos')}
                  </span>
@@ -2035,7 +2163,7 @@ const PropertyDetail = () => {
               <button
                 key={img.src + i}
                 onClick={() => setImgIdx(i + 1)}
-                className="hidden lg:block relative overflow-hidden group/thumb bg-stone-200"
+                className="hidden lg:block relative overflow-hidden group/thumb bg-stone-200 rounded-xl"
               >
                 <div className="absolute inset-0 bg-stone-200 animate-pulse flex items-center justify-center pointer-events-none z-0">
                   <Camera className="w-6 h-6 text-stone-400 opacity-40" />
@@ -2043,7 +2171,7 @@ const PropertyDetail = () => {
                 <img
                   src={img.src}
                   alt=""
-                  className="relative z-10 w-full h-[15.7rem] object-cover transition-transform duration-700 group-hover/thumb:scale-110"
+                  className="relative z-10 w-full h-[13.25rem] object-cover transition-transform duration-700 group-hover/thumb:scale-110"
                   loading="lazy"
                   decoding="async"
                   sizes="25vw"
@@ -2053,6 +2181,9 @@ const PropertyDetail = () => {
                   }}
                 />
                 <div className="absolute inset-0 bg-charcoal/20 opacity-0 group-hover/thumb:opacity-100 transition-opacity z-10"></div>
+                {i === 3 && resolvedImages.length > 5 && (
+                  <div className="absolute inset-0 z-20 grid place-items-center bg-black/45 text-[18px] font-semibold text-white">+{resolvedImages.length - 5} More</div>
+                )}
               </button>
             ))}
             <button 
@@ -2065,101 +2196,116 @@ const PropertyDetail = () => {
           </div>
         </div>
 
-        <div className="mb-12 flex items-center gap-2 text-sm font-semibold text-charcoal-muted">
-          <MapPin className="h-4 w-4 shrink-0 text-terracotta" />
-          <span>{formatAddress(property.address, property.city, property.state)}</span>
+        {/* Section tabs (stay under the header while scrolling) */}
+        <div className="sticky top-[72px] z-40 mb-8 overflow-x-auto border-b border-gray-200 bg-[#fafafa]/95 backdrop-blur no-scrollbar">
+          <div className="flex min-w-max gap-7">
+            {DETAIL_TABS.filter((tab) => (tab.needs === 'units' ? propertyUnits.length > 0 : tab.needs === 'meals' ? propertyHasMeals(property) : true)).map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  const el = document.getElementById(tab.id);
+                  if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 140, behavior: 'smooth' });
+                }}
+                className={`relative whitespace-nowrap py-3.5 text-[14px] font-medium !transform-none transition-colors ${activeTab === tab.id ? 'text-charcoal' : 'text-gray-500 hover:text-charcoal'}`}
+              >
+                {tab.label}
+                {activeTab === tab.id && <span className="absolute inset-x-0 -bottom-px h-[2px] bg-charcoal" />}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-12 animate-slide-up" style={{ animationDelay: '200ms' }}>
-            {/* Host Profile */}
+            {/* Title, location, key numbers and the first amenities */}
+            <section id="pd-overview" className="scroll-mt-40">
+              <h1 className="font-serif-hero text-[32px] font-semibold leading-tight text-charcoal md:text-[38px]" data-testid="property-title">{propertyName}</h1>
+              <p className="mt-2 text-[14px] text-gray-500">{formatAddress(property.address, property.city, property.state)}</p>
+              {property.review_count > 0 && (
+                <button type="button" onClick={() => { const el = document.getElementById('pd-reviews'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 140, behavior: 'smooth' }); }} className="mt-1 text-[14px] font-medium text-[#2563eb] !transform-none">
+                  {property.rating > 0 ? `${Number(property.rating).toFixed(1)} · ` : ''}{property.review_count} {property.review_count === 1 ? 'Review' : 'Reviews'}
+                </button>
+              )}
+
+              <div className="mt-5 flex flex-wrap gap-3">
+                {guestCapacity > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-[#bfdcf7] bg-[#f3f9ff] px-4 py-2.5 text-[14px] text-charcoal"><Users className="h-[18px] w-[18px]" strokeWidth={1.6} />{property.category === 'commercial' ? 'Up to ' + guestCapacity + ' staff' : 'Up to ' + guestCapacity + ' Guests'}</span>
+                )}
+                {Number(property.bedrooms || property.rooms) > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-[#bfdcf7] bg-[#f3f9ff] px-4 py-2.5 text-[14px] text-charcoal"><Building2 className="h-[18px] w-[18px]" strokeWidth={1.6} />{Number(property.bedrooms || property.rooms)} {Number(property.bedrooms || property.rooms) === 1 ? 'Room' : 'Rooms'}</span>
+                )}
+                {Number(property.bathrooms || property.baths) > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-[#bfdcf7] bg-[#f3f9ff] px-4 py-2.5 text-[14px] text-charcoal"><Bath className="h-[18px] w-[18px]" strokeWidth={1.6} />{Number(property.bathrooms || property.baths)} {Number(property.bathrooms || property.baths) === 1 ? 'Bath' : 'Baths'}</span>
+                )}
+                {property.area_sqft && Number(property.area_sqft) > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-[#bfdcf7] bg-[#f3f9ff] px-4 py-2.5 text-[14px] text-charcoal"><Grid className="h-[18px] w-[18px]" strokeWidth={1.6} />{property.area_sqft} sq.ft</span>
+                )}
+              </div>
+
+              {(property.amenities || []).length > 0 && (
+                <div className="mt-6 flex flex-wrap items-start gap-x-4 gap-y-4">
+                  {(property.amenities || []).slice(0, 5).map((a) => (
+                    <AmenityBadge key={a} icon={getAmenityIcon(a)} label={formatAmenityLabel(a)} stacked />
+                  ))}
+                  {(property.amenities || []).length > 5 && (
+                    <button type="button" onClick={() => { setShowAllAmenities(true); const el = document.getElementById('pd-amenities'); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 140, behavior: 'smooth' }); }} className="self-center text-[14px] font-medium text-[#2563eb] !transform-none">
+                      +{(property.amenities || []).length - 5} Amenities
+                    </button>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {/* Host: photo, name and the number to call */}
             {property.host && (
-              <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between group">
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="relative">
+              <div className="flex flex-col gap-4 rounded-xl bg-[#e6f1fd] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-4">
+                  <div className="relative shrink-0">
                     <img
-                      src={
-                        property.host.profile_image ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(property.host.full_name || 'Host')}`
-                      }
+                      src={property.host.profile_image || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(property.host.full_name || 'Host')}`}
                       alt={property.host.full_name}
-                      className="w-16 h-16 rounded-full object-cover border-2 border-terracotta/20 bg-stone group-hover:border-terracotta transition-colors"
+                      className="h-14 w-14 rounded-full border-2 border-white bg-stone object-cover"
                     />
-                    <div className="absolute -bottom-1 -right-1 bg-sage text-white p-1 rounded-full shadow-sm">
-                       <ShieldCheck className="w-3.5 h-3.5" />
-                    </div>
+                    <span className="absolute -bottom-1 -right-1 grid h-5 w-5 place-items-center rounded-full bg-sage text-white shadow-sm"><ShieldCheck className="h-3 w-3" /></span>
                   </div>
                   <div className="min-w-0">
-                    <h3 className="text-lg font-bold tracking-tight text-charcoal leading-tight break-words">{t('hostedBy').replace('{name}', property.host.full_name)}</h3>
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2">
-                       {(property.host.is_superhost || property.host.superhost) && (
-                         <>
-                           <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">{t('superhost')}</span>
-                           <span className="w-1 h-1 rounded-full bg-sand-300"></span>
-                         </>
-                       )}
-                       <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">
-                          {t('joined').replace('{year}', property.host.created_at ? new Date(property.host.created_at).getFullYear() : '2024')}
-                       </span>
-                    </div>
+                    <p className="break-words text-[16px] font-semibold leading-tight text-charcoal">{t('hostedBy').replace('{name}', property.host.full_name)}</p>
+                    <p className="mt-1 text-[12px] text-gray-600">
+                      {(property.host.is_superhost || property.host.superhost) ? `${t('superhost')} · ` : ''}
+                      {t('joined').replace('{year}', property.host.created_at ? new Date(property.host.created_at).getFullYear() : '2024')}
+                    </p>
                   </div>
                 </div>
-                {property.host.phone ? (
-                  <a
-                    href={`tel:${property.host.phone}`}
-                    className="inline-flex shrink-0 items-center justify-center px-5 py-3 border-2 border-charcoal rounded-2xl text-[10px] font-bold tracking-tight uppercase tracking-widest hover:bg-charcoal hover:text-white transition-all cursor-pointer decoration-none"
-                    style={{ textDecoration: 'none' }}
-                  >
-                    {property.host.phone}
+                {property.host.phone && (
+                  <a href={`tel:${property.host.phone}`} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-md bg-charcoal px-4 py-2 text-[13px] font-semibold text-white" style={{ textDecoration: 'none' }}>
+                    <Phone className="h-4 w-4" />{property.host.phone}
                   </a>
-                ) : (
-                  <button
-                    disabled
-                    className="inline-flex shrink-0 items-center justify-center px-5 py-3 border-2 border-gray-200 text-charcoal-muted rounded-2xl text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center gap-1.5 cursor-not-allowed bg-gray-50/80"
-                    title="Host contact details will be unlocked after booking confirmation"
-                  >
-                    <Lock className="w-3.5 h-3.5" />
-                    {t('contactHost')}
-                  </button>
                 )}
               </div>
             )}
 
-            {/* Overview Stats */}
-            {(() => {
-              const typeVal = `${formatCategoryLabel(property.category || 'residential')} · ${formatPropertyTypeLabel(property.property_type)}`;
-              const areaVal = property.area_sqft && Number(property.area_sqft) > 0 ? `${property.area_sqft} SQFT` : null;
-              const configVal = getBhkTypeLabel(property.category, property.bhk_type, property.max_guests);
-              const statsList = [
-                { label: t('type'), value: typeVal },
-                areaVal ? { label: t('area'), value: areaVal } : null,
-                configVal ? { label: t('config'), value: configVal } : null,
-              ].filter(Boolean);
-
-              if (statsList.length === 0) return null;
-
-              return (
-                <div className={`grid grid-cols-2 md:grid-cols-${statsList.length} gap-4`}>
-                   {statsList.map((stat) => (
-                     <div key={stat.label} className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
-                        <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">{stat.label}</p>
-                        <p className="text-sm font-bold tracking-tight text-charcoal">{stat.value}</p>
-                     </div>
-                   ))}
-                </div>
-              );
-            })()}
+            <div id="pd-units" className="scroll-mt-40" />
+            <UnitCards
+              property={baseProperty}
+              selectedUnitId={selectedUnitId}
+              onSelect={handleSelectUnit}
+              attention={unitAttention}
+              priceSuffix={property.category === 'commercial' ? (property.pricing_cycle === 'hourly' ? '/ hour' : property.pricing_cycle === 'weekly' ? '/ week' : property.pricing_cycle === 'monthly' ? '/ month' : '/ day') : '/ night'}
+              sizeLabel={(bhk) => (bhk ? getBhkTypeLabel(property.category, bhk, null) : null)}
+            />
 
             {/* AEO Quick Facts */}
-            <section className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium" aria-labelledby="property-quick-facts">
-              <h2 id="property-quick-facts" className="text-2xl font-bold tracking-tight text-charcoal mb-2">
-                Quick facts about {propertyName}
+            <section aria-labelledby="property-quick-facts">
+              <h2 id="property-quick-facts" className="font-serif-hero text-[26px] font-semibold text-charcoal mb-2">
+                Property details
               </h2>
-              <p className="text-sm font-medium text-charcoal-muted mb-5">
+              <p className="mb-5 text-[13px] text-gray-500">
                 {propertyName} is a {propertyType} in {propertyCity} with pricing, guest capacity and booking details shown below.
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
                 {[
                   { icon: MapPin, label: 'Location', value: propertyCity ? `${propertyCity}${property.state ? `, ${property.state}` : ''}` : null },
                   { icon: Building2, label: 'Property type', value: propertyType },
@@ -2172,13 +2318,13 @@ const PropertyDetail = () => {
                 ].filter(fact => fact.value && fact.value !== 'Not specified').map((fact) => {
                   const Icon = fact.icon;
                   return (
-                    <div key={fact.label} className="flex items-start gap-4 rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
-                      <div className="rounded-xl bg-white p-2.5 text-terracotta shadow-sm">
-                        <Icon className="h-5 w-5" />
-                      </div>
+                    <div key={fact.label} className="flex items-center gap-3">
+                      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gray-300 bg-white text-charcoal">
+                        <Icon className="h-5 w-5" strokeWidth={1.5} />
+                      </span>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-charcoal-muted">{fact.label}</p>
-                        <p className="mt-1 text-sm font-bold text-charcoal">{fact.value}</p>
+                        <p className="text-[12px] text-gray-500">{fact.label}</p>
+                        <p className="text-[14px] font-semibold text-charcoal">{fact.value}</p>
                       </div>
                     </div>
                   );
@@ -2188,21 +2334,44 @@ const PropertyDetail = () => {
 
             {/* Description */}
             <div className="prose prose-sand max-w-none">
-              <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+              <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-4 flex items-center">
                  {t('aboutThisSpace')}
-                 <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
               </h2>
               <p className="text-charcoal-muted font-medium text-lg leading-relaxed whitespace-pre-line">
                 {formatPropertyDescription(property.description, property)}
               </p>
             </div>
 
+            {/* Rules & refund policy: the platform refund rules and this property's timings */}
+            <section id="pd-policy" className="scroll-mt-40">
+              <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-5">Rules &amp; Refund Policy</h2>
+              <div className="relative grid grid-cols-3 gap-4">
+                <div className="absolute left-4 right-4 top-4 hidden border-t border-dashed border-gray-300 sm:block" />
+                {[
+                  { tone: 'bg-emerald-100 text-emerald-600', mark: '✓', title: '100% Refund', hint: '7 or more days before check-in' },
+                  { tone: 'bg-amber-100 text-amber-600', mark: '◐', title: '50% Refund', hint: '3 to 6 days before check-in' },
+                  { tone: 'bg-red-100 text-red-500', mark: '✕', title: 'No Refund', hint: 'Less than 72 hours before check-in' },
+                ].map((step) => (
+                  <div key={step.title} className="relative">
+                    <span className={`relative z-10 grid h-8 w-8 place-items-center rounded-full text-[14px] font-bold ${step.tone}`}>{step.mark}</span>
+                    <p className="mt-3 text-[14px] font-semibold text-charcoal">{step.title}</p>
+                    <p className="mt-0.5 text-[12px] text-gray-500">{step.hint}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-5 space-y-2 text-[13px] text-gray-600">
+                <p>Check-in time: {formatListingTime(property.check_in_time)}, Check-out time: {formatListingTime(property.check_out_time)}</p>
+                {property.minimum_stay_days > 1 && <p>Minimum stay: {property.minimum_stay_days} {isHourlyCommercial ? 'hour(s)' : 'nights'}</p>}
+                <p>Refunds go back to the original payment method and take 8-10 business days to credit after approval. The platform convenience fee and payment gateway charges are non-refundable.</p>
+                <Link to="/refund-policy" className="inline-block font-medium text-[#2563eb] hover:underline">Read the full Cancellation &amp; Refund Policy</Link>
+              </div>
+            </section>
+
             {/* Videos & Virtual Tours Section */}
             {(property.video_url || property.youtube_short_url || property.youtube_long_url) && (
               <div className="space-y-6">
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+                <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-4 flex items-center">
                    Videos & Virtual Tours
-                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -2223,14 +2392,7 @@ const PropertyDetail = () => {
                     <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-premium space-y-3">
                       <h3 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">Full YouTube Tour</h3>
                       <div className="aspect-video w-full rounded-2xl overflow-hidden bg-black">
-                        <iframe
-                          src={getYouTubeEmbedUrl(property.youtube_long_url)}
-                          title="YouTube video player"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowFullScreen
-                          className="w-full h-full"
-                        ></iframe>
+                        <VideoTour url={property.youtube_long_url} />
                       </div>
                     </div>
                   )}
@@ -2239,14 +2401,7 @@ const PropertyDetail = () => {
                     <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-premium space-y-3 md:col-span-2 max-w-sm mx-auto w-full">
                       <h3 className="text-xs font-bold tracking-tight text-charcoal-muted uppercase tracking-widest text-center">YouTube Short Tour</h3>
                       <div className="aspect-[9/16] w-full rounded-2xl overflow-hidden bg-black max-h-[500px]">
-                        <iframe
-                          src={getYouTubeEmbedUrl(property.youtube_short_url)}
-                          title="YouTube Shorts player"
-                          frameBorder="0"
-                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                          allowFullScreen
-                          className="w-full h-full"
-                        ></iframe>
+                        <VideoTour url={property.youtube_short_url} vertical />
                       </div>
                     </div>
                   )}
@@ -2257,80 +2412,22 @@ const PropertyDetail = () => {
             {/* Event Details */}
             {property.category === 'event_venue' && (
               <div>
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
+                <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-6 flex items-center">
                    Event Venue Details
-                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-6">
-                  <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Food Option</p>
-                     <p className="text-xl font-bold tracking-tight text-amber-800 uppercase">
-                       {property.food_type ? (property.food_type === 'both' ? 'Veg & Non-Veg' : property.food_type === 'veg' ? 'Veg Only' : 'Non-Veg Only') : 'Veg & Non-Veg'}
-                     </p>
-                  </div>
-                  {property.veg_price && Number(property.veg_price) > 0 ? (
-                    <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Veg Price</p>
-                     <p className="text-xl font-bold tracking-tight text-terracotta">₹{property.veg_price || 0} <span className="text-xs text-charcoal-light">/ plate</span></p>
-                    </div>
-                  ) : null}
-                  {property.non_veg_price && Number(property.non_veg_price) > 0 ? (
-                    <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Non-Veg Price</p>
-                     <p className="text-xl font-bold tracking-tight text-terracotta">₹{property.non_veg_price || 0} <span className="text-xs text-charcoal-light">/ plate</span></p>
-                    </div>
-                  ) : null}
-                  <div className="bg-stone rounded-2xl p-4 border border-gray-100 shadow-sm flex flex-col justify-center items-center text-center">
-                     <p className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] mb-1">Venue Rent</p>
-                     <p className="text-xl font-bold tracking-tight text-charcoal">₹{property.price_per_night || 0} <span className="text-xs text-charcoal-light">/ day</span></p>
-                  </div>
+                <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-300 bg-white px-5 py-4">
+                  <span className="text-[13px] text-gray-500">Venue rent</span>
+                  <span className="text-[20px] font-bold text-charcoal">₹{Number(property.price_per_night || 0).toLocaleString('en-IN')}</span>
+                  <span className="text-[12px] text-gray-500">/ day</span>
                 </div>
-                {property.packages && property.packages.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                    {property.packages.map((pkg, idx) => {
-                      const isVeg = pkg.type === 'veg';
-                      if (isVeg && (!property.veg_price || Number(property.veg_price) <= 0)) return null;
-                      if (!isVeg && (!property.non_veg_price || Number(property.non_veg_price) <= 0)) return null;
-                      const entries = Object.entries(pkg.items || {}).filter(([k, v]) => Number(v) > 0);
-                      if (entries.length === 0) return null;
-                      
-                      return (
-                        <div key={idx} className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
-                          <div className={`flex items-center px-5 py-4 ${isVeg ? 'bg-green-50/50' : 'bg-red-50/50'} border-b ${isVeg ? 'border-green-100' : 'border-red-100'}`}>
-                            <div className={`w-3 h-3 ${isVeg ? 'bg-green-500' : 'bg-red-500'} ${isVeg ? 'rounded-sm' : 'rounded-full'} mr-3 border ${isVeg ? 'border-green-700' : 'border-red-700'}`}></div>
-                            <h3 className={`text-sm font-bold tracking-tight uppercase tracking-widest ${isVeg ? 'text-green-900' : 'text-red-900'}`}>
-                              {isVeg ? 'Vegetarian Package' : 'Non-Vegetarian Package'}
-                            </h3>
-                          </div>
-                          <div className="p-5">
-                            <ul className="space-y-3">
-                              {entries.map(([item, count]) => (
-                                <li key={item} className="flex justify-between items-center">
-                                  <span className="text-charcoal-muted font-medium text-sm flex items-center">
-                                    <CheckCircle2 className="w-4 h-4 text-emerald-500 mr-2 flex-shrink-0" />
-                                    {item}
-                                  </span>
-                                  <span className="text-xs font-bold tracking-tight bg-gray-50 text-charcoal px-2 py-0.5 rounded-full">
-                                    x{count}
-                                  </span>
-                                </li>
-                              ))}
-                            </ul>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
             )}
 
             {/* Venue Policies Section */}
             {property.category === 'event_venue' && property.house_rules && property.house_rules.startsWith('{') && (
               <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
+                <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-6 flex items-center">
                    Venue Policies
-                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {(() => {
@@ -2384,9 +2481,8 @@ const PropertyDetail = () => {
             {/* Non-Event House Rules Section */}
             {property.category !== 'event_venue' && property.house_rules && !property.house_rules.startsWith('{') && (
               <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+                <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-4 flex items-center">
                    House Rules
-                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
                 <p className="text-charcoal-muted font-medium text-sm leading-relaxed whitespace-pre-line bg-white p-6 rounded-2xl border border-gray-100">
                   {property.house_rules}
@@ -2394,108 +2490,23 @@ const PropertyDetail = () => {
               </div>
             )}
 
-            {/* Check-in / Check-out Time Section */}
-            {(property.check_in_time || property.check_out_time) && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
-                  Check-in &amp; Check-out
-                  <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {property.check_in_time && (
-                    <div className="bg-sage/5 border border-sage/20 rounded-2xl p-5 flex items-center gap-4">
-                      <div className="bg-sage/15 p-3 rounded-xl text-sage-dark">
-                        <span className="text-2xl">🔑</span>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-sage-dark uppercase tracking-widest mb-0.5">Check-in Time</p>
-                        <p className="text-xl font-bold tracking-tight text-charcoal">
-                          {(() => {
-                            const [h, m] = property.check_in_time.split(':');
-                            const hour = parseInt(h);
-                            const ampm = hour >= 12 ? 'PM' : 'AM';
-                            return `${hour % 12 || 12}:${m} ${ampm}`;
-                          })()}
-                        </p>
-                        <p className="text-xs text-charcoal-muted font-medium mt-0.5">You may check-in from this time</p>
-                      </div>
-                    </div>
-                  )}
-                  {property.check_out_time && (
-                    <div className="bg-terracotta/5 border border-terracotta/20 rounded-2xl p-5 flex items-center gap-4">
-                      <div className="bg-terracotta/15 p-3 rounded-xl text-terracotta">
-                        <span className="text-2xl">🚪</span>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-terracotta uppercase tracking-widest mb-0.5">Check-out Time</p>
-                        <p className="text-xl font-bold tracking-tight text-charcoal">
-                          {(() => {
-                            const [h, m] = property.check_out_time.split(':');
-                            const hour = parseInt(h);
-                            const ampm = hour >= 12 ? 'PM' : 'AM';
-                            return `${hour % 12 || 12}:${m} ${ampm}`;
-                          })()}
-                        </p>
-                        <p className="text-xs text-charcoal-muted font-medium mt-0.5">Please check-out by this time</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {/* Cook & Taxi Services Section */}
-            {(property.has_cook || property.has_self_cook || property.has_taxi) && (
+            {property.has_taxi && (
               <div className="mb-8">
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-4 flex items-center">
+                <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-4 flex items-center">
                    {lang === 'mr' ? 'सेवा आणि स्वयंपाक पर्याय' : lang === 'hi' ? 'सेवाएं और रसोई विकल्प' : 'Services & Kitchen'}
-                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
-                <div className="space-y-4">
-                  {property.has_cook && (
-                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center space-x-6">
-                      <div className="bg-terracotta/10 p-4 rounded-full text-terracotta">
-                        <Utensils className="w-8 h-8" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1">
-                          {lang === 'mr' ? 'स्वयंपाकी उपलब्ध आहे' : lang === 'hi' ? 'रसोइया उपलब्ध है' : 'Cook Available'}
-                        </h3>
-                        <p className="text-charcoal-muted font-medium text-sm">
-                          {lang === 'mr' ? `घरगुती जेवणासाठी स्वयंपाकी सेवा उपलब्ध आहे. दर: ₹${property.cook_price}/दिवस` : 
-                           lang === 'hi' ? `घर के बने खाने के लिए रसोइया उपलब्ध है। दर: ₹${property.cook_price}/दिन` : 
-                           `Personal cook service available for home-cooked meals. Rate: ₹${property.cook_price}/day`}
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                  {property.has_self_cook && (
-                    <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium flex items-center space-x-6">
-                      <div className="bg-emerald-500/10 p-4 rounded-full text-emerald-600">
-                        <ChefHat className="w-8 h-8" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-bold tracking-tight text-charcoal mb-1">
-                          {lang === 'mr' ? 'स्वतः स्वयंपाक करण्याची परवानगी आहे' : lang === 'hi' ? 'स्वयं खाना पकाने की अनुमति है' : 'Self Cooking Allowed'}
-                        </h3>
-                        <p className="text-charcoal-muted font-medium text-sm">
-                          {lang === 'mr' ? 'अतिथी त्यांच्या स्वतःच्या जेवणासाठी स्वयंपाकघराचा वापर करू शकतात (मोफत/समाविष्ट).' : 
-                           lang === 'hi' ? 'अतिथि अपने भोजन के लिए रसोईघर का उपयोग कर सकते हैं (मुफ़्त/शामिल)।' : 
-                           'Guests can use the kitchen facility to prepare their own meals (Free/Included).'}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+                <div className="space-y-5">
                   {property.has_taxi && (
-                    <div className="bg-white rounded-3xl p-6 border border-sand-200 shadow-premium flex items-center space-x-6">
-                      <div className="bg-amber-500/10 p-4 rounded-full text-amber-600">
-                        <Car className="w-8 h-8" />
+                    <div className="flex items-start gap-4">
+                      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gray-300 bg-white text-charcoal">
+                        <Car className="h-5 w-5" strokeWidth={1.5} />
                       </div>
                       <div>
-                        <h3 className="text-lg font-black text-charcoal mb-1">
+                        <h3 className="mb-0.5 text-[15px] font-semibold text-charcoal">
                           {lang === 'mr' ? 'टॅक्सी सेवा उपलब्ध' : lang === 'hi' ? 'टैक्सी सेवा उपलब्ध' : 'Taxi Service Available'}
                         </h3>
-                        <p className="text-charcoal-muted font-medium text-sm">
+                        <p className="text-[13px] leading-relaxed text-gray-600">
                           {lang === 'mr' ? 'या मालमत्तेवर टॅक्सी किंवा वाहतूक सेवा उपलब्ध आहे (शुल्क लागू असू शकते).' : 
                            lang === 'hi' ? 'इस संपत्ति पर टैक्सी या परिवहन सेवा उपलब्ध है (शुल्क लागू हो सकते हैं)।' : 
                            'Taxi or transportation assistance service is available at this property (charges may apply).'}
@@ -2508,44 +2519,108 @@ const PropertyDetail = () => {
             )}
 
             {/* Amenities Section */}
-            <div>
-              <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
-                 {t('essentialAmenities')}
-                 <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(property.amenities || []).map((a) => {
-                  const Icon = getAmenityIcon(a);
-                  return (
-                    <div
-                      key={a}
-                      className="flex items-center space-x-4 p-4 bg-white border border-gray-100 rounded-2xl group hover:border-terracotta transition-colors"
-                    >
-                      <div className="bg-stone p-2.5 rounded-xl group-hover:bg-terracotta/5 transition-colors">
-                         <Icon className="w-5 h-5 text-terracotta" />
-                      </div>
-                      <span className="text-sm font-bold text-charcoal tracking-tight">
-                         {formatAmenityLabel(a)}
-                      </span>
-                    </div>
-                  );
-                })}
+            <div id="pd-amenities" className="scroll-mt-40">
+              <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-6">Amenities</h2>
+              <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+                {(property.amenities || []).slice(0, showAllAmenities ? undefined : 9).map((a) => (
+                  <AmenityBadge key={a} icon={getAmenityIcon(a)} label={formatAmenityLabel(a)} />
+                ))}
               </div>
+              {(property.amenities || []).length > 9 && (
+                <button type="button" onClick={() => setShowAllAmenities((v) => !v)} className="mt-6 rounded-lg border border-gray-300 px-4 py-2 text-[14px] font-medium text-charcoal !transform-none transition hover:bg-gray-50">
+                  {showAllAmenities ? 'Show fewer Amenities' : 'Show all Amenities'}
+                </button>
+              )}
             </div>
 
+            {/* Meals: veg / non-veg plates for venues, cook and kitchen for homes */}
+            {propertyHasMeals(property) && (() => {
+              const sellsPlates = property.category === 'event_venue' || Boolean(property.has_cook);
+              const vegPrice = Number(property.veg_price) > 0 && sellsPlates ? Number(property.veg_price) : 0;
+              const nonVegPrice = Number(property.non_veg_price) > 0 && sellsPlates ? Number(property.non_veg_price) : 0;
+              const options = [vegPrice > 0 ? 'veg' : null, nonVegPrice > 0 ? 'non_veg' : null].filter(Boolean);
+              const active = options.includes(foodPreference) ? foodPreference : options[0];
+              const platePrice = active === 'non_veg' ? nonVegPrice : vegPrice;
+              const menu = (property.packages || []).find((pkg) => (pkg.type === 'veg') === (active === 'veg'));
+              const menuItems = menu ? Object.entries(menu.items || {}).filter(([, count]) => Number(count) > 0) : [];
+              const foodLabel = property.food_type ? (property.food_type === 'both' ? 'Veg & Non-Veg' : property.food_type === 'veg' ? 'Veg only' : 'Non-Veg only') : null;
+              return (
+                <section id="pd-meals" className="scroll-mt-40">
+                  <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-5">Meals</h2>
+                  <div className="rounded-2xl border border-gray-300 bg-gradient-to-br from-[#fff0e6] via-[#fcf8f5] to-[#e4effb] p-4 sm:p-5">
+                    <div className="relative h-[190px] overflow-hidden rounded-xl">
+                      <img src="/assets/ui/meals-banner.webp" alt="Freshly cooked Indian meals" className="h-full w-full object-cover" loading="lazy" decoding="async" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+                      <div className="absolute inset-x-4 bottom-4 flex flex-wrap items-end justify-between gap-3 text-white">
+                        <div>
+                          <p className="font-serif-hero text-[22px] leading-tight">{options.length > 0 ? 'Choose your menu' : 'Home-style meals'}</p>
+                          <p className="text-[13px] text-white/90">{options.length > 0 ? (foodLabel ? `Food option: ${foodLabel}` : 'Veg and non-veg plates') : 'Cooked fresh at the property'}</p>
+                        </div>
+                        {platePrice > 0 && (
+                          <span className="rounded-full bg-white/95 px-4 py-1.5 text-[15px] font-semibold text-charcoal">
+                            ₹{platePrice.toLocaleString('en-IN')} <span className="text-[12px] font-normal text-gray-600">/ plate</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {options.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-3" role="radiogroup" aria-label="Meal preference">
+                        {options.map((key) => (
+                          <button
+                            key={key}
+                            type="button"
+                            role="radio"
+                            aria-checked={active === key}
+                            onClick={() => setFoodPreference(key)}
+                            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-[14px] font-medium !transform-none transition ${active === key ? 'border-charcoal bg-charcoal text-white' : 'border-gray-300 bg-white text-charcoal hover:border-charcoal'}`}
+                          >
+                            <span className={`grid h-4 w-4 place-items-center rounded-sm border-2 bg-white ${key === 'veg' ? 'border-green-600' : 'border-red-600'}`}>
+                              <span className={`h-2 w-2 rounded-full ${key === 'veg' ? 'bg-green-600' : 'bg-red-600'}`} />
+                            </span>
+                            {key === 'veg' ? 'Veg' : 'Non-Veg'}
+                            <span className={`text-[12px] ${active === key ? 'text-white/80' : 'text-gray-500'}`}>₹{(key === 'veg' ? vegPrice : nonVegPrice).toLocaleString('en-IN')}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {menuItems.length > 0 && (
+                      <ul className="mt-4 grid gap-x-8 gap-y-2.5 sm:grid-cols-2">
+                        {menuItems.map(([item, count]) => (
+                          <li key={item} className="flex items-center gap-2.5 text-[14px] text-charcoal">
+                            <CheckCircle2 className="h-5 w-5 shrink-0 text-charcoal" strokeWidth={1.5} />
+                            <span className="min-w-0 flex-1">{item}</span>
+                            <span className="text-[12px] font-medium text-gray-500">x{count}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <ul className="mt-4 list-disc space-y-1.5 pl-5 text-[13px] leading-relaxed text-gray-700">
+                      {options.length > 0 && <li>Rates are per plate{property.category === 'event_venue' ? '. The plate price is added to your booking total' : ''}.</li>}
+                      {property.category === 'event_venue' && options.length > 0 && <li>Choose Veg or Non-Veg here or in the booking box. Both stay in sync.</li>}
+                      {property.has_cook && <li>Personal cook available for home-cooked meals{Number(property.cook_price) > 0 ? `. Cook charge: ₹${Number(property.cook_price).toLocaleString('en-IN')} per day` : ''}.</li>}
+                      {property.has_self_cook && <li>Guests can use the kitchen facility to prepare their own meals (free, included).</li>}
+                    </ul>
+                  </div>
+                </section>
+              );
+            })()}
+
             {/* Property FAQ Section */}
-            <section className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium" aria-labelledby="property-faq">
-              <h2 id="property-faq" className="text-2xl font-bold tracking-tight text-charcoal mb-2">
+            <section aria-labelledby="property-faq">
+              <h2 id="property-faq" className="scroll-mt-40 font-serif-hero text-[26px] font-semibold text-charcoal mb-2">
                 Frequently asked questions
               </h2>
-              <p className="text-sm font-medium text-charcoal-muted mb-5">
+              <p className="mb-3 text-[13px] text-gray-500">
                 Direct answers about {propertyName} for guests comparing properties before booking.
               </p>
-              <div className="space-y-3">
+              <div>
                 {propertyFaqs.map((faq) => (
-                  <article key={faq.question} className="rounded-2xl border border-gray-100 bg-gray-50/60 p-4">
-                    <h3 className="text-sm font-bold text-charcoal mb-2">{faq.question}</h3>
-                    <p className="text-sm font-medium leading-relaxed text-charcoal-muted">{faq.answer}</p>
+                  <article key={faq.question} className="border-b border-gray-200 py-4">
+                    <h3 className="mb-1.5 text-[15px] font-semibold text-charcoal">{faq.question}</h3>
+                    <p className="text-[14px] leading-relaxed text-gray-600">{faq.answer}</p>
                   </article>
                 ))}
               </div>
@@ -2554,49 +2629,31 @@ const PropertyDetail = () => {
             {/* Nearby Famous Places Section */}
             {property.nearby_places && property.nearby_places.length > 0 && (
               <div className="animate-slide-up">
-                <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
+                <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-6 flex items-center">
                    Nearby Attractions
-                   <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                 </h2>
-                <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-premium">
-                  <div className="flex items-center space-x-2 mb-4">
-                    <Sparkles className="w-5 h-5 text-terracotta animate-pulse" />
-                    <span className="text-xs font-bold tracking-tight text-charcoal uppercase tracking-widest">Famous places near this property</span>
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div id="pd-location" className="scroll-mt-40">
+                  <p className="mb-4 text-[13px] text-gray-500">Famous places near this property</p>
+                  <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
                     {property.nearby_places.map((place, idx) => (
-                      <div key={idx} className="flex items-center space-x-3 p-3 bg-stone rounded-2xl border border-sand-100 hover:border-terracotta/30 transition-colors">
-                        <div className="w-8 h-8 rounded-xl bg-terracotta/10 flex items-center justify-center text-terracotta font-bold tracking-tight text-xs">
-                          {idx + 1}
-                        </div>
-                        <span className="text-sm font-bold text-charcoal">{place}</span>
+                      <div key={idx} className="flex items-center gap-3">
+                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gray-300 bg-white text-charcoal">
+                          <MapPin className="h-5 w-5" strokeWidth={1.5} />
+                        </span>
+                        <span className="text-[14px] font-medium text-charcoal">{place}</span>
                       </div>
                     ))}
                   </div>
-                  {property.google_maps_url && (
-                    <div className="mt-6 border-t border-sand-100 pt-4 flex justify-end">
-                      <a
-                        href={property.google_maps_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center space-x-2 text-xs font-bold tracking-tight text-terracotta hover:text-charcoal uppercase tracking-widest transition-colors"
-                      >
-                        <span>View on Google Maps</span>
-                        <ChevronRight className="w-4 h-4" />
-                      </a>
-                    </div>
-                  )}
                 </div>
               </div>
             )}
 
             {/* Interactive Availability Calendar */}
             <div>
-              <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-6 flex items-center">
+              <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-6 flex items-center">
                  {t('availability')}
-                 <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
               </h2>
-              <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-premium" data-testid="availability-calendar">
+              <div className="rounded-2xl border border-gray-200 bg-white p-6" data-testid="availability-calendar">
                 <div className="flex items-center justify-between mb-8">
                   <button
                     onClick={goPrev}
@@ -2687,9 +2744,8 @@ const PropertyDetail = () => {
 
             {/* Reviews Section */}
             <div>
-               <h2 className="text-2xl font-bold tracking-tight text-charcoal mb-8 flex items-center">
+               <h2 id="pd-reviews" className="scroll-mt-40 font-serif-hero text-[26px] font-semibold text-charcoal mb-8 flex items-center">
                  {t('reviews')}
-                 <div className="ml-4 h-[2px] flex-1 bg-sand-200"></div>
                </h2>
                
                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
@@ -2757,7 +2813,7 @@ const PropertyDetail = () => {
 
           {/* Sticky Booking Widget */}
           <div className="lg:col-span-1">
-            <div ref={bookingCardRef} className="card-premium sticky top-28 p-8 max-h-[calc(100vh-8rem)] overflow-y-auto no-scrollbar animate-slide-up" style={{ animationDelay: '400ms' }}>
+            <div ref={bookingCardRef} className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl border border-gray-300 bg-gradient-to-br from-[#fff0e6] via-[#fcf8f5] to-[#e4effb] p-6 no-scrollbar animate-slide-up" style={{ animationDelay: '400ms' }}>
               <div className="flex items-baseline justify-between mb-3">
                 <div>
                   {property.category === 'event_venue' ? (
@@ -2790,6 +2846,18 @@ const PropertyDetail = () => {
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500 text-white"><Percent className="h-3.5 w-3.5" strokeWidth={3} /></span>
                   <span className="text-[10px] font-bold leading-4 tracking-wide">{pricingBadgeText}</span>
                 </div>
+              )}
+
+              {propertyUnits.length > 0 && (
+                unitNotice && !selectedUnit ? (
+                  <div className={`mb-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-800 ${unitAttention ? 'unit-attention' : ''}`} role="status">
+                    Please select a unit first — then choose your dates.
+                  </div>
+                ) : selectedUnit ? (
+                  <p className="mb-3 text-xs font-semibold text-charcoal-muted">
+                    Booking: <span className="text-charcoal">{selectedUnit.name}</span>
+                  </p>
+                ) : null
               )}
 
               <div className="bg-stone/80 rounded-2xl border border-gray-100 mb-6">
@@ -3335,7 +3403,7 @@ const PropertyDetail = () => {
         {/* Recommended Properties */}
         {recommended.length > 0 && (
           <div className="mt-16 pt-16 border-t border-gray-100 animate-slide-up">
-            <h2 className="text-3xl font-bold tracking-tight text-charcoal tracking-tight mb-8">
+            <h2 className="font-serif-hero text-[28px] font-semibold text-charcoal mb-8">
               {isSameCityRecommendation 
                 ? t('similarProperties').replace('{city}', property.city)
                 : lang === 'mr' ? 'तत्सम जागा' : lang === 'hi' ? 'समान संपत्तियां' : 'Similar Properties'}
@@ -3614,6 +3682,14 @@ const PropertyDetail = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Phones: the booking card is not on screen, so show why Book Now did not go through */}
+      {bookingError && (
+        <div role="alert" className="fixed inset-x-4 bottom-[88px] z-50 flex items-start gap-3 rounded-xl border border-red-200 bg-[#fdecec] px-4 py-3 text-[13px] font-medium leading-snug text-red-700 shadow-lg lg:hidden">
+          <span className="flex-1">{bookingError}</span>
+          <button type="button" onClick={() => setBookingError('')} aria-label="Dismiss" className="text-[18px] leading-none text-red-700">×</button>
         </div>
       )}
 

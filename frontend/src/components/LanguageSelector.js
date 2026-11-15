@@ -68,10 +68,22 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
     };
   }, []);
 
+  // only one top-bar menu is open at a time: opening this one closes the Explore menu, and the other way round
+  useEffect(() => {
+    const closeWhenOtherOpens = (event) => {
+      if (event.detail === 'types') return;
+      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
+      setIsOpen(false);
+    };
+    window.addEventListener('xs-nav-open', closeWhenOtherOpens);
+    return () => window.removeEventListener('xs-nav-open', closeWhenOtherOpens);
+  }, []);
+
   const openDropdown = () => {
     if (closeTimerRef.current) {
       clearTimeout(closeTimerRef.current);
     }
+    window.dispatchEvent(new CustomEvent('xs-nav-open', { detail: 'types' }));
     setIsOpen(true);
   };
 
@@ -81,7 +93,7 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
     }
     closeTimerRef.current = setTimeout(() => {
       setIsOpen(false);
-    }, 180);
+    }, 260);
   };
 
   if (!showPropertyTypes) {
@@ -166,7 +178,7 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
             openDropdown();
           }
         }}
-        className="flex items-center space-x-1 font-sans font-semibold text-[14px] tracking-tight hover:text-terracotta transition-colors duration-200 cursor-pointer group bg-transparent border-none p-0 text-inherit"
+        className="flex items-center gap-1 rounded-xl px-2.5 py-2.5 font-sans font-medium text-[16px] leading-[21px] tracking-normal hover:text-terracotta transition-colors duration-200 cursor-pointer group bg-transparent border-none text-inherit"
       >
         <span>Property Types</span>
         <ChevronDown 
@@ -178,7 +190,7 @@ const LanguageSelector = ({ mode = 'dropdown', showPropertyTypes = false }) => {
 
       {isOpen && (
         <div
-          className="absolute right-[-5.5rem] md:-right-32 mt-3 w-[calc(100vw-2rem)] max-w-[95vw] md:w-[680px] max-h-[80vh] md:max-h-[none] overflow-y-auto md:overflow-y-visible rounded-[28px] bg-white border border-gray-200 shadow-elevated px-6 py-5 z-[999] origin-top-right animate-scale-up ring-1 ring-black/5 text-gray-900"
+          className="absolute right-[-5.5rem] md:-right-32 mt-3 before:absolute before:inset-x-0 before:-top-4 before:h-4 before:content-[''] w-[calc(100vw-2rem)] max-w-[95vw] md:w-[680px] max-h-[80vh] md:max-h-[none] overflow-y-auto md:overflow-y-visible rounded-[28px] bg-white border border-gray-200 shadow-elevated px-6 py-5 z-[999] origin-top-right animate-scale-up ring-1 ring-black/5 text-gray-900"
           onMouseEnter={openDropdown}
           onMouseLeave={closeDropdownWithDelay}
         >

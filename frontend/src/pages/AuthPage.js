@@ -513,14 +513,14 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 select-none selection:bg-terracotta selection:text-white">
+    <div className="w-full h-full flex items-end justify-center p-0 select-none selection:bg-terracotta selection:text-white md:items-center md:p-4">
       <SEO
         title={isAdminLogin ? "Admin Sign In" : (isLogin ? "Sign In" : "Register")}
         robots="noindex,nofollow"
       />
 
       {/* StayVista style Modal Box (Fixed height to prevent page scrolling) */}
-      <div className="relative w-full max-w-[980px] bg-white rounded-3xl shadow-2xl flex overflow-hidden border border-gray-150 h-[750px] max-h-[92vh] z-10">
+      <div className="relative z-10 flex w-full max-w-[980px] overflow-hidden border border-gray-150 bg-white shadow-2xl max-md:max-h-[92vh] max-md:rounded-b-none max-md:rounded-t-[28px] max-md:border-x-0 max-md:border-b-0 md:h-[750px] md:max-h-[92vh] md:rounded-3xl">
         
         {/* Close Button */}
         <button
@@ -582,16 +582,38 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
         </div>
 
         {/* Right Side: Auth Form Content (58% Width) */}
-        <div className="w-full md:w-[58%] p-8 flex flex-col justify-between h-full relative overflow-y-auto no-scrollbar">
-          
+        <div className="relative flex w-full flex-col justify-between overflow-y-auto p-5 no-scrollbar max-md:max-h-[92vh] md:h-full md:w-[58%] md:p-8">
+
+          {/* Phones: welcome title and offer banner, like a bottom-sheet login */}
+          <div className="md:hidden">
+            <h3 className="mb-3 whitespace-nowrap px-8 text-center font-sans text-[20px] font-medium leading-tight text-charcoal">
+              {isMdLogin ? 'MD Executive Sign In' : isAdminLogin ? 'Admin Sign In' : 'Welcome to X-Space360'}
+            </h3>
+            <div className="relative mb-4 h-[128px] overflow-hidden rounded-2xl">
+              <img src="https://images.unsplash.com/photo-1675657144361-98ae33e6b6f9?auto=format&fit=crop&q=80&w=800" alt="" className="absolute inset-0 h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-black/45" />
+              <div className="relative z-10 flex h-full flex-col items-center justify-center gap-1.5 px-5 text-center text-white">
+                <p className="font-sans text-[17px] font-extrabold leading-tight tracking-tight drop-shadow-sm">
+                  {!isLogin && registerData.role === 'host' ? <>List Your Property.<br />Maximize Your Earnings</> : <>Book a Room.<br />Enjoy A Villa Getaway</>}
+                </p>
+                <p className="text-[10px] font-semibold leading-snug drop-shadow-sm">
+                  {!isLogin && registerData.role === 'host' ? 'Host guests and earn maximum revenue.' : 'Enjoy the luxury, comfort and privacy of premium spaces across India.'}
+                </p>
+                <span className="rounded-md border border-dashed border-white/80 bg-white/10 px-2.5 py-0.5 text-[10px] font-bold backdrop-blur-sm">
+                  {!isLogin && registerData.role === 'host' ? 'Zero Listing Fee · Premium Hosts' : 'Rooms Starting at ₹2,000*'}
+                </span>
+              </div>
+            </div>
+          </div>
+
           {/* Top Header Section */}
           <div className="w-full">
             {/* Title / Subtext */}
-            <div className="mb-6">
-              <span className="text-sm font-semibold text-gray-500 block mb-1">
+            <div className="mb-4 md:mb-6">
+              <span className="mb-1 block text-sm font-semibold text-gray-500 max-md:text-[17px] max-md:text-charcoal">
                 {isMdLogin ? "Managing Director" : isAdminLogin ? "Admin Console" : "Login/Signup"}
               </span>
-              <h3 className="font-sans font-semibold text-2xl md:text-[28px] text-gray-900 tracking-tight leading-snug">
+              <h3 className="hidden font-sans font-semibold text-2xl md:block md:text-[28px] text-gray-900 tracking-tight leading-snug">
                 {isMdLogin ? "MD Executive Sign In" : isAdminLogin ? "Admin Sign In" : "Welcome to X-Space360"}
               </h3>
             </div>

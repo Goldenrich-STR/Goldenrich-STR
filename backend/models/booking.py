@@ -22,6 +22,8 @@ class CancellationPolicy(str, Enum):
 class Booking(BaseModel):
     booking_id: str = Field(default_factory=lambda: f"BK{uuid4().hex[:14].upper()}")
     property_id: str
+    unit_id: Optional[str] = None
+    unit_name: Optional[str] = None
     guest_id: str
     host_id: str
     broker_id: Optional[str] = None
@@ -87,6 +89,7 @@ class Booking(BaseModel):
 
 class BookingCreate(BaseModel):
     property_id: str
+    unit_id: Optional[str] = None
     check_in_date: date
     check_out_date: date
     number_of_guests: int

@@ -201,12 +201,19 @@ async def price_calendar(property_id: str, month: str = Query(..., pattern=r"^\d
 async def public_price_calendar(
     property_id: str,
     month: str = Query(..., pattern=r"^\d{4}-\d{2}$"),
+    unit_id: Optional[str] = None,
     db=Depends(get_db),
 ):
     """Expose nightly guest prices without exposing host-only price rules."""
     prop = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
     if not prop or str(prop.get("status") or "").lower() not in {"live", "approved", "active"}:
         raise HTTPException(status_code=404, detail="Property not found")
+    if prop.get("has_units") and prop.get("units"):
+        units = [u for u in prop["units"] if isinstance(u, dict)]
+        unit = next((u for u in units if u.get("unit_id") == unit_id), None) or (units[0] if units else None)
+        if unit and unit.get("price_per_night") not in (None, ""):
+            prop["price_per_night"] = float(unit["price_per_night"])
+            prop["base_price"] = float(unit["price_per_night"])
     if not is_eligible_property(prop):
         return {"property_id": property_id, "month": month, "days": []}
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Facebook, Instagram, Linkedin, MapPin, Mail, Phone } from 'lucide-react';
+import { ChevronDown, Facebook, Instagram, Linkedin, MapPin, Mail, Phone } from 'lucide-react';
 import LegalDocument from './LegalDocument';
 
 const WhatsAppIcon = ({ className }) => (
@@ -49,6 +49,25 @@ const FooterDiyaCorners = () => (
     </div>
   </div>
 );
+
+/** Footer link group: a tap-to-open accordion on phones, a normal column from tablet width up. */
+const FooterGroup = ({ title, children, className = '' }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`border-b border-white/10 md:border-0 ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((value) => !value)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between py-4 text-left md:pointer-events-none md:mb-5 md:py-0"
+      >
+        <h5 className="text-sm font-bold uppercase tracking-wider text-white">{title}</h5>
+        <ChevronDown className={`h-5 w-5 text-gray-400 transition-transform duration-200 md:hidden ${open ? 'rotate-180' : ''}`} />
+      </button>
+      <div className={`${open ? 'block' : 'hidden'} pb-5 md:block md:pb-0`}>{children}</div>
+    </div>
+  );
+};
 
 const DEFAULT_FOOTER_DATA = {
   brand_description: 'Redefining short-term rentals and spaces in India through technology, curation, and verified service.',
@@ -112,11 +131,11 @@ export default function Footer({ cmsContent }) {
       {/* Modern Sleek Dark Footer Section */}
       <footer className="relative overflow-hidden bg-[#0A121D] text-white border-t border-white/10">
         <FooterDiyaCorners />
-        <div className="relative z-10 mx-auto max-w-7xl px-6 py-20 md:px-10 lg:px-12 lg:py-24">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-10 md:px-10 md:py-20 lg:px-12 lg:py-24">
           {/* Main Grid Layout */}
-          <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 xl:gap-10">
+          <div className="grid grid-cols-1 gap-0 md:grid-cols-3 md:gap-12 lg:grid-cols-5 xl:gap-10">
             {/* Column 1: Brand Info */}
-            <div className="space-y-4">
+            <div className="space-y-4 pb-6 md:pb-0">
               <button
                 type="button"
                 className="flex items-center text-left"
@@ -157,9 +176,8 @@ export default function Footer({ cmsContent }) {
             </div>
 
             {/* Column 2: X-Space360 Stays */}
-            <div>
-              <h5 className="mb-5 text-sm font-bold uppercase tracking-wider text-white">X-Space360 Stays</h5>
-              <ul className="space-y-3.5 text-xs text-gray-300">
+            <FooterGroup title="X-Space360 Stays">
+              <ul className="space-y-3.5 text-[13px] text-gray-300 md:text-xs">
                 <li>
                   <button type="button" onClick={() => navigate('/property/residential')} className="hover:text-white transition">
                     Residential Villas &amp; Homes
@@ -186,12 +204,11 @@ export default function Footer({ cmsContent }) {
                   </button>
                 </li>
               </ul>
-            </div>
+            </FooterGroup>
 
             {/* Column 3: Company */}
-            <div>
-              <h5 className="mb-5 text-sm font-bold uppercase tracking-wider text-white">Company</h5>
-              <ul className="space-y-3.5 text-xs text-gray-300">
+            <FooterGroup title="Company">
+              <ul className="space-y-3.5 text-[13px] text-gray-300 md:text-xs">
                 <li>
                   <button type="button" onClick={() => navigate('/about-us')} className="hover:text-white transition">
                     About Us
@@ -219,12 +236,11 @@ export default function Footer({ cmsContent }) {
                   </li>
                 ))}
               </ul>
-            </div>
+            </FooterGroup>
 
             {/* Column 4: Contact Us */}
-            <div>
-              <h5 className="mb-5 text-sm font-bold uppercase tracking-wider text-white">Contact Us</h5>
-              <div className="space-y-4 text-xs text-gray-300">
+            <FooterGroup title="Contact Us">
+              <div className="space-y-4 text-[13px] text-gray-300 md:text-xs">
                 <div className="flex items-start gap-2.5">
                   <MapPin className="mt-0.5 h-4 w-4 text-gray-400 shrink-0" />
                   <span>{footerData.location || 'Nashik, Maharashtra'}, India</span>
@@ -241,15 +257,15 @@ export default function Footer({ cmsContent }) {
                   <span>Operating Hours: 9:30 AM to 6:30 PM (Mon-Sat)</span>
                 </div>
               </div>
-            </div>
+            </FooterGroup>
 
             {/* Column 5: Download App */}
-            <div className="space-y-4">
+            <div className="space-y-3 pt-6 md:space-y-4 md:pt-0">
               <h5 className="text-sm font-bold uppercase tracking-wider text-white">Download the App</h5>
               <p className="text-[11px] text-gray-300 leading-snug">
                 Book stays on the go and manage property hosting directly from mobile.
               </p>
-              <div className="flex flex-row items-center gap-3">
+              <div className="flex flex-row flex-wrap items-center gap-3">
                 <a
                   href="#download-android"
                   onClick={(e) => { e.preventDefault(); alert('X-Space360 Android App is launching soon on Google Play Store!'); }}
@@ -278,11 +294,11 @@ export default function Footer({ cmsContent }) {
           </div>
 
           {/* Bottom Copyright & Legal row */}
-          <div className="mt-12 border-t border-white/10 pt-6 text-center md:flex md:items-center md:justify-between md:text-left">
+          <div className="mt-8 border-t border-white/10 pt-5 text-center md:mt-12 md:flex md:items-center md:justify-between md:pt-6 md:text-left">
             <p className="text-[11px] font-normal text-gray-400">
               © 2026 X-SPACE360. Owned &amp; Operated by Golden Rich Financial Solutions &amp; Real Estate Solutions Pvt Ltd. All rights reserved.
             </p>
-            <div className="mt-3 flex flex-wrap justify-center gap-x-5 gap-y-1 md:mt-0 text-[11px] text-gray-400">
+            <div className="mt-3 hidden flex-wrap justify-center gap-x-5 gap-y-1 text-[11px] text-gray-400 md:mt-0 md:flex">
               {footerLegalItems.map((item) => (
                 <button
                   key={item.label}
