@@ -39,6 +39,8 @@ HOST_MANAGE_EDITABLE_STATUSES = {
 }
 
 HOST_MANAGE_EDITABLE_FIELDS = {
+    "units",
+    "has_units",
     "price_per_night",
     "pricing_display_mode",
     "per_person_price",
