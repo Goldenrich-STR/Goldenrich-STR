@@ -2071,10 +2071,10 @@ const PropertyDetail = () => {
           <div className="flex items-center">
             <button
               type="button"
-              onClick={() => user ? logout() : navigate('/login')}
+              onClick={() => user ? navigate('/dashboard') : navigate('/login')}
               className="grid h-10 w-10 place-items-center rounded-full border border-gray-200 bg-white text-charcoal transition hover:border-terracotta hover:text-terracotta"
-              aria-label={user ? t('signOut') : 'Sign in'}
-              title={user ? t('signOut') : 'Sign in'}
+              aria-label={user ? 'My dashboard' : 'Sign in'}
+              title={user ? 'My dashboard' : 'Sign in'}
             >
               <Users className="h-5 w-5" />
             </button>
