@@ -11,9 +11,11 @@ export default function ScrollReveal({
   delay = 0,
   duration = 'duration-1000',
   threshold = 0.05,
-  rootMargin = '50px 0px 0px 0px',
+  // reveal a little before the block scrolls into view, so there is no empty gap while it fades in
+  rootMargin = '0px 0px 220px 0px',
   fallbackDelay = null,
-  direction = 'up' // 'up', 'down', 'left', 'right', 'none'
+  direction = 'up', // 'up', 'down', 'left', 'right', 'none'
+  flat = false // true: fade only, no slide/scale (for full-width bands that must not shift)
 }) {
   const [isVisible, setIsVisible] = useState(() => {
     if (typeof window !== 'undefined' && window.matchMedia) {
@@ -104,7 +106,7 @@ export default function ScrollReveal({
       className={`transition-all ${duration} ease-out will-change-transform ${
         isVisible
           ? 'opacity-100 translate-y-0 translate-x-0 scale-100 blur-0'
-          : `opacity-0 scale-[0.98] blur-[0.5px] ${getDirectionClasses()}`
+          : (flat ? 'opacity-0' : `opacity-0 scale-[0.98] blur-[0.5px] ${getDirectionClasses()}`)
       } ${className}`}
       style={{
         transitionDelay: `${delay}ms`,

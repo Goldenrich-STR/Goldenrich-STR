@@ -324,6 +324,18 @@ async def _add_customer_display_price(db: AsyncIOMotorDatabase, prop: dict, conf
         prop["customer_price_per_night"] = as_float(display_price)
         prop["platform_fee_context"] = platform_fee_context
         prop["display_price_excludes_tax"] = True
+        units = prop.get("units")
+        if isinstance(units, list):
+            for unit in units:
+                if not isinstance(unit, dict):
+                    continue
+                unit_host_price = money(unit.get("price_per_night") or 0)
+                if unit_host_price > 0:
+                    unit["display_price_per_night"] = as_float(money(unit_host_price + calculate_configured_charges_total(
+                        unit_host_price,
+                        config,
+                        platform_fee_context=platform_fee_context,
+                    )))
         enabled_charges = [
             key
             for key in BOOKING_CHARGE_KEYS
@@ -725,6 +737,8 @@ async def search_properties(
             "latitude": 1,
             "longitude": 1,
             "max_guests": 1,
+            "has_units": 1,
+            "units": 1,
             "price_per_night": 1,
             "base_price": 1,
             "pricing_cycle": 1,
@@ -965,6 +979,159 @@ async def search_properties(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search properties",
         )
+
+@router.get("/public-stats")
+async def public_property_stats(db: AsyncIOMotorDatabase = Depends(get_db)):
+    """Live marketplace counts for the public landing page."""
+    rows = await db.properties.find(
+        {"status": PropertyStatus.LIVE.value},
+        {"_id": 0, "owner_id": 1, "city": 1, "category": 1},
+    ).to_list(length=50000)
+    hosts = {r.get("owner_id") for r in rows if r.get("owner_id")}
+    cities = {str(r.get("city")).strip().lower() for r in rows if r.get("city")}
+    categories = {r.get("category") for r in rows if r.get("category")}
+    return {
+        "live_properties": len(rows),
+        "hosts": len(hosts),
+        "cities": len(cities),
+        "categories": len(categories),
+    }
+
+
+@router.get("/expand-url")
+async def expand_url(url: str = Query(...)):
+    """Resolve short URLs (like maps.app.goo.gl) to their full URL."""
+    try:
+        import urllib.request
+        from urllib.parse import urlparse
+
+        def is_allowed_maps_url(candidate: str) -> bool:
+            parsed = urlparse(candidate)
+            hostname = (parsed.hostname or "").rstrip(".").lower()
+            if parsed.scheme != "https" or parsed.username or parsed.password:
+                return False
+            return (
+                hostname in {"goo.gl", "maps.app.goo.gl", "google.com"}
+                or hostname.endswith(".google.com")
+                or hostname.endswith(".google.co.in")
+            )
+
+        if not is_allowed_maps_url(url):
+            raise HTTPException(status_code=400, detail="Only HTTPS Google Maps links are allowed")
+
+        class MapsRedirectHandler(urllib.request.HTTPRedirectHandler):
+            def redirect_request(self, req, fp, code, msg, headers, newurl):
+                if not is_allowed_maps_url(newurl):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Google Maps link redirected to an unsupported host",
+                    )
+                return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        opener = urllib.request.build_opener(MapsRedirectHandler())
+        # Redirects are constrained by the same Google Maps host allowlist.
+        with opener.open(req, timeout=10) as res:
+            expanded_url = res.geturl()
+        if not is_allowed_maps_url(expanded_url):
+            raise HTTPException(status_code=400, detail="Google Maps link redirected to an unsupported host")
+        return {"url": expanded_url}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to expand URL: {str(e)}")
+        raise HTTPException(status_code=400, detail="Could not expand Google Maps URL")
+
+
+
+@router.get("/nearby-places")
+async def get_nearby_places(
+    latitude: float = Query(..., description="Latitude of the property"),
+    longitude: float = Query(..., description="Longitude of the property"),
+):
+    """Retrieve or generate famous landmarks near the given latitude and longitude coordinates."""
+    places = []
+    
+    # 1. Mumbai region
+    if 18.8 <= latitude <= 19.4 and 72.6 <= longitude <= 73.1:
+        places = [
+            "Gateway of India",
+            "Marine Drive Promenade",
+            "Juhu Beach",
+            "Siddhivinayak Temple",
+            "Bandra-Worli Sea Link",
+            "Chhatrapati Shivaji Maharaj Terminus",
+            "Colaba Causeway Shopping Market",
+            "Sanjay Gandhi National Park",
+        ]
+    # 2. Pune region
+    elif 18.3 <= latitude <= 18.7 and 73.6 <= longitude <= 74.1:
+        places = [
+            "Shaniwar Wada Palace",
+            "Aga Khan Palace",
+            "Sinhagad Fort View Point",
+            "Osho Meditation Resort",
+            "Dagadusheth Halwai Ganpati Temple",
+            "Vetal Tekdi Hilltop View",
+            "Phoenix Marketcity Viman Nagar",
+            "FC Road Street Shopping",
+        ]
+    # 3. Goa region
+    elif 14.8 <= latitude <= 15.9 and 73.5 <= longitude <= 74.3:
+        places = [
+            "Calangute Beach Coastline",
+            "Historic Fort Aguada & Lighthouse",
+            "Basilica of Bom Jesus (Old Goa)",
+            "Dudhsagar Waterfalls Trail",
+            "Anjuna Flea Market Ground",
+            "Panaji Church & Latin Quarter",
+            "Baga Beach Clubs & Nightlife",
+            "Dona Paula View Point",
+        ]
+    # 4. Delhi region
+    elif 28.3 <= latitude <= 28.9 and 76.9 <= longitude <= 77.4:
+        places = [
+            "Red Fort Heritage Monument",
+            "Qutub Minar Complex",
+            "India Gate War Memorial",
+            "Lotus Temple Garden",
+            "Humayun's Tomb",
+            "Akshardham Temple",
+            "Connaught Place Shopping Circle",
+            "Chandni Chowk Food Street",
+        ]
+    # 5. Bangalore region
+    elif 12.7 <= latitude <= 13.2 and 77.3 <= longitude <= 77.9:
+        places = [
+            "Lalbagh Botanical Garden",
+            "Bangalore Palace",
+            "Cubbon Park Walking Trail",
+            "Bannerghatta Biological Park",
+            "Nandi Hills Sunrise View",
+            "Visvesvaraya Industrial Museum",
+            "UB City Luxury Mall",
+            "Commercial Street Bazaar",
+        ]
+    # Generic fallback: generate dynamic nearby landmarks using standard categories
+    else:
+        seed = int(abs(latitude * 1000) + abs(longitude * 1000))
+        adjectives = ["Scenic", "Historic", "Central", "Popular", "Famous", "Golden", "Royal", "Sunset"]
+        nouns = ["Park", "Marketplace", "View Point", "Lake Promenade", "Museum", "Heritage Site", "Metro Station", "Shopping Plaza"]
+        
+        import random
+        r = random.Random(seed)
+        
+        places = []
+        for i in range(5):
+            if not adjectives or not nouns:
+                break
+            adj = r.choice(adjectives)
+            noun = r.choice(nouns)
+            adjectives.remove(adj)
+            nouns.remove(noun)
+            places.append(f"{adj} {noun}")
+            
+    return {"latitude": latitude, "longitude": longitude, "places": places}
 
 @router.get("/{property_id}")
 async def get_property(
@@ -1434,141 +1601,6 @@ async def submit_for_verification(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to submit property"
         )
-
-@router.get("/expand-url")
-async def expand_url(url: str = Query(...)):
-    """Resolve short URLs (like maps.app.goo.gl) to their full URL."""
-    try:
-        import urllib.request
-        from urllib.parse import urlparse
-
-        def is_allowed_maps_url(candidate: str) -> bool:
-            parsed = urlparse(candidate)
-            hostname = (parsed.hostname or "").rstrip(".").lower()
-            if parsed.scheme != "https" or parsed.username or parsed.password:
-                return False
-            return (
-                hostname in {"goo.gl", "maps.app.goo.gl", "google.com"}
-                or hostname.endswith(".google.com")
-                or hostname.endswith(".google.co.in")
-            )
-
-        if not is_allowed_maps_url(url):
-            raise HTTPException(status_code=400, detail="Only HTTPS Google Maps links are allowed")
-
-        class MapsRedirectHandler(urllib.request.HTTPRedirectHandler):
-            def redirect_request(self, req, fp, code, msg, headers, newurl):
-                if not is_allowed_maps_url(newurl):
-                    raise HTTPException(
-                        status_code=400,
-                        detail="Google Maps link redirected to an unsupported host",
-                    )
-                return super().redirect_request(req, fp, code, msg, headers, newurl)
-
-        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        opener = urllib.request.build_opener(MapsRedirectHandler())
-        # Redirects are constrained by the same Google Maps host allowlist.
-        with opener.open(req, timeout=10) as res:
-            expanded_url = res.geturl()
-        if not is_allowed_maps_url(expanded_url):
-            raise HTTPException(status_code=400, detail="Google Maps link redirected to an unsupported host")
-        return {"url": expanded_url}
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Failed to expand URL: {str(e)}")
-        raise HTTPException(status_code=400, detail="Could not expand Google Maps URL")
-
-
-
-@router.get("/nearby-places")
-async def get_nearby_places(
-    latitude: float = Query(..., description="Latitude of the property"),
-    longitude: float = Query(..., description="Longitude of the property"),
-):
-    """Retrieve or generate famous landmarks near the given latitude and longitude coordinates."""
-    places = []
-    
-    # 1. Mumbai region
-    if 18.8 <= latitude <= 19.4 and 72.6 <= longitude <= 73.1:
-        places = [
-            "Gateway of India",
-            "Marine Drive Promenade",
-            "Juhu Beach",
-            "Siddhivinayak Temple",
-            "Bandra-Worli Sea Link",
-            "Chhatrapati Shivaji Maharaj Terminus",
-            "Colaba Causeway Shopping Market",
-            "Sanjay Gandhi National Park",
-        ]
-    # 2. Pune region
-    elif 18.3 <= latitude <= 18.7 and 73.6 <= longitude <= 74.1:
-        places = [
-            "Shaniwar Wada Palace",
-            "Aga Khan Palace",
-            "Sinhagad Fort View Point",
-            "Osho Meditation Resort",
-            "Dagadusheth Halwai Ganpati Temple",
-            "Vetal Tekdi Hilltop View",
-            "Phoenix Marketcity Viman Nagar",
-            "FC Road Street Shopping",
-        ]
-    # 3. Goa region
-    elif 14.8 <= latitude <= 15.9 and 73.5 <= longitude <= 74.3:
-        places = [
-            "Calangute Beach Coastline",
-            "Historic Fort Aguada & Lighthouse",
-            "Basilica of Bom Jesus (Old Goa)",
-            "Dudhsagar Waterfalls Trail",
-            "Anjuna Flea Market Ground",
-            "Panaji Church & Latin Quarter",
-            "Baga Beach Clubs & Nightlife",
-            "Dona Paula View Point",
-        ]
-    # 4. Delhi region
-    elif 28.3 <= latitude <= 28.9 and 76.9 <= longitude <= 77.4:
-        places = [
-            "Red Fort Heritage Monument",
-            "Qutub Minar Complex",
-            "India Gate War Memorial",
-            "Lotus Temple Garden",
-            "Humayun's Tomb",
-            "Akshardham Temple",
-            "Connaught Place Shopping Circle",
-            "Chandni Chowk Food Street",
-        ]
-    # 5. Bangalore region
-    elif 12.7 <= latitude <= 13.2 and 77.3 <= longitude <= 77.9:
-        places = [
-            "Lalbagh Botanical Garden",
-            "Bangalore Palace",
-            "Cubbon Park Walking Trail",
-            "Bannerghatta Biological Park",
-            "Nandi Hills Sunrise View",
-            "Visvesvaraya Industrial Museum",
-            "UB City Luxury Mall",
-            "Commercial Street Bazaar",
-        ]
-    # Generic fallback: generate dynamic nearby landmarks using standard categories
-    else:
-        seed = int(abs(latitude * 1000) + abs(longitude * 1000))
-        adjectives = ["Scenic", "Historic", "Central", "Popular", "Famous", "Golden", "Royal", "Sunset"]
-        nouns = ["Park", "Marketplace", "View Point", "Lake Promenade", "Museum", "Heritage Site", "Metro Station", "Shopping Plaza"]
-        
-        import random
-        r = random.Random(seed)
-        
-        places = []
-        for i in range(5):
-            if not adjectives or not nouns:
-                break
-            adj = r.choice(adjectives)
-            noun = r.choice(nouns)
-            adjectives.remove(adj)
-            nouns.remove(noun)
-            places.append(f"{adj} {noun}")
-            
-    return {"latitude": latitude, "longitude": longitude, "places": places}
 
 class ReviewSubmit(BaseModel):
     rating: float

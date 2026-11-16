@@ -7,11 +7,14 @@ import LanguageSelector from '../components/LanguageSelector';
 import SEO from '../components/SEO';
 import ShareDropdown from '../components/ShareDropdown';
 import DateRangePicker from '../components/ui/DateRangePicker';
+import { MobileSearchSheet, MobileFiltersSheet } from '../components/MobileSearch';
 import DownloadAppButton from '../components/ui/DownloadAppButton';
 import CustomSelect from '../components/ui/CustomSelect';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { getPropertySlug, getPropertyUrl as buildPropertyUrl } from '../lib/propertySlug';
 import { getSeoRoutePreset, getSeoUrlForFilters } from '../lib/seoRoutes';
+import { SeriesRibbon, CardBadges, RatingCorner, BestRatedTag } from '../components/PropertyBadges';
+import PropertyPhotoSlider from '../components/PropertyPhotoSlider';
 import {
   Crown,
   Building2,
@@ -39,6 +42,8 @@ import {
   Briefcase,
   PartyPopper,
   Phone,
+  ChevronLeft,
+  Pencil,
 } from 'lucide-react';
 
 const PROPERTY_TYPES = [
@@ -91,7 +96,7 @@ const SORT_OPTIONS = [
   { value: 'newest', label: 'Newest' },
 ];
 
-const PAGE_SIZE = 9;
+const PAGE_SIZE = 20;
 const SIGNATURE_MIN_NIGHTLY_PRICE = 50000;
 
 const VIEW_MODES = {
@@ -464,6 +469,43 @@ const GuestBrowse = () => {
   }, []);
 
   const [activeDropdown, setActiveDropdown] = useState(null);
+  // StayVista-style header: a compact search pill lives in the sticky header (desktop);
+  // clicking it drops the full search bar right under the header over a dimmed page.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [mobileSortOpen, setMobileSortOpen] = useState(false);
+  const headerRef = useRef(null);
+  const [headerH, setHeaderH] = useState(72);
+
+  useEffect(() => {
+    const measure = () => {
+      if (headerRef.current) setHeaderH(Math.round(headerRef.current.getBoundingClientRect().height));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    // the logo image / fonts load after mount and change the header height
+    const observer = typeof ResizeObserver !== 'undefined' && headerRef.current ? new ResizeObserver(measure) : null;
+    if (observer) observer.observe(headerRef.current);
+    return () => {
+      window.removeEventListener('resize', measure);
+      if (observer) observer.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!searchOpen && !showFilters) return undefined;
+    const onKey = (event) => {
+      if (event.key === 'Escape') {
+        setSearchOpen(false);
+        setShowFilters(false);
+        setActiveDropdown(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [searchOpen, showFilters]);
   const [browseCalendarAnchor, setBrowseCalendarAnchor] = useState('checkIn');
   const [filters, setFilters] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -503,7 +545,6 @@ const GuestBrowse = () => {
   const [seoData, setSeoData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showFilters, setShowFilters] = useState(false);
   const [showSortMenu, setShowSortMenu] = useState(false);
   const [viewMode, setViewMode] = useState(VIEW_MODES.GRID);
   const [hoveredId, setHoveredId] = useState(null);
@@ -530,6 +571,9 @@ const GuestBrowse = () => {
           delete queryParams[key];
         }
       });
+      // Commercial spaces (desks, meeting rooms) often seat fewer than the default 2 guests,
+      // so the default guest count must not hide them.
+      if (collectionFilters.category === 'commercial' && String(collectionFilters.guests) === '2') delete queryParams.guests;
       if (!collectionFilters.instant_booking) delete queryParams.instant_booking;
       if (!collectionFilters.pet_friendly) delete queryParams.pet_friendly;
 
@@ -573,6 +617,7 @@ const GuestBrowse = () => {
 
   const handleSearch = (e) => {
     if (e && e.preventDefault) e.preventDefault();
+    setSearchOpen(false);
     setPage(1);
     fetchProperties();
   };
@@ -638,7 +683,7 @@ const GuestBrowse = () => {
     };
   }, []);
 
-  const [showWishlistOnly, setShowWishlistOnly] = useState(false);
+  const [showWishlistOnly, setShowWishlistOnly] = useState(() => new URLSearchParams(window.location.search).get('wishlist') === '1');
 
   const handleWishlistToggle = (propertyId) => {
     if (!user) {
@@ -742,8 +787,26 @@ const GuestBrowse = () => {
         seo={routePreset || location.pathname === '/guest/browse' ? null : seoData}
       />
       {/* Header */}
-      <header className="relative z-40 glass py-4 border-b border-gray-100" data-testid="guest-header">
-        <div className="mx-auto flex w-full max-w-[1440px] items-center justify-between gap-2 px-4 md:px-8">
+      <header ref={headerRef} className={`sticky top-0 z-40 glass py-4 border-b border-gray-100 ${searchOpen || showFilters ? '!bg-white !border-transparent' : ''}`} data-testid="guest-header">
+        {/* Phones: back, what you searched (tap Edit to change it), call and menu */}
+        <div className="flex items-center gap-2.5 px-4 lg:hidden">
+          <button type="button" onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))} aria-label="Back" className="grid h-9 w-9 shrink-0 place-items-center rounded-full !transform-none hover:bg-gray-100"><ChevronLeft className="h-6 w-6 text-charcoal" /></button>
+          <button type="button" onClick={() => setMobileSearchOpen(true)} aria-label="Edit search" className="flex min-w-0 flex-1 items-center rounded-xl border border-gray-200 bg-white px-3 py-1.5 text-left shadow-sm !transform-none">
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[14px] font-semibold text-charcoal">{filters.city || filters.search || 'All spaces'}</span>
+              <span className="block truncate text-[11px] text-gray-500">
+                {filters.check_in && filters.check_out
+                  ? `${new Date(`${filters.check_in}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} - ${new Date(`${filters.check_out}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+                  : 'Add dates'}
+                {`, ${String(guestCounts.adults + guestCounts.children).padStart(2, '0')} Guests`}
+              </span>
+            </span>
+            <span className="ml-2 flex shrink-0 flex-col items-center text-[#2563eb]"><Pencil className="h-4 w-4" /><span className="text-[11px] font-semibold leading-none">Edit</span></span>
+          </button>
+          <a href="tel:+919225586010" aria-label="Call us" className="grid h-10 w-10 shrink-0 place-items-center rounded-full text-emerald-600"><Phone className="h-5 w-5" /></a>
+          <button type="button" onClick={() => (user ? setIsMobileMenuOpen(true) : navigate('/login', { state: { backgroundLocation: location } }))} aria-label={user ? 'Menu' : 'Login or sign up'} className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-charcoal text-white !transform-none"><User className="h-5 w-5" /></button>
+        </div>
+        <div className="max-lg:hidden relative mx-auto flex w-full max-w-[1440px] items-center justify-between gap-2 px-4 md:px-8">
           {/* Left Logo */}
           <div 
             className="flex items-center cursor-pointer shrink-0" 
@@ -752,15 +815,36 @@ const GuestBrowse = () => {
             <img src="/logo.png" alt="X-Space360 Logo" className="h-8 md:h-10 w-auto object-contain" />
           </div>
 
-          {/* Right Actions */}
-          <div className="hidden lg:flex items-center space-x-6">
-            <Link
-              to="/guest/browse"
-              className="font-sans font-semibold text-[15px] tracking-tight text-terracotta transition-colors duration-200"
+          {/* Compact search pill (opens the full search bar) */}
+          <div className="hidden min-w-0 flex-1 justify-center px-6 lg:flex">
+          {!searchOpen && (
+            <button
+              type="button"
+              onClick={() => setSearchOpen(true)}
+              className="flex w-full max-w-[460px] items-center rounded-full border border-slate-200 bg-white py-1.5 pl-5 pr-1.5 text-left shadow-sm transition hover:shadow-md animate-fade-in"
+              aria-label="Open search"
+              data-testid="compact-search"
             >
-              Discover
-            </Link>
+              <span className="min-w-0 flex-1 truncate text-sm font-medium text-charcoal">
+                {filters.search || 'Search properties, villas and venues'}
+              </span>
+              <span className="mx-3 h-5 w-px shrink-0 bg-slate-300" />
+              <span className="shrink-0 text-sm font-medium text-charcoal">
+                {filters.check_in && filters.check_out
+                  ? `${new Date(`${filters.check_in}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })} – ${new Date(`${filters.check_out}T00:00:00`).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}`
+                  : 'Select Date'}
+              </span>
+              <span className="mx-3 h-5 w-px shrink-0 bg-slate-300" />
+              <span className="shrink-0 text-sm font-medium text-charcoal">{filters.guests || 2} Guests</span>
+              <span className="ml-3 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-charcoal text-white">
+                <Search className="h-4 w-4" />
+              </span>
+            </button>
+          )}
+          </div>
 
+          {/* Right Actions */}
+          <div className="hidden shrink-0 lg:flex items-center space-x-6">
             <Link
               to={user ? '/host/list-property' : '/list-your-property'}
               className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
@@ -809,9 +893,11 @@ const GuestBrowse = () => {
             ) : (
               <button
                 onClick={() => navigate('/login')}
-                className="bg-terracotta hover:bg-terracotta/90 text-white font-sans font-semibold text-[14px] tracking-tight px-6 py-2 rounded-full transition shadow-premium"
+                className="w-10 h-10 rounded-full flex items-center justify-center border transition shadow-subtle bg-gray-50 hover:bg-gray-100 text-charcoal border-gray-200"
+                title={t('signIn')}
+                aria-label={t('signIn')}
               >
-                {t('signIn')}
+                <User className="w-[18px] h-[18px]" />
               </button>
             )}
           </div>
@@ -894,18 +980,62 @@ const GuestBrowse = () => {
       )}
 
       {/* Top Search Bar */}
-      <div id="main-content" className="bg-white/80 backdrop-blur relative md:sticky md:top-0 z-30 px-4 md:px-8 py-4 border-b border-gray-100 shadow-sm">
+      {(searchOpen || showFilters) && (
+        <div
+          className={`fixed inset-0 z-[35] bg-black/40 animate-fade-in ${showFilters ? '' : 'hidden lg:block'}`}
+          onClick={() => { setSearchOpen(false); setShowFilters(false); setActiveDropdown(null); }}
+          aria-hidden="true"
+        />
+      )}
+      {/* Top Search Bar: inline on mobile, drops under the sticky header on desktop */}
+      <div
+        id="main-content"
+        style={{ '--hh': `${Math.max(headerH - 1, 0)}px` }}
+        className={`lg:top-[var(--hh)] bg-white/80 backdrop-blur relative px-4 md:px-8 py-4 border-b border-gray-100 shadow-sm ${showFilters ? 'z-[39] !bg-white' : 'z-30'} ${
+          searchOpen
+            ? `lg:fixed lg:inset-x-0 lg:z-[39] lg:bg-white lg:shadow-2xl animate-search-drop ${showFilters ? 'lg:max-h-[calc(100vh-72px)] lg:overflow-y-auto' : ''}`
+            : 'hidden'
+        }`}
+      >
+        {/* Phones: compact pill that opens the step-by-step search screens */}
+        <div className="lg:hidden">
+          <MobileFiltersSheet
+            open={mobileFiltersOpen}
+            onClose={() => setMobileFiltersOpen(false)}
+            filters={filters}
+            propertyTypes={PROPERTY_TYPES}
+            bhkOptions={configurationOptions}
+            amenities={AMENITY_OPTIONS.map((value) => ({ value, label: formatAmenityLabel(value) }))}
+            lockType={isSignatureCollection}
+            onApply={(next) => {
+              setFilters((prev) => ({ ...prev, ...next }));
+              setPage(1);
+            }}
+          />
+          <MobileSearchSheet
+            open={mobileSearchOpen}
+            onClose={() => setMobileSearchOpen(false)}
+            value={{ query: filters.city || filters.search, city: filters.city, checkIn: filters.check_in, checkOut: filters.check_out, adults: guestCounts.adults, children: guestCounts.children }}
+            onSearch={(v) => {
+              setFilters((prev) => ({ ...prev, search: v.city ? '' : (v.query || ''), city: v.city || '', check_in: v.checkIn || '', check_out: v.checkOut || '', guests: String(v.guests || 2) }));
+              setGuestCounts({ adults: v.adults, children: v.children, infants: 0 });
+              setPage(1);
+            }}
+          />
+        </div>
+
         {/* Transparent overlay to close active dropdowns on clicking outside */}
         {activeDropdown && (
           <div className="fixed inset-0 z-40 bg-transparent" onClick={() => setActiveDropdown(null)} />
         )}
 
-        <div className="w-full max-w-6xl mx-auto lg:relative z-50">
+        <div className="hidden w-full max-w-6xl mx-auto lg:relative lg:block z-50">
+          <div>
           {/* Capsule Search Bar */}
-          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-full border border-slate-200 bg-[#EEF2F6] p-2 shadow-[0_14px_32px_rgba(15,23,42,0.12)]">
+          <div className="relative z-50 overflow-visible rounded-[34px] lg:rounded-full border border-slate-200 bg-white p-1 shadow-sm">
             <form
               onSubmit={handleSearch}
-              className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[28px] lg:rounded-full w-full border border-white bg-white/95 p-1.5 relative overflow-visible z-50"
+              className="flex flex-col lg:flex-row items-stretch lg:items-center rounded-[28px] lg:rounded-full w-full bg-white p-1 relative overflow-visible z-50"
             >
               {/* Search Input */}
               <div className="relative w-full lg:w-[31%] lg:shrink-0 z-10">
@@ -914,7 +1044,7 @@ const GuestBrowse = () => {
                     const el = document.getElementById('browse-search-query');
                     if (el) el.focus();
                   }}
-                  className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full cursor-pointer group rounded-2xl lg:rounded-full bg-slate-50 hover:bg-slate-100 transition duration-200"
+                  className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full cursor-pointer group rounded-2xl lg:rounded-full bg-transparent hover:bg-slate-100 transition duration-200"
                 >
                   <Search className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
                   <div className="w-full text-left">
@@ -936,7 +1066,7 @@ const GuestBrowse = () => {
               <div className="hidden lg:block w-[1px] h-8 bg-slate-200" />
               
               {/* Check-in & Check-out Date Range Section */}
-              <div className={`relative flex flex-col lg:flex-row items-stretch lg:items-center w-full lg:w-[31%] lg:shrink-0 rounded-2xl lg:rounded-full bg-slate-50 ${activeDropdown === 'dates' ? 'z-50' : 'z-10'}`}>
+              <div className={`relative flex flex-col lg:flex-row items-stretch lg:items-center w-full lg:w-[31%] lg:shrink-0 rounded-2xl lg:rounded-full bg-transparent ${activeDropdown === 'dates' ? 'z-50' : 'z-10'}`}>
                 {/* Check-in */}
                 <div className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full lg:w-1/2 border-b border-slate-200 lg:border-none hover:bg-slate-100 transition duration-200 group">
                   <Calendar className="w-4.5 h-4.5 text-gray-500 mr-3 group-hover:text-terracotta transition-colors shrink-0" />
@@ -1000,7 +1130,7 @@ const GuestBrowse = () => {
               <div className="relative w-full lg:w-[14%] lg:shrink-0 z-10">
                 <div 
                   onClick={() => setActiveDropdown(activeDropdown === 'guests' ? null : 'guests')}
-                  className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full cursor-pointer bg-slate-50 hover:bg-slate-100 transition duration-200 rounded-2xl lg:rounded-full"
+                  className="flex min-h-[56px] items-center px-3 lg:px-4 py-2 w-full cursor-pointer bg-transparent hover:bg-slate-100 transition duration-200 rounded-2xl lg:rounded-full"
                 >
                   <User className="w-4.5 h-4.5 text-gray-500 mr-3 shrink-0" />
                   <div className="text-left">
@@ -1100,12 +1230,13 @@ const GuestBrowse = () => {
 
           </form>
           </div>
+          </div>
         </div>
-      </div>
       {/* Advanced filters drawer */}
       {showFilters && (
-        <div className="relative z-30 border-b border-gray-100 px-4 py-4 md:px-8 animate-slide-up" data-testid="advanced-filters">
-          <div className="mx-auto w-full max-w-[1216px] rounded-2xl border border-sand-200 bg-white p-5 shadow-premium">
+        <div className="relative z-[38] border-b border-gray-100 px-4 py-4 md:px-8 animate-slide-up" data-testid="advanced-filters">
+          <div className="relative mx-auto w-full max-w-[1216px] rounded-2xl border border-sand-200 bg-white p-5 shadow-premium">
+          <button type="button" onClick={() => setShowFilters(false)} className="absolute right-3 top-3 z-10 grid h-8 w-8 place-items-center rounded-full bg-gray-100 text-charcoal hover:bg-gray-200" aria-label="Close filters"><X className="h-4 w-4" /></button>
           <div className="grid max-h-[64vh] grid-cols-1 gap-5 overflow-y-auto pr-1 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-[0.2em] ml-1">{t('propertyType')}</label>
@@ -1232,9 +1363,65 @@ const GuestBrowse = () => {
           </div>
         </div>
       )}
+      </div>
+
+      {/* Phones: breadcrumb and quick chips (Map, Filter, Sort By, Price) */}
+      <div className="contents lg:hidden">
+        <nav className="px-4 pb-1 pt-3 text-[13px] text-gray-500" aria-label="Breadcrumb">
+          <Link to="/" className="text-[#2563eb]">Home</Link>
+          <span className="mx-2">&gt;</span>
+          <span className="text-charcoal">{activeSearchDestination ? `Spaces in ${activeSearchDestination}` : 'All spaces'}</span>
+        </nav>
+        <div className="no-scrollbar sticky z-30 flex gap-2.5 overflow-x-auto border-b border-gray-200 bg-white px-4 py-3" style={{ top: Math.max(headerH - 1, 0) }}>
+          {[
+            { key: 'map', label: 'Map', icon: MapPin, active: viewMode === VIEW_MODES.MAP, onClick: () => setViewMode(viewMode === VIEW_MODES.MAP ? VIEW_MODES.GRID : VIEW_MODES.MAP) },
+            { key: 'filter', label: 'Filter', icon: SlidersHorizontal, active: filters.amenities.length > 0 || Boolean(filters.property_type || filters.bhk_type || filters.instant_booking || filters.pet_friendly), onClick: () => setMobileFiltersOpen(true) },
+            { key: 'sort', label: 'Sort By', arrow: true, active: filters.sort !== 'recommended', onClick: () => setMobileSortOpen(true) },
+            { key: 'price', label: 'Price', arrow: true, active: Boolean(filters.min_price || filters.max_price), onClick: () => setMobileFiltersOpen(true) },
+            { key: 'instant', label: 'Instant Booking', active: Boolean(filters.instant_booking), onClick: () => setFilters((prev) => ({ ...prev, instant_booking: !prev.instant_booking })) },
+            { key: 'pet', label: 'Pet Friendly', active: Boolean(filters.pet_friendly), onClick: () => setFilters((prev) => ({ ...prev, pet_friendly: !prev.pet_friendly })) },
+          ].map((chip) => {
+            const Icon = chip.icon;
+            return (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={chip.onClick}
+                className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border bg-white px-3.5 py-2 text-[14px] font-medium !transform-none shadow-sm ${chip.active ? 'border-[#3b9cf5] text-[#2563eb]' : 'border-gray-200 text-charcoal'}`}
+              >
+                {chip.label}
+                {Icon && <Icon className="h-4 w-4" />}
+                {chip.arrow && <ChevronLeft className="h-4 w-4 -rotate-90" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {mobileSortOpen && (
+        <div className="fixed inset-0 z-[130] flex items-end bg-black/50 lg:hidden" onClick={() => setMobileSortOpen(false)}>
+          <div className="w-full rounded-t-3xl bg-white px-5 pb-6 pt-4" onClick={(event) => event.stopPropagation()}>
+            <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+              <h3 className="text-[18px] font-semibold text-charcoal">Sort By</h3>
+              <button type="button" onClick={() => setMobileSortOpen(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-full bg-gray-100 !transform-none"><X className="h-4 w-4" /></button>
+            </div>
+            {SORT_OPTIONS.map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                onClick={() => { setFilters((prev) => ({ ...prev, sort: option.value })); setPage(1); setMobileSortOpen(false); }}
+                className="flex w-full items-center justify-between border-b border-gray-100 py-3.5 text-left text-[15px] !transform-none"
+              >
+                <span className={filters.sort === option.value ? 'font-semibold text-[#2563eb]' : 'text-charcoal'}>{option.label}</span>
+                {filters.sort === option.value && <span className="h-2.5 w-2.5 rounded-full bg-[#2563eb]" />}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Results header */}
-      <div className="mx-auto w-full max-w-[1216px] px-4 md:px-8 py-8 flex flex-col sm:flex-row gap-6 sm:items-center sm:justify-between">
+      <div className="mx-auto w-full max-w-[1216px] px-4 py-4 md:px-8 md:py-8 flex flex-col sm:flex-row gap-3 sm:gap-6 sm:items-center sm:justify-between">
         <div>
           <h1 className="font-sans text-[22px] md:text-[28px] font-bold tracking-[-0.025em] text-[#1E1E1E]">
              {routePreset?.h1 || (
@@ -1260,7 +1447,7 @@ const GuestBrowse = () => {
           </p>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="hidden items-center gap-4 lg:flex">
           <div className="flex items-center space-x-2 relative">
              <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">{t('sortBy')}</span>
              <button
@@ -1371,8 +1558,8 @@ const GuestBrowse = () => {
                 <div
                   className={
                     viewMode === VIEW_MODES.SPLIT
-                      ? 'flex-1 overflow-y-auto pr-4 space-y-6 custom-scrollbar'
-                      : 'flex overflow-x-auto snap-x snap-mandatory gap-5 pb-4 no-scrollbar scroll-smooth sm:grid sm:grid-cols-2 lg:grid-cols-3 sm:gap-x-6 sm:gap-y-8 animate-slide-up w-full'
+                      ? 'flex-1 overflow-y-auto pl-2 -ml-2 pr-4 space-y-6 custom-scrollbar'
+                      : 'grid grid-cols-1 gap-x-6 gap-y-8 pb-4 sm:grid-cols-2 lg:grid-cols-3 animate-slide-up w-full'
                   }
                 >
                   {displayedProperties.map((p, idx) => (
@@ -1600,7 +1787,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, propertyUrl, style,
   return (
     <Link
       to={targetUrl}
-      className={`group block cursor-pointer shrink-0 snap-start ${compact ? 'card-premium w-full sm:w-auto flex flex-col sm:flex-row min-h-[240px]' : 'w-[86%] sm:w-full flex flex-col bg-transparent'} transition-all duration-500`}
+      className={`group relative block cursor-pointer shrink-0 snap-start ${compact ? 'card-premium w-full sm:w-auto flex flex-col sm:flex-row min-h-[240px]' : 'w-full flex flex-col bg-transparent'} transition-all duration-500`}
       onClick={(e) => {
         if (onClick && (e.button === 0 && !e.ctrlKey && !e.metaKey && !e.shiftKey && !e.altKey)) {
           onClick(e);
@@ -1610,37 +1797,17 @@ const PropertyCard = ({ property, compact, onHover, onClick, propertyUrl, style,
       onMouseLeave={() => onHover && onHover(null)}
       style={style}
     >
+      {isSignatureProperty(property) ? <SeriesRibbon /> : <CardBadges type={property.property_type || 'stay'} />}
+      {!compact && Number(property.rating) >= 4.5 && <BestRatedTag />}
       <div className={`relative overflow-hidden bg-sand-200 ${compact ? 'aspect-[4/3] sm:aspect-auto w-full sm:w-1/3 rounded-t-2xl sm:rounded-l-2xl sm:rounded-tr-none h-48 sm:h-auto' : 'aspect-[16/10] rounded-xl'}`}>
-        <img
-          src={getImageUrl(property.images?.[0]) || PROPERTY_IMAGE_PLACEHOLDER}
+        <PropertyPhotoSlider
+          images={(property.images || []).map((image) => getImageUrl(typeof image === 'string' ? image : image?.url || image?.image_url)).filter(Boolean)}
           alt={property.title}
-          loading="lazy"
-          decoding="async"
-          onError={(event) => {
-            event.currentTarget.onerror = null;
-            event.currentTarget.src = PROPERTY_IMAGE_PLACEHOLDER;
-          }}
-          className="w-full h-full object-cover"
+          fallback={PROPERTY_IMAGE_PLACEHOLDER}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60"></div>
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-charcoal/80 via-transparent to-transparent opacity-60"></div>
         
-        <div className="absolute left-3 top-3 z-20">
-           {isSignatureProperty(property) ? (
-             <div className="bg-black border border-[#D4AF37]/50 px-3.5 py-1.5 rounded-none shadow-md flex items-center gap-1.5">
-               <Crown className="w-3.5 h-3.5 text-[#D4AF37] fill-[#D4AF37]/20" />
-               <span className="text-[#D4AF37] text-[10px] font-extrabold uppercase tracking-[0.2em] font-serif">
-                 X-Space Series
-               </span>
-             </div>
-           ) : (
-             <div className="rounded-[3px] border border-white/30 bg-charcoal/60 px-2 py-1 shadow-sm backdrop-blur-md">
-                <span className="block text-[9px] font-semibold uppercase leading-none tracking-[0.08em] text-white">
-                   {formatPropertyTypeLabel(property.property_type) || 'Stay'}
-                </span>
-             </div>
-           )}
-        </div>
-        
+        {!compact && <RatingCorner rating={property.rating} />}
         {/* Share & Wishlist Buttons overlay */}
         <div className="absolute top-3 right-3 flex space-x-2 z-20">
            <button
@@ -1672,9 +1839,6 @@ const PropertyCard = ({ property, compact, onHover, onClick, propertyUrl, style,
       <div>
         <div className="flex items-start justify-between gap-3">
           <h3 className="text-[15px] font-bold tracking-tight text-charcoal mb-1 group-hover:text-terracotta transition-colors line-clamp-1">{property.title}</h3>
-          {!compact && property.rating > 0 && property.review_count > 0 && (
-            <span className="flex shrink-0 items-center pt-0.5 text-sm font-semibold text-charcoal"><Star className="mr-1 h-4 w-4 fill-[#eab308] text-[#eab308]" />{Number(property.rating).toFixed(1)}</span>
-          )}
         </div>
         <div className="flex items-center text-charcoal-muted mb-2 min-w-0">
           <MapPin className="w-3.5 h-3.5 mr-1.5 text-sage shrink-0" />
@@ -1780,6 +1944,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, propertyUrl, style,
       
       <div className={`flex items-center justify-between ${compact ? 'pt-3 border-t border-sand-100' : 'pt-2 border-0'}`}>
         <div>
+          {property.has_units && <span className="mr-1.5 text-[10px] font-medium text-charcoal-muted">Starting from</span>}
           <span className={`${compact ? 'text-xl text-terracotta' : 'text-[15px] text-charcoal'} font-bold tracking-tight`}>
             ₹{getCustomerNightlyPrice(property).toLocaleString('en-IN')}
           </span>

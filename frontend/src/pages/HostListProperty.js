@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, uploadAPI, couponAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Check,
+  ChevronDown,
   CheckCircle2,
   ShieldCheck,
   AlertCircle,
@@ -433,6 +434,15 @@ const TimePicker12h = ({ value, onChange }) => {
   );
 };
 
+const makeUnitId = () => `unit_${Math.random().toString(36).slice(2, 10)}`;
+
+const slugifyAmenity = (label) =>
+  String(label || '')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+
 const initialForm = {
   title: '',
   description: '',
@@ -449,6 +459,8 @@ const initialForm = {
   nearby_places: [],
   area_sqft: '',
   max_guests: 6,
+  has_units: false,
+  units: [],
   price_per_night: '',
   pricing_display_mode: 'per_night',
   per_person_price: '',
@@ -631,19 +643,34 @@ const HostListProperty = () => {
   const [editingRuleIndex, setEditingRuleIndex] = useState(null);
   const [editingRuleValue, setEditingRuleValue] = useState('');
   const [newAmenityLabel, setNewAmenityLabel] = useState('');
-  const subscriptionTargetParams = useMemo(
-    () => {
-      const areaSqft = Number(form.area_sqft);
-        return {
-          plan_type: getTargetSubscriptionPlanType(form.category, form.bhk_type),
-          property_category: form.category,
-          property_type: form.property_type,
-          bhk_type: form.bhk_type,
-          ...(Number.isFinite(areaSqft) && areaSqft > 0 ? { area_sqft: areaSqft } : {}),
-        };
-      },
-    [form.category, form.property_type, form.bhk_type, form.area_sqft]
-  );
+  const subscriptionTargets = useMemo(() => {
+    const buildTarget = (bhkType, area) => {
+      const areaSqft = Number(area);
+      return {
+        plan_type: getTargetSubscriptionPlanType(form.category, bhkType),
+        property_category: form.category,
+        property_type: form.property_type,
+        bhk_type: bhkType,
+        ...(Number.isFinite(areaSqft) && areaSqft > 0 ? { area_sqft: areaSqft } : {}),
+      };
+    };
+    const hasUnitsMode = form.category !== 'event_venue' && !!form.has_units;
+    if (hasUnitsMode && (form.units || []).length) {
+      const seen = new Set();
+      const targets = [];
+      (form.units || []).forEach((u) => {
+        const target = buildTarget(u.bhk_type || form.bhk_type, u.area_sqft);
+        const key = JSON.stringify(target);
+        if (!seen.has(key)) {
+          seen.add(key);
+          targets.push(target);
+        }
+      });
+      return targets;
+    }
+    return [buildTarget(form.bhk_type, form.area_sqft)];
+  }, [form.category, form.property_type, form.bhk_type, form.area_sqft, form.has_units, form.units]);
+  const subscriptionTargetsKey = JSON.stringify(subscriptionTargets);
 
   useEffect(() => {
     localStorage.setItem(`list_property_step_${draftStorageId}`, String(step));
@@ -737,6 +764,15 @@ const HostListProperty = () => {
             nearby_places: p.nearby_places || [],
             area_sqft: p.area_sqft !== null && p.area_sqft !== undefined ? String(p.area_sqft) : '',
             max_guests: p.max_guests !== null && p.max_guests !== undefined ? String(p.max_guests) : 6,
+            has_units: !!p.has_units,
+            units: (p.units || []).map((u) => ({
+              unit_id: u.unit_id || makeUnitId(),
+              name: u.name || '',
+              area_sqft: u.area_sqft !== null && u.area_sqft !== undefined ? String(u.area_sqft) : '',
+              max_guests: u.max_guests !== null && u.max_guests !== undefined ? String(u.max_guests) : '2',
+              bhk_type: u.bhk_type || '',
+              price_per_night: u.price_per_night !== null && u.price_per_night !== undefined ? String(u.price_per_night) : '',
+            })),
             price_per_night: p.price_per_night !== null && p.price_per_night !== undefined ? String(p.price_per_night) : '',
             pricing_display_mode: p.pricing_display_mode || 'per_night',
             per_person_price: p.per_person_price !== null && p.per_person_price !== undefined ? String(p.per_person_price) : '',
@@ -786,10 +822,24 @@ const HostListProperty = () => {
   }, [refreshUser]);
 
   useEffect(() => {
-    subscriptionAPI.getPlans(subscriptionTargetParams).then((r) => setPlans(r.data.plans || [])).catch(() => {});
-    couponAPI.getSubscriptionCoupons(subscriptionTargetParams).then((r) => setSubscriptionCoupons(r.data.coupons || [])).catch(() => {});
+    let cancelled = false;
+    const mergeById = (lists, idKey) => {
+      const seen = new Set();
+      return lists.flat().filter((item) => {
+        const id = item?.[idKey];
+        if (!id || seen.has(id)) return false;
+        seen.add(id);
+        return true;
+      });
+    };
+    Promise.all(subscriptionTargets.map((t) => subscriptionAPI.getPlans(t).then((r) => r.data.plans || []).catch(() => [])))
+      .then((lists) => { if (!cancelled) setPlans(mergeById(lists, 'plan_id')); });
+    Promise.all(subscriptionTargets.map((t) => couponAPI.getSubscriptionCoupons(t).then((r) => r.data.coupons || []).catch(() => [])))
+      .then((lists) => { if (!cancelled) setSubscriptionCoupons(mergeById(lists, 'code')); });
     setSubscriptionCouponCode('');
-  }, [subscriptionTargetParams]);
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subscriptionTargetsKey]);
 
   // Auto-detect and remove duplicates with a popup
   useEffect(() => {
@@ -817,6 +867,36 @@ const HostListProperty = () => {
   const isHostManageMode = !!editPropertyId && HOST_MANAGE_EDITABLE_STATUSES.includes(editingPropertyStatus) && user?.role !== 'admin';
   const firstManageStep = 0;
   const lastManageStep = STEPS.length - 1;
+  const unitsActive = form.category !== 'event_venue' && !!form.has_units;
+  const unitBhkOptions = (CATEGORY_DATA[form.category] || CATEGORY_DATA.residential).bhkTypes;
+
+  const addUnit = () => {
+    const next = {
+      unit_id: makeUnitId(),
+      name: '',
+      area_sqft: '',
+      max_guests: '2',
+      bhk_type: unitBhkOptions[0]?.value || '',
+      price_per_night: '',
+    };
+    update({ units: [...(form.units || []), next] });
+  };
+
+  const updateUnit = (unitId, patch) => {
+    update({ units: (form.units || []).map((u) => (u.unit_id === unitId ? { ...u, ...patch } : u)) });
+  };
+
+  const removeUnit = (unitId) => {
+    update({ units: (form.units || []).filter((u) => u.unit_id !== unitId) });
+  };
+
+  const applyFirstUnitPriceToAll = () => {
+    const units = form.units || [];
+    if (!units.length) return;
+    const firstPrice = units[0].price_per_night;
+    update({ units: units.map((u) => ({ ...u, price_per_night: firstPrice })) });
+  };
+
   const canEditCurrentStep = !isHostManageMode || HOST_MANAGE_EDITABLE_STEP_KEYS.includes(STEPS[step]?.key);
   const isLastAllowedStep = step >= lastManageStep;
 
@@ -913,39 +993,53 @@ const HostListProperty = () => {
       }
     }
 
-    // Extract coordinates from URL
-    // Pattern 1: @18.5245649,73.8055681
-    let match = processUrl.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
-    if (!match) {
-      // Pattern 2: q=18.5245649,73.8055681
-      match = processUrl.match(/[?&]q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-    }
-    if (!match) {
-      // Pattern 3: !3d18.5245649!4d73.8055681
-      match = processUrl.match(/!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/);
+    // Extract coordinates from URL. Prefer the place pin (!3d..!4d..) over the
+    // map viewport centre (@lat,lng), then fall back to q=, ll= and /place/lat,lng.
+    const coordPatterns = [
+      /!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)/,
+      /@(-?\d+\.\d+),(-?\d+\.\d+)/,
+      /[?&](?:q|ll|query|destination)=(-?\d+\.\d+),(-?\d+\.\d+)/,
+      /\/place\/(-?\d+\.\d+),(-?\d+\.\d+)/,
+    ];
+    let match = null;
+    for (const pattern of coordPatterns) {
+      match = processUrl.match(pattern);
+      if (match) break;
     }
     
     if (match) {
       const lat = match[1];
       const lng = match[2];
 
+      let newAddress = form.address;
       let newCity = form.city;
       let newState = form.state;
       let newPin = form.pin_code;
       
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json`);
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1&zoom=18`);
         const data = await res.json();
         if (data && data.address) {
-          newCity = data.address.city || data.address.town || data.address.village || data.address.county || newCity;
-          newState = data.address.state || newState;
-          newPin = data.address.postcode || newPin;
+          const addr = data.address;
+          newCity = addr.city || addr.town || addr.village || addr.county || newCity;
+          newState = addr.state || newState;
+          newPin = addr.postcode || newPin;
+
+          const parts = [
+            addr.road,
+            addr.neighbourhood || addr.residential || addr.suburb || addr.city_district,
+          ].filter(Boolean);
+          if (parts.length > 0) {
+            newAddress = parts.join(', ');
+          } else if (data.display_name) {
+            newAddress = data.display_name.split(',').slice(0, 2).join(',').trim();
+          }
         }
       } catch (err) {
         console.error("Reverse geocoding failed", err);
       }
 
-      update({ latitude: lat, longitude: lng, city: newCity, state: newState, pin_code: newPin });
+      update({ latitude: lat, longitude: lng, address: newAddress, city: newCity, state: newState, pin_code: newPin });
       await fetchNearbyPlaces(lat, lng);
     }
   };
@@ -1035,18 +1129,22 @@ const HostListProperty = () => {
 
   const matchingPlans = useMemo(() => {
     if (!plans.length) return [];
-    const target = getTargetSubscriptionPlanType(form.category, form.bhk_type);
-    const filtered = plans.filter((p) => {
+    const fitsTarget = (p, bhkType, area) => {
+      const target = getTargetSubscriptionPlanType(form.category, bhkType);
       if (p.plan_type !== target) return false;
       if (p.property_category && p.property_category !== form.category) return false;
       if (p.property_type && p.property_type !== form.property_type) return false;
-      if (p.bhk_type && p.bhk_type !== form.bhk_type) return false;
-      if (!subscriptionSqftMatches(p.sqft_range, form.area_sqft)) return false;
+      if (p.bhk_type && p.bhk_type !== bhkType) return false;
+      if (!subscriptionSqftMatches(p.sqft_range, area)) return false;
       return true;
-    });
-    if (filtered.length) return filtered;
-    return [];
-  }, [plans, form.category, form.property_type, form.bhk_type, form.area_sqft]);
+    };
+    const hasUnitsMode = form.category !== 'event_venue' && !!form.has_units && (form.units || []).length > 0;
+    if (hasUnitsMode) {
+      // One subscription covers the whole property: offer every plan that fits at least one unit.
+      return plans.filter((p) => (form.units || []).some((u) => fitsTarget(p, u.bhk_type || form.bhk_type, u.area_sqft)));
+    }
+    return plans.filter((p) => fitsTarget(p, form.bhk_type, form.area_sqft));
+  }, [plans, form.category, form.property_type, form.bhk_type, form.area_sqft, form.has_units, form.units]);
 
   const getSubscriptionBreakdown = (plan = {}) => {
     const planFee = Number(plan.price_monthly) || 0;
@@ -1091,9 +1189,21 @@ const HostListProperty = () => {
     if (k === 'basics') {
       if (!form.title || form.title.length < 8) return 'Title must be at least 8 characters';
       if (!form.description || form.description.length < 30) return 'Description must be at least 30 characters';
-      if (!form.area_sqft || Number(form.area_sqft) < 50) return 'Area must be at least 50 sq.ft';
-      if (!form.max_guests || Number(form.max_guests) < 1) return 'Maximum guests must be at least 1';
-      if (Number(form.max_guests) > 1000) return 'Maximum guests cannot exceed 1000';
+      if (unitsActive) {
+        const units = form.units || [];
+        if (units.length < 1) return 'Add at least one unit';
+        for (let i = 0; i < units.length; i += 1) {
+          const u = units[i];
+          if (!String(u.name || '').trim()) return `Enter a name for unit ${i + 1}`;
+          if (!u.area_sqft || Number(u.area_sqft) < 50) return `Area of "${u.name}" must be at least 50 sq.ft`;
+          if (!u.max_guests || Number(u.max_guests) < 1) return `Maximum guests of "${u.name}" must be at least 1`;
+          if (Number(u.max_guests) > 1000) return `Maximum guests of "${u.name}" cannot exceed 1000`;
+        }
+      } else {
+        if (!form.area_sqft || Number(form.area_sqft) < 50) return 'Area must be at least 50 sq.ft';
+        if (!form.max_guests || Number(form.max_guests) < 1) return 'Maximum guests must be at least 1';
+        if (Number(form.max_guests) > 1000) return 'Maximum guests cannot exceed 1000';
+      }
     }
     if (k === 'location') {
       if (!form.address) return 'Address is required';
@@ -1113,7 +1223,13 @@ const HostListProperty = () => {
       } else {
         const minPrice = form.pricing_cycle === 'hourly' ? 10 : 100;
         const rateUnit = form.pricing_cycle === 'hourly' ? 'hour' : form.pricing_cycle === 'weekly' ? 'week' : form.pricing_cycle === 'monthly' ? 'month' : 'day';
-        if (!form.price_per_night || Number(form.price_per_night) < minPrice) {
+        if (unitsActive) {
+          for (const u of (form.units || [])) {
+            if (!u.price_per_night || Number(u.price_per_night) < minPrice) {
+              return `Minimum price for "${u.name || 'unit'}" is ₹${minPrice}/${form.category === 'residential' ? 'night' : rateUnit}`;
+            }
+          }
+        } else if (!form.price_per_night || Number(form.price_per_night) < minPrice) {
           return `Minimum price is ₹${minPrice}/${form.category === 'residential' ? 'night' : rateUnit}`;
         }
         if (!form.minimum_stay_days || form.minimum_stay_days < 1) {
@@ -1136,6 +1252,9 @@ const HostListProperty = () => {
       return 'Select at least one amenity';
     }
     if (k === 'photos') {
+      const notYouTube = (value) => value && !/(?:youtube\.com|youtu\.be)\//i.test(value);
+      if (notYouTube(form.youtube_short_url)) return 'The YouTube Short link must be a youtube.com or youtu.be link';
+      if (notYouTube(form.youtube_long_url)) return 'The YouTube video link must be a youtube.com or youtu.be link (a share.google or other short link will not play)';
       if (form.images.length < 3) return 'Add at least 3 photos';
       if (form.images.length > 15) return 'Maximum 15 photos allowed';
       
@@ -1405,12 +1524,25 @@ const HostListProperty = () => {
 
   /* Helper to build payload */
   const buildPropertyPayload = () => {
+    const cleanUnits = unitsActive
+      ? (form.units || []).map((u) => ({
+          unit_id: u.unit_id,
+          name: String(u.name || '').trim(),
+          area_sqft: u.area_sqft ? Number(u.area_sqft) : null,
+          max_guests: Number(u.max_guests) || 1,
+          bhk_type: u.bhk_type || null,
+          price_per_night: u.price_per_night ? Number(u.price_per_night) : null,
+        }))
+      : [];
+    const unitPrices = cleanUnits.map((u) => u.price_per_night).filter((v) => v !== null && v > 0);
     return {
+      has_units: unitsActive,
+      units: cleanUnits,
       title: form.title,
       description: form.description,
       property_type: form.property_type,
       category: form.category,
-      bhk_type: form.bhk_type,
+      bhk_type: unitsActive ? (cleanUnits[0]?.bhk_type || form.bhk_type) : form.bhk_type,
       address: form.address,
       city: form.city,
       state: form.state,
@@ -1419,9 +1551,9 @@ const HostListProperty = () => {
       longitude: form.longitude ? Number(form.longitude) : null,
       google_maps_url: form.google_maps_url || null,
       nearby_places: form.nearby_places || [],
-      area_sqft: Number(form.area_sqft),
-      max_guests: Number(form.max_guests),
-      price_per_night: Number(form.price_per_night),
+      area_sqft: unitsActive ? Number(cleanUnits[0]?.area_sqft || 0) : Number(form.area_sqft),
+      max_guests: unitsActive ? Math.max(...cleanUnits.map((u) => u.max_guests), 1) : Number(form.max_guests),
+      price_per_night: unitsActive ? (unitPrices.length ? Math.min(...unitPrices) : 0) : Number(form.price_per_night),
       pricing_display_mode: 'per_night',
       per_person_price: form.category === 'event_venue' ? null : (form.per_person_price ? Number(form.per_person_price) : null),
       extra_guest_price: form.category === 'event_venue' ? null : (form.extra_guest_price ? Number(form.extra_guest_price) : null),
@@ -1458,6 +1590,8 @@ const HostListProperty = () => {
   const buildHostManagePayload = () => {
     const fullPayload = buildPropertyPayload();
     return {
+      has_units: fullPayload.has_units,
+      units: fullPayload.units,
       price_per_night: fullPayload.price_per_night,
       pricing_display_mode: fullPayload.pricing_display_mode,
       per_person_price: fullPayload.per_person_price,
@@ -1827,49 +1961,147 @@ const HostListProperty = () => {
                 <p className="text-xs font-semibold text-slate-500">ex. Cozy 2BHK with a sunset view</p>
               </div>
               <div className={`grid grid-cols-1 ${form.category === 'event_venue' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
-                <Select 
-                  label="Category" 
-                  testid="basics-category" 
-                  value={form.category} 
+                <Select
+                  label="Category"
+                  testid="basics-category"
+                  value={form.category}
                   onChange={(v) => {
                     const firstType = CATEGORY_DATA[v].propertyTypes[0].value;
                     const firstBhk = CATEGORY_DATA[v].bhkTypes[0].value;
-                    update({ category: v, property_type: firstType, bhk_type: firstBhk });
-                  }} 
+                    update({ category: v, property_type: firstType, bhk_type: firstBhk, units: [], has_units: v === 'event_venue' ? false : form.has_units });
+                  }}
                   options={[
                     { value: 'residential', label: 'Residential' },
                     { value: 'commercial', label: 'Commercial' },
                     { value: 'event_venue', label: 'Event Venue' },
-                  ]} 
+                  ]}
                 />
-                <Select 
-                  label="Property type" 
-                  testid="basics-property-type" 
-                  value={form.property_type} 
-                  onChange={(v) => update({ property_type: v })} 
-                  options={CATEGORY_DATA[form.category].propertyTypes} 
+                <Select
+                  label="Property type"
+                  testid="basics-property-type"
+                  value={form.property_type}
+                  onChange={(v) => update({ property_type: v })}
+                  options={CATEGORY_DATA[form.category].propertyTypes}
                 />
                 {form.category !== 'event_venue' && (
-                  <Select 
-                    label="BHK / Size" 
-                    testid="basics-bhk-type" 
-                    value={form.bhk_type} 
-                    onChange={(v) => update({ bhk_type: v })} 
-                    options={CATEGORY_DATA[form.category].bhkTypes} 
+                  <Select
+                    label="Listing type"
+                    testid="basics-listing-type"
+                    value={form.has_units ? 'units' : 'single'}
+                    onChange={(v) => {
+                      const hasUnits = v === 'units';
+                      const patch = { has_units: hasUnits };
+                      if (hasUnits && !(form.units || []).length) {
+                        patch.units = [{
+                          unit_id: makeUnitId(),
+                          name: '',
+                          area_sqft: '',
+                          max_guests: '2',
+                          bhk_type: unitBhkOptions[0]?.value || '',
+                          price_per_night: '',
+                        }];
+                      }
+                      update(patch);
+                    }}
+                    options={[
+                      { value: 'single', label: 'Single property (no units)' },
+                      { value: 'units', label: 'Property with units' },
+                    ]}
                   />
                 )}
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input type="number" label="Area (sq.ft)" testid="basics-area" value={form.area_sqft} onChange={(v) => update({ area_sqft: v })} placeholder="950" />
-                <Input
-                  type="number"
-                  label={form.category === 'commercial' ? 'Maximum staff' : form.category === 'event_venue' ? 'Maximum guest capacity' : 'Maximum guests'}
-                  testid="basics-max-guests"
-                  value={form.max_guests}
-                  onChange={(v) => update({ max_guests: v })}
-                  placeholder={form.category === 'event_venue' ? '200' : '6'}
-                />
-              </div>
+
+              {unitsActive ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="basics-units">
+                  <div className="mb-3">
+                    <h3 className="text-sm font-bold text-charcoal">Units</h3>
+                    <p className="mt-1 text-xs font-semibold text-slate-500">
+                      Add each bookable unit of this property. Area, guests and size are set per unit.
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    {(form.units || []).map((unit, index) => (
+                      <div key={unit.unit_id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm" data-testid={`basics-unit-${index}`}>
+                        <div className="mb-3 flex items-center justify-between">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">Unit {index + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => removeUnit(unit.unit_id)}
+                            disabled={(form.units || []).length <= 1}
+                            className="text-xs font-bold text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30"
+                            data-testid={`basics-unit-remove-${index}`}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <Input
+                          label="Unit name"
+                          testid={`basics-unit-name-${index}`}
+                          value={unit.name}
+                          onChange={(v) => updateUnit(unit.unit_id, { name: v })}
+                          placeholder="e.g. Deluxe Room 101"
+                        />
+                        <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
+                          <Input
+                            type="number"
+                            label="Area (sq.ft)"
+                            testid={`basics-unit-area-${index}`}
+                            value={unit.area_sqft}
+                            onChange={(v) => updateUnit(unit.unit_id, { area_sqft: v })}
+                            placeholder="450"
+                          />
+                          <Input
+                            type="number"
+                            label={form.category === 'commercial' ? 'Maximum staff' : 'Maximum guests'}
+                            testid={`basics-unit-guests-${index}`}
+                            value={unit.max_guests}
+                            onChange={(v) => updateUnit(unit.unit_id, { max_guests: v })}
+                            placeholder="2"
+                          />
+                          <Select
+                            label="BHK / Size"
+                            testid={`basics-unit-bhk-${index}`}
+                            value={unit.bhk_type || unitBhkOptions[0]?.value || ''}
+                            onChange={(v) => updateUnit(unit.unit_id, { bhk_type: v })}
+                            options={unitBhkOptions}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={addUnit}
+                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-charcoal px-4 py-2.5 text-xs font-bold text-white transition hover:bg-black"
+                    data-testid="basics-add-unit"
+                  >
+                    + Add unit
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {form.category !== 'event_venue' && (
+                    <Select
+                      label="BHK / Size"
+                      testid="basics-bhk-type"
+                      value={form.bhk_type}
+                      onChange={(v) => update({ bhk_type: v })}
+                      options={CATEGORY_DATA[form.category].bhkTypes}
+                    />
+                  )}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Input type="number" label="Area (sq.ft)" testid="basics-area" value={form.area_sqft} onChange={(v) => update({ area_sqft: v })} placeholder="950" />
+                    <Input
+                      type="number"
+                      label={form.category === 'commercial' ? 'Maximum staff' : form.category === 'event_venue' ? 'Maximum guest capacity' : 'Maximum guests'}
+                      testid="basics-max-guests"
+                      value={form.max_guests}
+                      onChange={(v) => update({ max_guests: v })}
+                      placeholder={form.category === 'event_venue' ? '200' : '6'}
+                    />
+                  </div>
+                </>
+              )}
               <Textarea label="Description" testid="basics-description" value={form.description} onChange={(v) => update({ description: v })} placeholder="Describe your space, neighbourhood, what makes it special…" rows={5} />
               <div className="flex justify-end mt-1">
                 <button
@@ -2135,7 +2367,7 @@ const HostListProperty = () => {
               ) : (
                 <>
                   <div className={`grid grid-cols-1 ${form.category === 'residential' ? 'md:grid-cols-2' : 'md:grid-cols-3'} gap-4`}>
-                    <Input 
+                    {!unitsActive && (<Input 
                       type="number" 
                       label={
                         form.category === 'commercial' 
@@ -2148,7 +2380,7 @@ const HostListProperty = () => {
                       placeholder={
                         form.pricing_cycle === 'hourly' ? '500' : form.pricing_cycle === 'weekly' ? '25000' : form.pricing_cycle === 'monthly' ? '90000' : (form.category === 'commercial' ? '5000' : '3500')
                       } 
-                    />
+                    />)}
                     {form.category === 'commercial' && (
                       <Select
                         label="Pricing unit"
@@ -2191,6 +2423,52 @@ const HostListProperty = () => {
                           onChange={(v) => update({ extra_guest_price: v })}
                           placeholder="1000"
                         />
+                      </div>
+                    </div>
+                  )}
+                  {unitsActive && (
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="pricing-units">
+                      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <h3 className="text-sm font-bold text-charcoal">
+                            {form.category === 'commercial'
+                              ? `Unit prices (per ${form.pricing_cycle === 'hourly' ? 'hour' : form.pricing_cycle === 'weekly' ? 'week' : form.pricing_cycle === 'monthly' ? 'month' : 'day'})`
+                              : 'Unit prices (per night)'}
+                          </h3>
+                          <p className="mt-1 text-xs font-semibold text-slate-500">Minimum stay and extra person price above apply to every unit.</p>
+                        </div>
+                        {(form.units || []).length > 1 && (
+                          <button
+                            type="button"
+                            onClick={applyFirstUnitPriceToAll}
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs font-bold text-charcoal transition hover:bg-slate-100"
+                            data-testid="pricing-apply-all"
+                          >
+                            Apply first unit's price to all
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        {(form.units || []).map((unit, index) => (
+                          <div key={unit.unit_id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-bold text-charcoal">{unit.name || `Unit ${index + 1}`}</p>
+                              <p className="text-[11px] font-semibold text-slate-500">{unit.area_sqft ? `${unit.area_sqft} sq.ft · ` : ''}{unit.max_guests} guests</p>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-sm font-bold text-slate-500">₹</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={unit.price_per_night}
+                                onChange={(e) => updateUnit(unit.unit_id, { price_per_night: e.target.value })}
+                                placeholder="3500"
+                                className="w-28 rounded-lg border px-3 py-2 text-sm font-bold text-charcoal"
+                                data-testid={`pricing-unit-price-${index}`}
+                              />
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -2911,6 +3189,9 @@ const HostListProperty = () => {
                       placeholder="https://www.youtube.com/shorts/..."
                       className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none shadow-sm transition-all focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     />
+                    {form.youtube_short_url && !/(?:youtube\.com|youtu\.be)\//i.test(form.youtube_short_url) && (
+                      <p className="mt-1.5 text-xs font-semibold text-red-600">This is not a YouTube link, so the video will not play.</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-bold uppercase tracking-wider text-charcoal-light block mb-2">
@@ -2923,6 +3204,9 @@ const HostListProperty = () => {
                       placeholder="https://www.youtube.com/watch?v=..."
                       className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none shadow-sm transition-all focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                     />
+                    {form.youtube_long_url && !/(?:youtube\.com|youtu\.be)\//i.test(form.youtube_long_url) && (
+                      <p className="mt-1.5 text-xs font-semibold text-red-600">This is not a YouTube link, so the video will not play. Open the video on YouTube, tap Share, and paste that youtube.com or youtu.be link.</p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -2992,11 +3276,19 @@ const HostListProperty = () => {
                   CATEGORY_DATA[form.category]?.bhkTypes.find(b => b.value === form.bhk_type)?.label || form.bhk_type
                 }`} 
               />
+              {unitsActive && (
+                <ReviewBlock
+                  label="Units"
+                  value={(form.units || []).map((u) => `${u.name || 'Unit'} (₹${u.price_per_night || 0})`).join(', ')}
+                />
+              )}
               <ReviewBlock label="Location" value={formatAddress(form.address, form.city, form.state, form.pin_code)} />
               <ReviewBlock 
-                label="Price" 
+                label={unitsActive ? 'Starting price' : 'Price'} 
                 value={
-                  form.category === 'commercial' || form.category === 'event_venue'
+                  unitsActive
+                    ? `From ₹${Math.min(...(form.units || []).map((u) => Number(u.price_per_night) || 0).filter(Boolean), Infinity) === Infinity ? 0 : Math.min(...(form.units || []).map((u) => Number(u.price_per_night) || 0).filter(Boolean))}/${form.category === 'commercial' ? (form.pricing_cycle === 'hourly' ? 'hr' : form.pricing_cycle === 'weekly' ? 'week' : form.pricing_cycle === 'monthly' ? 'month' : 'day') : 'night'} · min ${form.minimum_stay_days}`
+                    : form.category === 'commercial' || form.category === 'event_venue'
                     ? `₹${form.price_per_night}/${form.pricing_cycle === 'hourly' ? 'hr' : form.pricing_cycle === 'weekly' ? 'week' : form.pricing_cycle === 'monthly' ? 'month' : 'day'} · min ${form.minimum_stay_days} ${form.pricing_cycle === 'hourly' ? 'hour(s)' : form.pricing_cycle === 'weekly' ? 'week(s)' : form.pricing_cycle === 'monthly' ? 'month(s)' : 'day(s)'}`
                     : `₹${form.price_per_night}/night · min ${form.minimum_stay_days} night(s)`
                 } 
@@ -3492,21 +3784,76 @@ const Textarea = ({ label, testid, value, onChange, placeholder, rows = 3 }) => 
   </div>
 );
 
-const Select = ({ label, testid, value, onChange, options }) => (
-  <div>
-    <label className="text-xs uppercase tracking-wide text-charcoal-light">{label}</label>
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full border rounded-lg px-3 py-2 mt-1 bg-white"
-      data-testid={testid}
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
-      ))}
-    </select>
-  </div>
-);
+const Select = ({ label, testid, value, onChange, options }) => {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const handlePointer = (event) => {
+      if (rootRef.current && !rootRef.current.contains(event.target)) setOpen(false);
+    };
+    const handleKey = (event) => {
+      if (event.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('mousedown', handlePointer);
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('mousedown', handlePointer);
+      document.removeEventListener('keydown', handleKey);
+    };
+  }, [open]);
+
+  const selected = options.find((o) => String(o.value) === String(value));
+
+  return (
+    <div ref={rootRef} className="relative">
+      <label className="text-xs uppercase tracking-wide text-charcoal-light">{label}</label>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`mt-1 flex w-full items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left transition ${
+          open ? 'border-slate-900 ring-2 ring-slate-900/10' : 'border-gray-300 hover:border-gray-400'
+        }`}
+        data-testid={testid}
+      >
+        <span className={`truncate ${selected ? 'text-charcoal' : 'text-charcoal-muted'}`}>
+          {selected ? selected.label : 'Select'}
+        </span>
+        <ChevronDown className={`h-4 w-4 shrink-0 text-slate-500 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute left-0 right-0 z-50 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.14)]"
+        >
+          {options.map((o) => {
+            const isSelected = String(o.value) === String(value);
+            return (
+              <li key={o.value} role="option" aria-selected={isSelected}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(o.value);
+                    setOpen(false);
+                  }}
+                  className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
+                    isSelected ? 'bg-slate-100 font-semibold text-charcoal hover:bg-slate-900 hover:text-white' : 'text-charcoal hover:bg-slate-900 hover:text-white'
+                  }`}
+                >
+                  <span className="truncate">{o.label}</span>
+                  {isSelected && <Check className="h-4 w-4 shrink-0" />}
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+};
 
 const Toggle = ({ label, testid, checked, onChange }) => (
   <label className="flex items-center space-x-2 text-sm cursor-pointer" data-testid={testid}>

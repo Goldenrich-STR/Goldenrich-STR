@@ -483,3 +483,56 @@
   }
 }
 
+
+
+/* Attention cue when a guest tries to pick dates before choosing a unit */
+@keyframes unit-attention-shake {
+  0%, 100% { transform: translateX(0); }
+  15% { transform: translateX(-6px); }
+  30% { transform: translateX(5px); }
+  45% { transform: translateX(-4px); }
+  60% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+}
+
+@keyframes unit-attention-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.45); }
+  70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+.unit-attention {
+  border-color: #ef4444 !important;
+  animation: unit-attention-shake 0.5s ease-in-out, unit-attention-pulse 0.9s ease-out 2;
+}
+
+
+/* Discover page: compact search pill <-> full search bar */
+@keyframes search-drop {
+  from { opacity: 0; transform: translateY(-14px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes search-pill-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-search-drop { animation: search-drop 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-search-pill { animation: search-pill-in 0.25s ease-out both; }
+
+
+/* Chat assistant: shimmering "thinking" text */
+@keyframes ai-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+.ai-shimmer {
+  background: linear-gradient(90deg, #5f6368 30%, #9b72cb 45%, #4285f4 55%, #5f6368 70%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: ai-shimmer 2.2s linear infinite;
+}

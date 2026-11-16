@@ -177,6 +177,21 @@ def _active_booking_query(
     check_in_iso: str,
     check_out_iso: str,
     *,
+    unit_id: str | None = None,
+    **kwargs,
+) -> dict:
+    """Conflicting-booking query; for multi-unit properties only the same unit conflicts."""
+    query = _active_booking_query_for_property(property_id, check_in_iso, check_out_iso, **kwargs)
+    if unit_id:
+        query["unit_id"] = unit_id
+    return query
+
+
+def _active_booking_query_for_property(
+    property_id: str,
+    check_in_iso: str,
+    check_out_iso: str,
+    *,
     category: str = "",
     pricing_cycle: str = "",
     selected_slot: str | None = None,
@@ -274,6 +289,26 @@ def _blocked_date_query(
     }
 
 
+def _apply_property_unit(property_dict: dict, unit_id: str | None) -> dict | None:
+    """For multi-unit properties, price and capacity come from the selected unit."""
+    if not property_dict.get("has_units") or not property_dict.get("units"):
+        return None
+    if not unit_id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Please select a unit to book")
+    unit = next((u for u in property_dict["units"] if isinstance(u, dict) and u.get("unit_id") == unit_id), None)
+    if not unit:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Selected unit was not found")
+    unit_price = unit.get("price_per_night")
+    if unit_price not in (None, ""):
+        property_dict["price_per_night"] = float(unit_price)
+        property_dict["base_price"] = float(unit_price)
+    if unit.get("max_guests"):
+        property_dict["max_guests"] = int(unit["max_guests"])
+    if unit.get("area_sqft"):
+        property_dict["area_sqft"] = int(unit["area_sqft"])
+    return unit
+
+
 class ConfirmPaymentRequest(BaseModel):
     booking_id: str
     razorpay_payment_id: str
@@ -283,6 +318,7 @@ class ConfirmPaymentRequest(BaseModel):
 
 class BookingQuoteRequest(BaseModel):
     property_id: str
+    unit_id: Optional[str] = None
     check_in_date: str
     check_out_date: str
     number_of_guests: int = 1
@@ -500,6 +536,7 @@ async def _build_booking_quote(
     if property_dict.get("status") != PropertyStatus.LIVE.value:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Property is not available for booking")
     booking_mode = _normalize_booking_mode(property_dict)
+    selected_unit = _apply_property_unit(property_dict, payload.unit_id)
 
     try:
         check_in = datetime.fromisoformat(payload.check_in_date).date()
@@ -527,6 +564,7 @@ async def _build_booking_quote(
         selected_slot=payload.selected_slot,
         start_time=payload.start_time,
         end_time=payload.end_time,
+        unit_id=(selected_unit or {}).get("unit_id"),
     ))
     if existing_booking:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Selected dates are no longer available")
@@ -698,6 +736,7 @@ async def create_booking(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Property is not available for booking"
             )
+        selected_unit = _apply_property_unit(property_dict, booking_data.unit_id)
         booking_mode = _normalize_booking_mode(property_dict)
 
         # Check if subscription has expired
@@ -756,6 +795,7 @@ async def create_booking(
             selected_slot=booking_data.selected_slot,
             start_time=booking_data.start_time,
             end_time=booking_data.end_time,
+            unit_id=(selected_unit or {}).get("unit_id"),
         ))
         
         if existing_booking:
@@ -907,6 +947,8 @@ async def create_booking(
         booking_broker_lg_code = property_dict.get("broker_lg_code") or (owner or {}).get("broker_lg_code") or (owner or {}).get("broker_code")
         booking = Booking(
             property_id=booking_data.property_id,
+            unit_id=(selected_unit or {}).get("unit_id"),
+            unit_name=(selected_unit or {}).get("name"),
             guest_id=current_user["user_id"],
             host_id=property_dict["owner_id"],
             broker_id=booking_broker_id,
@@ -2270,6 +2312,7 @@ class ApplyCouponRequest(BaseModel):
 class BookingPricingQuoteRequest(BaseModel):
     host_amount: float
     property_id: Optional[str] = None
+    unit_id: Optional[str] = None
     tax_slab_base_amount: Optional[float] = None
     charge_base_amount: Optional[float] = None
     pricing_units: Optional[int] = 1
@@ -2294,6 +2337,9 @@ async def booking_pricing_quote(
     nightly_prices = []
     if payload.property_id:
         property_dict = await db.properties.find_one({"property_id": payload.property_id}, {"_id": 0})
+        if property_dict and property_dict.get("has_units") and property_dict.get("units"):
+            first_unit_id = (property_dict["units"][0] or {}).get("unit_id")
+            _apply_property_unit(property_dict, payload.unit_id or first_unit_id)
         owner = None
         owner_id = (property_dict or {}).get("owner_id")
         if owner_id:

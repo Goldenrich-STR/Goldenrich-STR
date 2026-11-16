@@ -245,6 +245,9 @@ export const authAPI = {
 
 // Property API
 export const propertyAPI = {
+  getPublicStats: () =>
+    apiClient.get('/properties/public-stats'),
+
   searchProperties: (params) =>
     apiClient.get('/properties/search', { params }),
   
@@ -450,8 +453,8 @@ export const calendarAPI = {
       params: { month, year },
     }),
 
-  getPublicNightlyPrices: (propertyId, month) =>
-    apiClient.get(`/v1/price-engine/public-calendar/${propertyId}`, { params: { month } }),
+  getPublicNightlyPrices: (propertyId, month, unitId) =>
+    apiClient.get(`/v1/price-engine/public-calendar/${propertyId}`, { params: { month, ...(unitId ? { unit_id: unitId } : {}) } }),
 
   listExternalCalendars: (propertyId) =>
     apiClient.get(`/calendar/properties/${propertyId}/external-calendars`),

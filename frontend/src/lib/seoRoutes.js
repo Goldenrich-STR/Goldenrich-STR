@@ -2,6 +2,7 @@
 const CANONICAL_SEO_ROUTE_MAP = {
   '/property/residential-bungalows': { category: 'residential', property_type: 'villa', title: 'Bungalows for Rent', h1: 'Bungalows for Rent' },
   '/property/residential/bungalows': { category: 'residential', property_type: 'villa', title: 'Bungalows for Rent', h1: 'Bungalows for Rent' },
+  '/property/residential/homestays': { category: 'residential', property_type: 'not:villa,farmhouse', title: 'Homestays for Rent', h1: 'Homestays for Rent' },
   '/property/residential/private-house': { category: 'residential', property_type: 'independent_house', title: 'Private Houses for Rent', h1: 'Private Houses' },
   '/property/coworking-desk': { category: 'commercial', property_type: 'co_working', title: 'Coworking Desks', h1: 'Coworking Desks' },
   '/property/meeting-rooms': { category: 'commercial', property_type: 'meeting_room', title: 'Meeting Rooms', h1: 'Meeting Rooms' },
