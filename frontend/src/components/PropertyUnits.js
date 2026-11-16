@@ -25,22 +25,22 @@ const TIER_RIBBON = {
 };
 
 /** Tier ribbon in the same shape as the property-type ribbon, one colour per tier. */
-export const TierBadge = ({ tier }) => {
+export const TierBadge = ({ tier, price }) => {
   const look = TIER_RIBBON[tier];
   if (!look) return null;
   return (
     <div className="relative inline-block">
       <div className={`flex w-max items-center gap-1 rounded-r-full bg-gradient-to-b ${look.bar} py-[3px] pl-2 pr-2 text-[9px] font-bold leading-none text-white shadow-md`}>
         <BadgeCheck className="h-2.5 w-2.5 shrink-0" strokeWidth={2.25} />
-        {UNIT_TIER_LABELS[tier]}
+        {UNIT_TIER_LABELS[tier]}{price > 0 ? ` · ${formatPrice(price)}` : ''}
       </div>
       <span className={`absolute left-0 top-[calc(100%-1px)] h-[4px] w-1 ${look.fold} [clip-path:polygon(0_0,100%_0,100%_100%)]`} aria-hidden="true" />
     </div>
   );
 };
 
-/** Tier chips for property cards: each tier the property has, with its lowest price. */
-export const TierChips = ({ property, className = '' }) => {
+/** Tier ribbons inside the property card's text area, each with its lowest price. */
+export const TierOverlay = ({ property, className = 'absolute left-3 top-12 z-30' }) => {
   const units = getPropertyUnits(property);
   const lowest = {};
   units.forEach((unit) => {
@@ -51,16 +51,12 @@ export const TierChips = ({ property, className = '' }) => {
   const tiers = Object.keys(UNIT_TIER_LABELS).filter((t) => t in lowest);
   if (!tiers.length) return null;
   return (
-    <div className={`flex flex-wrap items-center gap-x-3 gap-y-2 ${className}`}>
-      {tiers.map((tier) => (
-        <span key={tier} className="flex items-center gap-1.5">
-          <TierBadge tier={tier} />
-          {lowest[tier] > 0 && <span className="text-[11px] font-semibold text-charcoal">{formatPrice(lowest[tier])}</span>}
-        </span>
-      ))}
+    <div className={`pointer-events-none flex flex-col items-start gap-1.5 ${className}`}>
+      {tiers.map((tier) => <TierBadge key={tier} tier={tier} price={lowest[tier]} />)}
     </div>
   );
 };
+
 
 /** Compact capsules for property cards: "Room 101 · ₹3,500". */
 export const UnitChips = ({ property, max = 3, className = '' }) => {
