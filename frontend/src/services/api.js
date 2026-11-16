@@ -243,6 +243,11 @@ export const authAPI = {
     apiClient.post('/api/auth/reset-password', { token, password }),
 };
 
+// Holidays (festivals for the date pickers)
+export const holidayAPI = {
+  get: (year) => apiClient.get(`/holidays/${year}`),
+};
+
 // Property API
 export const propertyAPI = {
   getPublicStats: () =>

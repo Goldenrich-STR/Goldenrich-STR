@@ -434,6 +434,11 @@ const TimePicker12h = ({ value, onChange }) => {
   );
 };
 
+export const UNIT_TIERS = [
+  { value: 'standard', label: 'Standard' },
+  { value: 'deluxe', label: 'Deluxe' },
+  { value: 'premium', label: 'Premium' },
+];
 const makeUnitId = () => `unit_${Math.random().toString(36).slice(2, 10)}`;
 
 const slugifyAmenity = (label) =>
@@ -771,6 +776,7 @@ const HostListProperty = () => {
               area_sqft: u.area_sqft !== null && u.area_sqft !== undefined ? String(u.area_sqft) : '',
               max_guests: u.max_guests !== null && u.max_guests !== undefined ? String(u.max_guests) : '2',
               bhk_type: u.bhk_type || '',
+              tier: u.tier || '',
               price_per_night: u.price_per_night !== null && u.price_per_night !== undefined ? String(u.price_per_night) : '',
             })),
             price_per_night: p.price_per_night !== null && p.price_per_night !== undefined ? String(p.price_per_night) : '',
@@ -877,9 +883,19 @@ const HostListProperty = () => {
       area_sqft: '',
       max_guests: '2',
       bhk_type: unitBhkOptions[0]?.value || '',
+      tier: 'standard',
       price_per_night: '',
     };
     update({ units: [...(form.units || []), next] });
+  };
+
+  const [newUnit, setNewUnit] = useState({ name: '', area_sqft: '', max_guests: '2', tier: 'standard', price_per_night: '' });
+  const submitNewUnit = () => {
+    if (!newUnit.name.trim()) { setError('Enter a name for the new unit'); return; }
+    if (!Number(newUnit.price_per_night)) { setError('Enter a price for the new unit'); return; }
+    update({ units: [...(form.units || []), { unit_id: makeUnitId(), bhk_type: unitBhkOptions[0]?.value || '', ...newUnit, name: newUnit.name.trim() }] });
+    setNewUnit({ name: '', area_sqft: '', max_guests: '2', tier: 'standard', price_per_night: '' });
+    setError('');
   };
 
   const updateUnit = (unitId, patch) => {
@@ -1531,6 +1547,7 @@ const HostListProperty = () => {
           area_sqft: u.area_sqft ? Number(u.area_sqft) : null,
           max_guests: Number(u.max_guests) || 1,
           bhk_type: u.bhk_type || null,
+          tier: u.tier || null,
           price_per_night: u.price_per_night ? Number(u.price_per_night) : null,
         }))
       : [];
@@ -2041,6 +2058,15 @@ const HostListProperty = () => {
                           onChange={(v) => updateUnit(unit.unit_id, { name: v })}
                           placeholder="e.g. Deluxe Room 101"
                         />
+                        <div className="mt-3">
+                          <Select
+                            label="Tier"
+                            testid={`basics-unit-tier-${index}`}
+                            value={unit.tier || 'standard'}
+                            onChange={(v) => updateUnit(unit.unit_id, { tier: v })}
+                            options={UNIT_TIERS}
+                          />
+                        </div>
                         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
                           <Input
                             type="number"
@@ -2454,6 +2480,10 @@ const HostListProperty = () => {
                             <div className="min-w-0">
                               <p className="truncate text-sm font-bold text-charcoal">{unit.name || `Unit ${index + 1}`}</p>
                               <p className="text-[11px] font-semibold text-slate-500">{unit.area_sqft ? `${unit.area_sqft} sq.ft · ` : ''}{unit.max_guests} guests</p>
+                              <select value={unit.tier || ''} onChange={(e) => updateUnit(unit.unit_id, { tier: e.target.value })} className="mt-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-charcoal" aria-label="Unit tier" data-testid={`pricing-unit-tier-${index}`}>
+                                <option value="">No tier</option>
+                                {UNIT_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                              </select>
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-sm font-bold text-slate-500">₹</span>
@@ -2469,6 +2499,19 @@ const HostListProperty = () => {
                             </div>
                           </div>
                         ))}
+                      </div>
+                      <div className="mt-4 rounded-xl border border-dashed border-slate-300 bg-white p-4" data-testid="pricing-add-unit">
+                        <p className="mb-3 text-sm font-bold text-charcoal">Add a new unit</p>
+                        <div className="grid grid-cols-2 gap-3 md:grid-cols-6">
+                          <input value={newUnit.name} onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })} placeholder="Unit name" className="col-span-2 rounded-lg border px-3 py-2 text-sm" data-testid="new-unit-name" />
+                          <input type="number" min="0" value={newUnit.area_sqft} onChange={(e) => setNewUnit({ ...newUnit, area_sqft: e.target.value })} placeholder="Area sq.ft" className="rounded-lg border px-3 py-2 text-sm" />
+                          <input type="number" min="1" value={newUnit.max_guests} onChange={(e) => setNewUnit({ ...newUnit, max_guests: e.target.value })} placeholder="Guests" className="rounded-lg border px-3 py-2 text-sm" />
+                          <select value={newUnit.tier} onChange={(e) => setNewUnit({ ...newUnit, tier: e.target.value })} className="rounded-lg border px-3 py-2 text-sm" aria-label="Tier">
+                            {UNIT_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+                          </select>
+                          <input type="number" min="0" value={newUnit.price_per_night} onChange={(e) => setNewUnit({ ...newUnit, price_per_night: e.target.value })} placeholder="Price" className="rounded-lg border px-3 py-2 text-sm" data-testid="new-unit-price" />
+                        </div>
+                        <button type="button" onClick={submitNewUnit} className="mt-3 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white" data-testid="new-unit-add">Add unit</button>
                       </div>
                     </div>
                   )}

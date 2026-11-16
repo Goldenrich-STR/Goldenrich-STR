@@ -12,6 +12,7 @@ import LanguageSelector from '../components/LanguageSelector';
 import { MobileSearchPill, MobileSearchSheet } from '../components/MobileSearch';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatAddress } from '../lib/displayLabels';
 import { getPropertySlug, getPropertyUrl } from '../lib/propertySlug';
+import { TierChips } from '../components/PropertyUnits';
 import { RatingPill, RatingCorner, TypeRibbon, SeriesRibbon, CardBadges, BestRatedTag } from '../components/PropertyBadges';
 import { getSeoUrlForFilters } from '../lib/seoRoutes';
 import { getRecentlyVisitedProperties, RECENTLY_VISITED_PROPERTIES_EVENT } from '../lib/recentlyVisitedProperties';
@@ -326,12 +327,13 @@ const RecentlyVisitedCard = ({ item, index, navigate, wishlist, handleWishlistTo
         </div>
         <p className="mt-1.5 flex items-center gap-1 text-[12px] text-charcoal-muted"><MapPin className="h-3.5 w-3.5 shrink-0" />{item.city || 'Maharashtra'}{item.state ? `, ${item.state}` : ''}</p>
         <p className="mt-3 text-[15px] font-semibold text-charcoal">{item.has_units && <span className="mr-1 text-[11px] font-normal text-charcoal-muted">Starting from</span>}₹{Math.round(Number(item.display_price_per_night ?? item.customer_price_per_night ?? item.price_per_night ?? item.price ?? 0)).toLocaleString('en-IN')}<span className="ml-1 text-[11px] font-normal text-charcoal-muted">/ night</span></p>
+        <TierChips property={item} className="mt-2" />
       </div>
     </article>
   );
 };
 
-const ShowcaseCard = ({ item, navigate, wishlist, handleWishlistToggle, badgeLabel }) => {
+export const ShowcaseCard = ({ item, navigate, wishlist, handleWishlistToggle, badgeLabel }) => {
   const price = Math.round(Number(
     item.display_price_per_night ??
     item.customer_price_per_night ??

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useHolidays } from '../../lib/holidays';
 
 // weeks start on Monday
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -10,22 +11,6 @@ const MONTHS = [
 ];
 const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// public holidays and big festival days, shown in blue so guests can plan long weekends
-export const HOLIDAYS = {
-  '2026-01-26': 'Republic Day',
-  '2026-03-04': 'Holi',
-  '2026-04-03': 'Good Friday',
-  '2026-05-01': 'Maharashtra Day',
-  '2026-08-15': 'Independence Day',
-  '2026-09-14': 'Ganesh Chaturthi',
-  '2026-10-02': 'Gandhi Jayanti',
-  '2026-10-20': 'Dussehra',
-  '2026-11-08': 'Diwali',
-  '2026-11-24': 'Guru Nanak Jayanti',
-  '2026-12-25': 'Christmas',
-  '2027-01-01': "New Year's Day",
-  '2027-01-26': 'Republic Day',
-};
 
 const toISO = (date) => {
   const year = date.getFullYear();
@@ -117,6 +102,8 @@ export default function DateRangePicker({
     () => new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + 1, 1),
     [visibleMonth]
   );
+  // festivals and holidays of the years on screen (worked out by the server, so they follow the year)
+  const HOLIDAYS = useHolidays([visibleMonth.getFullYear(), nextVisibleMonth.getFullYear()]);
   const cells = useMemo(() => buildMonthGrid(visibleMonth), [visibleMonth]);
   const nextMonthCells = useMemo(() => buildMonthGrid(nextVisibleMonth), [nextVisibleMonth]);
 

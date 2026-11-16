@@ -13,6 +13,7 @@ import CustomSelect from '../components/ui/CustomSelect';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { getPropertySlug, getPropertyUrl as buildPropertyUrl } from '../lib/propertySlug';
 import { getSeoRoutePreset, getSeoUrlForFilters } from '../lib/seoRoutes';
+import { TierChips } from '../components/PropertyUnits';
 import { SeriesRibbon, CardBadges, RatingCorner, BestRatedTag } from '../components/PropertyBadges';
 import PropertyPhotoSlider from '../components/PropertyPhotoSlider';
 import {
@@ -1942,6 +1943,7 @@ const PropertyCard = ({ property, compact, onHover, onClick, propertyUrl, style,
         )}
       </div>
       
+      <TierChips property={property} className="mb-2" />
       <div className={`flex items-center justify-between ${compact ? 'pt-3 border-t border-sand-100' : 'pt-2 border-0'}`}>
         <div>
           {property.has_units && <span className="mr-1.5 text-[10px] font-medium text-charcoal-muted">Starting from</span>}

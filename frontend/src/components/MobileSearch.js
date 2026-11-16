@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom';
 import { ArrowDown, ArrowLeft, ArrowUp, Building2, CalendarDays, Check, Clock, MapPin, Minus, Navigation, Plus, Search, SlidersHorizontal, ThumbsUp, Users, X } from 'lucide-react';
 import { propertyAPI } from '../services/api';
-import { HOLIDAYS } from './ui/DateRangePicker';
+import { useHolidays } from '../lib/holidays';
 
 /**
  * Phone search, in the same steps people know from other booking apps:
@@ -212,6 +212,8 @@ export const MobileSearchSheet = ({ open, onClose, value = {}, onSearch, onNearM
     const start = new Date();
     return Array.from({ length: 12 }, (_, i) => new Date(start.getFullYear(), start.getMonth() + i, 1));
   }, []);
+  const thisYear = new Date().getFullYear();
+  const HOLIDAYS = useHolidays([thisYear, thisYear + 1]);
   const holidayChips = Object.entries(HOLIDAYS).filter(([iso]) => iso >= today).slice(0, 4);
   const pickDay = (iso) => {
     if (!draft.checkIn || (draft.checkIn && draft.checkOut)) patch({ checkIn: iso, checkOut: '' });

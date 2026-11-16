@@ -71,6 +71,7 @@ class PropertyUnit(BaseModel):
     max_guests: int = 2
     bhk_type: Optional[str] = None
     price_per_night: Optional[float] = None
+    tier: Optional[str] = None  # standard | deluxe | premium
 
 class Property(BaseModel):
     property_id: str = Field(default_factory=lambda: f"prop_{uuid4().hex[:14]}")

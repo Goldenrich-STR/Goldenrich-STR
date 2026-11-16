@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
 import SEO from '../components/SEO';
 import { SeriesRibbon } from '../components/PropertyBadges';
+import { ShowcaseCard } from './LandingPage';
 import { UnitCards, getPropertyUnits } from '../components/PropertyUnits';
 import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
@@ -53,6 +54,7 @@ import {
   Percent,
   Search,
   Bath,
+  BadgeCheck,
 } from 'lucide-react';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
@@ -3351,12 +3353,9 @@ const PropertyDetail = () => {
               </p>
 
               {property.instant_booking && (
-                <div className="mt-3 p-3 rounded-2xl bg-amber-50/80 border border-amber-200/80 text-amber-900 flex items-start gap-2.5 text-left">
-                  <Zap className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-xs leading-relaxed font-semibold">
-                    <strong className="font-extrabold block text-amber-950">Instant Booking Enabled</strong>
-                    Confirmed instantly upon payment without waiting for host approval.
-                  </p>
+                <div className="mt-3 flex items-center justify-center gap-2 rounded-md bg-[#e8f3ec] px-3 py-2.5 text-center text-[12px] font-medium text-[#1f8a4c]">
+                  <BadgeCheck className="h-5 w-5 shrink-0 fill-[#22a355] text-white" strokeWidth={2.25} />
+                  <span>Instant booking: confirmed on payment, no host approval needed.</span>
                 </div>
               )}
 
@@ -3370,11 +3369,9 @@ const PropertyDetail = () => {
                 </button>
               )}
 
-              <div className="mt-6 p-4 bg-charcoal/5 rounded-2xl flex items-center space-x-3">
-                 <Shield className="w-5 h-5 text-charcoal shrink-0" />
-                 <p className="text-[9px] font-bold text-charcoal-muted uppercase leading-relaxed tracking-wider">
-                    {t('securedByProtection')}
-                 </p>
+              <div className="mt-3 flex items-center justify-center gap-2 rounded-md bg-[#e8f3ec] px-3 py-2.5 text-center text-[12px] font-medium text-[#1f8a4c]">
+                <BadgeCheck className="h-5 w-5 shrink-0 fill-[#22a355] text-white" strokeWidth={2.25} />
+                <span>{t('securedByProtection')}</span>
               </div>
             </div>
             {bookingCalendarOpen && (
@@ -3408,60 +3405,10 @@ const PropertyDetail = () => {
                 ? t('similarProperties').replace('{city}', property.city)
                 : lang === 'mr' ? 'तत्सम जागा' : lang === 'hi' ? 'समान संपत्तियां' : 'Similar Properties'}
             </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {recommended.map((prop) => {
-                const propImg = prop.images?.length 
-                  ? getImageUrl(prop.images[0].split('#')[0]) 
-                  : 'https://images.unsplash.com/photo-1503174971373-b1f69850bded?w=600';
-                return (
-                  <div 
-                    key={prop.property_id} 
-                    onClick={() => {
-                      navigate(`/property/${prop.property_id}`);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm hover:shadow-premium hover:-translate-y-1 transition-all duration-300 cursor-pointer group flex flex-col h-full"
-                  >
-                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-sand-200">
-                      <img 
-                        src={propImg} 
-                        alt={prop.title} 
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
-                      />
-                      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm px-3 py-1 rounded-full text-[9px] font-bold tracking-tight uppercase tracking-widest text-charcoal shadow-sm">
-                        {formatCategoryLabel(prop.category)}
-                      </div>
-                    </div>
-                    <div className="p-6 flex flex-col flex-1 justify-between">
-                      <div>
-                        <div className="flex justify-between items-start mb-2">
-                          <h3 className="font-bold tracking-tight text-charcoal text-base tracking-tight leading-snug line-clamp-1 group-hover:text-terracotta transition-colors">
-                            {prop.title}
-                          </h3>
-                        </div>
-                        <p className="text-xs font-bold text-charcoal-muted mb-4 flex items-center">
-                          <MapPin className="w-3.5 h-3.5 mr-1 text-terracotta" />
-                          {formatAddress(prop.address, prop.city, prop.state)}
-                        </p>
-                      </div>
-                      <div className="pt-4 border-t border-sand-100 flex justify-between items-center mt-auto">
-                        <div>
-                          <span className="text-lg font-bold tracking-tight text-charcoal">₹{Number(prop.display_price_per_night ?? prop.customer_price_per_night ?? prop.price_per_night ?? 0).toLocaleString('en-IN')}</span>
-                          <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider ml-1">
-                            {prop.category === 'event_venue' ? '/ day' : prop.category === 'commercial' ? (prop.pricing_cycle === 'hourly' ? '/ hr' : '/ day') : '/ night'}
-                          </span>
-                        </div>
-                        {prop.rating > 0 && (
-                          <div className="flex items-center space-x-1">
-                            <Star className="w-3.5 h-3.5 text-amber-500 fill-current" />
-                            <span className="text-xs font-bold tracking-tight text-charcoal">{prop.rating.toFixed(1)}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {recommended.map((prop) => (
+                <ShowcaseCard key={prop.property_id} item={prop} navigate={navigate} wishlist={wishlist} handleWishlistToggle={handleWishlistToggle} />
+              ))}
             </div>
           </div>
         )}
