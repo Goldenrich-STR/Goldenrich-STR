@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../theme.dart';
 
@@ -267,134 +268,342 @@ class _PropertyFilterDialogState extends State<PropertyFilterDialog> {
     });
   }
 
+  String _labelFor(List<Map<String, String>> options, String value) {
+    for (final o in options) {
+      if (o['value'] == value) return o['label'] ?? value;
+    }
+    return value;
+  }
+
+  List<String> get _selectedSummary {
+    final out = <String>[];
+    if (_selectedCategory.isNotEmpty) {
+      out.add(_labelFor(
+          _categories.map((e) => Map<String, String>.from(e)).toList(),
+          _selectedCategory));
+    }
+    if (_selectedPropertyType.isNotEmpty) {
+      out.add(_labelFor(_propertyTypes, _selectedPropertyType));
+    }
+    if (_selectedBhkType.isNotEmpty) {
+      out.add(_labelFor(_bhkTypes, _selectedBhkType));
+    }
+    if (_minPriceController.text.isNotEmpty ||
+        _maxPriceController.text.isNotEmpty) {
+      out.add(
+          '\u20b9${_minPriceController.text.isEmpty ? '0' : _minPriceController.text} - ${_maxPriceController.text.isEmpty ? 'Any' : _maxPriceController.text}');
+    }
+    if (_instantBooking) out.add('Instant Book');
+    if (_petFriendly) out.add('Pet friendly');
+    out.addAll(_selectedAmenities.map(_amenityLabel));
+    return out;
+  }
+
+  String _amenityLabel(String raw) {
+    final text = raw.replaceAll('_', ' ');
+    return text.isEmpty ? raw : '${text[0].toUpperCase()}${text.substring(1)}';
+  }
+
+  Widget _title(String title, [String? sub]) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title,
+              style: GoogleFonts.inter(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1B1924))),
+          if (sub != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 2),
+              child: Text(sub,
+                  style: GoogleFonts.inter(
+                      fontSize: 12, color: const Color(0xFF6B6B6B))),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: active ? const Color(0xFF1B1924) : Colors.white,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+              color: active
+                  ? const Color(0xFF1B1924)
+                  : const Color(0xFFD5D5D5)),
+        ),
+        child: Text(label,
+            style: GoogleFonts.inter(
+                fontSize: 13.5,
+                fontWeight: FontWeight.w500,
+                color: active ? Colors.white : const Color(0xFF1B1924))),
+      ),
+    );
+  }
+
+  Widget _divider() => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 22),
+        child: Divider(height: 1, color: Color(0xFFEDEDED)),
+      );
+
+  Widget _priceField(TextEditingController c, String hint) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6F6F6),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFD5D5D5)),
+        ),
+        child: TextField(
+          controller: c,
+          keyboardType: TextInputType.number,
+          onChanged: (_) => setState(() {}),
+          style: GoogleFonts.inter(fontSize: 14),
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            prefixText: '\u20b9 ',
+            hintText: hint,
+            hintStyle: GoogleFonts.inter(
+                fontSize: 14, color: const Color(0xFF9AA0A6)),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _setPriceBand(String? min, String? max) {
+    setState(() {
+      _minPriceController.text = min ?? '';
+      _maxPriceController.text = max ?? '';
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final summary = _selectedSummary;
+    final bands = const [
+      ['Under \u20b95,000', null, '5000'],
+      ['\u20b95,000 - \u20b915,000', '5000', '15000'],
+      ['\u20b915,000 - \u20b930,000', '15000', '30000'],
+      ['\u20b930,000+', '30000', null],
+    ];
     return Scaffold(
-      backgroundColor: const Color(0xFFFBF8F2),
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(LucideIcons.arrowLeft, size: 22),
+                  ),
+                  Expanded(
+                    child: Text('Filters',
+                        style: GoogleFonts.inter(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF1B1924))),
+                  ),
+                  GestureDetector(
+                    onTap: _clearAll,
+                    child: Text('Clear',
+                        style: GoogleFonts.inter(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                            color: const Color(0xFF1B1924))),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1, color: Color(0xFFEDEDED)),
             Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 16),
+                padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _Header(
-                        onBack: () => Navigator.pop(context),
-                        onClear: _clearAll),
-                    const SizedBox(height: 18),
-                    _DropdownCard(
-                        icon: _categoryIcon,
-                        title: 'Category',
-                        value: _selectedCategory,
-                        items: _categories,
-                        onChanged: (v) => _setCategory(v ?? '')),
-                    const SizedBox(height: 10),
-                    _DropdownCard(
-                        icon: Icons.apartment_rounded,
-                        title: 'Property Type',
-                        value: _selectedPropertyType,
-                        items: _propertyTypes,
-                        onChanged: (v) =>
-                            setState(() => _selectedPropertyType = v ?? '')),
-                    const SizedBox(height: 10),
-                    _DropdownCard(
-                        icon: Icons.bed_outlined,
-                        title: 'BHK / Configuration',
-                        value: _selectedBhkType,
-                        items: _bhkTypes,
-                        onChanged: (v) =>
-                            setState(() => _selectedBhkType = v ?? '')),
-                    const SizedBox(height: 10),
-                    _PriceCard(
-                        minController: _minPriceController,
-                        maxController: _maxPriceController),
-                    const SizedBox(height: 16),
-                    const _SectionTitle('Booking Preferences'),
-                    const SizedBox(height: 10),
-                    _PreferenceCard(children: [
-                      _PreferenceRow(
-                          icon: Icons.flash_on_rounded,
-                          title: 'Instant Book',
-                          subtitle: 'Confirmed automatically after payment verification',
-                          trailing: Checkbox(
-                              value: _instantBooking,
-                              onChanged: (v) => setState(() {
-                                    _instantBooking = v ?? false;
-                                    _hostApprovalRequired = false;
-                                  }))),
-                      _PreferenceRow(
-                          icon: Icons.pets_rounded,
-                          title: 'Pet Friendly',
-                          trailing: Switch(
-                              value: _petFriendly,
-                              activeThumbColor: Colors.white,
-                              activeTrackColor: AppTheme.primary,
-                              onChanged: (v) =>
-                                  setState(() => _petFriendly = v))),
-                    ]),
-                    const SizedBox(height: 18),
-                    const _SectionTitle('Essential Amenities'),
-                    const SizedBox(height: 4),
-                    Text('Select amenities that matter to you',
-                        style: GoogleFonts.inter(
-                            fontSize: 12,
-                            color: AppTheme.charcoalMuted,
-                            fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 14),
+                    _title('Selected Filters'),
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: _amenitiesOptions.map((a) {
-                        final selected = _selectedAmenities.contains(a);
-                        return _AmenityChip(
-                          amenity: a,
-                          selected: selected,
-                          onSelected: (value) => setState(() {
-                            value
-                                ? _selectedAmenities.add(a)
-                                : _selectedAmenities.remove(a);
-                          }),
-                        );
+                      children: (summary.isEmpty ? ['All Results'] : summary)
+                          .map((t) => Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 7),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF1F1F1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(t,
+                                    style: GoogleFonts.inter(
+                                        fontSize: 12.5,
+                                        color: const Color(0xFF1B1924))),
+                              ))
+                          .toList(),
+                    ),
+                    _divider(),
+                    _title('Category'),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _categories
+                          .map((c) => _chip(
+                                c['value']!.isEmpty
+                                    ? 'All'
+                                    : c['label']!,
+                                _selectedCategory == c['value'],
+                                () => _setCategory(c['value']!),
+                              ))
+                          .toList(),
+                    ),
+                    _divider(),
+                    _title('Price Range', 'Per night, in rupees'),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: bands.map((b) {
+                        final min = b[1];
+                        final max = b[2];
+                        final active = _minPriceController.text == (min ?? '') &&
+                            _maxPriceController.text == (max ?? '');
+                        return _chip(b[0]!, active, () {
+                          _setPriceBand(active ? null : min, active ? null : max);
+                        });
                       }).toList(),
                     ),
-                    const SizedBox(height: 22),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        _priceField(_minPriceController, 'Min'),
+                        const SizedBox(width: 12),
+                        _priceField(_maxPriceController, 'Max'),
+                      ],
+                    ),
+                    _divider(),
+                    _title('Property Type'),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _propertyTypes
+                          .where((t) => t['value']!.isNotEmpty)
+                          .map((t) => _chip(
+                                t['label']!,
+                                _selectedPropertyType == t['value'],
+                                () => setState(() => _selectedPropertyType =
+                                    _selectedPropertyType == t['value']
+                                        ? ''
+                                        : t['value']!),
+                              ))
+                          .toList(),
+                    ),
+                    _divider(),
+                    _title('Size'),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _bhkTypes
+                          .where((t) => t['value']!.isNotEmpty)
+                          .map((t) => _chip(
+                                t['label']!,
+                                _selectedBhkType == t['value'],
+                                () => setState(() => _selectedBhkType =
+                                    _selectedBhkType == t['value']
+                                        ? ''
+                                        : t['value']!),
+                              ))
+                          .toList(),
+                    ),
+                    _divider(),
+                    _title('Booking Preferences'),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: [
+                        _chip('Instant Book', _instantBooking, () {
+                          setState(() {
+                            _instantBooking = !_instantBooking;
+                            if (_instantBooking) _hostApprovalRequired = false;
+                          });
+                        }),
+                        _chip('Pet friendly', _petFriendly,
+                            () => setState(() => _petFriendly = !_petFriendly)),
+                      ],
+                    ),
+                    _divider(),
+                    _title('Amenities', 'Select amenities that matter to you'),
+                    Wrap(
+                      spacing: 10,
+                      runSpacing: 10,
+                      children: _amenitiesOptions
+                          .map((a) => _chip(
+                                _amenityLabel(a),
+                                _selectedAmenities.contains(a),
+                                () => setState(() {
+                                  _selectedAmenities.contains(a)
+                                      ? _selectedAmenities.remove(a)
+                                      : _selectedAmenities.add(a);
+                                }),
+                              ))
+                          .toList(),
+                    ),
                   ],
                 ),
               ),
             ),
             Container(
-              padding: const EdgeInsets.fromLTRB(14, 8, 14, 10),
-              color: const Color(0xFFFBF8F2),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Color(0xFFEDEDED))),
+              ),
+              child: Row(
                 children: [
-                  SizedBox(
-                    height: 52,
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _applyFilters,
-                      icon: const Icon(Icons.tune_rounded,
-                          color: AppTheme.primary),
-                      label: const Text('Apply Filters'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF07142F),
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
-                        textStyle: GoogleFonts.inter(
-                            fontSize: 17, fontWeight: FontWeight.w900),
+                  GestureDetector(
+                    onTap: _clearAll,
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Text('CLEAR ALL',
+                          style: GoogleFonts.inter(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                              color: const Color(0xFF1B1924))),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: SizedBox(
+                      height: 50,
+                      child: ElevatedButton(
+                        onPressed: _applyFilters,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B1924),
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8)),
+                        ),
+                        child: Text('APPLY FILTER',
+                            style: GoogleFonts.inter(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.4)),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 10),
-                  Text('100% Secure  •  Trusted by 10,000+ users',
-                      style: GoogleFonts.inter(
-                          fontSize: 11,
-                          color: AppTheme.charcoalMuted,
-                          fontWeight: FontWeight.w700)),
                 ],
               ),
             ),

@@ -168,6 +168,67 @@ def _ranges_overlap(a_start: str, a_end: str, b_start: str, b_end: str) -> bool:
 
 # ========== BLOCKED DATES MANAGEMENT ==========
 
+@router.get("/properties/{property_id}/unit-availability")
+async def get_unit_availability(
+    property_id: str,
+    check_in: Optional[str] = None,
+    check_out: Optional[str] = None,
+    db: AsyncIOMotorDatabase = Depends(get_db),
+):
+    """Which units of a multi-unit property are free for the dates (default: tonight).
+
+    A unit counts as taken when an active booking of that unit overlaps the stay.
+    """
+    prop = await db.properties.find_one({"property_id": property_id}, {"_id": 0, "units": 1, "has_units": 1})
+    units = [u for u in (prop or {}).get("units") or [] if isinstance(u, dict) and u.get("unit_id")]
+    if not prop or not prop.get("has_units") or not units:
+        return {"total": 0, "available": 0, "booked_unit_ids": [], "check_in": check_in, "check_out": check_out}
+
+    today = datetime.now(timezone.utc).date()
+    start = check_in or today.isoformat()
+    end = check_out or (today + timedelta(days=1)).isoformat()
+    rows = await db.bookings.find(
+        {
+            "property_id": property_id,
+            "unit_id": {"$ne": None},
+            "booking_status": {"$nin": BOOKING_TERMINAL_STATUSES},
+            "$or": [
+                {"booking_status": {"$in": BOOKING_BLOCKING_STATUSES}},
+                {"payment_status": {"$in": BOOKING_BLOCKING_PAYMENT_STATUSES}},
+            ],
+            # the night of check-out is free again, so a stay overlaps when it starts before our check-out and ends after our check-in
+            "check_in_date": {"$lt": end},
+            "check_out_date": {"$gt": start},
+        },
+        {"_id": 0, "unit_id": 1},
+    ).to_list(length=2000)
+    booked = sorted({row.get("unit_id") for row in rows} & {u["unit_id"] for u in units})
+
+    # dates the host blocked by hand close the whole property, whatever the unit
+    try:
+        last_night = (date.fromisoformat(end[:10]) - timedelta(days=1)).isoformat()
+    except ValueError:
+        last_night = end
+    host_block = await db.blocked_dates.find_one(
+        {
+            "property_id": property_id,
+            "source": {"$ne": "booking"},
+            "start_date": {"$lte": last_night},
+            "end_date": {"$gte": start},
+        },
+        {"_id": 0, "blocked_date_id": 1},
+    )
+    host_blocked = host_block is not None
+    return {
+        "total": len(units),
+        "available": 0 if host_blocked else len(units) - len(booked),
+        "host_blocked": host_blocked,
+        "booked_unit_ids": [] if host_blocked else booked,
+        "check_in": start,
+        "check_out": end,
+    }
+
+
 @router.get("/properties/{property_id}/blocked-dates")
 async def get_blocked_dates(
     property_id: str,

@@ -33,6 +33,9 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
   List<dynamic> _leads = [];
   Map<String, dynamic>? _commissionData;
   List<dynamic> _commissions = [];
+  List<dynamic> _bookings = [];
+  List<dynamic> _tasks = [];
+  Map<String, dynamic>? _analytics;
 
   String _pricingUnitSuffixFor(dynamic property) {
     if (property is PropertyModel) return property.pricingUnitSuffix;
@@ -126,6 +129,15 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         if (propRes.statusCode == 200) {
           _properties = propRes.data['properties'] ?? [];
         }
+      } else if (_activeTab == 'bookings') {
+        final res = await _apiService.dio.get('/broker/bookings');
+        _bookings = res.data['bookings'] ?? [];
+      } else if (_activeTab == 'tasks') {
+        final res = await _apiService.dio.get('/broker/tasks');
+        _tasks = res.data['tasks'] ?? [];
+      } else if (_activeTab == 'analytics' || _activeTab == 'audit') {
+        final res = await _apiService.dio.get('/broker/analytics');
+        _analytics = res.data is Map ? Map<String, dynamic>.from(res.data) : null;
       } else if (_activeTab == 'commissions') {
         final res = await _apiService.dio.get('/broker/commissions');
         if (res.statusCode == 200) {
@@ -309,6 +321,14 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         return _buildLeadsContent();
       case 'commissions':
         return _buildCommissionsContent();
+      case 'bookings':
+        return _buildBrokerBookingsContent();
+      case 'tasks':
+        return _buildBrokerTasksContent();
+      case 'analytics':
+        return _buildBrokerAnalyticsContent();
+      case 'audit':
+        return _buildBrokerAuditContent();
       default:
         return Container();
     }
@@ -1749,6 +1769,183 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
           ),
         ],
       ),
+    );
+  }
+
+  // 7. BOOKINGS (same data as the website "Bookings & Reports")
+  Widget _buildBrokerBookingsContent() {
+    if (_bookings.isEmpty) {
+      return _buildEmptyState(Icons.receipt_long_outlined, 'No bookings yet',
+          'Bookings on your hosts\' properties will appear here.');
+    }
+    final money = NumberFormat.decimalPattern('en_IN');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Bookings & Reports',
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.charcoal)),
+        const SizedBox(height: 12),
+        for (final raw in _bookings)
+          Builder(builder: (context) {
+            final b = Map<String, dynamic>.from(raw as Map);
+            final prop = (b['property_summary'] as Map?) ?? const {};
+            final guest = (b['guest_summary'] as Map?) ?? const {};
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                title: Text((prop['title'] ?? 'Property').toString()),
+                subtitle: Text(
+                    '${guest['full_name'] ?? 'Guest'}\n${b['check_in_date'] ?? ''}  to  ${b['check_out_date'] ?? ''}'),
+                isThreeLine: true,
+                trailing: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                        '₹${money.format((b['total_amount'] as num?) ?? 0)}',
+                        style: const TextStyle(fontWeight: FontWeight.w700)),
+                    Text((b['booking_status'] ?? '').toString().toUpperCase(),
+                        style: const TextStyle(fontSize: 10)),
+                  ],
+                ),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  // 8. TASKS & ESCALATIONS
+  Widget _buildBrokerTasksContent() {
+    if (_tasks.isEmpty) {
+      return _buildEmptyState(Icons.schedule_outlined, 'No open tasks',
+          'Pending verifications and escalations will show here.');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Tasks & Escalations',
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.charcoal)),
+        const SizedBox(height: 12),
+        for (final raw in _tasks)
+          Builder(builder: (context) {
+            final t = Map<String, dynamic>.from(raw as Map);
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                title: Text((t['title'] ?? 'Task').toString()),
+                subtitle: Text(
+                    'SLA: ${t['sla_status'] ?? 'N/A'}  |  Age: ${t['age_hours'] ?? 0}h  |  Priority: ${t['priority'] ?? 'normal'}'),
+                trailing: Text((t['status'] ?? 'pending').toString().toUpperCase(),
+                    style: const TextStyle(fontSize: 11)),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  // 10. ACTIVITY & AUDIT
+  Widget _buildBrokerAuditContent() {
+    final events = ((_analytics?['audit'] as Map?)?['recent_events'] as List?) ??
+        const [];
+    if (events.isEmpty) {
+      return _buildEmptyState(Icons.shield_outlined, 'No activity yet',
+          'Your recent actions will be listed here.');
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Activity & Audit',
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.charcoal)),
+        const SizedBox(height: 12),
+        for (final raw in events)
+          Builder(builder: (context) {
+            final e = Map<String, dynamic>.from(raw as Map);
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                title: Text((e['action'] ?? 'Activity').toString()),
+                subtitle: Text(
+                    '${e['module'] ?? ''}  ${e['created_at'] ?? ''}'.trim()),
+                trailing: Text((e['status'] ?? '').toString(),
+                    style: const TextStyle(fontSize: 11)),
+              ),
+            );
+          }),
+      ],
+    );
+  }
+
+  // 9. ANALYTICS
+  Widget _buildBrokerAnalyticsContent() {
+    final a = _analytics;
+    if (a == null) {
+      return _buildEmptyState(Icons.insights_outlined, 'No analytics yet',
+          'Numbers appear once you have hosts, leads and bookings.');
+    }
+    String label(String k) => k
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+        .join(' ');
+    Widget block(String title, Map data) {
+      return Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 8),
+              for (final e in data.entries)
+                if (e.value is num || e.value is String)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 3),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(label(e.key.toString())),
+                        Text(e.value.toString(),
+                            style:
+                                const TextStyle(fontWeight: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final summary = a['summary'];
+    final trends = a['trends'];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Analytics',
+            style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w900,
+                color: AppTheme.charcoal)),
+        const SizedBox(height: 12),
+        if (summary is Map) block('Summary', summary),
+        if (trends is Map)
+          for (final e in trends.entries)
+            if (e.value is Map) block(label(e.key.toString()), e.value as Map),
+      ],
     );
   }
 

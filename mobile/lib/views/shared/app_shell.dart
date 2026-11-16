@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
@@ -16,7 +17,7 @@ import '../guest/guest_browse_screen.dart';
 import '../guest/landing_screen.dart';
 import '../guest/guest_bookings_screen.dart';
 import '../guest/property_detail_screen.dart';
-import '../guest/ai_chat_screen.dart';
+import '../guest/explore_map_screen.dart';
 import '../host/host_bookings_screen.dart';
 import '../host/host_dashboard_screen.dart';
 import '../host/host_my_properties_screen.dart';
@@ -119,19 +120,19 @@ class _AppShellState extends State<AppShell> {
           title: 'Trips',
           message: 'Please sign in to view and manage your property bookings.',
         ),
-        const AIChatScreen(),
+        const ExploreMapScreen(),
         _ModernProfileTab(user: null, auth: auth),
       ];
       navItems = const [
-        BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+        BottomNavigationBarItem(icon: Icon(LucideIcons.house), label: 'Home'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
+            icon: Icon(LucideIcons.heart), label: 'Wishlist'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.luggage_outlined), label: 'Trips'),
+            icon: Icon(LucideIcons.luggage), label: 'Trips'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.forum_outlined), label: 'Messages'),
+            icon: Icon(LucideIcons.compass), label: 'Explore'),
         BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
+            icon: Icon(LucideIcons.user), label: 'Profile'),
       ];
     } else {
       final String role = user.role;
@@ -140,58 +141,58 @@ class _AppShellState extends State<AppShell> {
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
           const GuestBookingsScreen(),
-          const AIChatScreen(),
+          const ExploreMapScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = [
           const BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled), label: 'Home'),
+              icon: Icon(LucideIcons.house), label: 'Home'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
+              icon: Icon(LucideIcons.heart), label: 'Wishlist'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.luggage_outlined), label: 'Trips'),
+              icon: Icon(LucideIcons.luggage), label: 'Trips'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'Messages'),
+              icon: Icon(LucideIcons.compass), label: 'Explore'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline_rounded), label: 'Profile'),
+              icon: Icon(LucideIcons.user), label: 'Profile'),
         ];
       } else if (role == 'host') {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
           const HostDashboardScreen(),
-          const AIChatScreen(),
+          const ExploreMapScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.house), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
+              icon: Icon(LucideIcons.heart), label: 'Wishlist'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined), label: 'Dashboard'),
+              icon: Icon(LucideIcons.layoutDashboard), label: 'Dashboard'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'Messages'),
+              icon: Icon(LucideIcons.compass), label: 'Explore'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: 'Profile'),
+              icon: Icon(LucideIcons.user), label: 'Profile'),
         ];
       } else if (role == 'broker') {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
           const BrokerDashboardScreen(),
-          const AIChatScreen(),
+          const ExploreMapScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.house), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
+              icon: Icon(LucideIcons.heart), label: 'Wishlist'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.dashboard_outlined), label: 'Broker'),
+              icon: Icon(LucideIcons.layoutDashboard), label: 'Broker'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'Messages'),
+              icon: Icon(LucideIcons.compass), label: 'Explore'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: 'Profile'),
+              icon: Icon(LucideIcons.user), label: 'Profile'),
         ];
       } else if (role == 'employee') {
         final String? adminRole = user.adminRoleKey;
@@ -203,41 +204,41 @@ class _AppShellState extends State<AppShell> {
           isRm
               ? const BrokerDashboardScreen()
               : const EmployeeDashboardScreen(),
-          const AIChatScreen(),
+          const ExploreMapScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = [
           const BottomNavigationBarItem(
-              icon: Icon(Icons.home_filled), label: 'Home'),
+              icon: Icon(LucideIcons.house), label: 'Home'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
+              icon: Icon(LucideIcons.heart), label: 'Wishlist'),
           BottomNavigationBarItem(
               icon: Icon(
-                  isRm ? Icons.dashboard_outlined : Icons.rate_review_outlined),
+                  isRm ? LucideIcons.layoutDashboard : LucideIcons.star),
               label: isRm ? 'Broker' : 'Reviews'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'Messages'),
+              icon: Icon(LucideIcons.compass), label: 'Explore'),
           const BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: 'Profile'),
+              icon: Icon(LucideIcons.user), label: 'Profile'),
         ];
       } else if (role == 'admin') {
         screens = [
           const LandingScreen(),
           const _WishlistsTab(isAuthenticated: true),
           const AdminDashboardScreen(),
-          const AIChatScreen(),
+          const ExploreMapScreen(),
           _ModernProfileTab(user: user, auth: auth),
         ];
         navItems = const [
-          BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(LucideIcons.house), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.favorite_border_rounded), label: 'Wishlist'),
+              icon: Icon(LucideIcons.heart), label: 'Wishlist'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.admin_panel_settings_outlined), label: 'Admin'),
+              icon: Icon(LucideIcons.shieldCheck), label: 'Admin'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.forum_outlined), label: 'Messages'),
+              icon: Icon(LucideIcons.compass), label: 'Explore'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: 'Profile'),
+              icon: Icon(LucideIcons.user), label: 'Profile'),
         ];
       } else {
         screens = [
@@ -248,7 +249,7 @@ class _AppShellState extends State<AppShell> {
           BottomNavigationBarItem(
               icon: Icon(Icons.error_outline), label: 'Home'),
           BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline), label: 'Profile'),
+              icon: Icon(LucideIcons.user), label: 'Profile'),
         ];
       }
     }
@@ -592,6 +593,26 @@ class _BrokerProfileDrawer extends StatelessWidget {
           'tab': 'commissions',
           'label': 'Commissions',
           'icon': Icons.monetization_on_outlined,
+        },
+        {
+          'tab': 'bookings',
+          'label': 'Bookings & Reports',
+          'icon': Icons.receipt_long_outlined,
+        },
+        {
+          'tab': 'tasks',
+          'label': 'Tasks & Escalations',
+          'icon': Icons.schedule_outlined,
+        },
+        {
+          'tab': 'analytics',
+          'label': 'Analytics',
+          'icon': Icons.insights_outlined,
+        },
+        {
+          'tab': 'audit',
+          'label': 'Activity & Audit',
+          'icon': Icons.shield_outlined,
         },
       ];
 
@@ -1256,40 +1277,124 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
     final topPadding = isCompact ? 10.0 : 16.0;
     final bottomPadding = media.padding.bottom + (isCompact ? 18.0 : 30.0);
 
+    void goLogin() => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+
+    // rows in the same style as the website's mobile menu: line icon, label, thin divider
+    Widget row(IconData icon, String label, VoidCallback onTap,
+        {String? badge, bool last = false}) {
+      return InkWell(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 17),
+          decoration: BoxDecoration(
+            border: last
+                ? null
+                : const Border(bottom: BorderSide(color: Color(0xFFEFEFEF))),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, size: 21, color: const Color(0xFF1B1924)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(label,
+                    style: GoogleFonts.inter(
+                        fontSize: 16, color: const Color(0xFF1B1924))),
+              ),
+              if (badge != null)
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF4D6D),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(badge,
+                      style: GoogleFonts.inter(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final name = (user?.fullName ?? '').toString().trim();
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(
-                horizontalPadding,
-                topPadding,
-                horizontalPadding,
-                bottomPadding,
-              ),
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      body: Column(
+        children: [
+          // dark header with avatar, name and the main action
+          Container(
+            width: double.infinity,
+            color: const Color(0xFF1F2020),
+            padding: EdgeInsets.fromLTRB(
+                20, media.padding.top + 22, 20, 22),
+            child: Row(
               children: [
-                _ProfileHeader(
-                  compact: isCompact,
-                  unreadCount: user == null ? 0 : unreadCount,
-                  onBack: () {
-                    if (Navigator.canPop(context)) {
-                      Navigator.pop(context);
-                    } else {
-                      final state =
-                          context.findAncestorStateOfType<_AppShellState>();
-                      state?._onItemTapped(0);
-                    }
-                  },
-                  onNotifications: () {
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: const BoxDecoration(
+                      color: Colors.white, shape: BoxShape.circle),
+                  child: const Icon(LucideIcons.user,
+                      size: 24, color: Color(0xFF1B1924)),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(user == null ? 'Welcome' : (name.isEmpty ? 'My account' : name),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white)),
+                      if (user != null && (user.email ?? '').toString().isNotEmpty)
+                        Text(user.email.toString(),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: GoogleFonts.inter(
+                                fontSize: 12,
+                                color: Colors.white.withValues(alpha: 0.7))),
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () {
+                          if (user == null) {
+                            goLogin();
+                          } else {
+                            context
+                                .findAncestorStateOfType<_AppShellState>()
+                                ?._onItemTapped(2);
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(color: Colors.white70),
+                          ),
+                          child: Text(user == null ? 'Sign in / Sign up' : 'My Bookings',
+                              style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
                     if (user == null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const LoginScreen()),
-                      );
+                      goLogin();
                       return;
                     }
                     Navigator.push(
@@ -1298,185 +1403,116 @@ class _ModernProfileTabState extends State<_ModernProfileTab> {
                           builder: (_) => const NotificationsScreen()),
                     );
                   },
-                ),
-                SizedBox(height: isCompact ? 12 : 18),
-                if (user == null)
-                  _LoggedOutProfileCard(compact: isCompact)
-                else
-                  _ProfileHeroCard(user: user, compact: isCompact),
-                SizedBox(height: isCompact ? 16 : 22),
-                Container(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: isCompact ? 10 : 14,
-                    vertical: isCompact ? 6 : 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.06),
-                        blurRadius: 20,
-                        offset: const Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Column(
+                  child: Stack(
+                    clipBehavior: Clip.none,
                     children: [
-                      _ProfileOptionTile(
-                        icon: Icons.settings_outlined,
-                        label: 'Account Settings',
-                        subtitle: 'Manage your account preferences',
-                        iconBackground: const Color(0xFFF7EBD8),
-                        iconColor: AppTheme.primary,
-                        compact: isCompact,
-                        onTap: () {
-                          if (user == null) {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => const LoginScreen()),
-                            );
-                            return;
-                          }
-                          _showAccountSettings(user, localeProvider);
-                        },
-                      ),
-                      _ProfileOptionTile(
-                        icon: Icons.help_outline_rounded,
-                        label: 'Get Help',
-                        subtitle: 'FAQs and customer support',
-                        iconBackground: const Color(0xFFF0ECFF),
-                        iconColor: const Color(0xFF11131A),
-                        compact: isCompact,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const SupportCenterScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                      _ProfileOptionTile(
-                        icon: Icons.info_outline_rounded,
-                        label: 'About X-Space360',
-                        subtitle: 'Learn more about us',
-                        iconBackground: const Color(0xFFEFF5FF),
-                        iconColor: const Color(0xFF11131A),
-                        compact: isCompact,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                                builder: (_) => const AboutUsScreen()),
-                          );
-                        },
-                      ),
-                      _ProfileOptionTile(
-                        icon: Icons.ios_share_rounded,
-                        label: 'Invite Friends',
-                        subtitle: 'Share X-Space360 with others',
-                        iconBackground: const Color(0xFFFFF4DD),
-                        iconColor: AppTheme.primary,
-                        compact: isCompact,
-                        onTap: _shareAppInvite,
-                      ),
-                      _ProfileOptionTile(
-                        icon: Icons.policy_outlined,
-                        label: 'Legal',
-                        subtitle: 'Terms, conditions and policies',
-                        iconBackground: const Color(0xFFEAF8EA),
-                        iconColor: const Color(0xFF0F6A2D),
-                        compact: isCompact,
-                        showDivider: false,
-                        onTap: _showLegalSheet,
-                      ),
+                      const Icon(LucideIcons.bell, size: 22, color: Colors.white),
+                      if (user != null && unreadCount > 0)
+                        Positioned(
+                          right: -2,
+                          top: -2,
+                          child: Container(
+                            width: 9,
+                            height: 9,
+                            decoration: const BoxDecoration(
+                                color: Color(0xFFFF4D6D), shape: BoxShape.circle),
+                          ),
+                        ),
                     ],
                   ),
                 ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.fromLTRB(20, 4, 20, bottomPadding + 12),
+              children: [
+                row(LucideIcons.settings, 'Account Settings', () {
+                  if (user == null) {
+                    goLogin();
+                    return;
+                  }
+                  _showAccountSettings(user, localeProvider);
+                }),
+                row(LucideIcons.headset, 'Get Help', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const SupportCenterScreen()),
+                  );
+                }),
+                row(LucideIcons.info, 'About X-Space360', () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AboutUsScreen()),
+                  );
+                }),
+                row(LucideIcons.share2, 'Invite Friends', _shareAppInvite),
+                row(LucideIcons.shieldCheck, 'Legal', _showLegalSheet, last: true),
                 if (user != null) ...[
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 22),
                   if (_canSelfDelete(user)) ...[
                     SizedBox(
-                      height: 56,
+                      height: 52,
                       child: OutlinedButton.icon(
-                        onPressed:
-                            _isDeactivating ? null : _confirmDeleteAccount,
+                        onPressed: _isDeactivating ? null : _confirmDeleteAccount,
                         icon: _isDeactivating
                             ? SizedBox(
-                                width: 20,
-                                height: 20,
+                                width: 18,
+                                height: 18,
                                 child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.red.shade700,
-                                ),
+                                    strokeWidth: 2, color: Colors.red.shade700),
                               )
-                            : const Icon(Icons.delete_outline_rounded,
-                                size: 24),
-                        label: Text(
-                            _isDeactivating ? 'Deleting...' : 'Delete Account'),
+                            : const Icon(LucideIcons.trash2, size: 20),
+                        label: Text(_isDeactivating ? 'Deleting...' : 'Delete Account'),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: Colors.red.shade700,
-                          side: BorderSide(
-                              color: Colors.red.shade200, width: 1.4),
+                          side: BorderSide(color: Colors.red.shade200, width: 1.2),
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(15),
-                          ),
+                              borderRadius: BorderRadius.circular(16)),
                           textStyle: GoogleFonts.inter(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                          ),
+                              fontSize: 15, fontWeight: FontWeight.w600),
                         ),
                       ),
                     ),
                     const SizedBox(height: 12),
                   ],
                   SizedBox(
-                    height: 56,
-                    child: ElevatedButton.icon(
+                    height: 54,
+                    child: ElevatedButton(
                       onPressed: () async {
                         await widget.auth.logout();
                         if (!context.mounted) return;
                         Navigator.pushAndRemoveUntil(
                           context,
-                          MaterialPageRoute(
-                              builder: (_) => const LoginScreen()),
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
                           (route) => false,
                         );
                       },
-                      icon: const Icon(Icons.logout_rounded, size: 24),
-                      label: Text(localeProvider.translate('sign_out')),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1F2026),
+                        backgroundColor: const Color(0xFF1F2020),
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(15),
-                        ),
+                            borderRadius: BorderRadius.circular(16)),
                         textStyle: GoogleFonts.inter(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
+                            fontSize: 16, fontWeight: FontWeight.w600),
                       ),
+                      child: Text(localeProvider.translate('sign_out')),
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 16),
                   Center(
-                    child: Text(
-                      'Version 1.0.0',
-                      style: GoogleFonts.inter(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.charcoalMuted,
-                      ),
-                    ),
+                    child: Text('Version 1.0.0',
+                        style: GoogleFonts.inter(
+                            fontSize: 12, color: const Color(0xFF8A8A8A))),
                   ),
                 ],
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }

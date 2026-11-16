@@ -17,6 +17,9 @@ import 'host_list_property_screen.dart';
 import 'host_calendar_screen.dart';
 import 'host_payouts_screen.dart';
 import 'host_bookings_screen.dart';
+import 'host_pricing_screen.dart';
+import 'host_reviews_screen.dart';
+import 'host_ical_screen.dart';
 
 class HostDashboardScreen extends StatefulWidget {
   const HostDashboardScreen({super.key});
@@ -507,6 +510,21 @@ class _HostDashboardScreenState extends State<HostDashboardScreen> {
                         context,
                         MaterialPageRoute(
                             builder: (context) => const HostBookingsScreen()),
+                      ),
+                      onPricing: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HostPricingScreen()),
+                      ),
+                      onReviews: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HostReviewsScreen()),
+                      ),
+                      onSync: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (context) => const HostIcalScreen()),
                       ),
                     ),
                     const SizedBox(height: 28),
@@ -1159,11 +1177,17 @@ class _FeatureCardsRow extends StatelessWidget {
   final VoidCallback onCalendar;
   final VoidCallback onPayouts;
   final VoidCallback onBookings;
+  final VoidCallback onPricing;
+  final VoidCallback onReviews;
+  final VoidCallback onSync;
 
   const _FeatureCardsRow({
+    required this.onReviews,
+    required this.onSync,
     required this.onCalendar,
     required this.onPayouts,
     required this.onBookings,
+    required this.onPricing,
   });
 
   @override
@@ -1204,6 +1228,39 @@ class _FeatureCardsRow extends StatelessWidget {
               subtitle: 'View and manage all bookings',
               tint: Colors.blue.shade700,
               onTap: onBookings,
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 148,
+            child: _FeatureCard(
+              icon: Icons.sell_rounded,
+              title: 'Pricing',
+              subtitle: 'Weekend, festival and seasonal rates',
+              tint: Colors.orange.shade800,
+              onTap: onPricing,
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 148,
+            child: _FeatureCard(
+              icon: Icons.star_rounded,
+              title: 'Guest Reviews',
+              subtitle: 'Read and reply to reviews',
+              tint: Colors.amber.shade800,
+              onTap: onReviews,
+            ),
+          ),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 148,
+            child: _FeatureCard(
+              icon: Icons.sync_rounded,
+              title: 'Calendar Sync',
+              subtitle: 'Airbnb, Booking.com, Google',
+              tint: Colors.teal.shade700,
+              onTap: onSync,
             ),
           ),
         ],

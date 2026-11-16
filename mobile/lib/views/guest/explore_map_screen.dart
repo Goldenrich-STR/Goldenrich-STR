@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:provider/provider.dart';
 
 import '../../config.dart';
@@ -24,6 +25,7 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
   final MapController _mapController = MapController();
   bool _showSearchThisArea = false;
   bool _mapReady = false;
+  bool _movedToArea = false;
   LatLng _cameraCenter = const LatLng(20.5937, 78.9629);
 
   @override
@@ -55,6 +57,15 @@ class _ExploreMapScreenState extends State<ExploreMapScreen>
     final center = current == null
         ? _cameraCenter
         : LatLng(current.latitude, current.longitude);
+    // without a GPS fix the provider loads the spaces around Nashik: show that area
+    final areaLat = provider.areaLatitude;
+    final areaLng = provider.areaLongitude;
+    if (current == null && areaLat != null && areaLng != null && !_movedToArea) {
+      _movedToArea = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _moveTo(LatLng(areaLat, areaLng));
+      });
+    }
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -267,12 +278,13 @@ class _TopMapBar extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFDADADA)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
-            blurRadius: 18,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 14,
+            offset: const Offset(0, 5),
           ),
         ],
       ),
@@ -280,8 +292,8 @@ class _TopMapBar extends StatelessWidget {
         children: [
           IconButton(
             onPressed: onBack,
-            icon: const Icon(Icons.arrow_back),
-            color: const Color(0xFF07142F),
+            icon: const Icon(LucideIcons.arrowLeft, size: 22),
+            color: const Color(0xFF1B1924),
           ),
           Expanded(
             child: Column(
@@ -290,17 +302,17 @@ class _TopMapBar extends StatelessWidget {
                 Text('Explore nearby',
                     style: GoogleFonts.inter(
                         fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: const Color(0xFF07142F))),
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF1B1924))),
                 Text('Stays, workspaces and venues around you',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inter(
-                        fontSize: 11, color: AppTheme.charcoalLight)),
+                        fontSize: 11.5, color: const Color(0xFF6B7280))),
               ],
             ),
           ),
-          const Icon(Icons.tune, color: Color(0xFF07142F)),
+          const Icon(LucideIcons.mapPin, size: 20, color: Color(0xFF1B1924)),
           const SizedBox(width: 10),
         ],
       ),
@@ -331,17 +343,23 @@ class _RadiusSelector extends StatelessWidget {
           final selected = value == radiusMeters;
           return ChoiceChip(
             selected: selected,
-            label: Text('${(value / 1000).round()} KM'),
+            showCheckmark: false,
+            label: Text('${(value / 1000).round()} km'),
             onSelected: (_) => onChanged(value),
-            selectedColor: AppTheme.primary,
+            selectedColor: const Color(0xFF1B1924),
             backgroundColor: Colors.white,
-            labelStyle: GoogleFonts.inter(
-              color: selected ? Colors.white : const Color(0xFF07142F),
-              fontWeight: FontWeight.w900,
-              fontSize: 12,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(
+                color: selected
+                    ? const Color(0xFF1B1924)
+                    : const Color(0xFFDADADA),
+              ),
             ),
-            side: BorderSide(
-              color: selected ? AppTheme.primary : AppTheme.border,
+            labelStyle: GoogleFonts.inter(
+              color: selected ? Colors.white : const Color(0xFF1B1924),
+              fontWeight: FontWeight.w500,
+              fontSize: 13,
             ),
           );
         },

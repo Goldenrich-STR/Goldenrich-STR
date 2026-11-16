@@ -88,7 +88,7 @@ export const UnitChips = ({ property, max = 3, className = '' }) => {
   );
 };
 
-const UnitCard = ({ unit, property, UnitIcon, priceSuffix, sizeLabel, selected, onSelect, attention }) => {
+const UnitCard = ({ unit, property, UnitIcon, priceSuffix, sizeLabel, selected, onSelect, attention, booked = false }) => {
   const price = getUnitPrice(unit);
   const details = [
     unit.area_sqft ? `${unit.area_sqft} sq.ft` : null,
@@ -101,7 +101,7 @@ const UnitCard = ({ unit, property, UnitIcon, priceSuffix, sizeLabel, selected, 
       type="button"
       onClick={() => onSelect && onSelect(unit)}
       aria-pressed={selected}
-      className={`relative flex w-full items-center justify-between gap-4 rounded-2xl border bg-gradient-to-br from-[#fff0e6] via-[#fcf8f5] to-[#e4effb] px-4 py-4 text-left transition ${
+      className={`relative flex w-full items-center justify-between gap-4 rounded-2xl border bg-gradient-to-br from-[#fbf1d6] via-[#fcf9ef] to-[#e1efe6] px-4 py-4 text-left transition ${
         selected ? 'border-charcoal ring-2 ring-charcoal/10' : 'border-gray-300 hover:border-charcoal'
       } ${onSelect ? 'cursor-pointer' : 'cursor-default'} ${attention && !selected ? 'unit-attention' : ''}`}
     >
@@ -121,6 +121,7 @@ const UnitCard = ({ unit, property, UnitIcon, priceSuffix, sizeLabel, selected, 
           <span className="min-w-0 break-words">{unit.name}</span>
         </p>
         {details.length > 0 && <p className="mt-1 text-xs font-medium text-charcoal-muted">{details.join(' · ')}</p>}
+        {booked && <p className="mt-1 text-[11px] font-semibold text-red-600">Booked for these dates</p>}
       </div>
       {price > 0 && (
         <div className="shrink-0 text-right">
@@ -242,7 +243,7 @@ const UnitsModal = ({ units, property, UnitIcon, priceSuffix, sizeLabel, selecte
 const INLINE_UNITS = 4;
 
 /** Full-width unit list for the property detail page: the first four, the rest behind "more units". */
-export const UnitCards = ({ property, priceSuffix = '/ night', sizeLabel, selectedUnitId, onSelect, attention = false }) => {
+export const UnitCards = ({ property, priceSuffix = '/ night', sizeLabel, selectedUnitId, onSelect, attention = false, availability = null, datesChosen = false }) => {
   const units = getPropertyUnits(property);
   const [showAll, setShowAll] = useState(false);
   if (!units.length) return null;
@@ -257,8 +258,16 @@ export const UnitCards = ({ property, priceSuffix = '/ night', sizeLabel, select
   return (
     <section id="property-units" data-testid="property-units" className="scroll-mt-28">
       <h2 className="mb-4 font-serif-hero text-[26px] font-semibold text-charcoal">Available units</h2>
+      {availability && availability.total > 0 && (
+        <p className="-mt-2 mb-1 text-[13px] font-medium text-charcoal" data-testid="units-available-count">
+          <span className={availability.available > 0 ? 'text-[#1f8a4c]' : 'text-red-600'}>
+            {availability.available > 0 ? `${availability.available} of ${availability.total} units available` : availability.host_blocked ? 'Not available' : 'All units are booked'}
+          </span>
+          <span className="text-charcoal-muted">{datesChosen ? ' for your dates' : ' tonight'}</span>
+        </p>
+      )}
       {onSelect && (
-        <p className="-mt-2 mb-3 text-xs font-medium text-charcoal-muted">Select a unit to see its availability and book it.</p>
+        <p className="-mt-1 mb-3 text-xs font-medium text-charcoal-muted">Select a unit to see its availability and book it.</p>
       )}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {shown.map((unit) => (
@@ -272,6 +281,7 @@ export const UnitCards = ({ property, priceSuffix = '/ night', sizeLabel, select
             selected={Boolean(selectedUnitId) && unit.unit_id === selectedUnitId}
             onSelect={onSelect}
             attention={attention}
+            booked={Boolean(availability?.booked_unit_ids?.includes(unit.unit_id))}
           />
         ))}
       </div>

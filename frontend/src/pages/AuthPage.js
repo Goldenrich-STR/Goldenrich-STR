@@ -520,7 +520,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
       />
 
       {/* StayVista style Modal Box (Fixed height to prevent page scrolling) */}
-      <div className="relative z-10 flex w-full max-w-[980px] overflow-hidden border border-gray-150 bg-white shadow-2xl max-md:max-h-[92vh] max-md:rounded-b-none max-md:rounded-t-[28px] max-md:border-x-0 max-md:border-b-0 md:h-[750px] md:max-h-[92vh] md:rounded-3xl">
+      <div className={`relative z-10 flex w-full overflow-hidden border border-gray-150 bg-white shadow-2xl max-md:max-h-[92vh] max-md:rounded-b-none max-md:rounded-t-[28px] max-md:border-x-0 max-md:border-b-0 md:max-h-[92vh] md:rounded-3xl ${isLogin ? 'max-w-[780px] md:h-[560px]' : 'max-w-[820px] md:h-[660px]'}`}>
         
         {/* Close Button */}
         <button
@@ -553,25 +553,25 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
               <div className="mb-6 flex flex-col items-center">
                 {!isLogin && registerData.role === 'host' ? (
                   <>
-                    <h4 className="text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
+                    <h4 className="text-white text-[22px] md:text-[24px] font-light leading-snug mb-3 tracking-normal drop-shadow-sm">
                       List Your Property.<br />Maximize Your Earnings
                     </h4>
-                    <p className="text-white text-xs font-semibold max-w-[240px] mb-4 drop-shadow-sm leading-relaxed">
+                    <p className="text-white text-[12px] font-normal max-w-[260px] mb-4 drop-shadow-sm leading-relaxed">
                       Partner with X-Space360 to host guests, manage bookings, and earn maximum revenue.
                     </p>
-                    <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide text-white drop-shadow-sm">
+                    <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-[12px] font-medium tracking-normal text-white drop-shadow-sm">
                       Zero Listing Fee · Premium Hosts
                     </div>
                   </>
                 ) : (
                   <>
-                    <h4 className="text-white text-2xl md:text-3xl font-extrabold leading-tight mb-2 tracking-tight drop-shadow-sm">
+                    <h4 className="text-white text-[22px] md:text-[24px] font-light leading-snug mb-3 tracking-normal drop-shadow-sm">
                       Book a Room.<br />Enjoy A Villa Getaway
                     </h4>
-                    <p className="text-white text-xs font-semibold max-w-[240px] mb-4 drop-shadow-sm leading-relaxed">
+                    <p className="text-white text-[12px] font-normal max-w-[260px] mb-4 drop-shadow-sm leading-relaxed">
                       Enjoy the luxury, comfort, and privacy of premium spaces across India.
                     </p>
-                    <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-xs font-bold tracking-wide text-white drop-shadow-sm">
+                    <div className="border border-dashed border-white/80 bg-white/10 backdrop-blur-sm rounded-lg px-4 py-1.5 text-[12px] font-medium tracking-normal text-white drop-shadow-sm">
                       Rooms Starting at ₹2,000*
                     </div>
                   </>
@@ -582,7 +582,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
         </div>
 
         {/* Right Side: Auth Form Content (58% Width) */}
-        <div className="relative flex w-full flex-col justify-between overflow-y-auto p-5 no-scrollbar max-md:max-h-[92vh] md:h-full md:w-[58%] md:p-8">
+        <div className="relative flex w-full flex-col justify-between overflow-y-auto p-5 no-scrollbar max-md:max-h-[92vh] md:h-full md:w-[58%] md:p-7">
 
           {/* Phones: welcome title and offer banner, like a bottom-sheet login */}
           <div className="md:hidden">
@@ -609,11 +609,11 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
           {/* Top Header Section */}
           <div className="w-full">
             {/* Title / Subtext */}
-            <div className="mb-4 md:mb-6">
-              <span className="mb-1 block text-sm font-semibold text-gray-500 max-md:text-[17px] max-md:text-charcoal">
+            <div className="mb-3 md:mb-4">
+              <span className="mb-1 block text-[14px] font-normal text-charcoal max-md:text-[17px]">
                 {isMdLogin ? "Managing Director" : isAdminLogin ? "Admin Console" : "Login/Signup"}
               </span>
-              <h3 className="hidden font-sans font-semibold text-2xl md:block md:text-[28px] text-gray-900 tracking-tight leading-snug">
+              <h3 className="hidden font-sans font-semibold text-2xl md:block md:text-[22px] text-gray-900 tracking-tight leading-snug">
                 {isMdLogin ? "MD Executive Sign In" : isAdminLogin ? "Admin Sign In" : "Welcome to X-Space360"}
               </h3>
             </div>
@@ -635,16 +635,16 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
             {/* Toggle switch for login vs register */}
             {isLogin ? (
               // SIGN IN FORM
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleLogin} className="space-y-3">
                 <div className="space-y-1">
-                  <label className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider ml-0.5">Email Address</label>
+                  <label className="block text-[13px] font-medium text-gray-600 ml-0.5">Email Address</label>
                   <input
                     id="login-email"
                     name="email"
                     type="email"
                     value={loginData.email}
                     onChange={(e) => setLoginData({ ...loginData, email: e.target.value })}
-                    className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg px-4 py-2.5 text-sm transition-all outline-none font-medium"
+                    className="w-full border border-gray-300 focus:border-charcoal focus:ring-0 rounded-lg px-4 py-2.5 text-[15px] transition-all outline-none font-normal placeholder:text-gray-400"
                     placeholder="email@example.com"
                     required
                   />
@@ -652,11 +652,11 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
 
                 <div className="space-y-1">
                   <div className="flex justify-between items-center px-0.5">
-                    <label className="block text-[9px] font-bold text-charcoal-muted uppercase tracking-wider">Password</label>
+                    <label className="block text-[13px] font-medium text-gray-600">Password</label>
                     <button
                       type="button"
                       onClick={() => navigate(`/forgot-password?login=${encodeURIComponent(isMdLogin ? '/md/login' : isAdminLogin ? '/admin/login' : '/login')}`)}
-                      className="text-[9px] font-bold text-blue-600 uppercase hover:underline"
+                      className="text-[13px] font-medium text-[#2563eb] hover:underline"
                     >
                       Forgot?
                     </button>
@@ -668,7 +668,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                       type={showLoginPassword ? 'text' : 'password'}
                       value={loginData.password}
                       onChange={(e) => setLoginData({ ...loginData, password: e.target.value })}
-                      className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-lg pl-4 pr-10 py-2.5 text-sm transition-all outline-none font-medium"
+                      className="w-full border border-gray-300 focus:border-charcoal focus:ring-0 rounded-lg pl-4 pr-10 py-2.5 text-[15px] transition-all outline-none font-normal placeholder:text-gray-400"
                       placeholder="••••••••"
                       required
                     />
@@ -685,29 +685,29 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="bg-[#1b1924] hover:bg-[#272433] text-white text-sm font-semibold py-3 rounded-lg w-full transition-colors cursor-pointer text-center tracking-wide mt-2"
+                  className="bg-[#1b1924] hover:bg-[#272433] text-white text-[15px] font-semibold py-3 rounded-lg w-full transition-colors cursor-pointer text-center tracking-wide mt-1"
                 >
                   {loading ? 'Continuing...' : 'Continue'}
                 </button>
 
                 {!isAdminLogin && (
                   <>
-                    <div className="flex items-center gap-3 my-2">
+                    <div className="flex items-center gap-3 my-1">
                       <div className="h-px flex-1 bg-gray-150" />
-                      <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">or</span>
+                      <span className="text-[12px] font-medium text-gray-400">or</span>
                       <div className="h-px flex-1 bg-gray-150" />
                     </div>
 
                     <button
                       type="button"
                       onClick={handleGoldenRichSso}
-                      className="w-full py-2.5 rounded-lg border border-gray-200 bg-white text-charcoal font-bold uppercase tracking-wider text-[10px] hover:border-charcoal hover:bg-gray-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                      className="w-full py-3 rounded-lg border border-gray-300 bg-white text-charcoal font-medium text-[14px] hover:border-charcoal hover:bg-gray-50 transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <ShieldCheck className="w-4 h-4" />
                       Login with GRP
                     </button>
 
-                    <div className="mt-5 text-center text-sm font-semibold text-gray-600">
+                    <div className="mt-3 text-center text-[14px] font-normal text-gray-700">
                       Don't have an account?{" "}
                       <button
                         type="button"
@@ -756,26 +756,26 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                     {/* Spacious Responsive Grid Layout */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                       <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Full Name</label>
+                        <label className="block text-[13px] font-medium text-gray-600 ml-0.5">Full Name</label>
                         <input
                           id="register-full-name"
                           type="text"
                           value={registerData.full_name}
                           onChange={(e) => setRegisterData({ ...registerData, full_name: e.target.value })}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                          className="w-full border border-gray-300 focus:border-charcoal focus:ring-0 rounded-lg px-4 py-3 text-[15px] font-normal outline-none placeholder:text-gray-400"
                           placeholder="Full Name"
                           required
                           autoComplete="name"
                         />
                       </div>
                       <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Phone Number</label>
+                        <label className="block text-[13px] font-medium text-gray-600 ml-0.5">Phone Number</label>
                         <input
                           id="register-phone"
                           type="tel"
                           value={registerData.phone}
                           onChange={(e) => setRegisterData({ ...registerData, phone: e.target.value })}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                          className="w-full border border-gray-300 focus:border-charcoal focus:ring-0 rounded-lg px-4 py-3 text-[15px] font-normal outline-none placeholder:text-gray-400"
                           placeholder="Phone"
                           required
                           autoComplete="tel"
@@ -783,13 +783,13 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                       </div>
  
                       <div className="space-y-1">
-                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Email</label>
+                        <label className="block text-[13px] font-medium text-gray-600 ml-0.5">Email</label>
                         <input
                           id="register-email"
                           type="email"
                           value={registerData.email}
                           onChange={(e) => setRegisterData({ ...registerData, email: e.target.value })}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                          className="w-full border border-gray-300 focus:border-charcoal focus:ring-0 rounded-lg px-4 py-3 text-[15px] font-normal outline-none placeholder:text-gray-400"
                           placeholder="Email"
                           required
                           autoComplete="email"
@@ -797,7 +797,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                       </div>
  
                       <div className="space-y-1 relative" ref={cityFieldRef}>
-                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">City</label>
+                        <label className="block text-[13px] font-medium text-gray-600 ml-0.5">City</label>
                         <input
                           id="register-city"
                           type="text"
@@ -807,7 +807,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                             setRegisterData({ ...registerData, city: e.target.value });
                             setCityDropdownOpen(true);
                           }}
-                          className="w-full border border-gray-200 focus:border-charcoal focus:ring-0 rounded-xl px-4 py-3 text-sm font-medium outline-none"
+                          className="w-full border border-gray-300 focus:border-charcoal focus:ring-0 rounded-lg px-4 py-3 text-[15px] font-normal outline-none placeholder:text-gray-400"
                           placeholder="Search city"
                           required
                           autoComplete="address-level2"
@@ -832,7 +832,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                       </div>
 
                       <div className="space-y-1 text-left md:col-span-2">
-                        <label className="block text-xs font-semibold text-gray-600 ml-0.5">Set New Password</label>
+                        <label className="block text-[13px] font-medium text-gray-600 ml-0.5">Set New Password</label>
                         <div className="relative">
                           <input
                             id="register-password"
@@ -965,7 +965,7 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
                         ))}
                       </div>
                       {otpSecondsRemaining > 0 ? (
-                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                        <p className="text-[12px] font-medium text-gray-400">
                           OTP valid for {otpTimerLabel}
                         </p>
                       ) : (
@@ -1005,9 +1005,10 @@ const AuthPage = ({ isAdminLogin = false, isMdLogin = false, defaultRole = null 
 
           {/* Bottom Footer Notice (Only for Login) */}
           {isLogin && (
-            <div className="w-full pt-4 border-t border-gray-100 text-center">
-              <p className="text-[10px] text-gray-400 font-semibold leading-relaxed">
-                By logging in, you agree to our <LegalLinks className="inline text-terracotta" context="general" />.
+            <div className="w-full pt-2 text-center">
+              <p className="text-[12px] font-normal leading-snug text-charcoal">
+                By signing up, you agree to<br />
+                our <LegalLinks className="inline" linkClassName="text-[#2563eb] font-normal" context="general" />.
               </p>
             </div>
           )}

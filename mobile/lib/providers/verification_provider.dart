@@ -22,11 +22,45 @@ class VerificationProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   // Fallback getters for unused/historical view methods to ensure build passes
-  List<dynamic> get hosts => [];
-  List<dynamic> get properties => [];
-  List<dynamic> get bookings => [];
-  List<dynamic> get tasks => [];
-  List<dynamic> get auditActivity => [];
+  List<dynamic> _hosts = [];
+  List<dynamic> _properties = [];
+  List<dynamic> _bookings = [];
+  List<dynamic> _tasks = [];
+  List<dynamic> _auditActivity = [];
+  List<dynamic> get hosts => _hosts;
+  List<dynamic> get properties => _properties;
+  List<dynamic> get bookings => _bookings;
+  List<dynamic> get tasks => _tasks;
+  List<dynamic> get auditActivity => _auditActivity;
+
+  Future<List<dynamic>> _fetchList(String path, String key) async {
+    try {
+      final response = await _apiService.dio.get(path);
+      final data = response.data;
+      if (data is Map && data[key] is List) {
+        return List<dynamic>.from(data[key]);
+      }
+    } catch (_) {}
+    return [];
+  }
+
+  // Employee (RM): hosts, properties, bookings, tasks and audit log
+  // (same endpoints the website RM dashboard uses)
+  Future<void> getRMOperations() async {
+    final results = await Future.wait([
+      _fetchList('/employee/hosts', 'hosts'),
+      _fetchList('/employee/properties', 'properties'),
+      _fetchList('/employee/bookings', 'bookings'),
+      _fetchList('/employee/tasks', 'tasks'),
+      _fetchList('/employee/audit-activity', 'audit_logs'),
+    ]);
+    _hosts = results[0];
+    _properties = results[1];
+    _bookings = results[2];
+    _tasks = results[3];
+    _auditActivity = results[4];
+    notifyListeners();
+  }
 
   // Broker: Get list of verification tasks
   Future<void> getBrokerTasks(String? statusFilter) async {

@@ -3,6 +3,12 @@ import 'dart:convert';
 
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'stay_date_picker_page.dart';
+import '../shared/web_property_card.dart';
+import 'home_web_sections.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -27,6 +33,8 @@ import '../shared/support_tickets_screen.dart';
 import 'explore_map_screen.dart';
 import 'guest_browse_screen.dart';
 import 'offers_screen.dart';
+import '../shared/landing_menu.dart';
+import '../shared/web_search_pill.dart';
 import 'property_detail_screen.dart';
 
 class LandingScreen extends StatefulWidget {
@@ -44,79 +52,136 @@ class _LandingScreenState extends State<LandingScreen> {
   DateTimeRange? _selectedRange;
   int _guestCount = 2;
   late final PageController _heroPageController;
+  final ScrollController _pageScroll = ScrollController();
+  final GlobalKey _pillKey = GlobalKey();
+  bool _stickyPill = false;
   Timer? _heroTimer;
   int _activeHeroIndex = 0;
   int? _registeredHostCount;
   List<_HeroSlide> _cmsHeroSlides = [];
   List<PropertyModel> _recentlyVisitedProperties = [];
+  List<PropertyModel> _signatureProperties = [];
+
+  Future<void> _loadSignatureProperties() async {
+    final list =
+        await context.read<PropertyProvider>().fetchSignatureProperties();
+    if (mounted) setState(() => _signatureProperties = list);
+  }
+
+  List<HomeBlogItem> _homeBlogItems() {
+    return _blogCards
+        .map((blog) => HomeBlogItem(
+              imageUrl: blog.imageUrl,
+              title: blog.title,
+              excerpt: blog.excerpt,
+              meta: blog.category,
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => _BlogDetailScreen(blog: blog)),
+              ),
+            ))
+        .toList();
+  }
   List<_BlogData> _blogCards = [];
   String _activeHolidayGetawayCity = 'All';
+  String _weekendCity = 'All';
 
   static final List<_HeroSlide> _fallbackHeroSlides = [
     _HeroSlide(
-      image: AppConfig.resolveWebAssetUrl(
-          '/videos/hero/pexels-contact-me-923323219715-262056873-12703092.jpg'),
-      tag: 'COMMERCIAL SPACES',
-      titlePrefix: 'Premium Workspaces in ',
-      titleHighlight: 'Nashik',
-      subtitle:
-          'Find polished offices, co-working spaces, and business-ready venues.',
-      badge: 'Office and Workspace Ready',
-      category: 'commercial',
-      isNetworkImage: true,
-    ),
-    _HeroSlide(
-      image: AppConfig.resolveWebAssetUrl(
-          '/videos/hero/hero-villa-mobile-crop.png'),
-      tag: 'RESORT VILLAS',
-      titlePrefix: "Luxury Villas in India's ",
-      titleHighlight: 'Wine Capital',
-      subtitle:
-          'Premium villa stays for family trips and peaceful weekend getaways.',
-      badge: 'Private Pool and Scenic Views',
+      image: 'assets/images/hero/vineyard-retreat.webp',
+      tag: '',
+      titlePrefix: "Vineyard Stays near Nashik",
+      titleHighlight: '',
+      subtitle: "Comfortable villas for weekends, families and small groups.",
+      badge: "Comfortable villas for weekends, families and small groups.",
       category: 'residential',
-      isNetworkImage: true,
     ),
     _HeroSlide(
-      image: AppConfig.resolveWebAssetUrl(
-          '/videos/hero/pexels-thevisionaryvows-33485961.jpg'),
-      tag: 'WEDDING VENUES',
-      titlePrefix: 'Luxury Weddings, ',
-      titleHighlight: 'Beautiful Memories',
-      subtitle:
-          'Stylish venues for weddings, parties, launches, and memorable gatherings.',
-      badge: 'Curated Venue Support Included',
-      category: 'event_venue',
-      isNetworkImage: true,
-    ),
-    _HeroSlide(
-      image: AppConfig.resolveWebAssetUrl(
-          '/videos/hero/pexels-liva-kitchens-and-interiors-2153927697-33452539.jpg'),
-      tag: 'RESIDENTIAL SPACES',
-      titlePrefix: 'Experience the ',
-      titleHighlight: 'Comfort of Home',
-      subtitle: 'Elegant homes and apartments designed for smooth short stays.',
-      badge: 'Verified Homes and Easy Booking',
+      image: 'assets/images/hero/lakeside-retreat.webp',
+      tag: '',
+      titlePrefix: "Lakeside Stays for a Quiet Break",
+      titleHighlight: '',
+      subtitle: "Choose a stay with open views, fresh air and room to unwind.",
+      badge: "Choose a stay with open views, fresh air and room to unwind.",
       category: 'residential',
-      isNetworkImage: true,
+    ),
+    _HeroSlide(
+      image: 'assets/images/hero/group-stay.webp',
+      tag: '',
+      titlePrefix: "Get Together, Stay Together",
+      titleHighlight: '',
+      subtitle: "Spacious homes for friends, families and celebrations.",
+      badge: "Spacious homes for friends, families and celebrations.",
+      category: 'residential',
+    ),
+    _HeroSlide(
+      image: 'assets/images/hero/heritage-homestay.webp',
+      tag: '',
+      titlePrefix: "Homestays with a Personal Touch",
+      titleHighlight: '',
+      subtitle: "Comfortable homes for relaxed family stays and longer visits.",
+      badge: "Comfortable homes for relaxed family stays and longer visits.",
+      category: 'residential',
+    ),
+    _HeroSlide(
+      image: 'assets/images/hero/courtyard-villa.webp',
+      tag: '',
+      titlePrefix: "Courtyard Villas with Old-World Charm",
+      titleHighlight: '',
+      subtitle: "Quiet courtyards, tall pillars and rooms that open to the garden.",
+      badge: "Quiet courtyards, tall pillars and rooms that open to the garden.",
+      category: 'residential',
+    ),
+    _HeroSlide(
+      image: 'assets/images/hero/garden-gate-bungalow.webp',
+      tag: '',
+      titlePrefix: "Heritage Homes Behind Garden Gates",
+      titleHighlight: '',
+      subtitle: "Step through the arch into a calm, tree-lined bungalow.",
+      badge: "Step through the arch into a calm, tree-lined bungalow.",
+      category: 'residential',
+    ),
+    _HeroSlide(
+      image: 'assets/images/hero/game-room-villa.webp',
+      tag: '',
+      titlePrefix: "Game Rooms for Every Get-Together",
+      titleHighlight: '',
+      subtitle: "Pool tables, music and a pool view for friends and families.",
+      badge: "Pool tables, music and a pool view for friends and families.",
+      category: 'residential',
+    ),
+    _HeroSlide(
+      image: 'assets/images/hero/sunset-garden-villa.webp',
+      tag: '',
+      titlePrefix: "Garden Sunsets near the Hills",
+      titleHighlight: '',
+      subtitle: "Stone paths, flower beds and golden evenings away from the city.",
+      badge: "Stone paths, flower beds and golden evenings away from the city.",
+      category: 'residential',
+    ),
+    _HeroSlide(
+      image: 'assets/images/hero/heritage-hall-stay.webp',
+      tag: '',
+      titlePrefix: "Rustic Heritage Stays with Hill Views",
+      titleHighlight: '',
+      subtitle: "Brick walls, wooden beams and a long verandah to sit back on.",
+      badge: "Brick walls, wooden beams and a long verandah to sit back on.",
+      category: 'residential',
     ),
   ];
 
   static const List<_DestinationData> _destinations = [
     _DestinationData('Nashik', 'nashik'),
-    _DestinationData('Trimbakeshwar', 'trimbak'),
-    _DestinationData('Mumbai', 'mumbai'),
-    _DestinationData('Goa', 'goa'),
-    _DestinationData('Gangapur Dam', 'gangapur_dam'),
     _DestinationData('Sula Vineyards', 'sula'),
+    _DestinationData('Trimbakeshwar', 'trimbak'),
+    _DestinationData('Gangapur Dam', 'gangapur_dam'),
     _DestinationData('Igatpuri', 'igatpuri'),
     _DestinationData('Anjaneri', 'anjaneri'),
     _DestinationData('Harihar Fort', 'harihar_fort'),
     _DestinationData('Bhandardara', 'bhandardara'),
   ];
 
-  List<_HeroSlide> get _heroSlides =>
-      _cmsHeroSlides.isNotEmpty ? _cmsHeroSlides : _fallbackHeroSlides;
+  List<_HeroSlide> get _heroSlides => _fallbackHeroSlides;
 
   static const List<_TestimonialData> _testimonials = [
     _TestimonialData(
@@ -249,6 +314,8 @@ class _LandingScreenState extends State<LandingScreen> {
   void initState() {
     super.initState();
     _heroPageController = PageController(viewportFraction: 1);
+    _pageScroll.addListener(_updateStickyPill);
+    _loadRecentSearches();
     _heroTimer = Timer.periodic(const Duration(seconds: 4), (_) {
       if (!_heroPageController.hasClients || _heroSlides.length <= 1) return;
       final nextIndex = (_activeHeroIndex + 1) % _heroSlides.length;
@@ -263,6 +330,7 @@ class _LandingScreenState extends State<LandingScreen> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialLandingData();
+      _loadSignatureProperties();
       Provider.of<NotificationProvider>(context, listen: false)
           .loadUnreadCount();
     });
@@ -272,8 +340,31 @@ class _LandingScreenState extends State<LandingScreen> {
   void dispose() {
     _heroTimer?.cancel();
     _heroPageController.dispose();
+    _pageScroll.dispose();
     super.dispose();
   }
+
+  /// Like the website on phones: once the search pill scrolls off the top it
+  /// stays pinned there.
+  void _updateStickyPill() {
+    final box = _pillKey.currentContext?.findRenderObject();
+    if (box is! RenderBox || !box.attached) return;
+    final top = box.localToGlobal(Offset.zero).dy;
+    final pinned = top < MediaQuery.paddingOf(context).top + 4;
+    if (pinned != _stickyPill) setState(() => _stickyPill = pinned);
+  }
+
+  String? get _pillValue {
+    if (_searchQuery.isNotEmpty) return _searchQuery;
+    if (_selectedCity != 'Anywhere') return _selectedCity;
+    return null;
+  }
+
+  String get _pillSummary => [
+        if (_selectedRange != null)
+          '${DateFormat('dd MMM').format(_selectedRange!.start)} - ${DateFormat('dd MMM').format(_selectedRange!.end)}',
+        '$_guestCount ${_guestCount == 1 ? 'guest' : 'guests'}',
+      ].join('  |  ');
 
   Future<void> _loadRecentlyVisitedProperties() async {
     final prefs = await SharedPreferences.getInstance();
@@ -483,8 +574,13 @@ class _LandingScreenState extends State<LandingScreen> {
 
     return Scaffold(
       backgroundColor: Colors.white,
+      floatingActionButton: const AssistantButton(),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       body: SafeArea(
-        child: RefreshIndicator(
+        top: false,
+        child: Stack(
+        children: [
+        RefreshIndicator(
           color: AppTheme.primary,
           onRefresh: () async {
             final propertyProvider = context.read<PropertyProvider>();
@@ -495,43 +591,88 @@ class _LandingScreenState extends State<LandingScreen> {
             }
           },
           child: ListView(
+            controller: _pageScroll,
             physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 28),
+            padding: const EdgeInsets.only(bottom: 28),
             children: [
-              _buildCommercialTopBar(auth),
-              const SizedBox(height: 18),
-              _buildCommercialHero(),
+              _buildWebHero(auth),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
               const SizedBox(height: 16),
-              _buildCommercialSearch(),
+              KeyedSubtree(key: _pillKey, child: _buildCommercialSearch()),
+              const SizedBox(height: 18),
+              _buildContinueBrowsing(),
               const SizedBox(height: 26),
-              _buildPopularLocationsCompact(properties),
-              const SizedBox(height: 26),
-              _buildBecomeHostBanner(auth),
+              _buildPickDestination(),
               const SizedBox(height: 26),
               _buildRecentlyViewedCompact(),
-              const SizedBox(height: 26),
-              _buildFeaturedSpacesCompact(
-                title: 'Residential Stays',
-                category: 'residential',
-                properties: residential,
+                  ],
+                ),
               ),
-              const SizedBox(height: 26),
-              _buildFeaturedSpacesCompact(
-                title: 'Commercial Spaces',
-                category: 'commercial',
-                properties: commercial,
+              const SizedBox(height: 30),
+              _buildWebCollections(),
+              const SizedBox(height: 28),
+              _buildAvailableThisWeekend(properties),
+              const SizedBox(height: 28),
+              PartnerBannerSection(
+                onExplore: (search) => _openBrowse(searchQuery: search),
               ),
-              const SizedBox(height: 26),
-              _buildFeaturedSpacesCompact(
-                title: 'Event Venues',
-                category: 'event_venue',
-                properties: event,
+              const SizedBox(height: 30),
+              ExploreSpacesSection(
+                residential: residential,
+                commercial: commercial,
+                events: event,
+                onOpen: _openPropertyFromHome,
+                onViewAll: (category) => _openBrowse(category: category),
               ),
-              const SizedBox(height: 22),
-              _buildOfferBanner(),
+              const SizedBox(height: 10),
+              const MoreThanStaySection(),
+              XSpaceSeriesSection(
+                properties: _signatureProperties,
+                onOpen: _openPropertyFromHome,
+                onViewAll: () => _openBrowse(
+                  category: 'residential',
+                  propertyType: 'villa',
+                  minPrice: 50000,
+                  title: 'X-Space Series',
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 30, 18, 0),
+                child: _buildHostStrip(auth),
+              ),
+              const SizedBox(height: 30),
+              BlogsSection(items: _homeBlogItems()),
+              _buildWebFooter(auth),
             ],
           ),
         ),
+        if (_stickyPill)
+          Positioned(
+            left: 0,
+            right: 0,
+            top: 0,
+            child: Container(
+              padding: EdgeInsets.fromLTRB(
+                  16, MediaQuery.paddingOf(context).top + 10, 16, 10),
+              decoration: const BoxDecoration(
+                color: Color(0xF2FFFFFF),
+                boxShadow: [
+                  BoxShadow(
+                    color: Color(0x14141414),
+                    blurRadius: 20,
+                    offset: Offset(0, 6),
+                  ),
+                ],
+              ),
+              child: _buildCommercialSearch(),
+            ),
+          ),
+        ],
+      ),
       ),
     );
   }
@@ -564,6 +705,8 @@ class _LandingScreenState extends State<LandingScreen> {
     int? guests,
     String? searchQuery,
     DateTimeRange? dateRange,
+    double? minPrice,
+    String? title,
   }) {
     Navigator.push(
       context,
@@ -575,6 +718,8 @@ class _LandingScreenState extends State<LandingScreen> {
           initialPropertyType: propertyType,
           initialGuests: guests,
           initialDateRange: dateRange,
+          initialMinPrice: minPrice,
+          title: title,
         ),
       ),
     );
@@ -682,14 +827,56 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
-  Widget _buildCommercialHero() {
+  Widget _buildWebHero(AuthProvider auth) {
     final media = MediaQuery.sizeOf(context);
+    final topInset = MediaQuery.paddingOf(context).top;
     final slides = _heroSlides;
-    final heroHeight = (media.width * 0.58).clamp(168.0, 235.0);
+    final heroHeight = (media.width * 0.92).clamp(320.0, 430.0) + topInset;
     final activeIndex = _activeHeroIndex.clamp(0, slides.length - 1).toInt();
     final activeSlide = slides[activeIndex];
+    final user = auth.currentUser;
+    final unreadCount = context.watch<NotificationProvider>().unreadCount;
+
+    Widget roundButton(IconData icon, VoidCallback onTap, {int badge = 0}) {
+      return GestureDetector(
+        onTap: onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.16),
+                shape: BoxShape.circle,
+                border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+              ),
+              child: Icon(icon, size: 19, color: Colors.white),
+            ),
+            if (badge > 0)
+              Positioned(
+                right: -2,
+                top: -2,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE53935),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(badge > 9 ? '9+' : '$badge',
+                      style: GoogleFonts.inter(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ),
+          ],
+        ),
+      );
+    }
+
     return ClipRRect(
-      borderRadius: BorderRadius.circular(22),
+      borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
       child: SizedBox(
         height: heroHeight,
         child: Stack(
@@ -698,101 +885,130 @@ class _LandingScreenState extends State<LandingScreen> {
             PageView.builder(
               controller: _heroPageController,
               itemCount: slides.length,
-              onPageChanged: (index) =>
-                  setState(() => _activeHeroIndex = index),
-              itemBuilder: (context, index) {
-                return _HeroSlideImage(slide: slides[index]);
-              },
+              onPageChanged: (index) => setState(() => _activeHeroIndex = index),
+              itemBuilder: (context, index) =>
+                  _HeroSlideImage(slide: slides[index]),
             ),
-            DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Colors.black.withValues(alpha: 0.72),
-                    Colors.black.withValues(alpha: 0.22),
-                  ],
+            IgnorePointer(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withValues(alpha: 0.5),
+                      Colors.black.withValues(alpha: 0.12),
+                      Colors.black.withValues(alpha: 0.2),
+                      Colors.black.withValues(alpha: 0.72),
+                    ],
+                    stops: const [0, 0.3, 0.55, 1],
+                  ),
                 ),
               ),
             ),
-            Padding(
-              padding:
-                  EdgeInsets.fromLTRB(20, media.width < 360 ? 14 : 18, 20, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Positioned(
+              left: 18,
+              right: 18,
+              top: topInset + 12,
+              child: Row(
                 children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.14),
-                      borderRadius: BorderRadius.circular(999),
-                      border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.24)),
-                    ),
-                    child: Text(activeSlide.tag,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: GoogleFonts.inter(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900)),
-                  ),
-                  SizedBox(height: media.width < 360 ? 7 : 10),
-                  Text(
-                      '${activeSlide.titlePrefix}\n${activeSlide.titleHighlight}',
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                          color: Colors.white,
-                          fontSize: media.width < 360 ? 22 : 25,
-                          height: 1.04,
-                          fontWeight: FontWeight.w900)),
-                  SizedBox(height: media.width < 360 ? 6 : 8),
-                  Text(activeSlide.badge,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          fontSize: media.width < 360 ? 11 : 12,
-                          fontWeight: FontWeight.w600)),
+                  const AppLogo(height: 30, white: true),
                   const Spacer(),
-                  ElevatedButton.icon(
-                    onPressed: () =>
-                        _openBrowse(category: activeSlide.category),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF07142F),
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 9),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14)),
-                    ),
-                    iconAlignment: IconAlignment.end,
-                    icon: const Icon(Icons.arrow_forward, size: 18),
-                    label: Text('Explore Now',
-                        style: GoogleFonts.inter(
-                            fontSize: 13, fontWeight: FontWeight.w900)),
+                  roundButton(
+                    LucideIcons.bell,
+                    () {
+                      if (user == null) {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const LoginScreen(initialRole: 'guest')),
+                        );
+                        return;
+                      }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const NotificationsScreen()),
+                      );
+                    },
+                    badge: user == null ? 0 : unreadCount,
                   ),
+                  const SizedBox(width: 10),
+                  roundButton(LucideIcons.user, () {
+                    if (user == null) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const LoginScreen(initialRole: 'guest')),
+                      );
+                    } else {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AppShell(initialIndex: 4)),
+                      );
+                    }
+                  }),
                 ],
               ),
             ),
             Positioned(
-              bottom: 20,
+              left: 24,
               right: 24,
-              child: Row(
-                children: List.generate(
-                  slides.length,
-                  (i) => Container(
-                    width: i == activeIndex ? 10 : 9,
-                    height: i == activeIndex ? 10 : 9,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.white
-                          .withValues(alpha: i == activeIndex ? 0.95 : 0.38),
-                      shape: BoxShape.circle,
+              bottom: 42,
+              child: GestureDetector(
+                onTap: () => _openBrowse(category: activeSlide.category),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${activeSlide.titlePrefix}${activeSlide.titleHighlight}',
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.playfairDisplay(
+                          color: Colors.white,
+                          fontSize: media.width < 360 ? 23 : 26,
+                          height: 1.15,
+                          fontWeight: FontWeight.w500),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      activeSlide.subtitle,
+                      textAlign: TextAlign.center,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: GoogleFonts.inter(
+                          color: Colors.white.withValues(alpha: 0.92),
+                          fontSize: 12,
+                          height: 1.35,
+                          fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 16,
+              left: 0,
+              right: 0,
+              child: IgnorePointer(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    slides.length,
+                    (i) => AnimatedContainer(
+                      duration: const Duration(milliseconds: 250),
+                      width: i == activeIndex ? 18 : 6,
+                      height: 6,
+                      margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                      decoration: BoxDecoration(
+                        color: Colors.white
+                            .withValues(alpha: i == activeIndex ? 0.95 : 0.5),
+                        borderRadius: BorderRadius.circular(999),
+                      ),
                     ),
                   ),
                 ),
@@ -804,85 +1020,311 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
+  static const String _recentSearchKey = 'xspace_recent_location_searches';
+  List<String> _recentSearches = [];
+
+  Future<void> _loadRecentSearches() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final list = prefs.getStringList(_recentSearchKey) ?? [];
+      if (mounted) setState(() => _recentSearches = list);
+    } catch (_) {}
+  }
+
+  Future<void> _saveRecentSearch(String value) async {
+    final cleaned = value.trim();
+    if (cleaned.isEmpty) return;
+    final next = [cleaned, ..._recentSearches.where((e) => e != cleaned)]
+        .take(5)
+        .toList();
+    if (mounted) setState(() => _recentSearches = next);
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setStringList(_recentSearchKey, next);
+    } catch (_) {}
+  }
+
+  /// "Continue browsing...": the guest's last searches, one tap to repeat them
+  /// (Nashik, Igatpuri and Pune until they have searched for something).
+  Widget _buildContinueBrowsing() {
+    final items = _recentSearches.isNotEmpty
+        ? _recentSearches
+        : const ['Nashik', 'Igatpuri', 'Pune'];
+    Widget chip(String label) {
+      return GestureDetector(
+        onTap: () {
+          final m = RegExp(r'\sin\s(.+)$', caseSensitive: false).firstMatch(label);
+          final city = (m?.group(1) ?? label).trim();
+          setState(() {
+            _selectedCity = city;
+            _searchQuery = '';
+          });
+          _runSearch();
+        },
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(10, 8, 16, 8),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xFFE8ECF1)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: const BoxDecoration(
+                    color: Color(0xFFF4F7FC), shape: BoxShape.circle),
+                padding: const EdgeInsets.all(2),
+                child: Image.asset(
+                  'assets/images/ui/recent-search-home.webp',
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => const Icon(LucideIcons.house,
+                      size: 16, color: Color(0xFFD96570)),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Text(label,
+                  style: GoogleFonts.inter(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: const Color(0xFF1B1924))),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Continue browsing...',
+            style: GoogleFonts.inter(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF64748B))),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(6),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF8FAFC),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x0D0F172A), blurRadius: 10, offset: Offset(0, 2))
+            ],
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      for (final item in items) ...[
+                        chip(item),
+                        const SizedBox(width: 8),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Icon(LucideIcons.chevronRight,
+                    size: 20, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPickDestination() {
+    const files = {
+      'trimbak': 'trimbakeshwar',
+      'sula': 'sula-vineyards',
+      'gangapur_dam': 'gangapur-dam',
+      'harihar_fort': 'harihar-fort',
+    };
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.baseline,
+          textBaseline: TextBaseline.alphabetic,
+          children: [
+            Text('Pick a Destination',
+                style: GoogleFonts.playfairDisplay(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF1B1924))),
+            const SizedBox(width: 8),
+            Text('Swipe',
+                style: GoogleFonts.inter(
+                    fontSize: 12, color: const Color(0xFF6B6B6B))),
+            const Icon(LucideIcons.chevronRight,
+                size: 14, color: Color(0xFF6B6B6B)),
+          ],
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          height: 124,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: _destinations.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 16),
+            itemBuilder: (context, index) {
+              final d = _destinations[index];
+              final file = files[d.type] ?? d.type;
+              return GestureDetector(
+                onTap: () => _openBrowse(city: d.city),
+                child: SizedBox(
+                  width: 88,
+                  child: Column(
+                    children: [
+                      SizedBox(
+                        width: 78,
+                        height: 88,
+                        child: Image.asset(
+                          'assets/images/destinations/$file.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(
+                              LucideIcons.mapPin,
+                              size: 32,
+                              color: Color(0xFF9A9A9A)),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(d.city,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: const Color(0xFF1B1924))),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCommercialHero() {
+    final media = MediaQuery.sizeOf(context);
+    final slides = _heroSlides;
+    final heroHeight = (media.width * 0.64).clamp(200.0, 280.0);
+    final activeIndex = _activeHeroIndex.clamp(0, slides.length - 1).toInt();
+    final activeSlide = slides[activeIndex];
+    final title = '${activeSlide.titlePrefix}${activeSlide.titleHighlight}';
+    return GestureDetector(
+      onTap: () => _openBrowse(category: activeSlide.category),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: SizedBox(
+          height: heroHeight,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              PageView.builder(
+                controller: _heroPageController,
+                itemCount: slides.length,
+                onPageChanged: (index) =>
+                    setState(() => _activeHeroIndex = index),
+                itemBuilder: (context, index) {
+                  return _HeroSlideImage(slide: slides[index]);
+                },
+              ),
+              IgnorePointer(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        Colors.black.withValues(alpha: 0.12),
+                        Colors.black.withValues(alpha: 0.68),
+                      ],
+                      stops: const [0.35, 0.6, 1],
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 18,
+                right: 18,
+                bottom: 34,
+                child: IgnorePointer(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                              color: Colors.white,
+                              fontSize: media.width < 360 ? 20 : 22,
+                              height: 1.15,
+                              fontWeight: FontWeight.w500)),
+                      const SizedBox(height: 6),
+                      Text(activeSlide.subtitle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                              color: Colors.white.withValues(alpha: 0.9),
+                              fontSize: 12,
+                              height: 1.35,
+                              fontWeight: FontWeight.w400)),
+                    ],
+                  ),
+                ),
+              ),
+              Positioned(
+                bottom: 14,
+                left: 0,
+                right: 0,
+                child: IgnorePointer(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: List.generate(
+                      slides.length,
+                      (i) => AnimatedContainer(
+                        duration: const Duration(milliseconds: 250),
+                        width: i == activeIndex ? 18 : 6,
+                        height: 6,
+                        margin: const EdgeInsets.symmetric(horizontal: 2.5),
+                        decoration: BoxDecoration(
+                          color: Colors.white
+                              .withValues(alpha: i == activeIndex ? 0.95 : 0.5),
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildCommercialSearch() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 10),
-          ),
-        ],
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          const CircleAvatar(
-            radius: 24,
-            backgroundColor: Color(0xFF07142F),
-            child: Icon(Icons.manage_search, color: Colors.white),
-          ),
-          const SizedBox(width: 10),
-          Expanded(
-            flex: 2,
-            child: GestureDetector(
-              onTap: () => _openSearchSheet(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Where to?',
-                      style: GoogleFonts.inter(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w900,
-                          color: const Color(0xFF07142F))),
-                  const SizedBox(height: 2),
-                  Text(
-                      _selectedCity != 'Anywhere'
-                          ? _selectedCity
-                          : (_searchQuery.isNotEmpty
-                              ? _searchQuery
-                              : 'Search city, area\nor property'),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: GoogleFonts.inter(
-                          fontSize: 10, color: AppTheme.charcoalLight)),
-                ],
-              ),
-            ),
-          ),
-          _searchMeta(
-            Icons.calendar_month,
-            'Check In',
-            _selectedRange == null
-                ? 'Add date'
-                : DateFormat('dd MMM').format(_selectedRange!.start),
-          ),
-          _searchMeta(
-            Icons.calendar_month,
-            'Check Out',
-            _selectedRange == null
-                ? 'Add date'
-                : DateFormat('dd MMM').format(_selectedRange!.end),
-          ),
-          _searchMeta(Icons.person_outline, 'Guests', '$_guestCount guest'),
-          CircleAvatar(
-            radius: 24,
-            backgroundColor: const Color(0xFF07142F),
-            child: IconButton(
-              onPressed: () => _openCommercialBrowse(
-                city: _selectedCity == 'Anywhere' ? null : _selectedCity,
-                guests: _guestCount,
-                searchQuery: _searchQuery.isEmpty ? null : _searchQuery,
-              ),
-              icon: const Icon(Icons.search, color: Colors.white),
-            ),
-          ),
-        ],
-      ),
+    return WebSearchPill(
+      onTap: () => _openSearchSheet(),
+      value: _pillValue,
+      summary: _pillSummary,
     );
   }
 
@@ -1234,65 +1676,149 @@ class _LandingScreenState extends State<LandingScreen> {
         .replaceAll(RegExp(r'^_+|_+$'), '');
   }
 
-  Widget _buildRecentlyViewedCompact() {
-    return Column(
+  Widget _webSectionTitle(String title, VoidCallback? onViewAll) {
+    return Row(
       children: [
-        _sectionHeader('Recently Viewed', () => _openCommercialBrowse()),
-        const SizedBox(height: 12),
-        if (_recentlyVisitedProperties.isEmpty)
-          Container(
-            padding: const EdgeInsets.all(18),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8F3F1),
-              borderRadius: BorderRadius.circular(18),
-            ),
+        Expanded(
+          child: Text(title,
+              style: GoogleFonts.playfairDisplay(
+                  fontSize: 24,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1B1924))),
+        ),
+        if (onViewAll != null)
+          GestureDetector(
+            onTap: onViewAll,
             child: Row(
               children: [
-                const CircleAvatar(
-                  radius: 28,
-                  backgroundColor: Color(0xFFF0E3D7),
-                  child: Icon(Icons.schedule, color: Color(0xFF07142F)),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text("You haven’t viewed any spaces yet",
-                          style: GoogleFonts.inter(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w900,
-                              color: const Color(0xFF07142F))),
-                      const SizedBox(height: 4),
-                      Text('Explore and save your favourite spaces.',
-                          style: GoogleFonts.inter(
-                              fontSize: 13, color: AppTheme.charcoalLight)),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: Color(0xFF07142F)),
+                Text('View all',
+                    style: GoogleFonts.inter(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF2563EB))),
+                const SizedBox(width: 4),
+                const Icon(LucideIcons.arrowRight,
+                    size: 15, color: Color(0xFF2563EB)),
               ],
             ),
-          )
-        else
-          SizedBox(
-            height: 210,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _recentlyVisitedProperties.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (_, index) => SizedBox(
-                width: 210,
-                child: _CommercialFeaturedCard(
-                  property: _recentlyVisitedProperties[index],
-                  tag: 'Recent',
-                  onViewed: _loadRecentlyVisitedProperties,
-                  initialDateRange: _selectedRange,
-                  initialGuestCount: _guestCount,
-                ),
-              ),
+          ),
+      ],
+    );
+  }
+
+  void _openPropertyFromHome(PropertyModel property) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PropertyDetailScreen(
+          propertyId: property.propertyId,
+          initialCheckInDate: _selectedRange?.start,
+          initialCheckOutDate: _selectedRange?.end,
+          initialGuestCount: _guestCount,
+        ),
+      ),
+    ).then((_) => _loadRecentlyVisitedProperties());
+  }
+
+  /// "Available This Weekend": the website's city tabs (All, Nashik, Pune, Goa,
+  /// Alibaug, Discover All) over the same live properties.
+  Widget _buildAvailableThisWeekend(List<PropertyModel> all) {
+    if (all.isEmpty) return const SizedBox.shrink();
+    const preferred = ['Nashik', 'Pune', 'Goa', 'Alibaug'];
+    final present = preferred
+        .where((c) => all.any((p) => p.city.trim().toLowerCase() == c.toLowerCase()))
+        .toList();
+    final tabs = ['All', ...present, 'Discover All'];
+    final active = tabs.contains(_weekendCity) ? _weekendCity : 'All';
+    final shown = (active == 'All'
+            ? all
+            : all.where((p) => p.city.trim().toLowerCase() == active.toLowerCase()))
+        .take(10)
+        .toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(18, 0, 0, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Available This Weekend',
+              style: GoogleFonts.playfairDisplay(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E1E1E))),
+          const SizedBox(height: 14),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final tab in tabs)
+                  GestureDetector(
+                    onTap: () {
+                      if (tab == 'Discover All') {
+                        _openBrowse();
+                        return;
+                      }
+                      setState(() => _weekendCity = tab);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 22),
+                      padding: const EdgeInsets.only(bottom: 8),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: active == tab
+                                ? const Color(0xFF1B1924)
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(tab,
+                          style: GoogleFonts.inter(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                              color: active == tab
+                                  ? const Color(0xFF1B1924)
+                                  : const Color(0xFF64748B))),
+                    ),
+                  ),
+              ],
             ),
           ),
+          const SizedBox(height: 16),
+          _webCardRow(shown),
+        ],
+      ),
+    );
+  }
+
+  Widget _webCardRow(List<PropertyModel> cards) {
+    return SizedBox(
+      height: 410,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        clipBehavior: Clip.none,
+        padding: const EdgeInsets.only(top: 4, bottom: 18, right: 18),
+        itemCount: cards.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 16),
+        itemBuilder: (_, index) => SizedBox(
+          width: 292,
+          child: WebPropertyCard(
+            property: cards[index],
+            onTap: () => _openPropertyFromHome(cards[index]),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentlyViewedCompact() {
+    if (_recentlyVisitedProperties.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _webSectionTitle('Recently Visited', null),
+        const SizedBox(height: 14),
+        _webCardRow(_recentlyVisitedProperties),
       ],
     );
   }
@@ -1302,35 +1828,261 @@ class _LandingScreenState extends State<LandingScreen> {
     required String category,
     required List<PropertyModel> properties,
   }) {
-    final cards = properties.take(6).toList();
+    final cards = properties.take(8).toList();
+    if (cards.isEmpty) return const SizedBox.shrink();
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(title, () => _openBrowse(category: category)),
-        const SizedBox(height: 12),
-        if (cards.isEmpty)
-          _CommercialEmptyCard(
-            message: _emptySectionMessage(title),
-          )
-        else
-          SizedBox(
-            height: 240,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: cards.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemBuilder: (_, index) => SizedBox(
-                width: 240,
-                child: _CommercialFeaturedCard(
-                  property: cards[index],
-                  tag: index == 0 ? 'Most Booked' : 'Top Rated',
-                  onViewed: _loadRecentlyVisitedProperties,
-                  initialDateRange: _selectedRange,
-                  initialGuestCount: _guestCount,
+        _webSectionTitle(title, () => _openBrowse(category: category)),
+        const SizedBox(height: 14),
+        _webCardRow(cards),
+      ],
+    );
+  }
+
+  Widget _buildWebCollections() {
+    // the website's five "Discover Our Collection" cards: same photos and wording
+    // [photo, title, subtitle, category, property_type filter] (same filters as the website)
+    const items = [
+      ['villas', 'Villas', 'Private pools, lush lawns & royal stays across India', 'residential', 'villa,farmhouse'],
+      ['xspace-series', 'X-Space Series', 'The ultimate pinnacle of private luxury stays', 'residential', 'villa'],
+      ['banquet-halls', 'Banquet Halls', 'Magical backdrops for your dream celebration', 'event_venue', ''],
+      ['homestays', 'Homestays', 'Fully serviced urban homes with hotel-grade amenities', 'residential', 'not:villa,farmhouse'],
+      ['coworking', 'Coworking Spaces', 'Premium offices and collaborative work studios', 'commercial', 'co_working'],
+    ];
+    return Container(
+      width: double.infinity,
+      color: const Color(0xFFF8F3E8),
+      padding: const EdgeInsets.fromLTRB(16, 30, 0, 30),
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _webSectionTitle('Discover Our Collection', null),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 290,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.only(right: 16),
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 14),
+            itemBuilder: (context, index) {
+              final c = items[index];
+              return GestureDetector(
+                onTap: () => _openBrowse(
+                  category: c[3],
+                  propertyType: c[4].isEmpty ? null : c[4],
+                  // the X-Space Series is only the premium villas
+                  minPrice: c[0] == 'xspace-series' ? 50000 : null,
+                  title: c[1],
                 ),
-              ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(14),
+                  child: SizedBox(
+                    width: 214,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        Image.asset(
+                          'assets/images/collections/${c[0]}.jpg',
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) =>
+                              Container(color: const Color(0xFF3A3A3A)),
+                        ),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.78),
+                              ],
+                              stops: const [0.35, 1],
+                            ),
+                          ),
+                        ),
+                        Positioned(
+                          left: 16,
+                          right: 16,
+                          bottom: 16,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(c[1],
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.playfairDisplay(
+                                      fontSize: 15,
+                                      height: 1.2,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.white)),
+                              const SizedBox(height: 6),
+                              Text(c[2],
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: GoogleFonts.inter(
+                                      fontSize: 11,
+                                      height: 1.35,
+                                      color:
+                                          Colors.white.withValues(alpha: 0.9))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    ),
+    );
+  }
+
+  Widget _buildWebFooter(AuthProvider auth) {
+    Widget link(String text, VoidCallback onTap) => InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(text,
+                  style: GoogleFonts.inter(
+                      fontSize: 13, color: const Color(0xFF4A5568))),
             ),
           ),
-      ],
+        );
+
+    Widget group(String title, List<Widget> children) => Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: const EdgeInsets.only(bottom: 8),
+            iconColor: const Color(0xFF1B1924),
+            collapsedIconColor: const Color(0xFF1B1924),
+            title: Text(title,
+                style: GoogleFonts.inter(
+                    fontSize: 13,
+                    letterSpacing: 0.6,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF1B1924))),
+            children: children,
+          ),
+        );
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(top: 34),
+      padding: const EdgeInsets.fromLTRB(20, 26, 20, 28),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFEDEDED))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppLogo(height: 30),
+          const SizedBox(height: 12),
+          Text(
+            'Redefining short-term rentals in India through curation, technology, and premium service.',
+            style: GoogleFonts.inter(
+                fontSize: 13, height: 1.55, color: const Color(0xFF4A5568)),
+          ),
+          const SizedBox(height: 20),
+          Text('CONNECT WITH US',
+              style: GoogleFonts.inter(
+                  fontSize: 11,
+                  letterSpacing: 0.8,
+                  fontWeight: FontWeight.w700,
+                  color: const Color(0xFF6B6B6B))),
+          const SizedBox(height: 10),
+          Row(
+            // same pages as the website footer; the website has no YouTube page yet
+            children: const [
+              _WebSocialDot(
+                  icon: FontAwesomeIcons.linkedinIn,
+                  url: 'https://www.linkedin.com/company/139624194/'),
+              SizedBox(width: 10),
+              _WebSocialDot(
+                  icon: FontAwesomeIcons.instagram,
+                  url: 'https://www.instagram.com/xspace360.in'),
+              SizedBox(width: 10),
+              _WebSocialDot(
+                  icon: FontAwesomeIcons.facebookF,
+                  url: 'https://www.facebook.com/share/1H3z56BJu4/'),
+              SizedBox(width: 10),
+              _WebSocialDot(icon: FontAwesomeIcons.youtube),
+            ],
+          ),
+          const SizedBox(height: 10),
+          const Divider(height: 1, color: Color(0xFFEDEDED)),
+          group('X-SPACE360 STAYS', [
+            link('Residential Stays', () => _openBrowse(category: 'residential')),
+            link('Commercial Spaces', () => _openBrowse(category: 'commercial')),
+            link('Event Venues', () => _openBrowse(category: 'event_venue')),
+          ]),
+          const Divider(height: 1, color: Color(0xFFEDEDED)),
+          group('HOSTS', [
+            link('List your space', () => _openHostSignup(auth)),
+          ]),
+          const Divider(height: 1, color: Color(0xFFEDEDED)),
+          group('CONTACT US', [
+            link('Call Us: +91 8104 954 254', () {}),
+            link('support@x-space360.in', () {}),
+          ]),
+          const Divider(height: 1, color: Color(0xFFEDEDED)),
+          const SizedBox(height: 18),
+          Text(
+            '\u00a9 2026 X-Space360. Owned & Operated by Golden Rich Financial Solutions & Real Estate Solutions Pvt Ltd. All rights reserved.',
+            style: GoogleFonts.inter(
+                fontSize: 11, height: 1.55, color: const Color(0xFF6B6B6B)),
+          ),
+          const SizedBox(height: 70),
+        ],
+      ),
+    );
+  }
+
+  /// Short host call-to-action in place of the old tall "Become a Host" block.
+  Widget _buildHostStrip(AuthProvider auth) {
+    return GestureDetector(
+      onTap: () => _openHostSignup(auth),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFBF1D6),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFE6CF8A)),
+        ),
+        child: Row(
+          children: [
+            const Icon(LucideIcons.house, size: 22, color: Color(0xFF1B1924)),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('List your space',
+                      style: GoogleFonts.inter(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1B1924))),
+                  const SizedBox(height: 2),
+                  Text('Host guests and start earning with X-Space360.',
+                      style: GoogleFonts.inter(
+                          fontSize: 12, color: const Color(0xFF6B6B6B))),
+                ],
+              ),
+            ),
+            const Icon(LucideIcons.arrowRight,
+                size: 18, color: Color(0xFF1B1924)),
+          ],
+        ),
+      ),
     );
   }
 
@@ -1479,30 +2231,52 @@ class _LandingScreenState extends State<LandingScreen> {
     );
   }
 
+  Future<void> _openMenu(AuthProvider auth) {
+    final user = auth.currentUser;
+    void toLogin() => Navigator.push(
+        context, MaterialPageRoute(builder: (_) => const LoginScreen()));
+    return showLandingMenu(
+      context,
+      userName: user?.fullName,
+      onBrowse: ({category, city, propertyType, searchQuery, minPrice}) =>
+          _openBrowse(
+              category: category,
+              city: city,
+              propertyType: propertyType,
+              searchQuery: searchQuery,
+              minPrice: minPrice),
+      onListProperty: () => _openHostSignup(auth),
+      onSignIn: toLogin,
+      onBookings: () {
+        if (user == null) return toLogin();
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const AppShell(initialIndex: 2)));
+      },
+      onWishlist: () {
+        if (user == null) return toLogin();
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const AppShell(initialIndex: 1)));
+      },
+      onSupport: () => Navigator.push(context,
+          MaterialPageRoute(builder: (_) => const SupportTicketsScreen())),
+      onDownload: () => launchUrl(
+          Uri.parse(
+              'https://play.google.com/store/apps/details?id=com.xspace360.app'),
+          mode: LaunchMode.externalApplication),
+    );
+  }
+
   Widget _buildHeroHeader(AuthProvider auth) {
     final user = auth.currentUser;
     return Row(
       children: [
         const AppLogo(height: 24, white: true, framed: false),
         const Spacer(),
-        if (!auth.isAuthenticated)
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const LoginScreen()),
-              );
-            },
-            child: Text(
-              'Sign In',
-              style: GoogleFonts.inter(
-                color: Colors.white,
-                fontWeight: FontWeight.w800,
-                fontSize: 13,
-              ),
-            ),
-          )
-        else ...[
+        if (auth.isAuthenticated) ...[
           InkWell(
             onTap: () => _showAccountSheet(auth),
             borderRadius: BorderRadius.circular(999),
@@ -1531,37 +2305,13 @@ class _LandingScreenState extends State<LandingScreen> {
                     ),
             ),
           ),
-          const SizedBox(width: 12),
-          InkWell(
-            onTap: () async {
-              await auth.logout();
-              if (!mounted) return;
-              Navigator.pushAndRemoveUntil(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const AppShell(initialIndex: 0),
-                ),
-                (route) => false,
-              );
-            },
-            borderRadius: BorderRadius.circular(999),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppTheme.primary,
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                'Sign Out',
-                style: GoogleFonts.inter(
-                  color: Colors.white,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
         ],
+        const SizedBox(width: 6),
+        IconButton(
+          onPressed: () => _openMenu(auth),
+          icon: const Icon(LucideIcons.menu, color: Colors.white, size: 28),
+          tooltip: 'Menu',
+        ),
       ],
     );
   }
@@ -2702,15 +3452,16 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   Future<void> _openSearchSheet() async {
-    final result = await showModalBottomSheet<_SearchSelection>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => _SearchBottomSheet(
-        initialCity: _selectedCity == 'Anywhere' ? '' : _selectedCity,
-        initialCategory: _selectedCategory,
-        initialRange: _selectedRange,
-        initialGuests: _guestCount,
+    final result = await Navigator.of(context).push<_SearchSelection>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (_) => _SearchStayPage(
+          initialCity: _selectedCity == 'Anywhere' ? '' : _selectedCity,
+          initialQuery: _searchQuery,
+          initialCategory: _selectedCategory,
+          initialRange: _selectedRange,
+          initialGuests: _guestCount,
+        ),
       ),
     );
     if (result == null || !mounted) return;
@@ -2721,6 +3472,7 @@ class _LandingScreenState extends State<LandingScreen> {
       _selectedRange = result.range;
       _guestCount = result.guests;
     });
+    _saveRecentSearch(result.city.isNotEmpty ? result.city : result.searchQuery);
     _runSearch();
   }
 
@@ -3686,6 +4438,339 @@ class _RecentlyVisitedCard extends StatelessWidget {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SearchStayPage extends StatefulWidget {
+  final String initialCity;
+  final String initialQuery;
+  final String initialCategory;
+  final DateTimeRange? initialRange;
+  final int initialGuests;
+
+  const _SearchStayPage({
+    required this.initialCity,
+    required this.initialQuery,
+    required this.initialCategory,
+    required this.initialRange,
+    required this.initialGuests,
+  });
+
+  @override
+  State<_SearchStayPage> createState() => _SearchStayPageState();
+}
+
+class _SearchStayPageState extends State<_SearchStayPage> {
+  final TextEditingController _controller = TextEditingController();
+  final FocusNode _focus = FocusNode();
+  DateTimeRange? _range;
+  int _guests = 2;
+  String _city = '';
+
+  static const List<String> _cities = [
+    'Nashik',
+    'Pune',
+    'Mumbai',
+    'Igatpuri',
+    'Trimbakeshwar',
+    'Alibaug',
+    'Lonavala',
+    'Goa',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _city = widget.initialCity;
+    _controller.text = widget.initialCity.isNotEmpty
+        ? widget.initialCity
+        : widget.initialQuery;
+    _range = widget.initialRange;
+    _guests = widget.initialGuests;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    _focus.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickDates() async {
+    final picked = await Navigator.of(context).push<DateTimeRange>(
+      MaterialPageRoute(
+        builder: (_) => StayDatePickerPage(initialRange: _range),
+      ),
+    );
+    if (picked != null && mounted) setState(() => _range = picked);
+  }
+
+  void _submit() {
+    final text = _controller.text.trim();
+    final isCity = _cities.any((c) => c.toLowerCase() == text.toLowerCase());
+    Navigator.pop(
+      context,
+      _SearchSelection(
+        city: isCity ? text : (text.isEmpty ? '' : _city),
+        searchQuery: isCity ? '' : text,
+        category: widget.initialCategory,
+        range: _range,
+        guests: _guests,
+      ),
+    );
+  }
+
+  Widget _tile({
+    required IconData icon,
+    required Widget child,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF6F6F6),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: const Color(0xFF4A4A4A)),
+            const SizedBox(width: 14),
+            Expanded(child: child),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _label(String text) => Text(text,
+      style: GoogleFonts.inter(
+          fontSize: 12,
+          fontWeight: FontWeight.w400,
+          color: const Color(0xFF6B6B6B)));
+
+  Widget _stepper(IconData icon, VoidCallback? onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(
+              color: onTap == null
+                  ? const Color(0xFFE0E0E0)
+                  : const Color(0xFF1B1924)),
+        ),
+        child: Icon(icon,
+            size: 16,
+            color: onTap == null
+                ? const Color(0xFFBDBDBD)
+                : const Color(0xFF1B1924)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    String dateText(DateTime? d) =>
+        d == null ? 'Select date' : DateFormat('dd MMM yyyy').format(d);
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 8, 16, 4),
+              child: Row(
+                children: [
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(LucideIcons.arrowLeft, size: 22),
+                  ),
+                  Text('Search your Stay',
+                      style: GoogleFonts.inter(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF1B1924))),
+                ],
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+                children: [
+                  _tile(
+                    icon: LucideIcons.mapPin,
+                    onTap: () => _focus.requestFocus(),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _label('Location/Villas/Landmark'),
+                        TextField(
+                          controller: _controller,
+                          focusNode: _focus,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (_) => _submit(),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            isDense: true,
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.only(top: 2),
+                            hintText: 'Select location',
+                            hintStyle: GoogleFonts.inter(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                                color: const Color(0xFF1B1924)),
+                          ),
+                          style: GoogleFonts.inter(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1B1924)),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _cities.map((c) {
+                      final active =
+                          _controller.text.trim().toLowerCase() ==
+                              c.toLowerCase();
+                      return GestureDetector(
+                        onTap: () => setState(() {
+                          _city = c;
+                          _controller.text = c;
+                        }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: active
+                                ? const Color(0xFF1B1924)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(999),
+                            border: Border.all(
+                                color: active
+                                    ? const Color(0xFF1B1924)
+                                    : const Color(0xFFD9D9D9)),
+                          ),
+                          child: Text(c,
+                              style: GoogleFonts.inter(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: active
+                                      ? Colors.white
+                                      : const Color(0xFF1B1924))),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                  const SizedBox(height: 14),
+                  _tile(
+                    icon: LucideIcons.calendar,
+                    onTap: _pickDates,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _label('Check-In Date'),
+                              const SizedBox(height: 2),
+                              Text(dateText(_range?.start),
+                                  style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: _range == null
+                                          ? const Color(0xFF6B6B6B)
+                                          : const Color(0xFF1B1924))),
+                            ],
+                          ),
+                        ),
+                        Container(
+                            width: 1, height: 34, color: const Color(0xFFDADADA)),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _label('Check-Out Date'),
+                              const SizedBox(height: 2),
+                              Text(dateText(_range?.end),
+                                  style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: _range == null
+                                          ? const Color(0xFF6B6B6B)
+                                          : const Color(0xFF1B1924))),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _tile(
+                    icon: LucideIcons.users,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _label('Total Guests'),
+                              const SizedBox(height: 2),
+                              Text('$_guests ${_guests == 1 ? 'Guest' : 'Guests'}',
+                                  style: GoogleFonts.inter(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w600,
+                                      color: const Color(0xFF1B1924))),
+                            ],
+                          ),
+                        ),
+                        _stepper(LucideIcons.minus,
+                            _guests > 1 ? () => setState(() => _guests--) : null),
+                        const SizedBox(width: 10),
+                        _stepper(LucideIcons.plus,
+                            _guests < 30 ? () => setState(() => _guests++) : null),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(top: BorderSide(color: Color(0xFFEDEDED))),
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: _submit,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1B1924),
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: Text('Search Stays',
+                      style: GoogleFonts.inter(
+                          fontSize: 15, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -5628,6 +6713,32 @@ class _HostBenefit extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _WebSocialDot extends StatelessWidget {
+  final FaIconData icon;
+  final String? url;
+
+  const _WebSocialDot({required this.icon, this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: url == null
+          ? null
+          : () => launchUrl(Uri.parse(url!), mode: LaunchMode.externalApplication),
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: const Color(0xFFD9D9D9)),
+        ),
+        alignment: Alignment.center,
+        child: FaIcon(icon, size: 17, color: const Color(0xFF1B1924)),
+      ),
     );
   }
 }

@@ -74,7 +74,10 @@ class LocationService {
 
   Stream<UserLocationSnapshot> watchLocation() async* {
     await _ensurePermission();
+    // geolocator's web build can throw a TypeError while converting a fix:
+    // ignore it so one bad update never breaks the screen
     yield* Geolocator.getPositionStream(locationSettings: _settings)
+        .handleError((Object _) {})
         .map(UserLocationSnapshot.fromPosition);
   }
 

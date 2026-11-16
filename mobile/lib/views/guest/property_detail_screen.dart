@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'property_web_body.dart';
+import 'stay_date_picker_page.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +12,7 @@ import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../providers/property_provider.dart';
+import '../../providers/booking_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../models/property_model.dart';
 import '../../theme.dart';
@@ -50,6 +53,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
   final _couponController = TextEditingController();
   int _currentImageIndex = 0;
   bool _isDescriptionExpanded = false;
+  String? _selectedUnitId;
   final PageController _pageController = PageController();
   Timer? _imageAutoSlideTimer;
   // New State variables for availability calendar, reviews, and guest count
@@ -74,6 +78,221 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
         (type.contains('villa') ||
             type.contains('resort') ||
             prop.category.toLowerCase() == 'residential');
+  }
+
+  final GlobalKey<PropertyWebBodyState> _bodyKey = GlobalKey<PropertyWebBodyState>();
+  bool _guestsChosen = false;
+  List<PropertyModel> _similar = [];
+  String? _similarFor;
+
+  /// Other live spaces in the same city and category, like the website's "Similar Properties".
+  Future<void> _loadSimilar(PropertyModel prop) async {
+    if (_similarFor == prop.propertyId) return;
+    _similarFor = prop.propertyId;
+    final all = await Provider.of<PropertyProvider>(context, listen: false)
+        .fetchLivePropertiesForBrowse();
+    if (!mounted) return;
+    final sameCity = all
+        .where((e) => e.propertyId != prop.propertyId && e.category == prop.category)
+        .toList()
+      ..sort((a, b) {
+        int score(PropertyModel x) => x.city.toLowerCase() == prop.city.toLowerCase() ? 0 : 1;
+        return score(a).compareTo(score(b));
+      });
+    setState(() => _similar = sameCity.take(6).toList());
+  }
+  double? _stayTotal;
+  int _adultsSel = 1, _childrenSel = 0, _infantsSel = 0;
+
+  /// Guests sheet shown right after the calendar, like the website's booking card.
+  Future<bool> _pickGuests(PropertyModel prop) async {
+    var adults = _adultsSel, children = _childrenSel, infants = _infantsSel;
+    PropertyUnit? unit;
+    for (final u in prop.units) {
+      if (u.unitId == _selectedUnitId) unit = u;
+    }
+    final max = unit?.maxGuests ?? prop.maxGuests;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          Widget row(String title, String sub, int value, int min,
+              void Function(int) onChanged, {bool counts = true}) {
+            final canAdd = !counts || adults + children < max;
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.w600)),
+                        Text(sub,
+                            style: GoogleFonts.inter(
+                                fontSize: 12, color: const Color(0xFF6B7280))),
+                      ],
+                    ),
+                  ),
+                  _stepBtn(Icons.remove, value > min ? () => setSheet(() => onChanged(value - 1)) : null),
+                  SizedBox(
+                    width: 36,
+                    child: Center(
+                        child: Text('$value',
+                            style: GoogleFonts.inter(
+                                fontSize: 16, fontWeight: FontWeight.w600))),
+                  ),
+                  _stepBtn(Icons.add, canAdd ? () => setSheet(() => onChanged(value + 1)) : null),
+                ],
+              ),
+            );
+          }
+
+          return Container(
+            padding: EdgeInsets.fromLTRB(
+                22, 18, 22, 18 + MediaQuery.paddingOf(ctx).bottom),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Total guests',
+                    style: GoogleFonts.inter(
+                        fontSize: 20, fontWeight: FontWeight.w600)),
+                Text('Maximum $max guests',
+                    style: GoogleFonts.inter(
+                        fontSize: 12, color: const Color(0xFF8A6100))),
+                const SizedBox(height: 8),
+                row('Adults', 'Age 13+', adults, 1, (v) => adults = v),
+                row('Children', 'Ages 2-12', children, 0, (v) => children = v),
+                row('Infants', 'Under 2', infants, 0, (v) => infants = v,
+                    counts: false),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx, true),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF1B1924),
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
+                    ),
+                    child: Text('Done',
+                        style: GoogleFonts.inter(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+    if (ok == true && mounted) {
+      setState(() {
+        _adultsSel = adults;
+        _childrenSel = children;
+        _infantsSel = infants;
+        _guestCount = adults + children;
+        _guestsChosen = true;
+      });
+      return true;
+    }
+    return false;
+  }
+
+  Widget _stepBtn(IconData icon, VoidCallback? onTap) => GestureDetector(
+        onTap: onTap,
+        child: Container(
+          width: 34,
+          height: 34,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+                color: onTap == null
+                    ? const Color(0xFFE0E0E0)
+                    : const Color(0xFF1B1924)),
+          ),
+          child: Icon(icon,
+              size: 16,
+              color: onTap == null
+                  ? const Color(0xFFBDBDBD)
+                  : const Color(0xFF1B1924)),
+        ),
+      );
+
+  /// Total for the stay with this unit's prices and rules, from the same quote the booking uses.
+  Future<void> _refreshStayTotal(PropertyModel prop) async {
+    if (_checkInDate == null || _checkOutDate == null) return;
+    final fmt = DateFormat('yyyy-MM-dd');
+    final quote = await Provider.of<BookingProvider>(context, listen: false)
+        .createQuote({
+      'property_id': prop.propertyId,
+      if (_selectedUnitId != null) 'unit_id': _selectedUnitId,
+      'check_in_date': fmt.format(_checkInDate!),
+      'check_out_date': fmt.format(_checkOutDate!),
+      'number_of_guests': _guestCount,
+      'payment_type': 'full',
+    });
+    if (!mounted) return;
+    setState(() => _stayTotal = (quote?['total_amount'] as num?)?.toDouble());
+  }
+
+  /// Same order as the website: pick a unit, then the dates (that unit's own
+  /// calendar and prices), then reserve.
+  Future<void> _onBottomButton(PropertyModel prop) async {
+    if (prop.units.isNotEmpty && _selectedUnitId == null) {
+      _bodyKey.currentState?.promptForUnit();
+      return;
+    }
+    if (_checkInDate == null || _checkOutDate == null) {
+      final picked = await Navigator.push<DateTimeRange>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => StayDatePickerPage(
+            propertyId: prop.propertyId,
+            unitId: _selectedUnitId,
+            defaultPrice: _selectedUnitPrice(prop),
+          ),
+        ),
+      );
+      if (picked != null && mounted) {
+        setState(() {
+          _checkInDate = picked.start;
+          _checkOutDate = picked.end;
+          _stayTotal = null;
+          _guestsChosen = false;
+        });
+        // guests come right after the calendar
+        if (await _pickGuests(prop)) await _refreshStayTotal(prop);
+      }
+      return;
+    }
+    if (!_guestsChosen) {
+      if (await _pickGuests(prop)) await _refreshStayTotal(prop);
+      return;
+    }
+    if (!mounted) return;
+    await _handleBooking(context, _selectedUnitPrice(prop));
+  }
+
+  double _selectedUnitPrice(PropertyModel prop) {
+    if (_selectedUnitId != null) {
+      for (final u in prop.units) {
+        if (u.unitId == _selectedUnitId) return u.price;
+      }
+    }
+    return prop.customerDisplayPrice;
   }
 
   Future<void> _openPropertyMap(PropertyModel prop) async {
@@ -437,6 +656,7 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
           initialCheckOutDate: _checkOutDate,
           initialGuestCount: _guestCount,
           initialCouponCode: widget.initialCouponCode,
+          unitId: _selectedUnitId,
         ),
       ),
     );
@@ -937,6 +1157,11 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       );
     }
 
+    if (_similarFor != prop.propertyId) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadSimilar(prop);
+      });
+    }
     final isCommercial = prop.category.toLowerCase() == 'commercial';
     final isEvent = prop.category.toLowerCase() == 'event_venue';
     final showPerDay = isCommercial || isEvent;
@@ -947,1584 +1172,154 @@ class _PropertyDetailScreenState extends State<PropertyDetailScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. SCROLLABLE CONTENT
+          // 1. WEBSITE-STYLE PAGE
           Positioned.fill(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.only(
-                  bottom: 110), // Room for sticky booking bar
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // IMAGE CAROUSEL SECTION
-                  Stack(
-                    children: [
-                      SizedBox(
-                        height: 320,
-                        child: PageView.builder(
-                          controller: _pageController,
-                          onPageChanged: (index) {
-                            setState(() {
-                              _currentImageIndex = index;
-                            });
-                            _startImageAutoSlide(images.length);
-                          },
-                          itemCount: images.isEmpty ? 1 : images.length,
-                          itemBuilder: (context, index) {
-                            return GestureDetector(
-                              onTap: images.isEmpty
-                                  ? null
-                                  : () => _openImageGallery(
-                                        images,
-                                        initialIndex: index,
-                                      ),
-                              child: PropertyImage(
-                                imageUrl: images.isEmpty ? null : images[index],
-                                width: double.infinity,
-                                height: 320,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      // Gradient Overlay for Title/Actions contrast
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.black.withValues(alpha: 0.4),
-                                Colors.transparent,
-                                Colors.black.withValues(alpha: 0.3),
-                              ],
-                              stops: const [0.0, 0.5, 1.0],
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Slide Index indicator badge
-                      if (images.length > 1) ...[
-                        Positioned(
-                          left: 14,
-                          top: 136,
-                          child: _ImageSliderArrow(
-                            icon: Icons.chevron_left_rounded,
-                            onTap: () => _goToImage(
-                              _currentImageIndex - 1,
-                              images.length,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          right: 14,
-                          top: 136,
-                          child: _ImageSliderArrow(
-                            icon: Icons.chevron_right_rounded,
-                            onTap: () => _goToImage(
-                              _currentImageIndex + 1,
-                              images.length,
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 38,
-                          child: Center(
-                            child: _ImageSliderDots(
-                              count: images.length,
-                              activeIndex: _currentImageIndex,
-                              onTap: (index) =>
-                                  _goToImage(index, images.length),
-                            ),
-                          ),
-                        ),
-                      ],
-                      Positioned(
-                        right: 16,
-                        bottom: 36, // leave room for card overlap
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            '${images.isEmpty ? 0 : _currentImageIndex + 1}/${images.isEmpty ? 0 : images.length}',
-                            style: GoogleFonts.inter(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (images.length > 1)
-                        Positioned(
-                          left: 16,
-                          bottom: 36,
-                          child: GestureDetector(
-                            onTap: () => _openImageGallery(
-                              images,
-                              initialIndex: _currentImageIndex,
-                            ),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 8,
-                              ),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.92),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.photo_library_outlined,
-                                    size: 16,
-                                    color: AppTheme.charcoal,
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'View all photos',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.charcoal,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+              child: PropertyWebBody(
+                key: _bodyKey,
+                similar: _similar,
+                onOpenSimilar: (other) => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) =>
+                        PropertyDetailScreen(propertyId: other.propertyId),
                   ),
-
-                  // DETAILS & CONTAINER CONTENT
-                  Transform.translate(
-                    offset: const Offset(0, -24),
-                    child: Container(
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        borderRadius:
-                            BorderRadius.vertical(top: Radius.circular(28)),
-                      ),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 7,
-                                ),
-                                decoration: BoxDecoration(
-                                  color:
-                                      AppTheme.primary.withValues(alpha: 0.10),
-                                  borderRadius: BorderRadius.circular(999),
-                                ),
-                                child: Text(
-                                  prop.category.toUpperCase(),
-                                  style: GoogleFonts.inter(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    color: AppTheme.primary,
-                                    letterSpacing: 0,
-                                  ),
-                                ),
-                              ),
-                              if (_isSignatureSeriesProperty(prop))
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 7,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.92),
-                                    borderRadius: BorderRadius.circular(999),
-                                    border: Border.all(
-                                      color: const Color(0xFFD4AF37),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      const Icon(
-                                        Icons.workspace_premium_rounded,
-                                        size: 13,
-                                        color: Color(0xFFD4AF37),
-                                      ),
-                                      const SizedBox(width: 5),
-                                      Text(
-                                        'SIGNATURE SERIES',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w800,
-                                          color: const Color(0xFFD4AF37),
-                                          letterSpacing: 0,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          // Title
-                          Text(
-                            prop.title,
-                            style: GoogleFonts.inter(
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.charcoal,
-                              height: 1.25,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Subtitle & Info
-                          Text(
-                            '${prop.maxGuests} guests · ${prop.bhkType.toUpperCase()} · ${prop.areaSqft.toStringAsFixed(0)} Sqft',
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: AppTheme.charcoalLight,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Small Guest Favourite Badge
-                          if (prop.rating != null && prop.rating! > 0) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceEvenly,
-                                children: [
-                                  Column(
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Text(
-                                            prop.rating!.toStringAsFixed(1),
-                                            style: GoogleFonts.inter(
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppTheme.charcoal,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 2),
-                                          const Icon(Icons.star,
-                                              size: 14,
-                                              color: AppTheme.charcoal),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        List.generate(
-                                            prop.rating!.round().clamp(1, 5),
-                                            (index) => '★').join(''),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 8,
-                                          color: AppTheme.charcoalMuted,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Container(
-                                      width: 1,
-                                      height: 28,
-                                      color: Colors.grey.shade200),
-                                  Column(
-                                    children: [
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          const Icon(
-                                              Icons
-                                                  .keyboard_double_arrow_left_rounded,
-                                              size: 14,
-                                              color: AppTheme.charcoal),
-                                          Text(
-                                            'Guest favourite',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppTheme.charcoal,
-                                            ),
-                                          ),
-                                          const Icon(
-                                              Icons
-                                                  .keyboard_double_arrow_right_rounded,
-                                              size: 14,
-                                              color: AppTheme.charcoal),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Highly rated stay',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          color: AppTheme.charcoalMuted,
-                                          fontWeight: FontWeight.w600,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Container(
-                                      width: 1,
-                                      height: 28,
-                                      color: Colors.grey.shade200),
-                                  Column(
-                                    children: [
-                                      Text(
-                                        (prop.reviewCount ?? 0).toString(),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.w800,
-                                          color: AppTheme.charcoal,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Reviews',
-                                        style: GoogleFonts.inter(
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.charcoalMuted,
-                                          decoration: TextDecoration.underline,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 20),
-                          ],
-
-                          const Divider(height: 1),
-                          const SizedBox(height: 20),
-
-                          _buildQuickFactsGrid(prop, showPerDay),
-                          const SizedBox(height: 20),
-
-                          const Divider(height: 1),
-                          const SizedBox(height: 20),
-
-                          // Exceptional key features list
-                          _buildPremiumHighlight(
-                            Icons.login_rounded,
-                            'Exceptional check-in experience',
-                            'Recent guests gave the check-in process a 5-star rating.',
-                          ),
-                          _buildPremiumHighlight(
-                            Icons.location_on_outlined,
-                            'Great location',
-                            'Guests who stayed here in the past year loved the location.',
-                          ),
-                          _buildPremiumHighlight(
-                            prop.petFriendly
-                                ? Icons.pets_outlined
-                                : Icons.local_parking_rounded,
-                            prop.petFriendly
-                                ? 'Pet friendly environment'
-                                : 'Park for free',
-                            prop.petFriendly
-                                ? 'Pets are welcomed with open arms at this listing.'
-                                : 'This is one of the few places in the area with free parking.',
-                          ),
-                          const SizedBox(height: 24),
-
-                          const Divider(height: 1),
-                          const SizedBox(height: 24),
-
-                          // Description / About
-                          Text(
-                            prop.description,
-                            maxLines: _isDescriptionExpanded ? null : 4,
-                            overflow: _isDescriptionExpanded
-                                ? TextOverflow.visible
-                                : TextOverflow.ellipsis,
-                            style: GoogleFonts.inter(
-                              fontSize: 14,
-                              color: AppTheme.charcoalLight,
-                              height: 1.6,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          InkWell(
-                            onTap: () {
-                              setState(() {
-                                _isDescriptionExpanded =
-                                    !_isDescriptionExpanded;
-                              });
-                            },
-                            child: Row(
-                              children: [
-                                Text(
-                                  _isDescriptionExpanded
-                                      ? 'Show less'
-                                      : 'Read more',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.charcoal,
-                                    decoration: TextDecoration.underline,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-                                Icon(
-                                  _isDescriptionExpanded
-                                      ? Icons.keyboard_arrow_up
-                                      : Icons.keyboard_arrow_down,
-                                  size: 16,
-                                  color: AppTheme.charcoal,
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-
-                          _buildVideoSection(prop),
-
-                          const Divider(height: 1),
-                          const SizedBox(height: 24),
-
-                          // Cook & Taxi Services Section
-                          if (prop.hasCook ||
-                              prop.hasSelfCook ||
-                              prop.hasTaxi) ...[
-                            Text(
-                              'Services & Kitchen',
-                              style: GoogleFonts.inter(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.charcoal,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            if (prop.hasCook) ...[
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.stone,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: AppTheme.border, width: 1),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primary
-                                            .withValues(alpha: 0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.restaurant,
-                                        color: AppTheme.primary,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Cook Available',
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.charcoal,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Personal cook service is available at this property.',
-                                            style: GoogleFonts.inter(
-                                              color: AppTheme.charcoalMuted,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Text(
-                                      '${CurrencyFormatter.format(prop.cookPrice ?? 0.0)}/day',
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w800,
-                                        color: AppTheme.primary,
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (prop.hasSelfCook || prop.hasTaxi)
-                                const SizedBox(height: 12),
-                            ],
-                            if (prop.hasSelfCook) ...[
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.stone,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: AppTheme.border, width: 1),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF10B981)
-                                            .withValues(alpha: 0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.soup_kitchen,
-                                        color: Color(0xFF10B981),
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Self Cooking Allowed',
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.charcoal,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Guests can use the kitchen facility to cook meals.',
-                                            style: GoogleFonts.inter(
-                                              color: AppTheme.charcoalMuted,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Text(
-                                      'Free',
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w800,
-                                        color: const Color(0xFF10B981),
-                                        fontSize: 15,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              if (prop.hasTaxi) const SizedBox(height: 12),
-                            ],
-                            if (prop.hasTaxi) ...[
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.stone,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(
-                                      color: AppTheme.border, width: 1),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color:
-                                            Colors.amber.withValues(alpha: 0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: const Icon(
-                                        Icons.local_taxi_rounded,
-                                        color: Colors.amber,
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'Taxi Service Available',
-                                            style: GoogleFonts.inter(
-                                              fontWeight: FontWeight.bold,
-                                              color: AppTheme.charcoal,
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Taxi or transportation service is available at this property.',
-                                            style: GoogleFonts.inter(
-                                              color: AppTheme.charcoalMuted,
-                                              fontSize: 12,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    Text(
-                                      'Available',
-                                      style: GoogleFonts.inter(
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.amber.shade700,
-                                        fontSize: 14,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            const SizedBox(height: 24),
-                            const Divider(height: 1),
-                            const SizedBox(height: 24),
-                          ],
-
-                          // What this place offers (Amenities)
-                          Text(
-                            'What this place offers',
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.charcoal,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          if (prop.amenities.isEmpty)
-                            Text(
-                              'No specific amenities listed.',
-                              style: GoogleFonts.inter(
-                                  color: AppTheme.charcoalMuted),
-                            )
-                          else
-                            GridView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 2,
-                                childAspectRatio: 3.5,
-                                crossAxisSpacing: 16,
-                                mainAxisSpacing: 12,
-                              ),
-                              itemCount: prop.amenities.length > 6
-                                  ? 6
-                                  : prop.amenities.length,
-                              itemBuilder: (context, index) {
-                                final amenity = prop.amenities[index];
-                                return Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.stone,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        _getAmenityIcon(amenity),
-                                        color: AppTheme.primary,
-                                        size: 18,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        amenity.toUpperCase(),
-                                        style: GoogleFonts.inter(
-                                          fontSize: 13,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.charcoal,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
-                            ),
-                          if (prop.amenities.length > 6) ...[
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: () {
-                                  // Simple bottom sheet to show all amenities
-                                  showModalBottomSheet(
-                                    context: context,
-                                    shape: const RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.vertical(
-                                          top: Radius.circular(24)),
-                                    ),
-                                    builder: (context) {
-                                      return Padding(
-                                        padding: const EdgeInsets.all(24.0),
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'What this place offers',
-                                              style: GoogleFonts.inter(
-                                                fontSize: 20,
-                                                fontWeight: FontWeight.w800,
-                                                color: AppTheme.charcoal,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 20),
-                                            Expanded(
-                                              child: ListView.separated(
-                                                itemCount:
-                                                    prop.amenities.length,
-                                                separatorBuilder:
-                                                    (context, index) =>
-                                                        const Divider(),
-                                                itemBuilder: (context, index) {
-                                                  final amenity =
-                                                      prop.amenities[index];
-                                                  return ListTile(
-                                                    leading: Icon(
-                                                        _getAmenityIcon(
-                                                            amenity),
-                                                        color:
-                                                            AppTheme.primary),
-                                                    title: Text(
-                                                      amenity.toUpperCase(),
-                                                      style: GoogleFonts.inter(
-                                                        fontWeight:
-                                                            FontWeight.w600,
-                                                        color:
-                                                            AppTheme.charcoal,
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                    },
-                                  );
-                                },
-                                style: OutlinedButton.styleFrom(
-                                  padding:
-                                      const EdgeInsets.symmetric(vertical: 14),
-                                  side: const BorderSide(
-                                      color: AppTheme.charcoal),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                ),
-                                child: Text(
-                                  'Show all ${prop.amenities.length} amenities',
-                                  style: GoogleFonts.inter(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.charcoal,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 24),
-
-                          const Divider(height: 1),
-                          const SizedBox(height: 24),
-
-                          // Location block
-                          Text(
-                            "Where you'll be",
-                            style: GoogleFonts.inter(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              color: AppTheme.charcoal,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            '${prop.address}, ${prop.city}, ${prop.state}, India',
-                            style: GoogleFonts.inter(
-                              fontSize: 17,
-                              color: AppTheme.charcoalLight,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          const SizedBox(height: 22),
-                          Container(
-                            height: 360,
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(28),
-                              color: const Color(0xFFF2F0EA),
-                            ),
-                            child: Stack(
-                              children: [
-                                Positioned.fill(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(28),
-                                    child: CustomPaint(
-                                      painter: _SoftMapPainter(),
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFF2F0EA)
-                                              .withValues(alpha: 0.78),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Positioned(
-                                  right: 18,
-                                  top: 18,
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    child: InkWell(
-                                      onTap: () => _openPropertyMap(prop),
-                                      customBorder: const CircleBorder(),
-                                      child: Container(
-                                        width: 64,
-                                        height: 64,
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black
-                                                  .withValues(alpha: 0.10),
-                                              blurRadius: 16,
-                                              offset: const Offset(0, 8),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.open_in_full_rounded,
-                                          color: AppTheme.charcoal,
-                                          size: 28,
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                Center(
-                                  child: Transform.translate(
-                                    offset: const Offset(0, -18),
-                                    child: const _MapHomeMarker(),
-                                  ),
-                                ),
-                                Positioned(
-                                  left: 16,
-                                  right: 16,
-                                  bottom: 16,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.96),
-                                      borderRadius: BorderRadius.circular(18),
-                                      boxShadow: [
-                                        BoxShadow(
-                                          color: Colors.black
-                                              .withValues(alpha: 0.08),
-                                          blurRadius: 16,
-                                          offset: const Offset(0, 8),
-                                        ),
-                                      ],
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 48,
-                                          height: 48,
-                                          decoration: const BoxDecoration(
-                                            color: AppTheme.primary,
-                                            shape: BoxShape.circle,
-                                          ),
-                                          child: const Icon(
-                                            Icons.location_on_rounded,
-                                            color: Colors.white,
-                                            size: 22,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                prop.city,
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 14,
-                                                  fontWeight: FontWeight.w900,
-                                                  color: AppTheme.charcoal,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 2),
-                                              Text(
-                                                '${prop.state} • Pin ${prop.pinCode}',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: AppTheme.charcoalMuted,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        OutlinedButton(
-                                          onPressed: () =>
-                                              _openPropertyMap(prop),
-                                          style: OutlinedButton.styleFrom(
-                                            side: const BorderSide(
-                                                color: AppTheme.charcoal),
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 12, vertical: 10),
-                                            shape: RoundedRectangleBorder(
-                                              borderRadius:
-                                                  BorderRadius.circular(12),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            'Open Map',
-                                            style: GoogleFonts.inter(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w800,
-                                              color: AppTheme.charcoal,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-
-                          const Divider(height: 1),
-                          const SizedBox(height: 32),
-
-                          // Large Wreath Guest Favourite Banner
-                          if (prop.rating != null && prop.rating! > 0) ...[
-                            Center(
-                              child: Column(
-                                children: [
-                                  LaurelWreathWidget(
-                                      rating: prop.rating ?? 4.95),
-                                  const SizedBox(height: 8),
-                                  Text(
-                                    'Guest favourite',
-                                    style: GoogleFonts.inter(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w800,
-                                      color: AppTheme.charcoal,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Text(
-                                    'One of the most loved homes on X-Space360,\nbased on ratings, reviews, and reliability',
-                                    textAlign: TextAlign.center,
-                                    style: GoogleFonts.inter(
-                                      fontSize: 12,
-                                      color: AppTheme.charcoalMuted,
-                                      fontWeight: FontWeight.w500,
-                                      height: 1.4,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-                            const Divider(height: 1),
-                            const SizedBox(height: 32),
-                          ],
-
-                          // Stay Dates Selection Card
-                          Text(
-                            prop.bookingDateTitle,
-                            style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: AppTheme.charcoal,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: AppTheme.border, width: 1.5),
-                            ),
-                            child: Column(
-                              children: [
-                                // Dates row
-                                Padding(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: InkWell(
-                                          onTap: () => _selectCheckIn(context),
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                isEvent
-                                                    ? 'EVENT DATE'
-                                                    : 'CHECK-IN',
-                                                style: GoogleFonts.inter(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w800,
-                                                  color: AppTheme.charcoalMuted,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 6),
-                                              Row(
-                                                children: [
-                                                  const Icon(
-                                                      Icons.calendar_today,
-                                                      size: 14,
-                                                      color: AppTheme.primary),
-                                                  const SizedBox(width: 6),
-                                                  Text(
-                                                    _checkInDate == null
-                                                        ? 'Add Date'
-                                                        : DateFormat(
-                                                                'dd-MM-yyyy')
-                                                            .format(
-                                                                _checkInDate!),
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 14,
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                      color: _checkInDate ==
-                                                              null
-                                                          ? AppTheme.primary
-                                                          : AppTheme.charcoal,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      if (!isEvent) ...[
-                                        Container(
-                                            width: 1.5,
-                                            height: 40,
-                                            color: AppTheme.border),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: InkWell(
-                                            onTap: _checkInDate == null
-                                                ? null
-                                                : () =>
-                                                    _selectCheckOut(context),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'CHECK-OUT',
-                                                  style: GoogleFonts.inter(
-                                                    fontSize: 10,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: _checkInDate == null
-                                                        ? AppTheme.charcoalMuted
-                                                            .withValues(
-                                                                alpha: 0.5)
-                                                        : AppTheme
-                                                            .charcoalMuted,
-                                                  ),
-                                                ),
-                                                const SizedBox(height: 6),
-                                                Row(
-                                                  children: [
-                                                    Icon(
-                                                      Icons.calendar_today,
-                                                      size: 14,
-                                                      color: _checkInDate ==
-                                                              null
-                                                          ? AppTheme
-                                                              .charcoalMuted
-                                                              .withValues(
-                                                                  alpha: 0.4)
-                                                          : AppTheme.primary,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      _checkOutDate == null
-                                                          ? 'Add Date'
-                                                          : DateFormat(
-                                                                  'dd-MM-yyyy')
-                                                              .format(
-                                                                  _checkOutDate!),
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        color: _checkOutDate ==
-                                                                null
-                                                            ? (_checkInDate ==
-                                                                    null
-                                                                ? AppTheme
-                                                                    .charcoalMuted
-                                                                    .withValues(
-                                                                        alpha:
-                                                                            0.5)
-                                                                : AppTheme
-                                                                    .primary)
-                                                            : AppTheme.charcoal,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ],
-                                  ),
-                                ),
-
-                                const Divider(
-                                    height: 1,
-                                    thickness: 1.5,
-                                    color: AppTheme.border),
-
-                                // Guests row
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 12),
-                                  child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Expanded(
-                                        child: Row(
-                                          children: [
-                                            Icon(
-                                              isCommercial
-                                                  ? Icons.groups_outlined
-                                                  : Icons.people_outline,
-                                              color: AppTheme.charcoalLight,
-                                              size: 22,
-                                            ),
-                                            const SizedBox(width: 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    'TOTAL ${prop.participantLabelUpper}',
-                                                    style: GoogleFonts.inter(
-                                                      fontSize: 10,
-                                                      fontWeight:
-                                                          FontWeight.w800,
-                                                      color: AppTheme
-                                                          .charcoalMuted,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  if (isEvent)
-                                                    DropdownButton<int>(
-                                                      value:
-                                                          _eventGuestBucketFor(
-                                                              _guestCount),
-                                                      underline:
-                                                          const SizedBox(),
-                                                      icon: const Icon(
-                                                          Icons.arrow_drop_down,
-                                                          color:
-                                                              AppTheme.primary),
-                                                      style: GoogleFonts.inter(
-                                                        fontSize: 15,
-                                                        fontWeight:
-                                                            FontWeight.w700,
-                                                        color:
-                                                            AppTheme.charcoal,
-                                                      ),
-                                                      items: const [
-                                                        DropdownMenuItem(
-                                                            value: 100,
-                                                            child: Text(
-                                                                'Less than 100')),
-                                                        DropdownMenuItem(
-                                                            value: 200,
-                                                            child: Text(
-                                                                '100-200')),
-                                                        DropdownMenuItem(
-                                                            value: 300,
-                                                            child: Text(
-                                                                '200-300')),
-                                                        DropdownMenuItem(
-                                                            value: 400,
-                                                            child: Text(
-                                                                '300-400')),
-                                                        DropdownMenuItem(
-                                                            value: 500,
-                                                            child: Text(
-                                                                '400-500')),
-                                                        DropdownMenuItem(
-                                                            value: 600,
-                                                            child: Text(
-                                                                'Greater than 500')),
-                                                      ],
-                                                      onChanged: (val) {
-                                                        setState(() {
-                                                          _guestCount =
-                                                              val ?? 100;
-                                                        });
-                                                      },
-                                                    )
-                                                  else
-                                                    Row(
-                                                      children: [
-                                                        InkWell(
-                                                          onTap: _guestCount > 1
-                                                              ? () => setState(() =>
-                                                                  _guestCount--)
-                                                              : null,
-                                                          child: Container(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(4),
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              shape: BoxShape
-                                                                  .circle,
-                                                              border: Border.all(
-                                                                  color: AppTheme
-                                                                      .border),
-                                                            ),
-                                                            child: const Icon(
-                                                                Icons.remove,
-                                                                size: 14,
-                                                                color: AppTheme
-                                                                    .charcoal),
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 12),
-                                                        Text(
-                                                          '$_guestCount',
-                                                          style:
-                                                              GoogleFonts.inter(
-                                                            fontSize: 16,
-                                                            fontWeight:
-                                                                FontWeight.w700,
-                                                            color: AppTheme
-                                                                .charcoal,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(
-                                                            width: 12),
-                                                        InkWell(
-                                                          onTap: _guestCount <
-                                                                  prop.maxGuests
-                                                              ? () => setState(() =>
-                                                                  _guestCount++)
-                                                              : null,
-                                                          child: Container(
-                                                            padding:
-                                                                const EdgeInsets
-                                                                    .all(4),
-                                                            decoration:
-                                                                BoxDecoration(
-                                                              shape: BoxShape
-                                                                  .circle,
-                                                              border: Border.all(
-                                                                  color: AppTheme
-                                                                      .border),
-                                                            ),
-                                                            child: const Icon(
-                                                                Icons.add,
-                                                                size: 14,
-                                                                color: AppTheme
-                                                                    .charcoal),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (!isEvent)
-                                        Text(
-                                          'MAX ${prop.maxGuests} ${prop.participantLabelUpper}',
-                                          style: GoogleFonts.inter(
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w800,
-                                            color: AppTheme.primary,
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _buildEventVenueOptions(prop),
-
-                          // Inline Availability Calendar section
-                          _buildAvailabilityCalendar(),
-
-                          // Guest Reviews section
-                          _buildReviewsSection(),
-                          const SizedBox(height: 32),
-
-                          const Divider(height: 1),
-                          const SizedBox(height: 32),
-
-                          _buildGuestAccessNote(),
-                        ],
-                      ),
-                    ),
-                  ),
+                ),
+                property: prop,
+                checkIn: _checkInDate,
+                checkOut: _checkOutDate,
+                wishlisted: propertyProvider.isWishlisted(prop.propertyId),
+                onBack: () => Navigator.pop(context),
+                onShare: () => _showShareSheet(prop),
+                onWishlist: () => handleWishlistTap(context, prop.propertyId),
+                onOpenGallery: (list, index) =>
+                    _openImageGallery(list, initialIndex: index),
+                selectedUnitId: _selectedUnitId,
+                onSelectUnit: (unit) => setState(() {
+                  if (_selectedUnitId != unit.unitId) {
+                    // a different unit has its own calendar, so start the dates again
+                    _checkInDate = null;
+                    _checkOutDate = null;
+                  }
+                  _selectedUnitId = unit.unitId;
+                }),
+                trailingSections: [
+                  _buildEventVenueOptions(prop),
+                  _buildAvailabilityCalendar(),
+                  _buildReviewsSection(),
+                  const SizedBox(height: 24),
+                  _buildGuestAccessNote(),
                 ],
               ),
             ),
           ),
 
-          // 2. FLOATING BACK ACTION BUTTONS OVERLAY
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 12,
-            left: 16,
-            right: 16,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                // Back Button
-                InkWell(
-                  onTap: () => Navigator.pop(context),
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.1),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        )
-                      ],
-                    ),
-                    child: const Icon(Icons.arrow_back,
-                        color: AppTheme.charcoal, size: 20),
-                  ),
-                ),
-                // Share & Favorite Buttons
-                Row(
-                  children: [
-                    GestureDetector(
-                      onTap: () => _showShareSheet(prop),
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            )
-                          ],
-                        ),
-                        child: const Icon(Icons.share_outlined,
-                            color: AppTheme.charcoal, size: 20),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    GestureDetector(
-                      onTap: () {
-                        handleWishlistTap(context, prop.propertyId);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          shape: BoxShape.circle,
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            )
-                          ],
-                        ),
-                        child: Icon(
-                          propertyProvider.isWishlisted(prop.propertyId)
-                              ? Icons.favorite_rounded
-                              : Icons.favorite_border_rounded,
-                          color: propertyProvider.isWishlisted(prop.propertyId)
-                              ? Colors.red
-                              : AppTheme.charcoal,
-                          size: 20,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-
-          // 3. STICKY BOTTOM RESERVATION BAR
+          // 3. STICKY BOTTOM BAR
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: EdgeInsets.fromLTRB(
+                  20, 12, 20, 12 + MediaQuery.paddingOf(context).bottom),
               decoration: BoxDecoration(
                 color: Colors.white,
-                border: const Border(
-                    top: BorderSide(color: AppTheme.border, width: 1)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.05),
-                    blurRadius: 10,
+                    color: Colors.black.withValues(alpha: 0.08),
+                    blurRadius: 14,
                     offset: const Offset(0, -4),
                   )
                 ],
               ),
               child: Row(
                 children: [
-                  // Price Tag
                   Expanded(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.baseline,
-                          textBaseline: TextBaseline.alphabetic,
-                          children: [
-                            Text(
-                              CurrencyFormatter.format(
-                                  prop.customerDisplayPrice),
-                              style: GoogleFonts.inter(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: AppTheme.charcoal,
+                    child: (_guestsChosen && _stayTotal != null)
+                        ? Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.baseline,
+                                textBaseline: TextBaseline.alphabetic,
+                                children: [
+                                  Text(
+                                    CurrencyFormatter.format(_stayTotal),
+                                    style: GoogleFonts.inter(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFF1B1924),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '/ TOTAL',
+                                    style: GoogleFonts.inter(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.5,
+                                      color: const Color(0xFF6B7280),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ),
-                            Text(
-                              prop.pricingUnitSuffix,
-                              style: GoogleFonts.inter(
-                                fontSize: 13,
-                                color: AppTheme.charcoalLight,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              prop.isInstantBook
-                                  ? Icons.flash_on_rounded
-                                  : Icons.assignment_turned_in_outlined,
-                              size: 13,
-                              color: prop.isInstantBook
-                                  ? AppTheme.primary
-                                  : AppTheme.charcoalMuted,
-                            ),
-                            const SizedBox(width: 4),
-                            Flexible(
-                              child: Text(
-                                prop.bookingModeLabel,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+                              Text(
+                                '${DateFormat('d MMM').format(_checkInDate!)} - ${DateFormat('d MMM').format(_checkOutDate!)}  ·  $_guestCount ${_guestCount == 1 ? 'guest' : 'guests'}',
                                 style: GoogleFonts.inter(
                                   fontSize: 11,
-                                  color: prop.isInstantBook
-                                      ? AppTheme.primary
-                                      : AppTheme.charcoalMuted,
-                                  fontWeight: FontWeight.w800,
+                                  fontWeight: FontWeight.w500,
+                                  color: const Color(0xFF8A6100),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        InkWell(
-                          onTap: () {
-                            // pricing details logic or show info dialog
-                          },
-                          child: Text(
-                            'View price breakup',
-                            style: GoogleFonts.inter(
-                              fontSize: 12,
-                              color: AppTheme.charcoal,
-                              fontWeight: FontWeight.w700,
-                              decoration: TextDecoration.underline,
-                            ),
+                            ],
+                          )
+                        : Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                CurrencyFormatter.format(_selectedUnitPrice(prop)),
+                                style: GoogleFonts.inter(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF1B1924),
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                prop.pricingUnitSuffix.toUpperCase(),
+                                style: GoogleFonts.inter(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                  color: const Color(0xFF6B7280),
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
                   ),
-                  // Book Button
                   ElevatedButton(
-                    onPressed: () =>
-                        _handleBooking(context, prop.pricePerNight),
+                    onPressed: () => _onBottomButton(prop),
                     style: ElevatedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 40, vertical: 16),
-                      backgroundColor: AppTheme.primary,
+                          horizontal: 28, vertical: 15),
+                      backgroundColor: const Color(0xFF1B1924),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(999),
                       ),
                       elevation: 0,
                     ),
                     child: Text(
-                      isEvent && prop.isInstantBook
-                          ? 'Reserve Venue'
-                          : prop.bookingCtaLabel,
+                      (_checkInDate != null && _checkOutDate != null)
+                          ? (_guestsChosen
+                              ? (prop.isInstantBook ? 'BOOK NOW' : 'REQUEST TO BOOK')
+                              : 'SELECT GUESTS')
+                          : 'SELECT DATES',
                       style: GoogleFonts.inter(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                        fontSize: 13,
+                        letterSpacing: 0.6,
+                        fontWeight: FontWeight.w700,
                         color: Colors.white,
                       ),
                     ),

@@ -6,7 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../providers/support_ticket_provider.dart';
 import '../../services/api_service.dart';
 import '../../theme.dart';
-import '../guest/ai_chat_screen.dart';
+import '../guest/home_web_sections.dart' show showAssistantSheet;
 
 class AboutUsScreen extends StatelessWidget {
   const AboutUsScreen({super.key});
@@ -342,10 +342,7 @@ class _SupportCenterScreenState extends State<SupportCenterScreen> {
                 onTap: () async {
                   final actionValue = card['action_value']?.toString() ?? '';
                   if (cardId == 'live_chat') {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AIChatScreen()),
-                    );
+                    showAssistantSheet(context);
                     return;
                   }
                   if (cardId == 'email_support' && actionValue.isNotEmpty) {

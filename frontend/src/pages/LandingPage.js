@@ -2807,6 +2807,11 @@ const LandingPage = () => {
   const [landingCalendarOpen, setLandingCalendarOpen] = useState(false);
   const [landingCalendarAnchor, setLandingCalendarAnchor] = useState('checkIn');
 
+  // only one search popup at a time: opening the location list or the guest picker closes the calendar
+  useEffect(() => {
+    if (activeDropdown) setLandingCalendarOpen(false);
+  }, [activeDropdown]);
+
   useEffect(() => {
     if (!activeDropdown && !landingCalendarOpen) return undefined;
 
@@ -3996,7 +4001,7 @@ const LandingPage = () => {
                 <>
                   {user.role === 'guest' ? (
                     <>
-                      <DrawerRow icon={Calendar} label="My Bookings" onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/bookings'); }} />
+                      <DrawerRow icon={Calendar} label="My Bookings" onClick={() => { setIsMobileMenuOpen(false); navigate(user.role === 'host' ? '/host/bookings' : user.role === 'guest' ? '/guest/bookings' : '/dashboard'); }} />
                       <DrawerRow icon={Heart} label="Wishlist" onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse?wishlist=1'); }} />
                       <DrawerRow icon={Headphones} label="Help & Support" onClick={() => { setIsMobileMenuOpen(false); navigate('/support'); }} />
                     </>
@@ -4257,6 +4262,7 @@ const LandingPage = () => {
                               type="button"
                               onClick={() => {
                                 setLandingCalendarAnchor('checkIn');
+                                setActiveDropdown(null);
                                 setLandingCalendarOpen(true);
                               }}
                               className="w-full text-left"
@@ -4279,6 +4285,7 @@ const LandingPage = () => {
                               type="button"
                               onClick={() => {
                                 setLandingCalendarAnchor('checkOut');
+                                setActiveDropdown(null);
                                 setLandingCalendarOpen(true);
                               }}
                               className="w-full text-left"

@@ -51,7 +51,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    _tabController = TabController(length: 9, vsync: this);
     _loadAllData();
   }
 
@@ -67,10 +67,111 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
     final prov = Provider.of<VerificationProvider>(context, listen: false);
     await Future.wait([
       prov.getRMStats(),
+      prov.getRMOperations(),
       prov.getPendingReviews(),
       prov.getReviewHistory(),
       prov.getBrokers(),
     ]);
+  }
+
+  /// Opens a read-only detail sheet for a host / property / booking / broker,
+  /// loaded from the same /employee/.../details endpoints the website uses.
+  Future<void> _showRecordDetails(String title, String path) async {
+    await showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.85,
+        maxChildSize: 0.95,
+        builder: (ctx, scroll) => FutureBuilder(
+          future: ApiService().dio.get(path),
+          builder: (ctx, snap) {
+            if (snap.connectionState != ConnectionState.done) {
+              return const Center(
+                  child: CircularProgressIndicator(color: AppTheme.primary));
+            }
+            if (snap.hasError || snap.data == null) {
+              return const Center(child: Text('Could not load details.'));
+            }
+            final data = snap.data!.data;
+            return ListView(
+              controller: scroll,
+              padding: const EdgeInsets.all(20),
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 12),
+                ..._detailRows(data, 0),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  String _prettyKey(String k) => k
+      .replaceAll('_', ' ')
+      .split(' ')
+      .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+      .join(' ');
+
+  List<Widget> _detailRows(dynamic data, int depth) {
+    final rows = <Widget>[];
+    const hidden = {'_id', 'password', 'password_hash', 'images', 'documents'};
+    if (data is Map) {
+      for (final e in data.entries) {
+        final key = e.key.toString();
+        if (hidden.contains(key) || e.value == null) continue;
+        final v = e.value;
+        if (v is Map || v is List) {
+          if (v is List && v.isEmpty) continue;
+          if (v is Map && v.isEmpty) continue;
+          rows.add(Padding(
+            padding: EdgeInsets.only(top: 12, left: depth * 8.0),
+            child: Text(_prettyKey(key),
+                style: const TextStyle(
+                    fontSize: 14, fontWeight: FontWeight.w800)),
+          ));
+          rows.addAll(_detailRows(v, depth + 1));
+        } else {
+          rows.add(Padding(
+            padding: EdgeInsets.only(top: 6, left: depth * 8.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                    flex: 4,
+                    child: Text(_prettyKey(key),
+                        style: const TextStyle(
+                            fontSize: 12, color: AppTheme.charcoalMuted))),
+                Expanded(
+                    flex: 6,
+                    child: Text('$v',
+                        style: const TextStyle(
+                            fontSize: 13, fontWeight: FontWeight.w600))),
+              ],
+            ),
+          ));
+        }
+      }
+    } else if (data is List) {
+      for (final item in data) {
+        if (item is Map || item is List) {
+          rows.add(const Divider(height: 18));
+          rows.addAll(_detailRows(item, depth));
+        } else {
+          rows.add(Padding(
+              padding: const EdgeInsets.only(top: 4), child: Text('$item')));
+        }
+      }
+    }
+    return rows;
   }
 
   String _getImageUrl(String? path) {
@@ -946,7 +1047,12 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
             borderRadius: BorderRadius.circular(16),
             side: const BorderSide(color: AppTheme.stone),
           ),
-          child: Padding(
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => _showRecordDetails(
+                '${b['full_name'] ?? 'Broker'}',
+                '/employee/brokers/${b['user_id']}/portfolio'),
+            child: Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1050,6 +1156,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                   ),
                 ),
               ],
+            ),
             ),
           ),
         );
@@ -1571,6 +1678,10 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                     final isKycApproved = host['kyc_status'] == 'approved';
                     return Card(
                       margin: const EdgeInsets.only(bottom: 16),
+                      child: InkWell(
+                      onTap: () => _showRecordDetails(
+                          "${host['full_name'] ?? 'Host'}",
+                          "/employee/hosts/${host['user_id']}/details"),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
@@ -1637,6 +1748,7 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                           ],
                         ),
                       ),
+                      ),
                     );
                   },
                 ),
@@ -1671,6 +1783,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
+                        onTap: () => _showRecordDetails(
+                            '${prop['title'] ?? 'Property'}',
+                            '/employee/properties/${prop['property_id']}/details'),
                         leading: Image.network(
                           AppConfig.resolveImageUrl(
                               (prop['images'] as List?)?.firstOrNull),
@@ -1721,6 +1836,9 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
+                        onTap: () => _showRecordDetails(
+                            'Booking ${booking['booking_id'] ?? ''}',
+                            '/employee/bookings/${booking['booking_id']}/details'),
                         title: Text(
                             'Booking ID: ${booking['booking_id'] ?? 'N/A'}'),
                         subtitle: Text(
@@ -1906,6 +2024,8 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
               // Custom styled tab header
               TabBar(
                 controller: _tabController,
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
                 indicatorColor: AppTheme.primary,
                 labelColor: AppTheme.primary,
                 unselectedLabelColor: AppTheme.charcoalLight,
@@ -1924,6 +2044,21 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                   Tab(
                       icon: Icon(Icons.analytics_outlined, size: 18),
                       text: 'Reports'),
+                  Tab(
+                      icon: Icon(Icons.business_center_outlined, size: 18),
+                      text: 'Hosts'),
+                  Tab(
+                      icon: Icon(Icons.apartment_outlined, size: 18),
+                      text: 'Properties'),
+                  Tab(
+                      icon: Icon(Icons.receipt_long_outlined, size: 18),
+                      text: 'Bookings'),
+                  Tab(
+                      icon: Icon(Icons.schedule_outlined, size: 18),
+                      text: 'Tasks'),
+                  Tab(
+                      icon: Icon(Icons.shield_outlined, size: 18),
+                      text: 'Audit'),
                 ],
               ),
             ],
@@ -1940,6 +2075,11 @@ class _EmployeeDashboardScreenState extends State<EmployeeDashboardScreen>
                 _buildPendingTab(prov),
                 _buildBrokersTab(prov),
                 _buildReportsTab(prov),
+                _buildHostsTab(prov),
+                _buildPropertiesTab(prov),
+                _buildBookingsTab(prov),
+                _buildTasksTab(prov),
+                _buildAuditTab(prov),
               ],
             ),
     );

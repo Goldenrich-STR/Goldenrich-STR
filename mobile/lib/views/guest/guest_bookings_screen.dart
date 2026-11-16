@@ -11,6 +11,7 @@ import '../../theme.dart';
 import '../../utils/currency_formatter.dart';
 import '../shared/property_image.dart';
 import 'ai_call_log_dialog.dart';
+import 'write_review_sheet.dart';
 
 class GuestBookingsScreen extends StatefulWidget {
   const GuestBookingsScreen({super.key});
@@ -645,6 +646,25 @@ class _GuestBookingsScreenState extends State<GuestBookingsScreen> {
                                       ),
                                     ),
 
+                                    if (!bk.statusUi.isCancelledGroup &&
+                                        (DateTime.tryParse(bk.checkOutDate)
+                                                ?.isBefore(DateTime.now()) ??
+                                            false))
+                                      TextButton(
+                                        onPressed: () => showWriteReviewSheet(
+                                            context,
+                                            bk.bookingId,
+                                            bk.propertyTitle ?? 'Your stay'),
+                                        child: Text(
+                                          'RATE STAY',
+                                          style: GoogleFonts.inter(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w800,
+                                            color: AppTheme.primary,
+                                          ),
+                                        ),
+                                      ),
+
                                     // Cancel Button
                                     if (!bk.statusUi.isCancelledGroup) ...[
                                       const SizedBox(width: 8),
@@ -801,7 +821,7 @@ class _BookingDetailsDialog extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFFFFFBF1), Color(0xFFFFF4DD)],
+                    colors: [Color(0xFFFAFAFA), Color(0xFFF1F1F1)],
                   ),
                 ),
                 child: Row(
@@ -1005,7 +1025,7 @@ class _AdvancePaymentPanel extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFFFFAEF),
+        color: const Color(0xFFF6F6F6),
         borderRadius: BorderRadius.circular(14),
         border: Border.all(color: AppTheme.primary.withValues(alpha: 0.22)),
       ),

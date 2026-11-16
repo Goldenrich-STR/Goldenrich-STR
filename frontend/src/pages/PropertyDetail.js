@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocation, useNavigate, useParams, Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, calendarAPI, bookingAPI, reviewAPI, getImageUrl, apiClient, couponAPI, PROPERTY_IMAGE_PLACEHOLDER } from '../services/api';
@@ -8,6 +9,7 @@ import { ShowcaseCard } from './LandingPage';
 import { UnitCards, getPropertyUnits } from '../components/PropertyUnits';
 import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
+import { buildStaySummary } from '../lib/staySummary';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText, formatPropertyDescription, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import ShareDropdown from '../components/ShareDropdown';
@@ -55,6 +57,12 @@ import {
   Search,
   Bath,
   BadgeCheck,
+  PawPrint,
+  Baby,
+  Mountain,
+  Laptop,
+  PartyPopper,
+  UtensilsCrossed,
 } from 'lucide-react';
 
 const PROPERTY_IMAGE_FALLBACK = PROPERTY_IMAGE_PLACEHOLDER;
@@ -552,7 +560,7 @@ const VideoTour = ({ url, vertical = false }) => {
   const videoId = (embed.match(/embed\/([a-zA-Z0-9_-]+)/) || [])[1];
   if (!embed || !videoId) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#fff0e6] via-[#fcf8f5] to-[#e4effb] px-6 text-center text-charcoal" style={{ textDecoration: 'none' }}>
+      <a href={url} target="_blank" rel="noopener noreferrer" className="flex h-full w-full flex-col items-center justify-center gap-3 bg-gradient-to-br from-[#fbf1d6] via-[#fcf9ef] to-[#e1efe6] px-6 text-center text-charcoal" style={{ textDecoration: 'none' }}>
         <span className="grid h-12 w-12 place-items-center rounded-full border border-gray-300 bg-white"><Camera className="h-5 w-5" strokeWidth={1.5} /></span>
         <span className="text-[14px] font-semibold">Watch the video tour</span>
         <span className="text-[12px] text-gray-600">Opens in a new tab</span>
@@ -609,6 +617,55 @@ const AmenityBadge = ({ icon: Icon, label, stacked = false }) => (
 const propertyHasMeals = (property) => {
   const sellsPlates = (property?.category === 'event_venue' || property?.has_cook) && (Number(property.veg_price) > 0 || Number(property.non_veg_price) > 0);
   return Boolean(sellsPlates || property?.has_cook || property?.has_self_cook);
+};
+
+/** Collapsible "Explore Your Stay": the whole property in plain words, from the host's own listing details. */
+const ExploreYourStay = ({ summary }) => {
+  const [open, setOpen] = useState(false);
+  if (!summary || !summary.sections.length) return null;
+  return (
+    <section aria-labelledby="explore-your-stay" className="border-y border-gray-200">
+      <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex w-full items-center justify-between py-5 text-left !transform-none">
+        <h2 id="explore-your-stay" className="font-serif-hero text-[22px] font-semibold text-charcoal">Explore Your Stay</h2>
+        <ChevronDown className={`h-5 w-5 text-gray-600 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="pb-6 text-[14px] leading-relaxed text-gray-700">
+          <p>{summary.intro}</p>
+          {summary.sections.map((section) => (
+            <div key={section.title} className="mt-5">
+              <p className="mb-1.5 text-[13px] font-bold uppercase tracking-wide text-charcoal">{section.title}</p>
+              <ul className="list-disc space-y-1 pl-5">
+                {section.lines.map((line, idx) => <li key={`${section.title}-${idx}`}>{line}</li>)}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+};
+
+/**
+ * "Great for" cards, worked out from what the host filled in (amenities, capacity, pets, meals, category).
+ * Returns at most four, so the row stays tidy.
+ */
+const getGreatFor = (property) => {
+  if (!property) return [];
+  const amenities = (property.amenities || []).map((a) => String(a).toLowerCase());
+  const text = `${property.title || ''} ${property.description || ''} ${property.property_type || ''}`.toLowerCase();
+  const has = (...words) => amenities.some((a) => words.some((w) => a.includes(w))) || words.some((w) => text.includes(w));
+  const guests = Number(property.max_guests || property.guests || 0);
+  const out = [];
+  if (property.category === 'event_venue') out.push({ key: 'celebrations', icon: PartyPopper, title: 'Celebrations', text: 'Weddings, parties and get-togethers' });
+  if (property.category === 'commercial') out.push({ key: 'work', icon: Laptop, title: 'Work', text: 'A space to focus and meet' });
+  if (has('view', 'lake', 'hill', 'mountain', 'valley', 'sunset', 'garden')) out.push({ key: 'view', icon: Mountain, title: 'View', text: 'Surroundings worth waking up to' });
+  if (property.pet_friendly) out.push({ key: 'pets', icon: PawPrint, title: 'Pets', text: 'Your furry friends are welcome' });
+  if (has('kids', 'play', 'swing', 'family', 'pool')) out.push({ key: 'kids', icon: Baby, title: 'Kids', text: 'Space for little ones to enjoy' });
+  if (guests >= 8) out.push({ key: 'groups', icon: Users, title: 'Groups', text: `Comfortable for up to ${guests} guests` });
+  if (has('wifi', 'workspace', 'desk') && property.category !== 'commercial') out.push({ key: 'work', icon: Laptop, title: 'Work', text: 'Fast WiFi for a workation' });
+  if (has('design', 'architect', 'heritage', 'luxury', 'bungalow')) out.push({ key: 'design', icon: Building2, title: 'Design', text: "Interiors you'll want to photograph" });
+  return out.slice(0, 4);
 };
 
 const DETAIL_TABS = [
@@ -682,6 +739,7 @@ const PropertyDetail = () => {
   const [unitAttention, setUnitAttention] = useState(false);
   const propertyUnits = useMemo(() => getPropertyUnits(baseProperty), [baseProperty]);
   const selectedUnit = propertyUnits.find((u) => u.unit_id === selectedUnitId) || null;
+  const [unitAvailability, setUnitAvailability] = useState(null);
   const activeUnitId = (selectedUnit || propertyUnits[0])?.unit_id;
   // For multi-unit properties the page shows the selected unit's price/capacity
   // (the first unit until the guest picks one).
@@ -758,6 +816,9 @@ const PropertyDetail = () => {
   });
   const [childrenGuests, setChildrenGuests] = useState(0);
   const [infantGuests, setInfantGuests] = useState(0);
+  // phones: guests are asked right after the calendar, before BOOK NOW
+  const [mobileGuestsOpen, setMobileGuestsOpen] = useState(false);
+  const [guestsConfirmed, setGuestsConfirmed] = useState(false);
   const [showGuestDropdown, setShowGuestDropdown] = useState(false);
   const [showHeaderGuestDropdown, setShowHeaderGuestDropdown] = useState(false);
   const [foodPreference, setFoodPreference] = useState('veg');
@@ -793,6 +854,9 @@ const PropertyDetail = () => {
   const [quotationPaymentType, setQuotationPaymentType] = useState('full');
 
   const [reviews, setReviews] = useState([]);
+  const [reviewSort, setReviewSort] = useState('recent');
+  const [reviewFilter, setReviewFilter] = useState('all');
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [reviewSummary, setReviewSummary] = useState({ rating_avg: 0, rating_count: 0, sub_avgs: {} });
 
   const [availableCoupons, setAvailableCoupons] = useState([]);
@@ -1206,6 +1270,17 @@ const PropertyDetail = () => {
       // non-blocking
     }
   };
+
+  // real count of free units for the chosen dates (tonight when no dates are picked)
+  useEffect(() => {
+    if (!id || !propertyUnits.length) { setUnitAvailability(null); return undefined; }
+    let alive = true;
+    calendarAPI
+      .getUnitAvailability(id, checkIn && checkOut ? { check_in: checkIn, check_out: checkOut } : {})
+      .then((res) => { if (alive) setUnitAvailability(res.data); })
+      .catch(() => { if (alive) setUnitAvailability(null); });
+    return () => { alive = false; };
+  }, [id, propertyUnits.length, checkIn, checkOut]);
 
   const fetchBlockedDates = async () => {
     try {
@@ -2245,6 +2320,12 @@ const PropertyDetail = () => {
                 {property.area_sqft && Number(property.area_sqft) > 0 && (
                   <span className="inline-flex items-center gap-2 rounded-xl border border-[#bfdcf7] bg-[#f3f9ff] px-4 py-2.5 text-[14px] text-charcoal"><Grid className="h-[18px] w-[18px]" strokeWidth={1.6} />{property.area_sqft} sq.ft</span>
                 )}
+                {property.pet_friendly && (
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-[#bfdcf7] bg-[#f3f9ff] px-4 py-2.5 text-[14px] text-charcoal"><PawPrint className="h-[18px] w-[18px]" strokeWidth={1.6} />Pet Friendly</span>
+                )}
+                {propertyHasMeals(property) && (
+                  <span className="inline-flex items-center gap-2 rounded-xl border border-[#bfdcf7] bg-[#f3f9ff] px-4 py-2.5 text-[14px] text-charcoal"><UtensilsCrossed className="h-[18px] w-[18px]" strokeWidth={1.6} />Meals Available</span>
+                )}
               </div>
 
               {(property.amenities || []).length > 0 && (
@@ -2257,6 +2338,21 @@ const PropertyDetail = () => {
                       +{(property.amenities || []).length - 5} Amenities
                     </button>
                   )}
+                </div>
+              )}
+
+              {getGreatFor(property).length > 0 && (
+                <div className="mt-8 border-t border-gray-200 pt-6">
+                  <p className="mb-3 text-[14px] font-semibold text-charcoal">Great for:</p>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {getGreatFor(property).map(({ key, icon: Icon, title, text }) => (
+                      <div key={key} className="rounded-2xl border border-gray-200 bg-white px-4 py-3.5">
+                        <Icon className="h-5 w-5 text-charcoal" strokeWidth={1.5} />
+                        <p className="mt-3 text-[15px] font-medium text-charcoal">{title}</p>
+                        <p className="mt-0.5 text-[13px] text-gray-500">{text}</p>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </section>
@@ -2292,6 +2388,8 @@ const PropertyDetail = () => {
             <div id="pd-units" className="scroll-mt-40" />
             <UnitCards
               property={baseProperty}
+              availability={unitAvailability}
+              datesChosen={Boolean(checkIn && checkOut)}
               selectedUnitId={selectedUnitId}
               onSelect={handleSelectUnit}
               attention={unitAttention}
@@ -2368,6 +2466,74 @@ const PropertyDetail = () => {
                 <Link to="/refund-policy" className="inline-block font-medium text-[#2563eb] hover:underline">Read the full Cancellation &amp; Refund Policy</Link>
               </div>
             </section>
+
+            {/* Spaces: one card per photo category the host chose when uploading */}
+            {(() => {
+              const order = ['Exterior', 'Living area', 'Bedroom', 'Kitchen', 'Bathroom', 'Balcony', 'Other'];
+              const groups = {};
+              resolvedImages.forEach((img) => { (groups[img.category] = groups[img.category] || []).push(img); });
+              const names = Object.keys(groups).sort((a, b) => (order.indexOf(a) === -1 ? 99 : order.indexOf(a)) - (order.indexOf(b) === -1 ? 99 : order.indexOf(b)));
+              if (names.length < 2) return null;
+              // amenities that belong to each kind of space, taken from what the host ticked
+              const KEYWORDS = {
+                Bedroom: ['air', 'ac', 'wifi', 'tv', 'heat', 'wardrobe', 'bed', 'workstation', 'desk'],
+                Bathroom: ['geyser', 'hot', 'bath', 'shower', 'toilet', 'towel'],
+                Kitchen: ['kitchen', 'fridge', 'microwave', 'cook', 'dining', 'food'],
+                'Living area': ['tv', 'wifi', 'sofa', 'game', 'fireplace', 'music', 'ac', 'air'],
+                Balcony: ['balcony', 'view', 'terrace', 'garden'],
+                Exterior: ['parking', 'pool', 'garden', 'cctv', 'security', 'lawn', 'bonfire', 'bbq'],
+              };
+              const amenitiesFor = (name) => {
+                const keys = KEYWORDS[name] || [];
+                return (property.amenities || [])
+                  .filter((a) => { const text = String(a).toLowerCase().replace(/^custom_/, '').replace(/_/g, ' '); return keys.some((k) => text.split(' ').some((w) => w === k || (k.length > 3 && w.startsWith(k)))); })
+                  .slice(0, 4)
+                  .map((a) => formatAmenityLabel(a));
+              };
+              const openSpace = (name) => {
+                setShowGallery(true);
+                window.setTimeout(() => document.getElementById(`cat-${name}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 150);
+              };
+              const scrollSlider = (dir) => { const el = document.getElementById('spaces-slider'); if (el) el.scrollBy({ left: dir * 320, behavior: 'smooth' }); };
+              return (
+                <section id="pd-spaces" className="scroll-mt-40">
+                  <div className="mb-5 flex items-center justify-between">
+                    <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal">Spaces</h2>
+                    {names.length > 2 && (
+                      <div className="hidden gap-2 md:flex">
+                        <button type="button" onClick={() => scrollSlider(-1)} aria-label="Previous spaces" className="grid h-9 w-9 place-items-center rounded-full border border-gray-300 bg-white text-charcoal !transform-none transition hover:border-charcoal"><ChevronLeft className="h-5 w-5" /></button>
+                        <button type="button" onClick={() => scrollSlider(1)} aria-label="Next spaces" className="grid h-9 w-9 place-items-center rounded-full border border-gray-300 bg-white text-charcoal !transform-none transition hover:border-charcoal"><ChevronRight className="h-5 w-5" /></button>
+                      </div>
+                    )}
+                  </div>
+                  <div id="spaces-slider" className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-4 pb-2 no-scrollbar md:mx-0 md:px-0">
+                    {names.map((name) => {
+                      const list = groups[name];
+                      const items = amenitiesFor(name);
+                      return (
+                        <div key={name} className="flex w-[240px] shrink-0 snap-start flex-col overflow-hidden rounded-xl border border-gray-300 bg-white">
+                          <button type="button" onClick={() => openSpace(name)} className="relative block aspect-[16/10] w-full overflow-hidden bg-sand-200 !transform-none" aria-label={`Open ${name} photos`}>
+                            <img src={list[0].src} alt={name} className="h-full w-full object-cover" loading="lazy" decoding="async" onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = PROPERTY_IMAGE_FALLBACK; }} />
+                            <span className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
+                            <span className="absolute right-0 top-2.5 rounded-l-md bg-black/55 px-2.5 py-0.5 text-[11px] font-semibold text-white">{list.length} {list.length === 1 ? 'photo' : 'photos'}</span>
+                            <span className="absolute bottom-2.5 left-3 text-[14px] font-semibold text-white">{name}</span>
+                          </button>
+                          <div className="flex flex-1 flex-col px-3.5 py-3">
+                            <ul className="space-y-1 text-[12px] leading-snug text-gray-600">
+                              <li className="flex gap-2"><span className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-gray-400" />{list.length} {list.length === 1 ? 'photo' : 'photos'} of the {String(name).toLowerCase()}.</li>
+                              {items.length > 0 && <li className="flex gap-2"><span className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-gray-400" />Includes {items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : items[0]}.</li>}
+                            </ul>
+                            <button type="button" onClick={() => openSpace(name)} className="mt-auto pt-3 text-left text-[12px] font-medium text-[#2563eb] !transform-none hover:underline">
+                              {list.length > 1 ? `+${list.length - 1} more ${list.length - 1 === 1 ? 'photo' : 'photos'}` : 'View photo'}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </section>
+              );
+            })()}
 
             {/* Videos & Virtual Tours Section */}
             {(property.video_url || property.youtube_short_url || property.youtube_long_url) && (
@@ -2523,15 +2689,36 @@ const PropertyDetail = () => {
             {/* Amenities Section */}
             <div id="pd-amenities" className="scroll-mt-40">
               <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-6">Amenities</h2>
-              <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
-                {(property.amenities || []).slice(0, showAllAmenities ? undefined : 9).map((a) => (
-                  <AmenityBadge key={a} icon={getAmenityIcon(a)} label={formatAmenityLabel(a)} />
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4 sm:gap-x-8 sm:gap-y-5 sm:grid-cols-2 lg:grid-cols-3">
+                {(property.amenities || []).slice(0, 9).map((a, index) => (
+                  // phones show the first 6; larger screens show 9. The rest open in a window.
+                  <div key={a} className={index >= 6 ? 'hidden sm:block' : ''}>
+                    <AmenityBadge icon={getAmenityIcon(a)} label={formatAmenityLabel(a)} />
+                  </div>
                 ))}
               </div>
-              {(property.amenities || []).length > 9 && (
-                <button type="button" onClick={() => setShowAllAmenities((v) => !v)} className="mt-6 rounded-lg border border-gray-300 px-4 py-2 text-[14px] font-medium text-charcoal !transform-none transition hover:bg-gray-50">
-                  {showAllAmenities ? 'Show fewer Amenities' : 'Show all Amenities'}
+              {(property.amenities || []).length > 6 && (
+                <button type="button" onClick={() => setShowAllAmenities(true)} className={`mt-6 rounded-lg border border-gray-300 px-4 py-2 text-[14px] font-medium text-charcoal !transform-none transition hover:bg-gray-50 ${(property.amenities || []).length <= 9 ? 'sm:hidden' : ''}`}>
+                  Show all {(property.amenities || []).length} Amenities
                 </button>
+              )}
+              {showAllAmenities && createPortal(
+                <div className="fixed inset-0 z-[120] flex items-end justify-center bg-black/55 sm:items-center sm:p-6" onClick={() => setShowAllAmenities(false)}>
+                  <div className="flex max-h-[88vh] w-full max-w-[640px] flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl" onClick={(event) => event.stopPropagation()} role="dialog" aria-label="All amenities">
+                    <div className="flex items-center justify-between border-b border-gray-200 px-6 pb-3 pt-5">
+                      <h3 className="font-serif-hero text-[24px] font-semibold text-charcoal">All amenities</h3>
+                      <button type="button" onClick={() => setShowAllAmenities(false)} aria-label="Close" className="grid h-9 w-9 place-items-center rounded-full bg-gray-100 text-charcoal transition hover:bg-gray-200"><X className="h-4 w-4" /></button>
+                    </div>
+                    <div className="overflow-y-auto px-6 py-5">
+                      <div className="grid grid-cols-1 gap-x-8 gap-y-5 sm:grid-cols-2">
+                        {(property.amenities || []).map((a) => (
+                          <AmenityBadge key={a} icon={getAmenityIcon(a)} label={formatAmenityLabel(a)} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>,
+                document.body
               )}
             </div>
 
@@ -2549,7 +2736,7 @@ const PropertyDetail = () => {
               return (
                 <section id="pd-meals" className="scroll-mt-40">
                   <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-5">Meals</h2>
-                  <div className="rounded-2xl border border-gray-300 bg-gradient-to-br from-[#fff0e6] via-[#fcf8f5] to-[#e4effb] p-4 sm:p-5">
+                  <div className="rounded-2xl border border-gray-300 bg-gradient-to-br from-[#fbf1d6] via-[#fcf9ef] to-[#e1efe6] p-4 sm:p-5">
                     <div className="relative h-[190px] overflow-hidden rounded-xl">
                       <img src="/assets/ui/meals-banner.webp" alt="Freshly cooked Indian meals" className="h-full w-full object-cover" loading="lazy" decoding="async" />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
@@ -2580,8 +2767,8 @@ const PropertyDetail = () => {
                             <span className={`grid h-4 w-4 place-items-center rounded-sm border-2 bg-white ${key === 'veg' ? 'border-green-600' : 'border-red-600'}`}>
                               <span className={`h-2 w-2 rounded-full ${key === 'veg' ? 'bg-green-600' : 'bg-red-600'}`} />
                             </span>
-                            {key === 'veg' ? 'Veg' : 'Non-Veg'}
-                            <span className={`text-[12px] ${active === key ? 'text-white/80' : 'text-gray-500'}`}>₹{(key === 'veg' ? vegPrice : nonVegPrice).toLocaleString('en-IN')}</span>
+                            <span className="leading-none">{key === 'veg' ? 'Veg' : 'Non-Veg'}</span>
+                            <span className={`text-[12px] font-semibold leading-none ${active === key ? 'text-white' : 'text-charcoal'}`}>₹{(key === 'veg' ? vegPrice : nonVegPrice).toLocaleString('en-IN')}</span>
                           </button>
                         ))}
                       </div>
@@ -2628,25 +2815,70 @@ const PropertyDetail = () => {
               </div>
             </section>
 
+            <ExploreYourStay summary={buildStaySummary(property, { amenityLabel: formatAmenityLabel, typeLabel: propertyType })} />
+
             {/* Nearby Famous Places Section */}
-            {property.nearby_places && property.nearby_places.length > 0 && (
-              <div className="animate-slide-up">
-                <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-6 flex items-center">
-                   Nearby Attractions
-                </h2>
-                <div id="pd-location" className="scroll-mt-40">
-                  <p className="mb-4 text-[13px] text-gray-500">Famous places near this property</p>
-                  <div className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
-                    {property.nearby_places.map((place, idx) => (
-                      <div key={idx} className="flex items-center gap-3">
-                        <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-gray-300 bg-white text-charcoal">
-                          <MapPin className="h-5 w-5" strokeWidth={1.5} />
-                        </span>
-                        <span className="text-[14px] font-medium text-charcoal">{place}</span>
+            {(
+              <div id="pd-location" className="scroll-mt-40 animate-slide-up">
+                <h2 className="font-serif-hero text-[26px] font-semibold text-charcoal mb-5">Location</h2>
+                {(() => {
+                  const unlocked = Boolean(property.location_unlocked);
+                  const lat = Number(property.latitude);
+                  const lng = Number(property.longitude);
+                  const query = Number.isFinite(lat) && Number.isFinite(lng) && lat && lng
+                    ? `${lat},${lng}`
+                    : encodeURIComponent(formatAddress(property.address, property.city, property.state));
+                  // Locked guests still see the area: the API gives a point rounded to ~1 km, shown wide and blurred.
+                  const mapSrc = `https://maps.google.com/maps?q=${query}&z=${unlocked ? 15 : 11}&output=embed`;
+                  const nearby = property.nearby_places || [];
+                  return (
+                    <div>
+                      <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)]">
+                        <div className="relative h-[240px] overflow-hidden rounded-2xl border border-gray-200 bg-[#eef2ee]">
+                          <iframe
+                            title="Property location"
+                            src={mapSrc}
+                            className={`h-full w-full ${unlocked ? '' : 'pointer-events-none scale-110 blur-[5px]'}`}
+                            loading="lazy"
+                            referrerPolicy="no-referrer-when-downgrade"
+                          />
+                          {!unlocked && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-white/45 px-5 text-center">
+                              <span className="grid h-10 w-10 place-items-center rounded-full bg-charcoal text-white"><Lock className="h-[18px] w-[18px]" /></span>
+                              <p className="text-[14px] font-semibold text-charcoal">Exact location unlocks after booking</p>
+                              <p className="text-[12px] text-gray-700">{user ? 'Once your booking is confirmed, the exact pin appears here.' : 'Log in and confirm a booking to see the exact pin.'}</p>
+                              {!user && (
+                                <button type="button" onClick={() => navigate(`/login?next=${encodeURIComponent(location.pathname + location.search)}`)} className="rounded-md bg-charcoal px-4 py-1.5 text-[12px] font-semibold text-white !transform-none">Log in</button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        {nearby.length > 0 && (
+                          <div>
+                            <span className="inline-block rounded-full bg-charcoal px-3 py-1.5 text-[12px] font-semibold text-white">Nearby Attractions</span>
+                            <div className="mt-3 max-h-[190px] space-y-2 overflow-y-auto pr-1">
+                              {nearby.map((place, idx) => (
+                                <div key={idx} className="flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2.5 text-[14px] text-charcoal">
+                                  <MapPin className="h-4 w-4 shrink-0 text-gray-500" strokeWidth={1.6} />
+                                  <span className="min-w-0 flex-1 truncate">{place}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
-                </div>
+                      <p className="mt-4 text-[14px] leading-relaxed text-gray-700">
+                        <span className="font-semibold text-charcoal">{property.city ? `Around ${property.city}` : 'Around the property'}</span>
+                        {unlocked
+                          ? ` · ${formatAddress(property.address, property.city, property.state)}`
+                          : ` · ${[property.city, property.state].filter(Boolean).join(', ')}. The full address and directions are shared once your booking is confirmed.`}
+                      </p>
+                      {unlocked && (
+                        <a href={`https://www.google.com/maps/search/?api=1&query=${query}`} target="_blank" rel="noopener noreferrer" className="mt-1 inline-block text-[14px] font-semibold text-[#2563eb]">Open in Google Maps</a>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -2750,72 +2982,108 @@ const PropertyDetail = () => {
                  {t('reviews')}
                </h2>
                
-               <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-                  <div className="bg-charcoal text-white rounded-3xl p-8 flex flex-col items-center justify-center text-center">
-                     <span className="text-5xl font-bold tracking-tight mb-2">{property.rating ? property.rating.toFixed(1) : '0.0'}</span>
-                     <div className="flex space-x-1 mb-2">
-                        {[1,2,3,4,5].map(n => <Star key={n} className={`w-4 h-4 ${n <= (property.rating || 0) ? 'fill-amber-400 text-amber-400' : 'text-gray-600'}`} />)}
+               {(() => {
+                 const rating = Number(property.rating || 0);
+                 const total = Number(property.review_count || reviews.length || 0);
+                 const label = rating >= 4.5 ? 'Guest Favourite!' : rating >= 4 ? 'Loved by guests' : rating > 0 ? 'Guest rating' : 'No ratings yet';
+                 return (
+                   <div className="mb-6 rounded-xl border border-[#e6cf8a] bg-gradient-to-br from-[#fbf1d6] via-[#fcf9ef] to-[#e1efe6] p-4 sm:p-6">
+                     <div className="flex flex-col gap-6 sm:flex-row sm:items-stretch">
+                       <div className="flex shrink-0 flex-col items-center justify-center rounded-lg bg-white/70 px-8 py-5 text-center sm:min-w-[170px]">
+                         <span className="text-[44px] font-bold leading-none tracking-tight text-charcoal">{rating ? rating.toFixed(1) : '0.0'}</span>
+                         <div className="mt-2 flex gap-0.5">
+                           {[1, 2, 3, 4, 5].map((n) => <Star key={n} className={`h-3 w-3 ${n <= Math.round(rating) ? 'fill-[#c9a227] text-[#c9a227]' : 'text-gray-300'}`} />)}
+                         </div>
+                         <span className="mt-2 text-[14px] text-charcoal">{label}</span>
+                         <span className="mt-1 text-[11px] font-medium text-[#2563eb] underline">{total} {total === 1 ? 'Review' : 'Reviews'}</span>
+                       </div>
+                       <div className="hidden w-px self-stretch bg-gray-200 sm:block" />
+                       <div className="grid flex-1 grid-cols-1 content-center gap-x-8 gap-y-4 sm:grid-cols-2">
+                         {reviewSummary?.sub_avgs && Object.entries(reviewSummary.sub_avgs).map(([k, v]) => (
+                           <div key={k} className="space-y-1.5">
+                             <div className="flex items-center justify-between text-[13px] font-medium text-charcoal">
+                               <span>{t(k)}</span>
+                               <span>{Number(v).toFixed(1)}</span>
+                             </div>
+                             <div className="h-1.5 w-full overflow-hidden rounded-full bg-white">
+                               <div className="h-full rounded-full bg-[#c9a227]" style={{ width: `${(Number(v) / 5) * 100}%` }} />
+                             </div>
+                           </div>
+                         ))}
+                       </div>
                      </div>
-                     <span className="text-xs font-bold text-white/60 uppercase tracking-widest">{t('overallRating')}</span>
-                  </div>
-                  
-                  <div className="md:col-span-2 grid grid-cols-2 gap-x-8 gap-y-4">
-                     {reviewSummary?.sub_avgs && Object.entries(reviewSummary.sub_avgs).map(([k, v]) => (
-                        <div key={k} className="space-y-1">
-                           <div className="flex justify-between items-center text-[10px] font-bold tracking-tight text-charcoal uppercase tracking-widest">
-                              <span>{t(k)}</span>
-                              <span>{Number(v).toFixed(1)}</span>
-                           </div>
-                           <div className="h-1.5 w-full bg-sand-200 rounded-full overflow-hidden">
-                              <div className="h-full bg-terracotta rounded-full" style={{ width: `${(v/5)*100}%` }}></div>
-                           </div>
-                        </div>
-                     ))}
-                  </div>
-               </div>
+                   </div>
+                 );
+               })()}
 
                {/* Add Review Form */}
                <ReviewForm user={user} propertyId={id} t={t} setProperty={setProperty} onSuccess={fetchReviews} />
 
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {reviews.length === 0 ? (
-                    <div className="col-span-2 py-12 text-center bg-white rounded-3xl border-2 border-dashed border-gray-200">
-                       <p className="font-bold tracking-tight text-charcoal-muted uppercase tracking-widest text-sm">{t('noReviews')}</p>
-                    </div>
-                  ) : (
-                    reviews.map((r) => (
-                      <div key={r.review_id} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-premium transition-all group">
-                         <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center space-x-3">
-                               <div className="w-10 h-10 rounded-xl bg-terracotta flex items-center justify-center text-white font-bold tracking-tight">
-                                  {(r.guest_display_name || 'G')[0]}
+               {reviews.length > 0 && (
+                 <div className="mb-5 mt-8 flex flex-wrap items-center gap-2">
+                   <div className="relative">
+                     <select value={reviewSort} onChange={(e) => setReviewSort(e.target.value)} className="appearance-none rounded-full bg-charcoal py-2 pl-4 pr-9 text-[13px] font-medium text-white outline-none" aria-label="Sort reviews">
+                       <option value="recent">Most recent</option>
+                       <option value="high">Highest rated</option>
+                       <option value="low">Lowest rated</option>
+                     </select>
+                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white" />
+                   </div>
+                   <span className="mx-1 hidden h-7 w-px bg-gray-300 sm:block" />
+                   {[['all', 'All'], ['5', '5 star'], ['4', '4 star'], ['3', '3 star & below']].map(([value, text]) => (
+                     <button key={value} type="button" onClick={() => setReviewFilter(value)} className={`rounded-full border px-4 py-2 text-[13px] font-medium !transform-none transition ${reviewFilter === value ? 'border-charcoal bg-charcoal text-white' : 'border-gray-300 bg-white text-charcoal hover:border-charcoal'}`}>{text}</button>
+                   ))}
+                 </div>
+               )}
+
+               {(() => {
+                 const filtered = reviews
+                   .filter((r) => reviewFilter === 'all' || (reviewFilter === '3' ? Number(r.overall_rating) <= 3 : Math.round(Number(r.overall_rating)) === Number(reviewFilter)))
+                   .sort((a, b) => (reviewSort === 'high' ? b.overall_rating - a.overall_rating : reviewSort === 'low' ? a.overall_rating - b.overall_rating : new Date(b.created_at) - new Date(a.created_at)));
+                 const shown = showAllReviews ? filtered : filtered.slice(0, 4);
+                 if (reviews.length === 0) {
+                   return (
+                     <div className="rounded-xl border border-dashed border-gray-300 bg-white py-12 text-center">
+                       <p className="text-sm font-medium text-charcoal-muted">{t('noReviews')}</p>
+                     </div>
+                   );
+                 }
+                 return (
+                   <>
+                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                       {shown.map((r) => (
+                         <div key={r.review_id} className="flex flex-col rounded-xl border border-gray-300 bg-white p-5">
+                           <div className="flex items-start justify-between gap-3">
+                             <div className="flex min-w-0 items-center gap-3">
+                               <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#b9895b] text-[13px] font-semibold uppercase text-white">{(r.guest_display_name || 'G').slice(0, 2)}</span>
+                               <div className="min-w-0">
+                                 <h4 className="truncate text-[16px] font-semibold text-charcoal">{r.guest_display_name || 'Verified Guest'}</h4>
+                                 <span className="text-[12px] text-gray-500">{new Date(r.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}</span>
                                </div>
-                               <div>
-                                  <h4 className="font-bold text-charcoal leading-none">{r.guest_display_name || 'Verified Guest'}</h4>
-                                  <span className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest">
-                                     {new Date(r.created_at).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
-                                  </span>
-                               </div>
-                            </div>
-                            <div className="flex">
-                               {[1,2,3,4,5].map(n => (
-                                  <Star key={n} className={`w-3 h-3 ${n <= r.overall_rating ? 'fill-amber-400 text-amber-400' : 'text-sand-200'}`} />
-                               ))}
-                            </div>
+                             </div>
+                             <span className="flex shrink-0 items-center gap-1 text-[15px] font-semibold text-charcoal">
+                               <Star className="h-4 w-4 fill-[#f97316] text-[#f97316]" />{Number(r.overall_rating).toFixed(0)}<span className="text-[12px] font-normal text-gray-400">/5</span>
+                             </span>
+                           </div>
+                           <p className="mt-4 text-[14px] leading-relaxed text-charcoal line-clamp-4">{r.comment || 'An exceptional experience at this wonderful property.'}</p>
                          </div>
-                         <p className="text-charcoal-muted text-sm font-medium leading-relaxed italic line-clamp-4">
-                           "{r.comment || 'An exceptional experience at this wonderful property.'}"
-                         </p>
-                      </div>
-                    ))
-                  )}
-               </div>
+                       ))}
+                     </div>
+                     {filtered.length === 0 && <p className="py-8 text-center text-sm text-gray-500">No reviews match this filter.</p>}
+                     {filtered.length > 4 && (
+                       <button type="button" onClick={() => setShowAllReviews((v) => !v)} className="mt-6 rounded-lg border border-gray-300 px-4 py-2.5 text-[14px] font-medium text-charcoal !transform-none transition hover:bg-gray-50">
+                         {showAllReviews ? 'Show fewer reviews' : `Show all ${filtered.length} Reviews`}
+                       </button>
+                     )}
+                   </>
+                 );
+               })()}
             </div>
           </div>
 
           {/* Sticky Booking Widget */}
           <div className="lg:col-span-1">
-            <div ref={bookingCardRef} className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl border border-gray-300 bg-gradient-to-br from-[#fff0e6] via-[#fcf8f5] to-[#e4effb] p-6 no-scrollbar animate-slide-up" style={{ animationDelay: '400ms' }}>
+            <div ref={bookingCardRef} className="sticky top-28 max-h-[calc(100vh-8rem)] overflow-y-auto rounded-2xl border border-gray-300 bg-gradient-to-br from-[#fbf1d6] via-[#fcf9ef] to-[#e1efe6] p-6 no-scrollbar animate-slide-up" style={{ animationDelay: '400ms' }}>
               <div className="flex items-baseline justify-between mb-3">
                 <div>
                   {property.category === 'event_venue' ? (
@@ -2843,6 +3111,13 @@ const PropertyDetail = () => {
                   )}
                 </div>
               </div>
+              <p className="-mt-1 mb-4 text-[12px] text-charcoal-muted" data-testid="price-basis">
+                {property.category === 'event_venue'
+                  ? '(for the venue) Per day + taxes'
+                  : pricingDisplayMode === 'per_person'
+                  ? '(for 1 person) + taxes'
+                  : `(for 1 ${property.category === 'commercial' ? 'unit' : propertyUnits.length > 0 ? 'room' : 'stay'}) Per ${property.category === 'commercial' ? (property.pricing_cycle === 'hourly' ? 'hour' : property.pricing_cycle === 'weekly' ? 'week' : property.pricing_cycle === 'monthly' ? 'month' : 'day') : 'night'} + taxes`}
+              </p>
               {['villa', 'homestay', 'home_stay'].includes(String(property.property_type || property.property_subtype || '').toLowerCase()) && pricingBadgeText && (
                 <div className="mb-6 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-emerald-800">
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-emerald-500 text-white"><Percent className="h-3.5 w-3.5" strokeWidth={3} /></span>
@@ -3390,8 +3665,12 @@ const PropertyDetail = () => {
                 onChange={({ checkIn: nextCheckIn, checkOut: nextCheckOut }) => {
                   setCheckIn(nextCheckIn);
                   setCheckOut(nextCheckOut);
+                  setGuestsConfirmed(false);
                 }}
-                onClose={() => setBookingCalendarOpen(false)}
+                onClose={() => {
+                  setBookingCalendarOpen(false);
+                  if (window.innerWidth < 1024 && checkIn && checkOut && !guestsConfirmed) setMobileGuestsOpen(true);
+                }}
               />
             )}
           </div>
@@ -3664,6 +3943,8 @@ const PropertyDetail = () => {
           onClick={() => {
             if (!checkIn || !checkOut) {
               openBookingCalendar('checkIn');
+            } else if (!guestsConfirmed && property.category !== 'event_venue') {
+              setMobileGuestsOpen(true);
             } else {
               handleBookNow(null, bookingPaymentType);
             }
@@ -3677,10 +3958,41 @@ const PropertyDetail = () => {
                 <span>...</span>
              </div>
           ) : (
-             checkIn && checkOut ? (property.instant_booking ? t('reserveNow') : t('requestBooking')) : 'Select dates'
+             checkIn && checkOut ? ((!guestsConfirmed && property.category !== 'event_venue') ? 'Select guests' : (property.instant_booking ? t('reserveNow') : t('requestBooking'))) : 'Select dates'
           )}
         </button>
       </div>
+
+      {/* Guests sheet (phones): asked right after the calendar */}
+      {mobileGuestsOpen && (
+        <div className="fixed inset-0 z-[120] flex items-end bg-black/50 lg:hidden" onClick={() => setMobileGuestsOpen(false)}>
+          <div className="w-full rounded-t-3xl bg-white px-6 pb-8 pt-5" onClick={(event) => event.stopPropagation()} role="dialog" aria-label="Total guests">
+            <h3 className="text-[20px] font-semibold text-charcoal">Total guests</h3>
+            <p className="text-[12px] font-medium text-[#8a6100]">Maximum {property.max_guests || 2} guests</p>
+            {[
+              { label: 'Adults', sub: 'Age 13+', value: guests, set: setGuests, min: 1, counts: true },
+              { label: 'Children', sub: 'Ages 2-12', value: childrenGuests, set: setChildrenGuests, min: 0, counts: true },
+              { label: 'Infants', sub: 'Under 2', value: infantGuests, set: setInfantGuests, min: 0, counts: false },
+            ].map((row) => {
+              const canAdd = !row.counts || (guests + childrenGuests) < Number(property.max_guests || 2);
+              return (
+                <div key={row.label} className="flex items-center justify-between py-3">
+                  <div>
+                    <p className="text-[16px] font-semibold text-charcoal">{row.label}</p>
+                    <p className="text-[12px] text-gray-500">{row.sub}</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button type="button" disabled={row.value <= row.min} onClick={() => row.set(row.value - 1)} className="grid h-9 w-9 place-items-center rounded-full border border-charcoal text-[18px] leading-none text-charcoal disabled:border-gray-200 disabled:text-gray-300" aria-label={`Fewer ${row.label}`}>−</button>
+                    <span className="w-6 text-center text-[16px] font-semibold">{row.value}</span>
+                    <button type="button" disabled={!canAdd} onClick={() => row.set(row.value + 1)} className="grid h-9 w-9 place-items-center rounded-full border border-charcoal text-[18px] leading-none text-charcoal disabled:border-gray-200 disabled:text-gray-300" aria-label={`More ${row.label}`}>+</button>
+                  </div>
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => { setGuestsConfirmed(true); setMobileGuestsOpen(false); }} className="mt-4 w-full rounded-2xl bg-charcoal py-3.5 text-[15px] font-semibold text-white">Done</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

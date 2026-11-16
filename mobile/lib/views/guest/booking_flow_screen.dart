@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../services/api_service.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -20,6 +21,9 @@ class BookingFlowScreen extends StatefulWidget {
   final int? initialGuestCount;
   final String? initialCouponCode;
 
+  /// The unit picked on the property page (multi-unit properties).
+  final String? unitId;
+
   const BookingFlowScreen({
     super.key,
     required this.property,
@@ -27,6 +31,7 @@ class BookingFlowScreen extends StatefulWidget {
     this.initialCheckOutDate,
     this.initialGuestCount,
     this.initialCouponCode,
+    this.unitId,
   });
 
   @override
@@ -69,6 +74,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
       _adults = initialGuests.clamp(1, _maxGuests);
       _children = 0;
     }
+    _loadPropertyCoupons();
     final initialCoupon = widget.initialCouponCode?.trim().toUpperCase();
     if (initialCoupon != null && initialCoupon.isNotEmpty) {
       _couponController.text = initialCoupon;
@@ -77,6 +83,16 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    // dates were already chosen on the property page: go straight to guests
+    if (_checkIn != null && _checkOut != null) {
+      _presetTrip = true;
+      // events still need slot / food options, so they keep the full flow
+      _step = _isEvent ? 0 : 4; // 4 = pay step, which the retry sheets point to
+      if (!_isEvent) _paymentType = 'full';
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _refreshQuote(coupon: _couponController.text);
+      });
+    }
   }
 
   @override
@@ -136,6 +152,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     if (_checkIn == null || _checkOut == null) return null;
     return {
       'property_id': widget.property.propertyId,
+      if (widget.unitId != null) 'unit_id': widget.unitId,
       'check_in_date': _apiDate(_checkIn!),
       'check_out_date': _apiDate(_checkOut!),
       'number_of_guests': _guestCount,
@@ -191,6 +208,53 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     if (_step < 4) {
       setState(() => _step += 1);
     }
+  }
+
+  List<Map<String, dynamic>> _offerCoupons = [];
+
+  Future<void> _loadPropertyCoupons() async {
+    try {
+      final res = await ApiService()
+          .dio
+          .get('/coupons/property/${widget.property.propertyId}');
+      final list = (res.data['coupons'] as List?) ?? const [];
+      if (mounted) {
+        setState(() => _offerCoupons =
+            list.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList());
+      }
+    } catch (_) {}
+  }
+
+  /// Coupons the host / platform offers for this property: tap one to apply it.
+  Widget _couponChips() {
+    if (_offerCoupons.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (final c in _offerCoupons)
+            GestureDetector(
+              onTap: () {
+                _couponController.text = (c['code'] ?? '').toString();
+                _applyCoupon();
+              },
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: const Color(0xFFD5D5D5)),
+                ),
+                child: Text(
+                  '${c['code']}  ·  ${(c['discount_type'] ?? '').toString().toLowerCase().contains('percent') ? '${c['discount_value']}% off' : '₹${c['discount_value']} off'}',
+                  style: GoogleFonts.inter(fontSize: 12.5, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Future<void> _applyCoupon() async {
@@ -540,8 +604,206 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
     );
   }
 
+  bool _presetTrip = false;
+
+  /// One page like the website's reservation page: itinerary, price, coupon, pay.
+  Widget _buildExpressPage() {
+    final payable = (_quote?['payable_now'] as num?) ?? 0;
+    final busy = _loadingQuote || _preparingPayment || _verifyingPayment || _checkingPayment;
+    final nights = (_checkIn != null && _checkOut != null)
+        ? _checkOut!.difference(_checkIn!).inDays
+        : 0;
+    String d(DateTime? v) => v == null ? '-' : DateFormat('yyyy-MM-dd').format(v);
+    Widget card({required Widget child, Color? color}) => Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: color ?? Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6)),
+            ],
+          ),
+          child: child,
+        );
+    Widget fact(String label, String value) => Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label,
+                  style: GoogleFonts.inter(
+                      fontSize: 10.5,
+                      letterSpacing: 0.8,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF6B6B6B))),
+              const SizedBox(height: 4),
+              Text(value,
+                  style: GoogleFonts.inter(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF1B1924))),
+            ],
+          ),
+        );
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFFAFAFA),
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        foregroundColor: const Color(0xFF1B1924),
+        title: Text('Review & Pay',
+            style: GoogleFonts.inter(fontWeight: FontWeight.w600, fontSize: 17)),
+      ),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+        children: [
+          if (_error != null) _notice(_error!, Icons.error_outline, AppTheme.primary),
+          if (_loadingQuote || _verifyingPayment)
+            _notice(
+                _verifyingPayment
+                    ? "We're securely confirming your booking. Please don't close the app."
+                    : 'Checking latest availability and pricing...',
+                Icons.lock_clock,
+                AppTheme.secondary),
+          card(
+            child: Column(
+              children: [
+                Container(
+                  width: 64,
+                  height: 64,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFF8A6100), width: 4),
+                  ),
+                  child: const Icon(Icons.check_rounded,
+                      size: 32, color: Color(0xFF8A6100)),
+                ),
+                const SizedBox(height: 14),
+                Text('Reserve Your Stay',
+                    style: GoogleFonts.inter(
+                        fontSize: 26,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1B1924))),
+                const SizedBox(height: 12),
+                _summaryHeader(),
+              ],
+            ),
+          ),
+          card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Itinerary Summary',
+                    style: GoogleFonts.inter(
+                        fontSize: 18, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 18),
+                Row(children: [fact('CHECK-IN', d(_checkIn)), fact('CHECK-OUT', d(_checkOut))]),
+                const SizedBox(height: 16),
+                Row(children: [
+                  fact('TOTAL GUESTS', '$_guestCount'),
+                  fact('NIGHTS', '$nights'),
+                ]),
+                const SizedBox(height: 14),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8F6F0),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: _priceBreakdown(),
+                ),
+              ],
+            ),
+          ),
+          card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Coupons',
+                    style: GoogleFonts.inter(
+                        fontSize: 18, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _couponController,
+                        textCapitalization: TextCapitalization.characters,
+                        decoration: InputDecoration(
+                          hintText: 'Enter coupon code',
+                          filled: true,
+                          fillColor: const Color(0xFFF6F6F6),
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: busy ? null : _applyCoupon,
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF1B1924),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 16),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12))),
+                      child: const Text('Apply'),
+                    ),
+                  ],
+                ),
+                _couponChips(),
+              ],
+            ),
+          ),
+          Text(
+            "By confirming this booking, you agree to X-Space360's Terms, Cancellation Policy and applicable Property Rules.",
+            style: GoogleFonts.inter(
+                fontSize: 12, color: const Color(0xFF6B6B6B), height: 1.5),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            height: 54,
+            child: ElevatedButton(
+              onPressed: (busy || _quote == null) ? null : _pay,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1B1924),
+                foregroundColor: Colors.white,
+                disabledBackgroundColor: const Color(0xFFBDBDBD),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              child: Text(
+                _verifyingPayment
+                    ? 'VERIFYING...'
+                    : _preparingPayment
+                        ? 'PREPARING...'
+                        : (_isInstantBook
+                            ? 'PAY ${_money(payable)}'
+                            : 'PAY & SEND REQUEST'),
+                style: GoogleFonts.inter(
+                    fontSize: 14,
+                    letterSpacing: 0.7,
+                    fontWeight: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_presetTrip && !_isEvent) return _buildExpressPage();
     final payable = (_quote?['payable_now'] as num?) ?? 0;
     final finalPayLabel =
         _isInstantBook ? 'Pay ${_money(payable)}' : 'Pay & Send Request';
@@ -736,6 +998,7 @@ class _BookingFlowScreenState extends State<BookingFlowScreen> {
             ElevatedButton(onPressed: _applyCoupon, child: const Text('Apply')),
           ],
         ),
+        _couponChips(),
       ],
     );
   }

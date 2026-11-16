@@ -8,8 +8,8 @@ class AppTheme {
   static const Color charcoal = Color(0xFF1D1C1A);
   static const Color charcoalLight = Color(0xFF4C4841);
   static const Color charcoalMuted = Color(0xFF766F66);
-  static const Color primary = Color(0xFFE0A51B);
-  static const Color primaryHover = Color(0xFFC28A11);
+  static const Color primary = Color(0xFF1B1924);
+  static const Color primaryHover = Color(0xFF2E2B38);
   static const Color secondary = Color(0xFF23211D);
   static const Color border = Color(0xFFE6DDD2);
   static const Color terracotta = Color(0xFFC56A46);

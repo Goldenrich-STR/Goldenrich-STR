@@ -30,6 +30,30 @@ class PropertyProvider with ChangeNotifier {
     }
   }
 
+  /// Live listings that match what a guest typed in the assistant.
+  Future<List<PropertyModel>> searchForAssistant(
+      Map<String, dynamic> query) async {
+    final list = await _fetchSearchList(query);
+    final max = query['max_price'];
+    if (max is num) {
+      return list.where((p) => p.customerDisplayPrice <= max).take(3).toList();
+    }
+    return list.take(3).toList();
+  }
+
+  /// Villas from 50,000 a night: the website's "X-Space Series".
+  Future<List<PropertyModel>> fetchSignatureProperties() async {
+    try {
+      return await _fetchSearchList({
+        'property_type': 'villa',
+        'min_price': 50000,
+        'limit': 10,
+      });
+    } catch (_) {
+      return [];
+    }
+  }
+
   Future<List<Map<String, dynamic>>> fetchBookingOffers(
       {int limit = 50}) async {
     try {

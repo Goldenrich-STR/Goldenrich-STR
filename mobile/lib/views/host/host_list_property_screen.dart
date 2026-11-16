@@ -94,8 +94,17 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
   bool _hasSelfCook = false;
   bool _hasTaxi = false;
 
+  // Units, booking mode and times: the same fields the website's listing form has
+  bool _hasUnits = false;
+  final List<_UnitDraft> _units = [];
+  bool _instantBooking = true;
+  String _checkInTime = '12:00';
+  String _checkOutTime = '11:00';
+  static const List<String> _unitTiers = ['standard', 'deluxe', 'premium'];
+
   // Step 4: Amenities
   final List<String> _selectedAmenities = [];
+  final _customAmenityController = TextEditingController();
 
   // Step 4: Event Venue specific policies & details
   final Map<String, dynamic> _venuePolicies = {
@@ -405,7 +414,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       _pincodeController.text = p.pinCode;
       _latitude = p.latitude;
       _longitude = p.longitude;
-      _priceController.text = p.pricePerNight.toString();
+      _priceController.text =
+          (p.basePricePerNight ?? p.pricePerNight).toString();
       if (p.extraGuestPrice != null) {
         _extraGuestPriceController.text = p.extraGuestPrice.toString();
       }
@@ -418,8 +428,17 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       _youtubeLongController.text = p.youtubeLongUrl ?? '';
 
       _selectedAmenities.addAll(p.amenities);
-      _uploadedImages.addAll(p.images);
+      // keep each photo's category tag ("...jpg#Bedroom") so saving does not wipe it
+      _uploadedImages
+          .addAll(p.taggedImages.isNotEmpty ? p.taggedImages : p.images);
       _petFriendly = p.petFriendly;
+      _instantBooking = p.isInstantBook;
+      _checkInTime = p.checkInTime;
+      _checkOutTime = p.checkOutTime;
+      _hasUnits = p.hasUnits && p.units.isNotEmpty;
+      for (final u in p.units) {
+        _units.add(_UnitDraft.fromUnit(u));
+      }
       _hasCook = p.hasCook;
       if (p.cookPrice != null)
         _cookPriceController.text = p.cookPrice.toString();
@@ -516,6 +535,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     _extraGuestPriceController.dispose();
     _maxExtraGuestsController.dispose();
     _subscriptionCouponController.dispose();
+    _customAmenityController.dispose();
+    for (final unit in _units) {
+      unit.dispose();
+    }
     for (final controller in _rulesControllers) {
       controller.dispose();
     }
@@ -583,7 +606,21 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       'pricingCycle': _pricingCycle,
       'petFriendly': _petFriendly,
       'smokingAllowed': _smokingAllowed,
-      'instantBooking': true,
+      'instantBooking': _instantBooking,
+      'checkInTime': _checkInTime,
+      'checkOutTime': _checkOutTime,
+      'hasUnits': _hasUnits,
+      'units': _units
+          .map((u) => {
+                'id': u.unitId,
+                'name': u.name.text,
+                'area': u.area.text,
+                'guests': u.guests.text,
+                'price': u.price.text,
+                'bhk': u.bhk,
+                'tier': u.tier,
+              })
+          .toList(),
       'hasCook': _hasCook,
       'cookPrice': _cookPriceController.text,
       'hasSelfCook': _hasSelfCook,
@@ -650,6 +687,27 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         _pricingCycle = draft['pricingCycle'] ?? _pricingCycle;
         _petFriendly = draft['petFriendly'] ?? _petFriendly;
         _smokingAllowed = draft['smokingAllowed'] ?? _smokingAllowed;
+        _instantBooking = draft['instantBooking'] ?? _instantBooking;
+        _checkInTime = draft['checkInTime'] ?? _checkInTime;
+        _checkOutTime = draft['checkOutTime'] ?? _checkOutTime;
+        _hasUnits = draft['hasUnits'] ?? _hasUnits;
+        final savedUnits = draft['units'];
+        if (savedUnits is List && savedUnits.isNotEmpty) {
+          for (final u in _units) {
+            u.dispose();
+          }
+          _units
+            ..clear()
+            ..addAll(savedUnits.whereType<Map>().map((m) => _UnitDraft(
+                  unitId: (m['id'] ?? '').toString(),
+                  name: (m['name'] ?? '').toString(),
+                  area: (m['area'] ?? '').toString(),
+                  guests: (m['guests'] ?? '2').toString(),
+                  price: (m['price'] ?? '').toString(),
+                  bhk: (m['bhk'] ?? '').toString(),
+                  tier: (m['tier'] ?? 'standard').toString(),
+                )));
+        }
         _hasCook = draft['hasCook'] ?? _hasCook;
         _cookPriceController.text =
             draft['cookPrice'] ?? _cookPriceController.text;
@@ -1162,7 +1220,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     await Future.delayed(const Duration(milliseconds: 600));
     if (mounted) {
       setState(() {
-        _uploadedImages.add('$path#Other');
+        _uploadedImages.add('$path#'); // category is chosen by the host
         _isUploadingPhoto = false;
       });
     }
@@ -1473,6 +1531,50 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     return int.tryParse(_maxGuestsController.text) ?? 6;
   }
 
+  /// The listing's own price: the cheapest unit when there are units, else the single price.
+  double _listingBasePrice({bool lenient = false}) {
+    if (_hasUnits && _category != 'event_venue' && _units.isNotEmpty) {
+      final prices = _units
+          .map((u) => double.tryParse(u.price.text) ?? 0)
+          .where((v) => v > 0)
+          .toList();
+      if (prices.isNotEmpty) {
+        prices.sort();
+        return prices.first;
+      }
+    }
+    return lenient
+        ? (double.tryParse(_priceController.text) ?? 0.0)
+        : double.parse(_priceController.text);
+  }
+
+  List<Map<String, dynamic>> _unitsPayload() {
+    return _units
+        .map((u) => {
+              'unit_id': u.unitId,
+              'name': u.name.text.trim(),
+              'area_sqft': int.tryParse(u.area.text.trim()),
+              'max_guests': int.tryParse(u.guests.text.trim()) ?? 1,
+              'bhk_type': u.bhk.isEmpty ? null : u.bhk,
+              'tier': u.tier.isEmpty ? null : u.tier,
+              'price_per_night': double.tryParse(u.price.text.trim()),
+            })
+        .toList();
+  }
+
+  String? _unitsError() {
+    if (_units.isEmpty) return 'Add at least one unit.';
+    for (var i = 0; i < _units.length; i++) {
+      final u = _units[i];
+      if (u.name.text.trim().isEmpty) return 'Enter a name for unit ${i + 1}.';
+      final price = double.tryParse(u.price.text.trim());
+      if (price == null || price <= 0) {
+        return 'Enter a price for "${u.name.text.trim()}".';
+      }
+    }
+    return null;
+  }
+
   bool _validateCurrentStep() {
     if (_currentStep == 0) {
       if (_titleController.text.trim().length < 5) {
@@ -1508,7 +1610,14 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       }
     }
     if (_currentStep == 2) {
-      if (_priceController.text.isEmpty ||
+      if (_hasUnits && _category != 'event_venue') {
+        final unitError = _unitsError();
+        if (unitError != null) {
+          ScaffoldMessenger.of(context)
+              .showSnackBar(SnackBar(content: Text(unitError)));
+          return false;
+        }
+      } else if (_priceController.text.isEmpty ||
           double.tryParse(_priceController.text) == null) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please enter a valid price.')));
@@ -1551,6 +1660,24 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             content:
                 Text('Please upload at least one photo of your property.')));
         return false;
+      }
+      // every photo needs a category: guests see them grouped in "Spaces"
+      final missing = _uploadedImages
+          .indexWhere((img) => img.split('#').length < 2 || img.split('#')[1].trim().isEmpty);
+      if (missing != -1) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                'Choose a category for photo ${missing + 1} (Exterior, Bedroom, Kitchen...). Guests see it in the Spaces section.')));
+        return false;
+      }
+      for (final link in [_youtubeShortController.text, _youtubeLongController.text]) {
+        final v = link.trim();
+        if (v.isNotEmpty && !RegExp(r'(youtube\.com|youtu\.be)/', caseSensitive: false).hasMatch(v)) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text(
+                  'YouTube links must be a youtube.com or youtu.be link.')));
+          return false;
+        }
       }
     }
     if (_currentStep == 5 && !_hasActiveSubscription()) {
@@ -1617,7 +1744,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       'area_sqft': double.tryParse(_areaController.text) ?? 0.0,
       'guest_size': _includedGuestCount(),
       'max_guests': _totalGuestCapacity(),
-      'price_per_night': double.tryParse(_priceController.text) ?? 0.0,
+      'price_per_night': _listingBasePrice(lenient: true),
       'extra_guest_price': double.tryParse(_extraGuestPriceController.text),
       'pricing_cycle': _pricingCycle,
       'minimum_stay_days': int.tryParse(_minStayController.text) ?? 1,
@@ -1646,8 +1773,12 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                   : 'Please keep the space clean.')),
       'pet_friendly': _petFriendly,
       'smoking_allowed': _smokingAllowed,
-      'instant_booking': true,
-      'booking_mode': 'INSTANT_BOOK',
+      'instant_booking': _instantBooking,
+      'booking_mode': _instantBooking ? 'INSTANT_BOOK' : 'HOST_APPROVAL',
+      'check_in_time': _checkInTime,
+      'check_out_time': _checkOutTime,
+      'has_units': _hasUnits && _category != 'event_venue',
+      'units': (_hasUnits && _category != 'event_venue') ? _unitsPayload() : <Map<String, dynamic>>[],
       'has_cook': _hasCook,
       'cook_price': _hasCook && _cookPriceController.text.isNotEmpty
           ? double.tryParse(_cookPriceController.text)
@@ -1740,7 +1871,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
       'area_sqft': double.parse(_areaController.text),
       'guest_size': _includedGuestCount(),
       'max_guests': _totalGuestCapacity(),
-      'price_per_night': double.parse(_priceController.text),
+      'price_per_night': _listingBasePrice(),
       'extra_guest_price': double.tryParse(_extraGuestPriceController.text),
       'pricing_cycle': _pricingCycle,
       'minimum_stay_days': int.tryParse(_minStayController.text) ?? 1,
@@ -1769,8 +1900,12 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                   : 'Please keep the space clean.')),
       'pet_friendly': _petFriendly,
       'smoking_allowed': _smokingAllowed,
-      'instant_booking': true,
-      'booking_mode': 'INSTANT_BOOK',
+      'instant_booking': _instantBooking,
+      'booking_mode': _instantBooking ? 'INSTANT_BOOK' : 'HOST_APPROVAL',
+      'check_in_time': _checkInTime,
+      'check_out_time': _checkOutTime,
+      'has_units': _hasUnits && _category != 'event_venue',
+      'units': (_hasUnits && _category != 'event_venue') ? _unitsPayload() : <Map<String, dynamic>>[],
       'has_cook': _hasCook,
       'cook_price': _hasCook && _cookPriceController.text.isNotEmpty
           ? double.tryParse(_cookPriceController.text)
@@ -3388,6 +3523,270 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     );
   }
 
+  Widget _buildBookingAndUnitsSection(bool isEventVenue) {
+    Widget choice(String label, bool active, VoidCallback onTap) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFF1B1924) : Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                  color: active ? const Color(0xFF1B1924) : AppTheme.border),
+            ),
+            child: Text(label,
+                style: TextStyle(
+                    fontSize: 13.5,
+                    fontWeight: FontWeight.w600,
+                    color: active ? Colors.white : AppTheme.charcoal)),
+          ),
+        ),
+      );
+    }
+
+    Future<void> pickTime(bool checkIn) async {
+      final current = checkIn ? _checkInTime : _checkOutTime;
+      final parts = current.split(':');
+      final picked = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay(
+            hour: int.tryParse(parts.first) ?? 12,
+            minute: parts.length > 1 ? (int.tryParse(parts[1]) ?? 0) : 0),
+      );
+      if (picked == null) return;
+      final text =
+          '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      setState(() => checkIn ? _checkInTime = text : _checkOutTime = text);
+    }
+
+    Widget timeField(String label, String value, bool checkIn) {
+      return Expanded(
+        child: GestureDetector(
+          onTap: () => pickTime(checkIn),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.charcoalLight)),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    const Icon(Icons.access_time, size: 16),
+                    const SizedBox(width: 6),
+                    Text(value,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildFieldLabel('Booking mode'),
+        Row(
+          children: [
+            choice('Instant booking', _instantBooking,
+                () => setState(() => _instantBooking = true)),
+            const SizedBox(width: 10),
+            choice('Host approval', !_instantBooking,
+                () => setState(() => _instantBooking = false)),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(
+          _instantBooking
+              ? 'Guests are confirmed as soon as they pay.'
+              : 'You approve each request within 24 hours; guests pay after approval.',
+          style: const TextStyle(fontSize: 12, color: AppTheme.charcoalLight),
+        ),
+        if (!isEventVenue) ...[
+          const SizedBox(height: 16),
+          _buildFieldLabel('Check-in and check-out time'),
+          Row(
+            children: [
+              timeField('Check-in', _checkInTime, true),
+              const SizedBox(width: 10),
+              timeField('Check-out', _checkOutTime, false),
+            ],
+          ),
+          const SizedBox(height: 18),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            value: _hasUnits,
+            activeColor: const Color(0xFF1B1924),
+            onChanged: (v) => setState(() {
+              _hasUnits = v;
+              if (v && _units.isEmpty) _units.add(_UnitDraft.blank(_bhkTypesByCategory[_category]?.first['value'] ?? ''));
+            }),
+            title: const Text('This listing has multiple units',
+                style: TextStyle(fontSize: 14.5, fontWeight: FontWeight.w600)),
+            subtitle: const Text(
+                'Rooms, flats or offices guests book one by one, each with its own price and tier.',
+                style: TextStyle(fontSize: 12)),
+          ),
+          if (_hasUnits) ...[
+            for (var i = 0; i < _units.length; i++) _buildUnitCard(i),
+            OutlinedButton.icon(
+              onPressed: () => setState(() => _units.add(
+                  _UnitDraft.blank(_bhkTypesByCategory[_category]?.first['value'] ?? ''))),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add a unit'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: const Color(0xFF1B1924),
+                side: const BorderSide(color: AppTheme.border),
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+                'The listing shows "Starting from" the lowest unit price. Weekend and festival price rules apply to every unit.',
+                style:
+                    TextStyle(fontSize: 12, color: AppTheme.charcoalLight)),
+          ],
+        ],
+      ],
+    );
+  }
+
+  Widget _buildUnitCard(int index) {
+    final u = _units[index];
+    final bhkOptions = _bhkTypesByCategory[_category] ?? const [];
+    InputDecoration deco(String hint, {String? prefix}) => InputDecoration(
+          hintText: hint,
+          prefixText: prefix,
+          isDense: true,
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        );
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppTheme.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text('Unit ${index + 1}',
+                    style: const TextStyle(
+                        fontSize: 14, fontWeight: FontWeight.w700)),
+              ),
+              if (_units.length > 1)
+                IconButton(
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                  icon: const Icon(Icons.delete_outline,
+                      color: Colors.redAccent, size: 20),
+                  onPressed: () => setState(() {
+                    _units[index].dispose();
+                    _units.removeAt(index);
+                  }),
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          TextFormField(
+              controller: u.name, decoration: deco('Unit name, e.g. Deluxe Room 101')),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                    controller: u.area,
+                    keyboardType: TextInputType.number,
+                    decoration: deco('Area sq.ft')),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFormField(
+                    controller: u.guests,
+                    keyboardType: TextInputType.number,
+                    decoration: deco('Max guests')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (bhkOptions.isNotEmpty)
+            DropdownButtonFormField<String>(
+              value: bhkOptions.any((o) => o['value'] == u.bhk) ? u.bhk : null,
+              isExpanded: true,
+              decoration: deco('Size'),
+              items: [
+                for (final o in bhkOptions)
+                  DropdownMenuItem(value: o['value'], child: Text(o['label']!)),
+              ],
+              onChanged: (v) => setState(() => u.bhk = v ?? ''),
+            ),
+          const SizedBox(height: 10),
+          const Text('Tier',
+              style: TextStyle(fontSize: 11, color: AppTheme.charcoalLight)),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              for (final t in _unitTiers)
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => u.tier = t),
+                    child: Container(
+                      margin: EdgeInsets.only(right: t == 'premium' ? 0 : 8),
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: u.tier == t
+                            ? const Color(0xFF1B1924)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                            color: u.tier == t
+                                ? const Color(0xFF1B1924)
+                                : AppTheme.border),
+                      ),
+                      child: Text('${t[0].toUpperCase()}${t.substring(1)}',
+                          style: TextStyle(
+                              fontSize: 12.5,
+                              fontWeight: FontWeight.w600,
+                              color: u.tier == t
+                                  ? Colors.white
+                                  : AppTheme.charcoal)),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+              controller: u.price,
+              keyboardType: TextInputType.number,
+              decoration: deco('Price per night', prefix: '\u20b9 ')),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStepPricing(TextTheme textTheme) {
     List<DropdownMenuItem<String>> pricingCycleItems = [];
     if (_category == 'residential') {
@@ -3428,6 +3827,8 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
         const Text(
             'Configure nightly rate, minimum duration, and booking policies.',
             style: TextStyle(fontSize: 13, color: AppTheme.charcoalLight)),
+        const SizedBox(height: 20),
+        _buildBookingAndUnitsSection(isEventVenue),
         const SizedBox(height: 20),
         if (isEventVenue) ...[
           // Veg & Non-Veg plate prices side-by-side
@@ -4063,6 +4464,21 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     );
   }
 
+  void _addCustomAmenity() {
+    final raw = _customAmenityController.text.trim();
+    if (raw.isEmpty) return;
+    final slug = raw
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'^_+|_+$'), '');
+    if (slug.isEmpty) return;
+    final value = 'custom_$slug'; // same format as the website
+    setState(() {
+      if (!_selectedAmenities.contains(value)) _selectedAmenities.add(value);
+      _customAmenityController.clear();
+    });
+  }
+
   Widget _buildStepAmenities(TextTheme textTheme) {
     final isEvent = _category == 'event_venue';
 
@@ -4110,6 +4526,57 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
             );
           }).toList(),
         ),
+        const SizedBox(height: 18),
+        const Text('Add your own amenity',
+            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            Expanded(
+              child: TextFormField(
+                controller: _customAmenityController,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(
+                  hintText: 'e.g. Bonfire, Telescope',
+                  isDense: true,
+                ),
+                onFieldSubmitted: (_) => _addCustomAmenity(),
+              ),
+            ),
+            const SizedBox(width: 10),
+            ElevatedButton(
+              onPressed: _addCustomAmenity,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF1B1924),
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+              ),
+              child: const Text('Add'),
+            ),
+          ],
+        ),
+        if (_selectedAmenities.any((a) => a.startsWith('custom_'))) ...[
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final a in _selectedAmenities.where((a) => a.startsWith('custom_')))
+                InputChip(
+                  label: Text(a
+                      .substring(7)
+                      .replaceAll('_', ' ')
+                      .split(' ')
+                      .map((w) => w.isEmpty ? w : '${w[0].toUpperCase()}${w.substring(1)}')
+                      .join(' ')),
+                  onDeleted: () => setState(() => _selectedAmenities.remove(a)),
+                ),
+            ],
+          ),
+        ],
         if (isEvent) ...[
           const SizedBox(height: 24),
           const Divider(),
@@ -4639,9 +5106,9 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
               final imgPath = parts[0];
               final availableCategories =
                   _getPhotoCategoriesForCategory(_category);
-              String imgCategory = parts.length > 1 ? parts[1] : 'Other';
+              String imgCategory = parts.length > 1 ? parts[1] : '';
               if (!availableCategories.contains(imgCategory)) {
-                imgCategory = 'Other';
+                imgCategory = ''; // not chosen yet: the host must pick one
               }
               final isNetwork = imgPath.startsWith('http');
               final isCover = index == 0;
@@ -4718,8 +5185,10 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                             ),
                             const SizedBox(height: 4),
                             DropdownButtonFormField<String>(
-                              value: imgCategory,
+                              value: imgCategory.isEmpty ? null : imgCategory,
                               isExpanded: true,
+                              hint: const Text('Select category *',
+                                  style: TextStyle(fontSize: 12)),
                               decoration: InputDecoration(
                                 contentPadding: const EdgeInsets.symmetric(
                                     horizontal: 10, vertical: 8),
@@ -4924,36 +5393,17 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
     );
   }
 
+  /// Same list as the website, so the guest's "Spaces" section groups photos the same way.
   List<String> _getPhotoCategoriesForCategory(String category) {
-    if (category == 'commercial') {
-      return [
-        'Conference Room',
-        'Office Space',
-        'Reception / Lobby',
-        'Cafeteria / Pantry',
-        'Exterior',
-        'Other',
-      ];
-    } else if (category == 'event_venue') {
-      return [
-        'Main Hall / Stage',
-        'Seating Area',
-        'Dining Area / Buffet',
-        'Entrance / Decor',
-        'Lawn / Outdoor',
-        'Changing Room',
-        'Other',
-      ];
-    } else {
-      return [
-        'Living Room',
-        'Bedroom',
-        'Bathroom',
-        'Kitchen',
-        'Exterior',
-        'Other',
-      ];
-    }
+    return const [
+      'Living area',
+      'Bedroom',
+      'Kitchen',
+      'Bathroom',
+      'Balcony',
+      'Exterior',
+      'Other',
+    ];
   }
 
   Widget _buildStepSubscription(TextTheme textTheme) {
@@ -5924,4 +6374,56 @@ class PackageItem {
   String name;
   int count;
   PackageItem({required this.name, required this.count});
+}
+
+
+/// One unit being edited in the listing form.
+class _UnitDraft {
+  final String unitId;
+  final TextEditingController name;
+  final TextEditingController area;
+  final TextEditingController guests;
+  final TextEditingController price;
+  String bhk;
+  String tier;
+
+  _UnitDraft({
+    required this.unitId,
+    required String name,
+    required String area,
+    required String guests,
+    required String price,
+    required this.bhk,
+    required this.tier,
+  })  : name = TextEditingController(text: name),
+        area = TextEditingController(text: area),
+        guests = TextEditingController(text: guests),
+        price = TextEditingController(text: price);
+
+  factory _UnitDraft.blank(String bhk) => _UnitDraft(
+        unitId: 'unit_${DateTime.now().microsecondsSinceEpoch.toRadixString(36)}',
+        name: '',
+        area: '',
+        guests: '2',
+        price: '',
+        bhk: bhk,
+        tier: 'standard',
+      );
+
+  factory _UnitDraft.fromUnit(PropertyUnit u) => _UnitDraft(
+        unitId: u.unitId,
+        name: u.name,
+        area: u.areaSqft == null ? '' : u.areaSqft!.round().toString(),
+        guests: u.maxGuests.toString(),
+        price: u.rawPrice.round().toString(),
+        bhk: u.bhkType,
+        tier: u.tier,
+      );
+
+  void dispose() {
+    name.dispose();
+    area.dispose();
+    guests.dispose();
+    price.dispose();
+  }
 }

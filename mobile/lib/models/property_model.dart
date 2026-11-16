@@ -1,5 +1,44 @@
 import '../config.dart';
 
+/// A bookable unit (room / flat / office) inside a multi-unit property.
+class PropertyUnit {
+  final String unitId;
+  final String name;
+  final double? areaSqft;
+  final int maxGuests;
+  final String bhkType;
+  final String tier; // standard | deluxe | premium | ''
+  final double price; // what guests pay today (price rules included)
+  final double rawPrice; // the price the host set; used when editing
+
+  const PropertyUnit({
+    required this.unitId,
+    required this.name,
+    this.areaSqft,
+    required this.maxGuests,
+    required this.bhkType,
+    required this.tier,
+    required this.price,
+    double? rawPrice,
+  }) : rawPrice = rawPrice ?? price;
+
+  factory PropertyUnit.fromJson(Map<String, dynamic> json) {
+    return PropertyUnit(
+      unitId: (json['unit_id'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      areaSqft: (json['area_sqft'] as num?)?.toDouble(),
+      maxGuests: (json['max_guests'] as num?)?.toInt() ?? 2,
+      bhkType: (json['bhk_type'] ?? '').toString(),
+      tier: (json['tier'] ?? '').toString(),
+      price: ((json['display_price_per_night'] ?? json['price_per_night'])
+                  as num?)
+              ?.toDouble() ??
+          0,
+      rawPrice: (json['price_per_night'] as num?)?.toDouble(),
+    );
+  }
+}
+
 class PropertyModel {
   final String propertyId;
   final String ownerId;
@@ -47,6 +86,20 @@ class PropertyModel {
   final bool hasTaxi;
   final double? rating;
   final int? reviewCount;
+  final bool hasUnits;
+  final List<PropertyUnit> units;
+  final String hostName;
+  final String? hostJoined;
+  final List<String> taggedImages; // 'url#Category'
+  final List<Map<String, dynamic>> packages; // meal packages (veg / non-veg)
+  final double? basePricePerNight; // the host's own price, before price rules
+  final List<String> nearbyPlaces;
+  final String? hostPhone;
+  final bool locationUnlocked; // exact map unlocks with a confirmed booking
+  final String? virtualTourLink;
+  final String checkInTime;
+  final String checkOutTime;
+  final int minimumStayDays;
 
   PropertyModel({
     required this.propertyId,
@@ -95,6 +148,20 @@ class PropertyModel {
     required this.hasTaxi,
     this.rating,
     this.reviewCount,
+    this.hasUnits = false,
+    this.units = const [],
+    this.hostName = '',
+    this.hostJoined,
+    this.taggedImages = const [],
+    this.packages = const [],
+    this.basePricePerNight,
+    this.nearbyPlaces = const [],
+    this.hostPhone,
+    this.locationUnlocked = false,
+    this.virtualTourLink,
+    this.checkInTime = '12:00',
+    this.checkOutTime = '11:00',
+    this.minimumStayDays = 1,
   });
 
   bool get isEventVenue => category.toLowerCase().trim() == 'event_venue';
@@ -119,12 +186,13 @@ class PropertyModel {
 
   bool get isInstantBook => bookingMode.toUpperCase() == 'INSTANT_BOOK';
 
-  String get bookingModeLabel => 'Instant Book';
+  String get bookingModeLabel => isInstantBook ? 'Instant Book' : 'Request to Book';
 
-  String get bookingModeDescription =>
-      'Book instantly without waiting for host approval.';
+  String get bookingModeDescription => isInstantBook
+      ? 'Book instantly without waiting for host approval.'
+      : 'The host confirms within 24 hours. You pay after approval.';
 
-  String get bookingCtaLabel => 'Reserve';
+  String get bookingCtaLabel => isInstantBook ? 'Reserve' : 'Request to Book';
 
   String get bookingDateTitle {
     if (isEventVenue) return 'Select event date';
@@ -149,7 +217,9 @@ class PropertyModel {
   factory PropertyModel.fromJson(Map<String, dynamic> json) {
     final images = (json['images'] as List? ?? [])
         .where((img) => _isProductionPropertyImageUrl(img.toString()))
-        .map<String>((img) => AppConfig.resolveImageUrl(img.toString()))
+        // the category tag ("...jpg#Exterior") is only for the website
+        .map<String>((img) =>
+            AppConfig.resolveImageUrl(img.toString().split('#').first))
         .toList();
     return PropertyModel(
       propertyId: json['property_id'] ?? '',
@@ -179,9 +249,10 @@ class PropertyModel {
       youtubeShortUrl: json['youtube_short_url'],
       youtubeLongUrl: json['youtube_long_url'],
       petFriendly: json['pet_friendly'] ?? false,
-      instantBooking: true,
-      bookingMode: 'INSTANT_BOOK',
-      hostApprovalRequired: false,
+      // follow the host's choice (instant booking or approval) instead of forcing instant
+      instantBooking: _modeFromJson(json) == 'INSTANT_BOOK',
+      bookingMode: _modeFromJson(json),
+      hostApprovalRequired: _modeFromJson(json) != 'INSTANT_BOOK',
       hostApprovalSlaMinutes: null,
       status: json['status'] ?? 'draft',
       vegPrice: (json['veg_price'] as num?)?.toDouble(),
@@ -204,7 +275,53 @@ class PropertyModel {
           (json['rating_avg'] as num?)?.toDouble(),
       reviewCount: (json['review_count'] as num?)?.toInt() ??
           (json['rating_count'] as num?)?.toInt(),
+      hasUnits: json['has_units'] == true,
+      units: json['has_units'] == true && json['units'] is List
+          ? (json['units'] as List)
+              .whereType<Map>()
+              .map((u) => PropertyUnit.fromJson(Map<String, dynamic>.from(u)))
+              .where((u) => u.name.isNotEmpty)
+              .toList()
+          : const [],
+      hostName: json['host'] is Map
+          ? (json['host']['full_name'] ?? '').toString().trim()
+          : '',
+      hostJoined: json['host'] is Map
+          ? (json['host']['created_at'] ?? '').toString()
+          : null,
+      taggedImages: (json['images'] as List? ?? [])
+          .where((img) => _isProductionPropertyImageUrl(img.toString()))
+          .map<String>((img) {
+        final parts = img.toString().split('#');
+        final url = AppConfig.resolveImageUrl(parts.first);
+        return parts.length > 1 ? '$url#${parts[1]}' : url;
+      }).toList(),
+      basePricePerNight: (json['base_price_per_night'] as num?)?.toDouble(),
+      nearbyPlaces: (json['nearby_places'] as List? ?? [])
+          .map((e) => e is Map ? (e['name'] ?? '').toString() : e.toString())
+          .where((e) => e.trim().isNotEmpty)
+          .toList(),
+      locationUnlocked: json['location_unlocked'] == true,
+      hostPhone: json['host'] is Map && (json['host']['phone'] ?? '').toString().isNotEmpty
+          ? json['host']['phone'].toString()
+          : null,
+      virtualTourLink: (json['virtual_tour_link'] ?? '').toString().isNotEmpty
+          ? json['virtual_tour_link'].toString()
+          : null,
+      packages: (json['packages'] as List? ?? [])
+          .whereType<Map>()
+          .map((e) => Map<String, dynamic>.from(e))
+          .toList(),
+      checkInTime: (json['check_in_time'] ?? '12:00').toString(),
+      checkOutTime: (json['check_out_time'] ?? '11:00').toString(),
+      minimumStayDays: (json['minimum_stay_days'] as num?)?.toInt() ?? 1,
     );
+  }
+
+  static String _modeFromJson(Map<String, dynamic> json) {
+    final mode = (json['booking_mode'] ?? '').toString().toUpperCase();
+    if (mode == 'INSTANT_BOOK' || mode == 'HOST_APPROVAL') return mode;
+    return json['instant_booking'] == false ? 'HOST_APPROVAL' : 'INSTANT_BOOK';
   }
 
   static bool _isProductionPropertyImageUrl(String value) {
@@ -219,7 +336,8 @@ class PropertyModel {
         !lower.contains('placeholder.com') &&
         !lower.contains('placehold.co') &&
         !lower.contains('dummyimage') &&
-        !_isLocalAbsoluteUrl(raw);
+        // local uploads are fine while developing, never in a production build
+        (!AppConfig.isProduction || !_isLocalAbsoluteUrl(raw));
   }
 
   static bool _isLocalAbsoluteUrl(String value) {

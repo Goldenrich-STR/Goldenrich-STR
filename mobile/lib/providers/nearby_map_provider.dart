@@ -188,6 +188,14 @@ class NearbyMapProvider with ChangeNotifier {
     }
   }
 
+  /// Where the map shows properties when the phone's location is not available.
+  static const double fallbackLatitude = 19.9975; // Nashik
+  static const double fallbackLongitude = 73.7898;
+  double? _areaLatitude;
+  double? _areaLongitude;
+  double? get areaLatitude => _areaLatitude;
+  double? get areaLongitude => _areaLongitude;
+
   void _handleLocationFailure(LocationFailure failure) {
     _message = failure.message;
     switch (failure.type) {
@@ -203,8 +211,17 @@ class NearbyMapProvider with ChangeNotifier {
       case LocationFailureType.timeout:
       case LocationFailureType.unavailable:
         _setStatus(NearbyMapStatus.error);
+        // no GPS fix (common on desktop browsers): still show the spaces around Nashik
+        _loadFallbackArea();
         break;
     }
+  }
+
+  Future<void> _loadFallbackArea() async {
+    _areaLatitude = fallbackLatitude;
+    _areaLongitude = fallbackLongitude;
+    if (_radiusMeters < 20000) _radiusMeters = 20000;
+    await searchThisArea(latitude: fallbackLatitude, longitude: fallbackLongitude);
   }
 
   void _setStatus(NearbyMapStatus value) {

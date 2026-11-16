@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient, AsyncIOMotorDatabase
 import os
+import re
 import logging
 import asyncio
 import mimetypes
@@ -232,9 +233,23 @@ else:
             _cors_origins.append(_local_origin)
 
 
+# Local development only: Flutter web (and other dev servers) run on a random localhost port.
+_LOCAL_ORIGIN_REGEX = (
+    r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+    if os.environ.get("ENVIRONMENT", "development").lower() != "production"
+    else None
+)
+
+
 def _cors_headers_for_origin(origin: str | None) -> dict[str, str]:
     if not origin:
         return {}
+    if _LOCAL_ORIGIN_REGEX and re.fullmatch(_LOCAL_ORIGIN_REGEX, origin):
+        return {
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+            "Vary": "Origin",
+        }
     if "*" in _cors_origins or origin in _cors_origins:
         return {
             "Access-Control-Allow-Origin": origin,
@@ -247,6 +262,7 @@ def _cors_headers_for_origin(origin: str | None) -> dict[str, str]:
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
+    allow_origin_regex=_LOCAL_ORIGIN_REGEX,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

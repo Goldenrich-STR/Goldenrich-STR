@@ -75,7 +75,7 @@ const legalTitleForContext = (context) => {
   }
 };
 
-const LegalLinks = ({ className = '', context = 'general' }) => {
+const LegalLinks = ({ className = '', context = 'general', linkClassName = 'text-terracotta font-bold' }) => {
   const [legal, setLegal] = useState(DEFAULT_LEGAL);
   const [modal, setModal] = useState(null);
 
@@ -173,7 +173,7 @@ const LegalLinks = ({ className = '', context = 'general' }) => {
                 e.stopPropagation();
                 openLegal(doc);
               }}
-              className="text-terracotta hover:underline font-bold normal-case tracking-normal"
+              className={`${linkClassName} hover:underline normal-case tracking-normal`}
             >
               {doc.title}
             </button>
@@ -186,7 +186,7 @@ const LegalLinks = ({ className = '', context = 'general' }) => {
               e.stopPropagation();
               openLegal({ title: legalTitleForContext(context), text: '' });
             }}
-            className="text-terracotta hover:underline font-bold normal-case tracking-normal"
+            className={`${linkClassName} hover:underline normal-case tracking-normal`}
           >
             {legalTitleForContext(context)}
           </button>

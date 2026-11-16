@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -1315,90 +1316,156 @@ class _LoginScreenState extends State<LoginScreen> {
                 ? 'Create account'
                 : 'Login/Signup';
 
+    final sheetMaxHeight = size.height - safeTop - 24;
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF8C8C8C),
       body: Form(
         key: _formKey,
         child: Stack(
           children: [
-            if (!compactFormOnly)
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                height: heroHeight,
-                child: _AuthHero(
-                  onLogoTap: () {
-                    _logoTapCount++;
-                    if (_logoTapCount >= 5) {
-                      _logoTapCount = 0;
-                      _showBuildConfigurationDialog();
-                    }
-                  },
-                ),
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: _handleClose,
+                child: Container(color: const Color(0xFF8C8C8C)),
               ),
-            Positioned(
-              top: formTop,
-              left: popupSideMargin,
-              right: popupSideMargin,
-              bottom: popupBottomMargin,
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
               child: Container(
+                constraints: BoxConstraints(maxHeight: sheetMaxHeight),
+                width: double.infinity,
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.all(Radius.circular(30)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0x1A000000),
-                      blurRadius: 34,
-                      offset: Offset(0, 14),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 child: SafeArea(
                   top: false,
-                  bottom: false,
                   child: SingleChildScrollView(
-                    physics: lockAuthSheetScroll
-                        ? const NeverScrollableScrollPhysics()
-                        : const BouncingScrollPhysics(),
+                    physics: const BouncingScrollPhysics(),
                     padding: EdgeInsets.fromLTRB(
-                      horizontalPadding,
-                      isCompact ? 9 : 26,
-                      horizontalPadding,
-                      (isCompact ? 10 : 24) + viewInsets.bottom,
-                    ),
+                        20, 16, 20, 16 + viewInsets.bottom),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        Center(
-                          child: Container(
-                            width: 58,
-                            height: 6,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFD5D5D5),
-                              borderRadius: BorderRadius.circular(100),
+                        Row(
+                          children: [
+                            const SizedBox(width: 32),
+                            Expanded(
+                              child: GestureDetector(
+                                onTap: () {
+                                  _logoTapCount++;
+                                  if (_logoTapCount >= 5) {
+                                    _logoTapCount = 0;
+                                    _showBuildConfigurationDialog();
+                                  }
+                                },
+                                child: Text(
+                                  'Welcome to X-Space360',
+                                  textAlign: TextAlign.center,
+                                  style: GoogleFonts.inter(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.w500,
+                                      color: const Color(0xFF1B1924)),
+                                ),
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: _handleClose,
+                              child: Container(
+                                width: 32,
+                                height: 32,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF1F1F1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(LucideIcons.x,
+                                    size: 16, color: Color(0xFF1B1924)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        if (_step == 0) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(14),
+                            child: SizedBox(
+                              height: 112,
+                              child: Stack(
+                                fit: StackFit.expand,
+                                children: [
+                                  Image.asset(
+                                    'assets/images/hero/vineyard-retreat.webp',
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) =>
+                                        Container(color: const Color(0xFF3A3A3A)),
+                                  ),
+                                  Container(
+                                      color:
+                                          Colors.black.withValues(alpha: 0.45)),
+                                  Center(
+                                    child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          'Book a Room.\nEnjoy A Villa Getaway',
+                                          textAlign: TextAlign.center,
+                                          style: GoogleFonts.inter(
+                                              fontSize: 17,
+                                              height: 1.2,
+                                              fontWeight: FontWeight.w500,
+                                              color: Colors.white),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          'Enjoy the luxury, comfort and privacy of premium spaces across India.',
+                                          textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          style: GoogleFonts.inter(
+                                              fontSize: 10,
+                                              color: Colors.white
+                                                  .withValues(alpha: 0.95)),
+                                        ),
+                                        const SizedBox(height: 6),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 10, vertical: 3),
+                                          decoration: BoxDecoration(
+                                            borderRadius:
+                                                BorderRadius.circular(6),
+                                            border: Border.all(
+                                                color: Colors.white70),
+                                          ),
+                                          child: Text(
+                                              'Rooms Starting at \u20b92,000*',
+                                              style: GoogleFonts.inter(
+                                                  fontSize: 10,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.white)),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                        SizedBox(height: isCompact ? 8 : 30),
-                        if (_step == 0) ...[
-                          _buildWelcomeHeader(isCompact: isCompact),
+                          const SizedBox(height: 14),
+                          Text(
+                            _isSignUpMode ? 'Create account' : 'Login/Signup',
+                            style: GoogleFonts.inter(
+                                fontSize: 14, color: const Color(0xFF1B1924)),
+                          ),
+                          const SizedBox(height: 10),
                         ] else ...[
                           Text(
                             eyebrow,
                             style: GoogleFonts.inter(
                               fontSize: 14,
-                              fontWeight: FontWeight.w900,
-                              color: AppTheme.primary,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF1B1924),
                             ),
                           ),
                           const SizedBox(height: 10),
-                          _buildWelcomeTitle(size.width),
-                        ],
-                        SizedBox(height: isCompact ? 9 : 22),
-                        if (_step == 0) ...[
-                          _buildAuthTabs(),
-                          SizedBox(height: isCompact ? 9 : 18),
                         ],
                         if (_errorMessage != null) ...[
                           Container(
@@ -1406,107 +1473,90 @@ class _LoginScreenState extends State<LoginScreen> {
                             decoration: BoxDecoration(
                               color: Colors.red.shade50,
                               border: Border.all(color: Colors.red.shade200),
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(10),
                             ),
                             child: Text(
                               _errorMessage!,
                               style: GoogleFonts.inter(
                                 color: Colors.red.shade900,
                                 fontSize: 13,
-                                fontWeight: FontWeight.w700,
+                                fontWeight: FontWeight.w500,
                               ),
                               textAlign: TextAlign.center,
                             ),
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: 14),
                         ],
                         AnimatedSwitcher(
                           duration: const Duration(milliseconds: 300),
                           child: _buildFormContent(auth),
                         ),
-                        ...[
-                          SizedBox(height: isCompact ? 12 : 24),
-                          Row(
-                            children: [
-                              Expanded(
-                                  child: Divider(color: Colors.grey.shade200)),
-                              Text(
-                                'Secure & Trusted',
+                        if (_step == 0) ...[
+                          const SizedBox(height: 14),
+                          Center(
+                            child: Text.rich(
+                              TextSpan(
+                                text: _isSignUpMode
+                                    ? 'Already have an account?  '
+                                    : "Don't have an account?  ",
                                 style: GoogleFonts.inter(
-                                  fontSize: isCompact ? 12 : 15,
-                                  fontWeight: FontWeight.w800,
-                                  color: AppTheme.charcoalMuted,
-                                ),
-                              ),
-                              Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 12),
-                                child: Icon(Icons.verified_user_outlined,
-                                    color: AppTheme.primary,
-                                    size: isCompact ? 18 : 24),
-                              ),
-                              Expanded(
-                                  child: Divider(color: Colors.grey.shade200)),
-                            ],
-                          ),
-                          SizedBox(height: isCompact ? 8 : 14),
-                          Text.rich(
-                            TextSpan(
-                              text: 'By continuing, you agree to our\n',
-                              children: [
-                                TextSpan(
-                                  text: 'Terms & Conditions',
-                                  style: GoogleFonts.inter(
-                                    color: const Color(0xFF07142F),
-                                    fontWeight: FontWeight.w900,
+                                    fontSize: 14,
+                                    color: const Color(0xFF3B3B3B)),
+                                children: [
+                                  WidgetSpan(
+                                    alignment: PlaceholderAlignment.baseline,
+                                    baseline: TextBaseline.alphabetic,
+                                    child: GestureDetector(
+                                      onTap: () => setState(() {
+                                        _isSignUpMode = !_isSignUpMode;
+                                        _errorMessage = null;
+                                      }),
+                                      child: Text(
+                                        _isSignUpMode ? 'Sign In' : 'Sign Up',
+                                        style: GoogleFonts.inter(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFF2563EB)),
+                                      ),
+                                    ),
                                   ),
-                                ),
-                                const TextSpan(text: ' and '),
-                                TextSpan(
-                                  text: 'Privacy Policy.',
-                                  style: GoogleFonts.inter(
-                                    color: const Color(0xFF07142F),
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.inter(
-                              fontSize: isCompact ? 11 : 14,
-                              height: isCompact ? 1.35 : 1.55,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.charcoalMuted,
+                                ],
+                              ),
                             ),
                           ),
                         ],
+                        const SizedBox(height: 14),
+                        Text.rich(
+                          TextSpan(
+                            text: 'By signing up, you agree to\nour ',
+                            children: [
+                              TextSpan(
+                                text: 'Terms & Conditions',
+                                style: GoogleFonts.inter(
+                                    color: const Color(0xFF2563EB)),
+                              ),
+                              const TextSpan(text: ' and '),
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: GoogleFonts.inter(
+                                    color: const Color(0xFF2563EB)),
+                              ),
+                              const TextSpan(text: '.'),
+                            ],
+                          ),
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.inter(
+                            fontSize: 12,
+                            height: 1.4,
+                            color: const Color(0xFF1B1924),
+                          ),
+                        ),
                       ],
                     ),
                   ),
                 ),
               ),
             ),
-            if (!compactFormOnly)
-              Positioned(
-                top: safeTop + 22,
-                right: horizontalPadding,
-                child: Material(
-                  color: Colors.white,
-                  shape: const CircleBorder(),
-                  elevation: 8,
-                  shadowColor: Colors.black26,
-                  child: InkWell(
-                    customBorder: const CircleBorder(),
-                    onTap: _handleClose,
-                    child: const SizedBox(
-                      width: 54,
-                      height: 54,
-                      child: Icon(Icons.close_rounded,
-                          color: Color(0xFF07142F), size: 30),
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -1706,10 +1756,8 @@ class _LoginScreenState extends State<LoginScreen> {
               style: _inputTextStyle,
               cursorColor: AppTheme.primary,
               decoration: InputDecoration(
-                hintText: 'Email address',
+                hintText: 'email@example.com',
                 hintStyle: _inputHintStyle,
-                prefixIcon: const Icon(Icons.email_outlined,
-                    color: AppTheme.charcoalMuted),
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: inputPadding,
@@ -1739,8 +1787,6 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: InputDecoration(
                 hintText: 'Password',
                 hintStyle: _inputHintStyle,
-                prefixIcon: const Icon(Icons.lock_outline,
-                    color: AppTheme.charcoalMuted),
                 suffixIcon: IconButton(
                   onPressed: () {
                     setState(() {
@@ -1848,25 +1894,21 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: CircularProgressIndicator(color: AppTheme.primary))
                 : SizedBox(
                     width: double.infinity,
-                    height: isCompact ? 48 : 72,
-                    child: ElevatedButton.icon(
+                    height: 50,
+                    child: ElevatedButton(
                       onPressed: _handleLogin,
-                      iconAlignment: IconAlignment.end,
-                      icon: Icon(Icons.arrow_forward_rounded,
-                          color: Colors.white, size: isCompact ? 22 : 30),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
+                        backgroundColor: const Color(0xFF1B1924),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
+                          borderRadius: BorderRadius.circular(10),
                         ),
-                        elevation: 12,
-                        shadowColor: AppTheme.primary.withValues(alpha: 0.28),
+                        elevation: 0,
                       ),
-                      label: Text(
-                        'Sign In',
+                      child: Text(
+                        'Continue',
                         style: GoogleFonts.inter(
-                          fontSize: isCompact ? 16 : 20,
-                          fontWeight: FontWeight.w900,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
                           color: Colors.white,
                         ),
                       ),
@@ -1888,8 +1930,6 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: InputDecoration(
                 hintText: 'Phone number',
                 hintStyle: _inputHintStyle,
-                prefixIcon: const Icon(Icons.phone_outlined,
-                    color: AppTheme.charcoalMuted),
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding:
@@ -1921,9 +1961,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: ElevatedButton(
                       onPressed: _sendOTP,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primary,
+                        backgroundColor: const Color(0xFF1B1924),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(10),
                         ),
                         elevation: 0,
                       ),

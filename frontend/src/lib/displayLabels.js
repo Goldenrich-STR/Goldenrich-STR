@@ -146,6 +146,8 @@ const slugifyAmenity = (label) =>
 export const getAmenityIcon = (value, label = '') => {
   const key = value || slugifyAmenity(label);
   if (AMENITY_ICONS[key]) return AMENITY_ICONS[key];
+  // amenities a host typed in themselves all get the same default icon
+  if (String(key).startsWith('custom_')) return CheckCircle2;
   const text = `${key} ${label}`.toLowerCase();
   if (text.includes('wifi') || text.includes('internet')) return Wifi;
   if (text.includes('park')) return Car;
@@ -168,7 +170,7 @@ export const getAmenityIcon = (value, label = '') => {
   return CheckCircle2;
 };
 
-export const formatAmenityLabel = (value) => AMENITY_DISPLAY_LABELS[value] || titleCase(value);
+export const formatAmenityLabel = (value) => AMENITY_DISPLAY_LABELS[value] || titleCase(String(value || '').replace(/^custom_/, ''));
 
 export const formatPropertyDescription = (description, propertyOrLocation) => {
   let desc = String(description || '');

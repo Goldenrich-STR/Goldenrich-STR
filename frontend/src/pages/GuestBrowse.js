@@ -845,12 +845,14 @@ const GuestBrowse = () => {
 
           {/* Right Actions */}
           <div className="hidden shrink-0 lg:flex items-center space-x-6">
+            {!user && (
             <Link
-              to={user ? '/host/list-property' : '/list-your-property'}
+              to="/list-your-property"
               className="font-sans font-semibold text-[15px] tracking-tight text-charcoal hover:text-terracotta transition-colors duration-200"
             >
               List your Property
             </Link>
+            )}
 
             <LanguageSelector
               currentLang={lang}
@@ -861,7 +863,7 @@ const GuestBrowse = () => {
             />
 
             {/* Download App Button with APP badge and QR Scanner Popup */}
-            <DownloadAppButton isNavScrolled={true} />
+            {!user && <DownloadAppButton isNavScrolled={true} />}
 
             {user && user.role === 'guest' && wishlist.length > 0 && (
               <button
@@ -878,7 +880,7 @@ const GuestBrowse = () => {
             {user ? (
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => navigate('/guest/bookings')}
+                  onClick={() => navigate(user.role === 'host' ? '/host/bookings' : user.role === 'guest' ? '/guest/bookings' : '/dashboard')}
                   className="bg-gray-50 hover:bg-gray-100 text-charcoal font-sans font-semibold text-[14px] tracking-tight px-4 py-2 rounded-full border border-gray-200 transition shadow-subtle"
                 >
                   {t('myBookings')}
@@ -947,7 +949,7 @@ const GuestBrowse = () => {
             {user ? (
               <>
                 <button
-                  onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/bookings'); }}
+                  onClick={() => { setIsMobileMenuOpen(false); navigate(user.role === 'host' ? '/host/bookings' : user.role === 'guest' ? '/guest/bookings' : '/dashboard'); }}
                   className="text-left text-2xl font-bold text-terracotta py-2 border-b border-gray-100"
                 >
                   {t('myBookings')}

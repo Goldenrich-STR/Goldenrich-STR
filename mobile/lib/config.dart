@@ -40,14 +40,21 @@ class AppConfig {
       bool.fromEnvironment('DEMO_MODE', defaultValue: false);
   static const bool debugFeatures =
       bool.fromEnvironment('DEBUG_FEATURES', defaultValue: false);
+  /// Google Maps key (same project as the website's). Pass it with
+  /// --dart-define=GOOGLE_MAPS_API_KEY=... (never commit the key). Without it
+  /// the property page falls back to OpenStreetMap.
+  static const String googleMapsKey =
+      String.fromEnvironment('GOOGLE_MAPS_API_KEY', defaultValue: '');
   static const String mapTileUrl = String.fromEnvironment(
     'MAP_TILE_URL',
-    defaultValue:
-        'https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+    // Carto's free tiles now stamp "API KEY REQUIRED" over the map, so the
+    // default is the standard OpenStreetMap tile server (no key). For heavy
+    // production traffic pass MAP_TILE_URL for a paid provider instead.
+    defaultValue: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
   );
   static const String mapAttribution = String.fromEnvironment(
     'MAP_ATTRIBUTION',
-    defaultValue: '© OpenStreetMap © CARTO',
+    defaultValue: '© OpenStreetMap contributors',
   );
   static const String mapUserAgent = String.fromEnvironment(
     'MAP_USER_AGENT',

@@ -455,6 +455,9 @@ export const bookingAPI = {
 
 // Calendar API
 export const calendarAPI = {
+  getUnitAvailability: (propertyId, params = {}) =>
+    apiClient.get(`/calendar/properties/${propertyId}/unit-availability`, { params }),
+
   getBlockedDates: (propertyId, params = {}) =>
     apiClient.get(`/calendar/properties/${propertyId}/blocked-dates`, { params }),
 
