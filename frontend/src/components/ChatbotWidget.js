@@ -1038,20 +1038,35 @@ const ThinkingBubble = () => {
 };
 
 /** Send button with the gradient ring; it spins while thinking and turns into Stop while the answer types out. */
-const AskButton = ({ busy, typing, disabled, onStop }) => (
-  <button
-    type={typing ? 'button' : 'submit'}
-    onClick={typing ? onStop : undefined}
-    disabled={!typing && disabled}
-    aria-label={typing ? 'Stop answer' : 'Send'}
-    title={typing ? 'Stop' : 'Send'}
-    className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full !transform-none transition disabled:opacity-60"
-  >
-    <span aria-hidden="true" className={`absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#4285F4,#9B72CB,#D96570,#F4B400,#4285F4)] ${busy ? 'animate-[spin_1.4s_linear_infinite]' : ''}`} />
-    <span aria-hidden="true" className="absolute inset-[2.5px] rounded-full bg-white" />
-    {typing ? <span className="relative h-3.5 w-3.5 rounded-[3px] bg-[#1E2430]" /> : <AiSparkle className="relative h-6 w-6" />}
-  </button>
-);
+const AskButton = ({ busy, typing, disabled, hasText, onStop }) => {
+  // like Gemini: once something is typed the sparkle becomes a solid "send" arrow
+  if (hasText && !typing && !busy) {
+    return (
+      <button
+        type="submit"
+        aria-label="Send"
+        title="Send"
+        className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#1E2430] text-white !transform-none transition hover:bg-black"
+      >
+        <ArrowUp className="h-5 w-5" strokeWidth={2.4} />
+      </button>
+    );
+  }
+  return (
+    <button
+      type={typing ? 'button' : 'submit'}
+      onClick={typing ? onStop : undefined}
+      disabled={!typing && disabled}
+      aria-label={typing ? 'Stop answer' : 'Send'}
+      title={typing ? 'Stop' : 'Send'}
+      className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full !transform-none transition disabled:opacity-60"
+    >
+      <span aria-hidden="true" className={`absolute inset-0 rounded-full bg-[conic-gradient(from_0deg,#4285F4,#9B72CB,#D96570,#F4B400,#4285F4)] ${busy ? 'animate-[spin_1.4s_linear_infinite]' : ''}`} />
+      <span aria-hidden="true" className="absolute inset-[2.5px] rounded-full bg-white" />
+      {typing ? <span className="relative h-3.5 w-3.5 rounded-[3px] bg-[#1E2430]" /> : <AiSparkle className="relative h-6 w-6" />}
+    </button>
+  );
+};
 
 const PLACEHOLDERS = ['villas near Nashik under ₹25,000', 'the refund policy', 'how to list my property', 'co-working spaces in Pune', 'host and guest rules', 'a weekend stay for 6 guests'];
 /** Types example questions into the empty input, then deletes them, so people see what they can ask. */
@@ -1301,7 +1316,7 @@ const ChatbotWidget = () => {
                   </span>
                 )}
               </div>
-              <AskButton busy={thinking} typing={!thinking && !typingDone} disabled={!text.trim() || thinking} onStop={() => setStopTyping(true)} />
+              <AskButton busy={thinking} typing={!thinking && !typingDone} disabled={!text.trim() || thinking} hasText={Boolean(text.trim())} onStop={() => setStopTyping(true)} />
             </form>
             <p className="mt-1.5 text-center text-[11px] text-[#80868B]">Answers come from X-Space360 help topics and live listings. Confirm important details with support.</p>
           </div>

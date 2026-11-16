@@ -1273,6 +1273,8 @@ const HostListProperty = () => {
       if (notYouTube(form.youtube_long_url)) return 'The YouTube video link must be a youtube.com or youtu.be link (a share.google or other short link will not play)';
       if (form.images.length < 3) return 'Add at least 3 photos';
       if (form.images.length > 15) return 'Maximum 15 photos allowed';
+      const uncategorised = form.images.findIndex((img) => !String(img.split('#')[1] || '').trim());
+      if (uncategorised !== -1) return `Choose a category for photo ${uncategorised + 1} (Exterior, Bedroom, Kitchen...). It is shown to guests in the Spaces section.`;
       
       const pureUrls = form.images.map(img => img.split('#')[0]);
       const hasDuplicates = pureUrls.some((url, idx) => pureUrls.indexOf(url) !== idx);
@@ -1418,7 +1420,7 @@ const HostListProperty = () => {
       }
 
       // Default category 'Other'
-      update({ images: [...form.images, `${url}#Other`], watermark_confirmed: true });
+      update({ images: [...form.images, url], watermark_confirmed: true });
     } catch (err) {
       setError(formatError(err, 'Image upload failed'));
     } finally {
@@ -1461,12 +1463,12 @@ const HostListProperty = () => {
         setError('This image is already uploaded');
         return;
       }
-      update({ images: [...form.images, `${hostedUrl}#Other`], watermark_confirmed: true });
+      update({ images: [...form.images, hostedUrl], watermark_confirmed: true });
       setImageUrlDraft('');
     } catch (err) {
       const canUseDirectUrl = await canPreviewImageUrl(url);
       if (canUseDirectUrl) {
-        update({ images: [...form.images, `${url}#Other`], watermark_confirmed: true });
+        update({ images: [...form.images, url], watermark_confirmed: true });
         setImageUrlDraft('');
         setError('');
         return;
@@ -3060,9 +3062,10 @@ const HostListProperty = () => {
                         </button>
                       </div>
                       <div className="p-4 bg-stone/50">
-                        <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block">Photo Category</label>
+                        <label className="text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-widest mb-1 block">Photo Category <span className="text-red-600">*</span></label>
                         <select
-                          value={category || 'Other'}
+                          value={category || ''}
+                          data-testid={`photo-category-${idx}`}
                           onChange={(e) => {
                             const newImages = [...form.images];
                             newImages[idx] = `${url}#${e.target.value}`;
@@ -3070,6 +3073,7 @@ const HostListProperty = () => {
                           }}
                           className="w-full rounded-lg border border-gray-200 bg-white p-2 text-xs font-bold text-charcoal outline-none transition-colors focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
                         >
+                          <option value="" disabled>Select category</option>
                           {PHOTO_CATEGORIES.map(cat => (
                             <option key={cat} value={cat}>{cat}</option>
                           ))}

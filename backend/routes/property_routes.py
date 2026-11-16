@@ -198,6 +198,18 @@ async def _add_dynamic_property_price(db, prop: dict, target_date=None) -> dict:
         prop["effective_price_per_night"] = pricing["final_price"]
         prop["price_per_night"] = pricing["final_price"]
         prop["active_price_rule"] = pricing
+        # every unit follows the same pricing rules as the property (Diwali, weekend, ...)
+        for unit in prop.get("units") or []:
+            if not isinstance(unit, dict) or unit.get("price_per_night") in (None, ""):
+                continue
+            unit_base = float(unit.get("price_per_night") or 0)
+            unit["base_price_per_night"] = unit_base
+            unit_pricing = calculate_price(
+                {**prop, "base_price": unit_base, "price_per_night": unit_base},
+                target_date or datetime.now(timezone.utc).date(),
+                rules,
+            )
+            unit["effective_price_per_night"] = unit_pricing["final_price"]
         today_iso = datetime.now(timezone.utc).date().isoformat()
         relevant = [
             rule for rule in rules
@@ -331,7 +343,10 @@ async def _add_customer_display_price(db: AsyncIOMotorDatabase, prop: dict, conf
             for unit in units:
                 if not isinstance(unit, dict):
                     continue
-                unit_host_price = money(unit.get("price_per_night") or 0)
+                # today's price including pricing rules, falling back to the listed unit price
+                unit_host_price = money(
+                    unit.get("effective_price_per_night") or unit.get("price_per_night") or 0
+                )
                 if unit_host_price > 0:
                     unit["display_price_per_night"] = as_float(money(unit_host_price + calculate_configured_charges_total(
                         unit_host_price,
@@ -1249,8 +1264,19 @@ async def get_property(
             host["created_at"] = created_at.isoformat() if hasattr(created_at, "isoformat") else created_at
         property_dict["host"] = host or None
 
-        # Set cache-control header for property details (30 minutes)
-        response.headers["Cache-Control"] = "public, max-age=1800"
+        # Exact map location unlocks with a confirmed booking (same rule as the host's phone).
+        # Until then only a ~1 km rounded point is exposed.
+        property_dict["location_unlocked"] = bool(has_confirmed_booking)
+        if not has_confirmed_booking:
+            for coord in ("latitude", "longitude"):
+                value = property_dict.get(coord)
+                if isinstance(value, (int, float)):
+                    property_dict[coord] = round(float(value), 2)
+
+        # Set cache-control header for property details (30 minutes); never cache a personalised response
+        response.headers["Cache-Control"] = (
+            "private, no-store" if has_confirmed_booking else "public, max-age=1800"
+        )
 
         # Generate SEO metadata dynamically with fallback
         title = property_dict.get("meta_title") or f"{property_dict.get('title')} in {property_dict.get('city')} | X-Space360"

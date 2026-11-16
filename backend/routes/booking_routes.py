@@ -569,15 +569,17 @@ async def _build_booking_quote(
     if existing_booking:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Selected dates are no longer available")
 
-    blocked_conflict = await db.blocked_dates.find_one(
-        _blocked_date_query(
-            payload.property_id,
-            check_in_iso,
-            check_out_iso,
-            property_dict.get("category", ""),
-            property_dict.get("pricing_cycle", ""),
-        )
+    blocked_query = _blocked_date_query(
+        payload.property_id,
+        check_in_iso,
+        check_out_iso,
+        property_dict.get("category", ""),
+        property_dict.get("pricing_cycle", ""),
     )
+    if selected_unit:
+        # other units' bookings do not close this unit; its own bookings were checked above
+        blocked_query = {"$and": [blocked_query, {"source": {"$ne": "booking"}}]}
+    blocked_conflict = await db.blocked_dates.find_one(blocked_query)
     if blocked_conflict:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Property is unavailable for selected dates")
 
@@ -848,15 +850,18 @@ async def create_booking(
                 )
         
         # Check for blocked dates (manual or external calendar)
-        blocked_conflict = await db.blocked_dates.find_one(
-            _blocked_date_query(
-                booking_data.property_id,
-                check_in.isoformat(),
-                check_out.isoformat(),
-                property_dict.get("category", ""),
-                property_dict.get("pricing_cycle", ""),
-            )
+        blocked_query = _blocked_date_query(
+            booking_data.property_id,
+            check_in.isoformat(),
+            check_out.isoformat(),
+            property_dict.get("category", ""),
+            property_dict.get("pricing_cycle", ""),
         )
+        if selected_unit:
+            # Another unit's booking must not close this unit: same-unit bookings are already
+            # caught by the active-booking check above, so only manual / external blocks count here.
+            blocked_query = {"$and": [blocked_query, {"source": {"$ne": "booking"}}]}
+        blocked_conflict = await db.blocked_dates.find_one(blocked_query)
         
         if blocked_conflict:
             raise HTTPException(
