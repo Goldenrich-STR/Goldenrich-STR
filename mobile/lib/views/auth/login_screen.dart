@@ -439,7 +439,6 @@ class _AuthHero extends StatelessWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  static const int _otpValiditySeconds = 120;
   final _formKey = GlobalKey<FormState>();
 
   // Navigation & Flow state
@@ -1058,18 +1057,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _startOtpCountdown() {
     _otpCountdownTimer?.cancel();
-    setState(() => _otpSecondsRemaining = _otpValiditySeconds);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    setState(() => _otpSecondsRemaining = auth.otpSecondsRemaining);
 
     _otpCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (!mounted) {
         timer.cancel();
         return;
       }
-      if (_otpSecondsRemaining <= 1) {
+      final remaining = auth.otpSecondsRemaining;
+      if (remaining == 0) {
         timer.cancel();
         setState(() => _otpSecondsRemaining = 0);
       } else {
-        setState(() => _otpSecondsRemaining--);
+        setState(() => _otpSecondsRemaining = remaining);
       }
     });
   }
@@ -1163,6 +1164,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _errorMessage = null);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.sendOTP(_phoneController.text.trim());
+    if (!mounted) return;
     if (success) {
       _clearOtpFields();
       setState(() => _step = 2); // Go to OTP verification
@@ -1175,7 +1177,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _verifyOTP() async {
     _setOtpFromDigits();
-    if (_otpSecondsRemaining == 0) {
+    if (context.read<AuthProvider>().otpSecondsRemaining == 0) {
       setState(() => _errorMessage = 'OTP expired. Please request a new OTP.');
       return;
     }
@@ -1189,6 +1191,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.verifyOTP(
         _phoneController.text.trim(), _otpController.text.trim());
+    if (!mounted) return;
     if (success) {
       _stopOtpCountdown();
       setState(() {
@@ -1196,7 +1199,8 @@ class _LoginScreenState extends State<LoginScreen> {
         _emailRegController.text = ''; // Clear for user entry
       });
     } else {
-      setState(() => _errorMessage = 'Invalid OTP. Please try again.');
+      setState(() => _errorMessage =
+          auth.lastError ?? 'Unable to verify OTP. Please try again.');
     }
   }
 
@@ -2036,6 +2040,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: TextField(
                   controller: _otpDigitControllers[index],
                   focusNode: _otpFocusNodes[index],
+                  autofillHints:
+                      index == 0 ? const [AutofillHints.oneTimeCode] : null,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
                   maxLength: 6,

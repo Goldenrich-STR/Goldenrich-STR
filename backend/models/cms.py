@@ -26,3 +26,4 @@ class FeaturedProperty(BaseModel):
 class CMSUpdate(BaseModel):
     content_data: dict
     is_active: Optional[bool] = None
+    expected_updated_at: Optional[str] = None

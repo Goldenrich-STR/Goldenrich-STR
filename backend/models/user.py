@@ -18,7 +18,9 @@ class KYCStatus(str, Enum):
 
 class KYCDocument(BaseModel):
     document_type: str
-    document_url: str
+    document_url: Optional[str] = None
+    text_value: Optional[str] = None
+    value: Optional[str] = None
     uploaded_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     status: Optional[str] = "pending"
     rejection_reason: Optional[str] = None
@@ -49,6 +51,9 @@ class User(BaseModel):
     broker_id: Optional[str] = None  # Assigned broker user_id
     branch_manager_id: Optional[str] = None
     branch_manager_code: Optional[str] = None
+    telecaller_id: Optional[str] = None
+    telecaller_code: Optional[str] = None
+    host_association_type: Optional[str] = "property_owner"
     kyc_status: KYCStatus = KYCStatus.UNVERIFIED
     kyc_documents: List[KYCDocument] = []
     pan_number: Optional[str] = None
@@ -138,5 +143,28 @@ class UserResponse(BaseModel):
     access_scope: Optional[str] = None
     profile_image: Optional[str] = None
     kyc_status: Optional[KYCStatus] = None
+    kyc_documents: List[KYCDocument] = []
+    host_association_type: Optional[str] = None
+    pan_number: Optional[str] = None
+    agreement_owner_name: Optional[str] = None
+    agreement_owner_address: Optional[str] = None
+    agreement_signature: Optional[str] = None
+    lg_code: Optional[str] = None
+    employee_code: Optional[str] = None
+    broker_id: Optional[str] = None
+    rm_id: Optional[str] = None
+    branch_manager_id: Optional[str] = None
+    branch_manager_code: Optional[str] = None
+    telecaller_id: Optional[str] = None
+    telecaller_code: Optional[str] = None
+    telecaller_name: Optional[str] = None
+    assignment_primary_type: Optional[str] = None
+    assignment_primary_id: Optional[str] = None
+    assignment_primary_code: Optional[str] = None
+    assignment_primary_name: Optional[str] = None
+    assignment_secondary_type: Optional[str] = None
+    assignment_secondary_id: Optional[str] = None
+    assignment_secondary_code: Optional[str] = None
+    assignment_secondary_name: Optional[str] = None
     is_active: bool
     created_at: datetime

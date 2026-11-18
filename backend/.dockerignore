@@ -7,3 +7,9 @@ __pycache__
 .ruff_cache
 uploads
 *.log
+.env
+.env.*
+!.env.example
+sample-*.json
+*.pre-*
+*.before-*

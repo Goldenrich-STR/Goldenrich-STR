@@ -53,12 +53,46 @@ async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, templ
                     or subscription.get("expires_at")
                     or subscription.get("expiry_date")
                 ),
-                "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/") + "/host/dashboard",
+                "action_url": os.getenv("PUBLIC_FRONTEND_URL", "https://x-space360.in").rstrip("/") + "/host/dashboard",
                 **(extra or {}),
             },
         )
     except Exception as email_err:
         logger.warning("Subscription email failed: %s", email_err)
+
+
+async def send_subscription_success_whatsapp(
+    db: AsyncIOMotorDatabase,
+    subscription: dict,
+    payment_id: str,
+) -> None:
+    try:
+        from models.notification import NotificationChannel, NotificationType
+        from services.notification_service import send_multi_channel_notification
+
+        plan = await db.subscription_plans.find_one(
+            {"plan_id": subscription.get("plan_id")},
+            {"_id": 0, "plan_name": 1},
+        ) or {}
+        await send_multi_channel_notification(
+            db=db,
+            user_id=subscription["user_id"],
+            notification_type=NotificationType.SUBSCRIPTION_SUCCESS,
+            title="Subscription activated",
+            message=f"Subscription {subscription.get('subscription_id')} is active.",
+            channels=[NotificationChannel.IN_APP, NotificationChannel.WHATSAPP],
+            data={
+                "host_name": subscription.get("host_name"),
+                "plan_name": plan.get("plan_name") or subscription.get("plan_type") or subscription.get("plan_id"),
+                "start_date": subscription.get("start_date") or subscription.get("activated_at") or subscription.get("updated_at") or "",
+                "end_date": subscription.get("end_date") or subscription.get("expires_at") or subscription.get("expiry_date") or "",
+                "amount": subscription.get("amount") or "",
+                "transaction_id": payment_id,
+                "subscription_id": subscription.get("subscription_id"),
+            },
+        )
+    except Exception as whatsapp_err:
+        logger.exception("Subscription WhatsApp failed for %s: %s", subscription.get("subscription_id"), whatsapp_err)
 
 
 async def _activate_property_after_subscription_payment(
@@ -106,6 +140,44 @@ async def _activate_property_after_subscription_payment(
             logger.warning("Verification workflow after subscription payment failed for %s: %s", property_id, wf_err)
 
     return property_id
+
+
+async def _record_subscription_transaction(
+    db: AsyncIOMotorDatabase,
+    subscription: dict,
+    *,
+    payment_id: Optional[str] = None,
+    order_id: Optional[str] = None,
+) -> bool:
+    """Idempotently repair/create the finance ledger row for a paid subscription."""
+    resolved_payment_id = str(
+        payment_id
+        or subscription.get("upi_transaction_id")
+        or subscription.get("razorpay_payment_id")
+        or subscription.get("razorpay_subscription_id")
+        or ""
+    ).strip()
+    subscription_id = str(subscription.get("subscription_id") or "").strip()
+    if not subscription_id or not resolved_payment_id:
+        return False
+
+    from models.transaction import TransactionType
+    from services.account_service import record_transaction
+
+    is_upi = bool(subscription.get("upi_transaction_id"))
+    await record_transaction(
+        db,
+        type=TransactionType.SUBSCRIPTION,
+        amount=int(round(float(subscription.get("amount") or 0) * 100)),
+        razorpay_order_id=order_id or subscription.get("razorpay_order_id"),
+        razorpay_payment_id=resolved_payment_id,
+        upi_transaction_id=resolved_payment_id if is_upi else None,
+        user_id=subscription.get("user_id"),
+        subscription_id=subscription_id,
+        notes="Host subscription paid by UPI QR" if is_upi else None,
+        is_mock=razorpay_service.is_mock,
+    )
+    return True
 
 
 def _subscription_checkout_payload(subscription: dict, plan: dict, amount_breakdown: dict, coupon_code: Optional[str], already_active: bool = False) -> dict:
@@ -466,18 +538,102 @@ async def create_subscription(
                     "status": {"$in": [SubscriptionStatus.ACTIVE.value, SubscriptionStatus.TRIAL.value]},
                     "cancelled_at": None,
                 },
-                sort=[("created_at", -1)],
+                # Prefer the first order for this property. If Checkout captured
+                # it but confirmation failed, a later retry may already have
+                # created another unpaid row; the original paid order must win.
+                sort=[("created_at", 1)],
             )
             if existing_subscription:
                 existing_status = existing_subscription.get("status")
                 existing_payment_status = existing_subscription.get("payment_status")
                 has_active_payment = existing_status == SubscriptionStatus.ACTIVE.value or existing_payment_status == "paid"
-                has_open_order = existing_payment_status == "order_created" and existing_subscription.get("razorpay_order_id")
+                has_open_order = existing_payment_status in {"order_created", "order_invalid"} and existing_subscription.get("razorpay_order_id")
                 if has_active_payment:
                     await _activate_property_after_subscription_payment(db, existing_subscription, existing_subscription["subscription_id"])
                     return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code, already_active=True)
                 if has_open_order:
-                    return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code)
+                    expected_amount = int(round(amount * 100))
+                    order_result = await razorpay_service.call_async("fetch_order", existing_subscription["razorpay_order_id"])
+                    order = order_result.get("order") or {}
+
+                    # Checkout may have captured the money while the confirmation
+                    # request lost its Razorpay API connection. Reconcile the paid
+                    # order before ever offering the host another payment attempt.
+                    if (
+                        order_result.get("success")
+                        and order.get("status") == "paid"
+                        and int(order.get("amount_paid") or 0) == expected_amount
+                        and (order.get("currency") or "INR").upper() == "INR"
+                    ):
+                        payments_result = await razorpay_service.call_async("fetch_order_payments", order["id"])
+                        captured_payment = next((
+                            payment for payment in payments_result.get("payments", [])
+                            if payment.get("status") == "captured"
+                            and payment.get("order_id") == order["id"]
+                            and int(payment.get("amount") or 0) == expected_amount
+                            and (payment.get("currency") or "INR").upper() == "INR"
+                        ), None)
+                        if captured_payment:
+                            payment_id = captured_payment["id"]
+                            now = datetime.now(timezone.utc)
+                            await db.subscriptions.update_one(
+                                {
+                                    "subscription_id": existing_subscription["subscription_id"],
+                                    "payment_status": {"$in": ["order_created", "order_invalid"]},
+                                },
+                                {"$set": {
+                                    "status": SubscriptionStatus.ACTIVE.value,
+                                    "payment_status": "paid",
+                                    "razorpay_payment_id": payment_id,
+                                    "razorpay_subscription_id": payment_id,
+                                    "updated_at": now,
+                                }},
+                            )
+                            recovered_subscription = {
+                                **existing_subscription,
+                                "status": SubscriptionStatus.ACTIVE.value,
+                                "payment_status": "paid",
+                                "razorpay_payment_id": payment_id,
+                                "razorpay_subscription_id": payment_id,
+                                "updated_at": now,
+                            }
+                            await _activate_property_after_subscription_payment(
+                                db, recovered_subscription, existing_subscription["subscription_id"]
+                            )
+                            logger.warning(
+                                "Recovered captured Razorpay payment %s for subscription %s",
+                                payment_id, existing_subscription["subscription_id"],
+                            )
+                            return _subscription_checkout_payload(
+                                recovered_subscription, plan, amount_breakdown, coupon_code, already_active=True
+                            )
+
+                    order_is_reusable = (
+                        order_result.get("success")
+                        and (razorpay_service.is_mock or (
+                            order.get("status") in {"created", "attempted"}
+                            and int(order.get("amount") or 0) == expected_amount
+                            and (order.get("currency") or "INR").upper() == "INR"
+                        ))
+                    )
+                    if order_is_reusable:
+                        return _subscription_checkout_payload(existing_subscription, plan, amount_breakdown, coupon_code)
+
+                    # A key rotation/test-to-live switch makes old order IDs
+                    # invalid for the current Checkout key. Retire that row so
+                    # the request below creates a fresh order on this account.
+                    logger.warning(
+                        "Retiring stale Razorpay order %s for subscription %s",
+                        existing_subscription.get("razorpay_order_id"),
+                        existing_subscription.get("subscription_id"),
+                    )
+                    await db.subscriptions.update_one(
+                        {"subscription_id": existing_subscription["subscription_id"]},
+                        {"$set": {
+                            "payment_status": "order_invalid",
+                            "updated_at": datetime.now(timezone.utc),
+                        }},
+                    )
         
         # Calculate dates
         start_date = date.today()
@@ -503,7 +659,7 @@ async def create_subscription(
         )
         
         # Create Razorpay order for subscription
-        razorpay_result = razorpay_service.create_order(
+        razorpay_result = await razorpay_service.call_async("create_order",
             amount=int(round(amount * 100)),  # Convert to paise
             receipt=subscription.subscription_id[:40]
         )
@@ -575,6 +731,12 @@ async def confirm_subscription_payment(
         if subscription.get("status") == SubscriptionStatus.ACTIVE.value:
             if existing_payment_id == razorpay_payment_id:
                 await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+                await _record_subscription_transaction(
+                    db,
+                    subscription,
+                    payment_id=razorpay_payment_id,
+                    order_id=razorpay_order_id,
+                )
                 return {
                     "message": "Subscription already activated",
                     "subscription_id": subscription_id,
@@ -611,7 +773,7 @@ async def confirm_subscription_payment(
                 detail="Invalid payment signature"
             )
 
-        payment_lookup = razorpay_service.fetch_payment(razorpay_payment_id)
+        payment_lookup = await razorpay_service.call_async("fetch_payment", razorpay_payment_id)
         if not payment_lookup.get("success"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -668,22 +830,11 @@ async def confirm_subscription_payment(
 
         # Phase 15 — subscription revenue ledger
         try:
-            from models.transaction import TransactionType
-            from services.account_service import record_transaction
-            sub_plan = await db.subscription_plans.find_one(
-                {"plan_id": subscription.get("plan_id")}, {"_id": 0, "price_monthly": 1}
-            )
-            # amount was stored in subscription object
-            sub_amount = int(round(subscription.get("amount", 0) * 100))
-            await record_transaction(
+            await _record_subscription_transaction(
                 db,
-                type=TransactionType.SUBSCRIPTION,
-                amount=sub_amount,
-                razorpay_order_id=razorpay_order_id,
-                razorpay_payment_id=razorpay_payment_id,
-                user_id=subscription["user_id"],
-                subscription_id=subscription_id,
-                is_mock=razorpay_service.is_mock,
+                updated_subscription,
+                payment_id=razorpay_payment_id,
+                order_id=razorpay_order_id,
             )
         except Exception as txn_err:
             logger.warning(f"Failed to record subscription transaction: {txn_err}")
@@ -694,6 +845,7 @@ async def confirm_subscription_payment(
             "subscription_activated",
             {**subscription, "razorpay_subscription_id": razorpay_payment_id},
         )
+        await send_subscription_success_whatsapp(db, updated_subscription, razorpay_payment_id)
 
         return {
             "message": "Subscription activated successfully",
@@ -734,6 +886,7 @@ async def mock_pay_subscription(
 
     if subscription.get("status") == SubscriptionStatus.ACTIVE.value:
         await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+        await _record_subscription_transaction(db, subscription, order_id=razorpay_order_id)
         return {
             "message": "Subscription already activated",
             "subscription_id": subscription_id,
@@ -763,17 +916,11 @@ async def mock_pay_subscription(
     await _activate_property_after_subscription_payment(db, updated_subscription, subscription_id)
 
     try:
-        from models.transaction import TransactionType
-        from services.account_service import record_transaction
-        await record_transaction(
+        await _record_subscription_transaction(
             db,
-            type=TransactionType.SUBSCRIPTION,
-            amount=int(round(float(subscription.get("amount") or 0) * 100)),
-            razorpay_order_id=razorpay_order_id,
-            razorpay_payment_id=mock_payment["razorpay_payment_id"],
-            user_id=subscription["user_id"],
-            subscription_id=subscription_id,
-            is_mock=True,
+            updated_subscription,
+            payment_id=mock_payment["razorpay_payment_id"],
+            order_id=razorpay_order_id,
         )
     except Exception as txn_err:
         logger.warning("Failed to record mock subscription transaction: %s", txn_err)
@@ -784,6 +931,7 @@ async def mock_pay_subscription(
         "subscription_activated",
         {**subscription, "razorpay_subscription_id": mock_payment["razorpay_payment_id"]},
     )
+    await send_subscription_success_whatsapp(db, updated_subscription, mock_payment["razorpay_payment_id"])
 
     return {
         "message": "Subscription activated successfully",
@@ -839,20 +987,11 @@ async def confirm_subscription_upi_payment(
     await _activate_property_after_subscription_payment(db, updated_subscription, payload.subscription_id)
 
     try:
-        from models.transaction import TransactionType
-        from services.account_service import record_transaction
-        sub_amount = int(round(subscription.get("amount", 0) * 100))
-        await record_transaction(
+        await _record_subscription_transaction(
             db,
-            type=TransactionType.SUBSCRIPTION,
-            amount=sub_amount,
-            razorpay_order_id=payload.razorpay_order_id,
-            razorpay_payment_id=upi_transaction_id,
-            upi_transaction_id=upi_transaction_id,
-            user_id=subscription["user_id"],
-            subscription_id=payload.subscription_id,
-            notes="Host subscription paid by UPI QR",
-            is_mock=razorpay_service.is_mock,
+            updated_subscription,
+            payment_id=upi_transaction_id,
+            order_id=payload.razorpay_order_id,
         )
     except Exception as txn_err:
         logger.warning(f"Failed to record UPI subscription transaction: {txn_err}")
@@ -864,6 +1003,7 @@ async def confirm_subscription_upi_payment(
         {**subscription, "razorpay_subscription_id": upi_transaction_id},
         {"payment_id": upi_transaction_id},
     )
+    await send_subscription_success_whatsapp(db, updated_subscription, upi_transaction_id)
 
     return {
         "message": "Subscription activated successfully",
@@ -917,7 +1057,7 @@ async def create_registration_fee_order(
                 "registration_fee_payment_id": user.get("registration_fee_payment_id"),
             }
 
-        razorpay_result = razorpay_service.create_order(
+        razorpay_result = await razorpay_service.call_async("create_order",
             amount=REGISTRATION_FEE_AMOUNT,
             receipt=f"reg_fee_{current_user['user_id']}"
         )
@@ -1012,7 +1152,7 @@ async def confirm_registration_fee_payment(
                 detail="Invalid payment signature"
             )
 
-        payment_lookup = razorpay_service.fetch_payment(payload.razorpay_payment_id)
+        payment_lookup = await razorpay_service.call_async("fetch_payment", payload.razorpay_payment_id)
         if not payment_lookup.get("success"):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

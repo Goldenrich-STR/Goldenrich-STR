@@ -27,6 +27,7 @@ from datetime import datetime, timezone
 import asyncio
 import logging
 import math
+import os
 import re
 
 logger = logging.getLogger(__name__)
@@ -88,6 +89,14 @@ DISALLOWED_PROPERTY_MEDIA_HOSTS = {
     "placehold.co",
     "dummyimage.com",
 }
+
+
+def _supports_guest_count(property_data: dict, requested_guests: int) -> bool:
+    """Compare JSON-backed guest capacity numerically, never lexicographically."""
+    try:
+        return int(property_data.get("max_guests")) >= requested_guests
+    except (TypeError, ValueError):
+        return False
 
 
 async def get_db():
@@ -417,7 +426,7 @@ async def create_property(
         notification_result = await send_multi_channel_notification(
             db=db,
             user_id=current_user["user_id"],
-            notification_type=NotificationType.PROPERTY_APPROVED,
+            notification_type=NotificationType.PROPERTY_LISTED,
             title="Property listed",
             message=(
                 f"Your property '{property_obj.title}' has been listed successfully "
@@ -433,6 +442,10 @@ async def create_property(
                 "property_title": property_obj.title,
                 "location": location,
                 "status": property_obj.status.value if hasattr(property_obj.status, "value") else property_obj.status,
+                "action_url": (
+                    os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
+                    + f"/properties/{property_obj.property_id}"
+                ),
             },
         )
         whatsapp_result = (notification_result.get("results") or {}).get("whatsapp", {})
@@ -659,8 +672,6 @@ async def search_properties(
             query["pet_friendly"] = pet_friendly
 
         requested_guests = guests or max_guests
-        if requested_guests is not None:
-            query["max_guests"] = {"$gte": requested_guests}
 
         # Amenities filter
         if amenities:
@@ -777,6 +788,13 @@ async def search_properties(
             if expired_sub_ids:
                 raw_properties = [p for p in raw_properties if p.get("subscription_id") not in expired_sub_ids]
 
+        # PostgreSQL stores document fields in JSONB. The generic adapter compares
+        # $gte values as text so that it can also support ISO dates, which makes a
+        # capacity such as "10" sort below "2". Guest capacity is numeric, so apply
+        # this filter numerically after fetching the live property rows.
+        if requested_guests is not None:
+            raw_properties = [p for p in raw_properties if _supports_guest_count(p, requested_guests)]
+
         if min_price is not None:
             raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
         if max_price is not None:
@@ -826,6 +844,9 @@ async def search_properties(
                     expired_sub_ids = {s["subscription_id"] for s in expired_subs}
                     if expired_sub_ids:
                         raw_properties = [p for p in raw_properties if p.get("subscription_id") not in expired_sub_ids]
+
+                    if requested_guests is not None:
+                        raw_properties = [p for p in raw_properties if _supports_guest_count(p, requested_guests)]
 
                 if min_price is not None:
                     raw_properties = [p for p in raw_properties if numeric_price(p) >= min_price]
@@ -1299,6 +1320,17 @@ async def get_host_properties(
     try:
         cursor = db.properties.find({"owner_id": current_user["user_id"]}, {"_id": 0}).sort("created_at", -1)
         properties = await cursor.to_list(length=100)
+        property_ids = [p.get("property_id") for p in properties if p.get("property_id")]
+        verification_by_property = {}
+        if property_ids:
+            verification_rows = await db.property_verifications.find(
+                {"property_id": {"$in": property_ids}},
+                {"_id": 0},
+            ).sort("updated_at", -1).to_list(length=len(property_ids) * 3)
+            for row in verification_rows:
+                prop_id = row.get("property_id")
+                if prop_id and prop_id not in verification_by_property:
+                    verification_by_property[prop_id] = row
         sub_ids = [p.get("subscription_id") for p in properties if p.get("subscription_id")]
         subscriptions = {}
         plans = {}
@@ -1319,6 +1351,20 @@ async def get_host_properties(
         for prop in properties:
             _normalize_booking_mode(prop)
             _sanitize_property_media(prop)
+            verification = verification_by_property.get(prop.get("property_id")) or {}
+            if verification:
+                prop["verification_case"] = verification
+                if verification.get("scheduled_date") and verification.get("scheduled_start_time"):
+                    prop["video_verification"] = {
+                        **(prop.get("video_verification") or {}),
+                        "verification_id": verification.get("verification_id"),
+                        "scheduled_date": verification.get("scheduled_date"),
+                        "scheduled_start_time": verification.get("scheduled_start_time"),
+                        "scheduled_end_time": verification.get("scheduled_end_time") or "",
+                        "notes": verification.get("schedule_notes") or "",
+                        "status": "scheduled",
+                        "action_url": f"/host/properties/{prop.get('property_id')}/video-verification?verificationId={verification.get('verification_id')}",
+                    }
             sub = subscriptions.get(prop.get("subscription_id")) or {}
             plan = plans.get(sub.get("plan_id")) or {}
             prop["subscription_plan_name"] = plan.get("plan_name") or sub.get("plan_type") or "Trial"
@@ -1382,7 +1428,8 @@ async def update_property(
                     status_code=status.HTTP_400_BAD_REQUEST,
                     detail="Only pricing rules, amenities, and photos can be updated for submitted or live properties",
                 )
-            update_data["status"] = PropertyStatus.LIVE.value
+            # Preserve the current verification status. Only the admin approval
+            # workflow is allowed to promote a submitted property to live.
             update_data["is_edited"] = True
 
         update_data["updated_at"] = datetime.now(timezone.utc)
@@ -1529,7 +1576,7 @@ async def submit_for_verification(
     current_user: dict = Depends(get_current_user),
     db: AsyncIOMotorDatabase = Depends(get_db)
 ):
-    """Submit property for verification (Host only). Auto-assigns a broker + fires notifications."""
+    """Submit a property into the telecaller-led verification workflow."""
     try:
         # Check property ownership
         property_dict = await db.properties.find_one({"property_id": property_id})
@@ -1556,17 +1603,23 @@ async def submit_for_verification(
             }}
         )
 
-        # Trigger workflow: broker auto-assignment + notifications
+        # One case workflow serves every listing. KYC-approved existing hosts
+        # enter the video queue directly; new hosts begin with documents/call.
         try:
-            from services.verification_workflow import on_host_submit
+            from services.verification_case_workflow import upsert_verification_case
             updated = await db.properties.find_one({"property_id": property_id}, {"_id": 0})
-            broker_id = await on_host_submit(db, updated)
+            host = await db.users.find_one({"user_id": current_user["user_id"]}, {"_id": 0}) or current_user
+            verification_case = await upsert_verification_case(db, updated, host, current_user)
         except Exception as wf_err:
             logger.warning(f"Verification workflow trigger failed: {wf_err}")
-            broker_id = None
+            verification_case = None
 
-        logger.info(f"Property submitted for verification: {property_id} (broker={broker_id})")
-        return {"message": "Property submitted for verification", "broker_id": broker_id}
+        logger.info(f"Property submitted for verification: {property_id}")
+        return {
+            "message": "Property submitted for verification",
+            "verification_id": (verification_case or {}).get("verification_id"),
+            "workflow_status": (verification_case or {}).get("current_stage"),
+        }
     
     except HTTPException:
         raise

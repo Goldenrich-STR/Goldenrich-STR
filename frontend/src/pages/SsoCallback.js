@@ -2,8 +2,12 @@ import React, { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 
-const dashboardForRole = (role) => {
-  switch (role) {
+const dashboardForUser = (user = {}) => {
+  const roleKey = String(user.admin_role_key || user.designation || '')
+    .toLowerCase()
+    .replace(/[\s-]+/g, '_');
+
+  switch (user.role) {
     case "admin":
       return "/admin/dashboard";
     case "host":
@@ -11,6 +15,8 @@ const dashboardForRole = (role) => {
     case "broker":
       return "/broker/dashboard";
     case "employee":
+      if (roleKey === "telecaller") return "/telecaller/dashboard";
+      if (roleKey === "rm" || roleKey === "relationship_manager") return "/broker/dashboard";
       return "/employee/dashboard";
     case "guest":
     default:
@@ -38,7 +44,7 @@ const SsoCallback = () => {
 
     handledRef.current = true;
     acceptToken(token)
-      .then((user) => navigate(dashboardForRole(user?.role), { replace: true }))
+      .then((user) => navigate(dashboardForUser(user), { replace: true }))
       .catch(() => setError("Unable to complete SSO login"));
   }, [acceptToken, navigate, searchParams]);
 

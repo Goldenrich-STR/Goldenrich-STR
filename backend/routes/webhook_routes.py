@@ -87,15 +87,48 @@ async def razorpay_webhook(
     event_type = payload.get("event")
     logger.info(f"Received Razorpay webhook event: {event_type}")
 
+    event_data = payload.get("payload", {})
+    payment_entity = event_data.get("payment", {}).get("entity", {})
+    order_entity = event_data.get("order", {}).get("entity", {}) or {}
+
+    if event_type == "payment.failed":
+        order_id = payment_entity.get("order_id")
+        payment_id = payment_entity.get("id") or ""
+        booking = None
+        if order_id:
+            booking = await db.bookings.find_one(
+                {"$or": [{"razorpay_order_id": order_id}, {"remaining_payment_order_id": order_id}]},
+                {"_id": 0},
+            )
+        if booking:
+            already_notified = booking.get("payment_failed_notification_payment_id") == payment_id
+            if not already_notified:
+                is_remaining_payment = booking.get("remaining_payment_order_id") == order_id
+                payment_update = {
+                    "payment_failed_notification_payment_id": payment_id,
+                    "updated_at": datetime.now(timezone.utc),
+                }
+                if is_remaining_payment:
+                    payment_update["remaining_payment_status"] = "failed"
+                else:
+                    payment_update["payment_status"] = "failed"
+                await db.bookings.update_one(
+                    {"booking_id": booking["booking_id"]},
+                    {"$set": payment_update},
+                )
+                from services.booking_notifications import notify_guest_payment_failed
+                notification_booking = dict(booking)
+                if is_remaining_payment:
+                    notification_booking["notification_amount"] = booking.get("remaining_amount")
+                await notify_guest_payment_failed(db, notification_booking, payment_id)
+            return {"status": "processed", "resolved_entity": "booking", "id": booking["booking_id"]}
+        return {"status": "unresolved", "event": event_type}
+
     if event_type not in ("payment.captured", "order.paid"):
         # We acknowledge receipt of other events with 200 OK as required by Razorpay
         return {"status": "ignored", "event": event_type}
 
     # Extract transaction references
-    event_data = payload.get("payload", {})
-    payment_entity = event_data.get("payment", {}).get("entity", {})
-    order_entity = event_data.get("order", {}).get("entity", {}) or {}
-
     payment_id = payment_entity.get("id")
     order_id = payment_entity.get("order_id") or order_entity.get("id")
     amount_paise = payment_entity.get("amount") or order_entity.get("amount")
@@ -295,41 +328,58 @@ async def razorpay_webhook(
                 {"subscription_id": subscription_id},
                 {"$set": {
                     "status": SubscriptionStatus.ACTIVE.value,
+                    "payment_status": "paid",
+                    "razorpay_payment_id": payment_id,
                     "razorpay_subscription_id": payment_id,
                     "updated_at": datetime.now(timezone.utc)
                 }}
             )
 
-            # Activate associated property listing
-            if subscription.get("property_id"):
-                await db.properties.update_one(
-                    {"property_id": subscription["property_id"]},
-                    {"$set": {
-                        "subscription_id": subscription_id,
-                        "subscription_status": "active"
-                    }}
-                )
+            # Use the same finalizer as the browser confirmation path. Besides
+            # linking the subscription, this submits a paid draft property for
+            # verification and starts its verification workflow.
+            from routes.subscription_routes import _activate_property_after_subscription_payment
+            await _activate_property_after_subscription_payment(
+                db,
+                {**subscription, "status": SubscriptionStatus.ACTIVE.value, "payment_status": "paid"},
+                subscription_id,
+            )
 
-            # Record transaction
             try:
-                from models.transaction import TransactionType
-                from services.account_service import record_transaction
-                await record_transaction(
+                from routes.subscription_routes import _record_subscription_transaction
+                await _record_subscription_transaction(
                     db,
-                    type=TransactionType.SUBSCRIPTION,
-                    amount=int(amount_paise or round(subscription.get("amount", 0) * 100)),
-                    razorpay_order_id=order_id,
-                    razorpay_payment_id=payment_id,
-                    user_id=subscription["user_id"],
-                    subscription_id=subscription_id,
-                    is_mock=razorpay_service.is_mock,
+                    {**subscription, "status": SubscriptionStatus.ACTIVE.value, "payment_status": "paid", "razorpay_payment_id": payment_id, "razorpay_subscription_id": payment_id},
+                    payment_id=payment_id,
+                    order_id=order_id,
                 )
             except Exception as txn_err:
                 logger.warning(f"Webhook failed to record subscription transaction: {txn_err}")
 
             logger.info(f"Subscription {subscription_id} successfully activated via webhook.")
+            from routes.subscription_routes import send_subscription_success_whatsapp
+            await send_subscription_success_whatsapp(
+                db,
+                {**subscription, "status": SubscriptionStatus.ACTIVE.value},
+                payment_id or order_id or "",
+            )
             return {"status": "processed", "resolved_entity": "subscription", "id": subscription_id}
         else:
+            # Webhooks are retried. Reconcile the linked property even when a
+            # previous callback activated the subscription but failed before
+            # moving the property out of draft.
+            from routes.subscription_routes import _activate_property_after_subscription_payment
+            await _activate_property_after_subscription_payment(db, subscription, subscription_id)
+            try:
+                from routes.subscription_routes import _record_subscription_transaction
+                await _record_subscription_transaction(
+                    db,
+                    subscription,
+                    payment_id=payment_id,
+                    order_id=order_id,
+                )
+            except Exception as txn_err:
+                logger.warning("Webhook failed to reconcile subscription transaction: %s", txn_err)
             logger.info(f"Subscription {subscription_id} was already active. No-op.")
             return {"status": "already_processed", "resolved_entity": "subscription", "id": subscription_id}
 

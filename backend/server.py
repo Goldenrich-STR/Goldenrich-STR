@@ -58,11 +58,13 @@ from routes.admin_account_routes import router as admin_account_router
 from routes.host_account_routes import router as host_account_router
 from routes.review_routes import router as review_router
 from routes.webhook_routes import router as webhook_router
+from routes.deylaxy_routes import router as deylaxy_router
 from routes.coupon_routes import router as coupon_router
 from routes.ai_agent_routes import router as ai_agent_router
 from routes.support_ticket_routes import router as support_ticket_router
 from routes.admin_core_routes import router as admin_core_router
 from routes.pricing_routes import router as pricing_router
+from routes.verification_case_routes import router as verification_case_router
 from routes.price_engine_routes import router as price_engine_router
 from routes.lodgify_routes import router as lodgify_router
 from routes.holiday_routes import router as holiday_router
@@ -83,11 +85,13 @@ app.include_router(admin_account_router, prefix="/api")
 app.include_router(host_account_router, prefix="/api")
 app.include_router(review_router, prefix="/api")
 app.include_router(webhook_router, prefix="/api")
+app.include_router(deylaxy_router, prefix="/api")
 app.include_router(coupon_router, prefix="/api")
 app.include_router(ai_agent_router, prefix="/api")
 app.include_router(support_ticket_router, prefix="/api")
 app.include_router(admin_core_router, prefix="/api")
 app.include_router(pricing_router, prefix="/api")
+app.include_router(verification_case_router, prefix="/api")
 app.include_router(price_engine_router, prefix="/api")
 app.include_router(lodgify_router, prefix="/api")
 app.include_router(holiday_router, prefix="/api")
@@ -167,6 +171,9 @@ async def serve_upload(object_path: str):
     body = s3_object["Body"]
 
     def stream_body():
+        if isinstance(body, (bytes, bytearray)):
+            yield bytes(body)
+            return
         try:
             yield from body.iter_chunks(chunk_size=64 * 1024)
         finally:
@@ -231,6 +238,14 @@ else:
     for _local_origin in ("http://localhost:3005", "http://127.0.0.1:3005"):
         if _local_origin not in _cors_origins:
             _cors_origins.append(_local_origin)
+
+
+# Local development only: Flutter web (and other dev servers) run on a random localhost port.
+_LOCAL_ORIGIN_REGEX = (
+    r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+    if os.environ.get("ENVIRONMENT", "development").lower() != "production"
+    else None
+)
 
 
 # Local development only: Flutter web (and other dev servers) run on a random localhost port.
@@ -436,6 +451,12 @@ async def startup_sequence():
         logger.error(f"Failed to create indexes or seed users: {e}")
 
     # 4. Start background jobs
+    try:
+        from services.notification_service import log_whatsapp_configuration
+        log_whatsapp_configuration()
+    except Exception as e:
+        logger.error(f"Failed to validate MSG91 WhatsApp configuration: {e}")
+
     try:
         from services.soft_lock_reaper import (
             start_soft_lock_reaper,

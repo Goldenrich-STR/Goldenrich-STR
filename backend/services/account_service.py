@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, timedelta, timezone
-from typing import Optional
+from typing import Any, Optional
 
 from motor.motor_asyncio import AsyncIOMotorDatabase
 
@@ -638,7 +638,7 @@ async def approve_refund_request(
     rfd.processed_at = datetime.now(timezone.utc)
 
     if refund_paise and rfd.razorpay_payment_id:
-        result = razorpay_service.create_refund(
+        result = await razorpay_service.call_async("create_refund",
             payment_id=rfd.razorpay_payment_id,
             amount=refund_paise,
             notes={"booking_id": rfd.booking_id, "reason": (reason or rfd.reason or "")[:200]},
@@ -699,9 +699,8 @@ async def approve_refund_request(
         {"$set": {"refund_status": RefundStatus.APPROVED.value, "refund_amount": refund_paise}},
     )
     try:
-        import asyncio
         from services.booking_notifications import notify_guest_refund_processed
-        asyncio.create_task(notify_guest_refund_processed(db, credit_note_doc))
+        await notify_guest_refund_processed(db, credit_note_doc)
     except Exception as err:
         logger.warning(f"Failed to start refund notification task: {err}")
     return await db.refunds.find_one({"refund_id": refund_id}, {"_id": 0})
@@ -815,14 +814,13 @@ async def initiate_refund(
             {"$set": {"refund_status": "processed", "refund_amount": refund_paise}},
         )
         try:
-            import asyncio
             from services.booking_notifications import notify_guest_refund_processed
-            asyncio.create_task(notify_guest_refund_processed(db, refund_doc))
+            await notify_guest_refund_processed(db, refund_doc)
         except Exception as err:
             logger.warning(f"Failed to start refund notification task: {err}")
         return rfd
 
-    result = razorpay_service.create_refund(
+    result = await razorpay_service.call_async("create_refund",
         payment_id=rfd.razorpay_payment_id,
         amount=refund_paise,
         notes={"booking_id": rfd.booking_id, "reason": reason[:200]},
@@ -870,9 +868,8 @@ async def initiate_refund(
     )
     if rfd.status == RefundStatus.PROCESSED:
         try:
-            import asyncio
             from services.booking_notifications import notify_guest_refund_processed
-            asyncio.create_task(notify_guest_refund_processed(db, refund_doc))
+            await notify_guest_refund_processed(db, refund_doc)
         except Exception as err:
             logger.warning(f"Failed to start refund notification task: {err}")
     return rfd
@@ -1105,7 +1102,7 @@ async def process_payout(
         }},
     )
 
-    result = razorpay_service.create_payout(
+    result = await razorpay_service.call_async("create_payout",
         destination_type=dest_type.value,
         destination_ref=dest_ref,
         amount=payout.net_amount,

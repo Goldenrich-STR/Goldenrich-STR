@@ -94,7 +94,16 @@ async def sweep_subscriptions(db: AsyncIOMotorDatabase):
             
             # Case 2: Subscription is expiring within 10 days
             else:
-                if property_id and prop and prop.get("status") == PropertyStatus.DRAFT.value:
+                has_confirmed_payment = (
+                    sub.get("status") == SubscriptionStatus.ACTIVE.value
+                    or sub.get("payment_status") == "paid"
+                )
+                if (
+                    has_confirmed_payment
+                    and property_id
+                    and prop
+                    and prop.get("status") == PropertyStatus.DRAFT.value
+                ):
                     now = datetime.now(timezone.utc)
                     logger.info(f"Repairing paid draft property {property_id} from subscription {sub_id}")
                     await db.properties.update_one(

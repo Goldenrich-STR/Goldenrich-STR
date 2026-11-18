@@ -21,6 +21,7 @@ const BlogManagementAdmin = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [posts, setPosts] = useState([]);
+  const [sectionVersion, setSectionVersion] = useState(null);
   const [editingPost, setEditingPost] = useState(null);
   const [message, setMessage] = useState('');
 
@@ -29,9 +30,10 @@ const BlogManagementAdmin = () => {
     try {
       const res = await cmsAPI.getAdminContent();
       const allContent = res.data?.content || [];
-      const blogSection = allContent.find(item => item.section === 'blog');
+      const blogSection = allContent.find(item => item.page === 'landing' && item.section === 'blog');
       const fetchedPosts = blogSection?.content_data?.posts || [];
       setPosts(fetchedPosts);
+      setSectionVersion(blogSection?.updated_at || null);
     } catch (err) {
       console.error(err);
       setMessage('Failed to load blog posts.');
@@ -66,27 +68,29 @@ const BlogManagementAdmin = () => {
 
       const res = await cmsAPI.getAdminContent();
       const allContent = res.data?.content || [];
-      const blogSection = allContent.find(item => item.section === 'blog');
+      const blogSection = allContent.find(item => item.page === 'landing' && item.section === 'blog');
 
       if (blogSection) {
         await cmsAPI.updateContent(blogSection.content_id, {
-          content_data: { posts: updatedPosts }
+          content_data: { ...blogSection.content_data, posts: updatedPosts },
+          expected_updated_at: sectionVersion
         });
       } else {
         await cmsAPI.createContent({
-          page: 'blog',
+          page: 'landing',
           section: 'blog',
           content_type: 'object',
-          content_data: { posts: updatedPosts }
+          content_data: { ...blogSection.content_data, posts: updatedPosts },
+          expected_updated_at: sectionVersion
         });
       }
       
-      setPosts(updatedPosts);
+      await loadData();
       setEditingPost(null);
       setMessage('Blog post saved successfully.');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('Error saving blog post.');
+      setMessage(getApiErrorMessage(err, 'Error saving blog post. Reload before retrying.'));
       console.error(err);
     } finally {
       setSaving(false);
@@ -100,18 +104,19 @@ const BlogManagementAdmin = () => {
       const updatedPosts = posts.filter(p => p.id !== id);
       const res = await cmsAPI.getAdminContent();
       const allContent = res.data?.content || [];
-      const blogSection = allContent.find(item => item.section === 'blog');
+      const blogSection = allContent.find(item => item.page === 'landing' && item.section === 'blog');
 
       if (blogSection) {
         await cmsAPI.updateContent(blogSection.content_id, {
-          content_data: { posts: updatedPosts }
+          content_data: { ...blogSection.content_data, posts: updatedPosts },
+          expected_updated_at: sectionVersion
         });
       }
-      setPosts(updatedPosts);
+      await loadData();
       setMessage('Blog post deleted.');
       setTimeout(() => setMessage(''), 3000);
     } catch (err) {
-      setMessage('Error deleting blog post.');
+      setMessage(getApiErrorMessage(err, 'Error deleting blog post. Reload before retrying.'));
       console.error(err);
     } finally {
       setSaving(false);

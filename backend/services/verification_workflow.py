@@ -259,7 +259,7 @@ async def _notify(
     channels: Optional[list] = None,
 ) -> None:
     try:
-        await send_multi_channel_notification(
+        result = await send_multi_channel_notification(
             db=db,
             user_id=user_id,
             notification_type=notif_type,
@@ -271,6 +271,12 @@ async def _notify(
                 NotificationChannel.EMAIL,
             ],
             data=data,
+        )
+        logger.info(
+            "Notification result: user_id=%s type=%s result=%s",
+            user_id,
+            notif_type.value,
+            result,
         )
     except Exception as e:
         logger.warning(f"_notify failed for {user_id}: {e}")
@@ -463,6 +469,7 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
         )
         frontend_url = os.getenv("PUBLIC_FRONTEND_URL", "https://uat.x-space360.in").rstrip("/")
         dashboard_url = f"{frontend_url}/host/dashboard"
+        property_url = f"{frontend_url}/properties/{property_data['property_id']}"
         property_title = (
             property_data.get("title")
             or property_data.get("property_title")
@@ -490,8 +497,9 @@ async def on_admin_decision(db: AsyncIOMotorDatabase, property_data: dict, appro
                 "status": "Live",
                 "approval_date": approval_date,
                 "published_date": approval_date,
-                "action_url": dashboard_url,
+                "action_url": property_url,
                 "dashboard_url": dashboard_url,
+                "property_image": next(iter(property_data.get("images") or []), None),
             },
         )
     else:

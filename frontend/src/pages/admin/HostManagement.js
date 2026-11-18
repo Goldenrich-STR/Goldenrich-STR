@@ -155,12 +155,15 @@ const HostManagement = () => {
   useEffect(() => {
     setPage(1);
   }, [tab, search]);
-  const [assignees, setAssignees] = useState({ loading: true, error: '', brokers: [], relationship_managers: [], branch_managers: [] });
+  const [assignees, setAssignees] = useState({ loading: true, error: '', brokers: [], relationship_managers: [], branch_managers: [], telecallers: [] });
   const [assignment, setAssignment] = useState({
     open: false,
     host: null,
     broker_id: '',
     rm_id: '',
+    branch_manager_id: '',
+    telecaller_id: '',
+    primary_assignment_type: '',
     reason: 'Host team assignment updated from Host Management',
     saving: false,
     error: '',
@@ -272,9 +275,10 @@ const HostManagement = () => {
         brokers: data.brokers || [],
         relationship_managers: data.relationship_managers || [],
         branch_managers: data.branch_managers || [],
+        telecallers: data.telecallers || [],
       });
     } catch (error) {
-      setAssignees({ loading: false, error: error.response?.data?.detail || 'Failed to load brokers, RMs and branch managers', brokers: [], relationship_managers: [], branch_managers: [] });
+      setAssignees({ loading: false, error: error.response?.data?.detail || 'Failed to load assignment options', brokers: [], relationship_managers: [], branch_managers: [], telecallers: [] });
     }
   }, []);
 
@@ -350,12 +354,15 @@ const HostManagement = () => {
 
   const openAssignment = (host) => {
     const primaryId = host.broker_id || host.rm_id || '';
-    const secondaryId = host.broker_id ? (host.rm_id || '') : getBranchManagerIdFromHost(host, assignees.branch_managers);
+    const secondaryId = host.broker_id ? (host.rm_id || '') : '';
     setAssignment({
       open: true,
       host,
       broker_id: primaryId,
       rm_id: secondaryId,
+      branch_manager_id: getBranchManagerIdFromHost(host, assignees.branch_managers),
+      telecaller_id: host.verification_telecaller_id || host.document_telecaller_id || '',
+      primary_assignment_type: host.broker_id ? 'broker' : host.rm_id ? 'rm' : '',
       reason: 'Host team assignment updated from Host Management',
       saving: false,
       error: '',
@@ -368,6 +375,9 @@ const HostManagement = () => {
       host: null,
       broker_id: '',
       rm_id: '',
+      branch_manager_id: '',
+      telecaller_id: '',
+      primary_assignment_type: '',
       reason: 'Host team assignment updated from Host Management',
       saving: false,
       error: '',
@@ -381,6 +391,9 @@ const HostManagement = () => {
       await adminPhase1API.assignHostTeam(assignment.host.user_id, {
         broker_id: assignment.broker_id,
         rm_id: assignment.rm_id,
+        branch_manager_id: assignment.branch_manager_id,
+        telecaller_id: assignment.telecaller_id,
+        primary_assignment_type: assignment.primary_assignment_type,
         reason: assignment.reason || 'Host team assignment updated from Host Management',
       });
       closeAssignment();
@@ -608,19 +621,21 @@ const AssignmentModal = ({ assignees, assignment, onChange, onClose, onSave }) =
     ...(assignees.relationship_managers || []).map((user) => ({ ...user, assignment_type: 'rm' })),
   ];
   const selectedPrimary = primaryOptions.find((user) => user.user_id === assignment.broker_id || getAssigneeCode(user) === assignment.broker_id);
-  const secondaryType = selectedPrimary?.assignment_type === 'broker' ? 'rm' : selectedPrimary?.assignment_type === 'rm' ? 'branch_manager' : '';
-  const secondaryOptions = secondaryType === 'rm'
+  const secondaryOptions = selectedPrimary?.assignment_type === 'broker'
     ? assignees.relationship_managers || []
-    : secondaryType === 'branch_manager'
-      ? assignees.branch_managers || []
-      : [];
-  const secondaryPlaceholder = secondaryType === 'rm'
+    : [];
+  const secondaryPlaceholder = selectedPrimary?.assignment_type === 'broker'
     ? '-- Select RM Code --'
-    : secondaryType === 'branch_manager'
-      ? '-- Select Branch Manager Code --'
-      : '-- Select Broker / RM first --';
+    : '-- No additional RM assigned --';
   const handlePrimaryChange = (value) => {
-    onChange((current) => ({ ...current, broker_id: value, rm_id: '', error: '' }));
+    const selected = primaryOptions.find((user) => user.user_id === value || getAssigneeCode(user) === value);
+    onChange((current) => ({
+      ...current,
+      broker_id: value,
+      rm_id: '',
+      primary_assignment_type: selected?.assignment_type || '',
+      error: '',
+    }));
   };
 
   return (
@@ -658,23 +673,58 @@ const AssignmentModal = ({ assignees, assignment, onChange, onClose, onSave }) =
           </label>
 
           <label className="grid gap-2 text-sm font-bold">
-            Branch Manager / RM Code
+            RM Code (optional, for broker-mapped hosts)
             <select
               value={assignment.rm_id}
               onChange={(event) => updateField('rm_id', event.target.value)}
-              disabled={assignees.loading || assignment.saving || !selectedPrimary}
+              disabled={assignees.loading || assignment.saving || selectedPrimary?.assignment_type !== 'broker'}
               className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-[#2f6df6]"
             >
               <option value="">{secondaryPlaceholder}</option>
               {secondaryOptions.map((user) => (
-                <option key={`${secondaryType}-${user.user_id}`} value={user.user_id}>
-                  {getAssigneeOptionLabel(user)} [{secondaryType === 'rm' ? 'RM' : 'Branch Manager'}]
+                <option key={`rm-${user.user_id}`} value={user.user_id}>
+                  {getAssigneeOptionLabel(user)} [RM]
                 </option>
               ))}
             </select>
-            <span className="text-xs font-medium text-slate-500">Current: {host.broker_id ? (host.rm?.employee_code || host.rm_id || '-') : (host.branch_manager?.employee_code || host.branch_manager_code || host.branch_manager_id || '-')}</span>
+            <span className="text-xs font-medium text-slate-500">Current: {host.rm?.employee_code || host.rm_id || '-'}</span>
           </label>
 
+          <label className="grid gap-2 text-sm font-bold">
+            Branch Manager (optional, independent)
+            <select
+              value={assignment.branch_manager_id}
+              onChange={(event) => updateField('branch_manager_id', event.target.value)}
+              disabled={assignees.loading || assignment.saving}
+              className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-[#2f6df6]"
+            >
+              <option value="">-- No Branch Manager Assigned --</option>
+              {(assignees.branch_managers || []).map((user) => (
+                <option key={`branch-manager-${user.user_id}`} value={user.user_id}>
+                  {getAssigneeOptionLabel(user)} [Branch Manager]
+                </option>
+              ))}
+            </select>
+            <span className="text-xs font-medium text-slate-500">Current: {host.branch_manager?.employee_code || host.branch_manager_code || host.branch_manager_id || '-'}</span>
+          </label>
+
+          <label className="grid gap-2 text-sm font-bold">
+            Telecaller
+            <select
+              value={assignment.telecaller_id}
+              onChange={(event) => updateField('telecaller_id', event.target.value)}
+              disabled={assignees.loading || assignment.saving}
+              className="h-11 rounded-2xl border border-slate-200 bg-white px-3 text-sm font-semibold outline-none focus:border-[#2f6df6]"
+            >
+              <option value="">-- Auto assign telecaller --</option>
+              {(assignees.telecallers || []).map((user) => (
+                <option key={`telecaller-${user.user_id}`} value={user.user_id}>
+                  {getAssigneeOptionLabel(user)} [Telecaller]
+                </option>
+              ))}
+            </select>
+            <span className="text-xs font-medium text-slate-500">Current: {host.verification_telecaller_id || host.document_telecaller_id || 'Auto assigned'}</span>
+          </label>
           <label className="grid gap-2 text-sm font-bold">
             Assignment Reason
             <textarea

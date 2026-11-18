@@ -2,18 +2,33 @@
 
 
 import os
+import asyncio
 import logging
 import uuid
 import hmac
 import hashlib
+import time
 from typing import Dict, Optional
 
 import contextvars
+import requests
 
 logger = logging.getLogger(__name__)
 
 # Context variable to hold the user-agent of the current request to detect test runner requests
 request_user_agent_var = contextvars.ContextVar("request_user_agent", default="")
+
+
+class _TimeoutSession(requests.Session):
+    """Give every Razorpay SDK HTTP request a bounded connect/read timeout."""
+
+    def __init__(self, connect_timeout: float, read_timeout: float):
+        super().__init__()
+        self._default_timeout = (connect_timeout, read_timeout)
+
+    def request(self, method, url, **kwargs):
+        kwargs.setdefault("timeout", self._default_timeout)
+        return super().request(method, url, **kwargs)
 
 
 def _is_demo_key(key: str) -> bool:
@@ -62,7 +77,31 @@ class RazorpayService:
             self.client = None
         else:
             import razorpay
-            self.client = razorpay.Client(auth=(self.key_id, self.key_secret))
+            connect_timeout = float(os.getenv("RAZORPAY_CONNECT_TIMEOUT_SECONDS", "3.05"))
+            read_timeout = float(os.getenv("RAZORPAY_READ_TIMEOUT_SECONDS", "10"))
+            session = _TimeoutSession(connect_timeout, read_timeout)
+            self.client = razorpay.Client(session=session, auth=(self.key_id, self.key_secret))
+
+    async def call_async(self, operation: str, *args, **kwargs) -> Dict:
+        """Run the synchronous Razorpay SDK away from the FastAPI event loop.
+
+        The SDK is requests-based. Without this boundary, one slow upstream
+        connection stalls unrelated endpoints (including login and health) on
+        the single Uvicorn worker.
+        """
+        timeout = float(os.getenv("RAZORPAY_ASYNC_TIMEOUT_SECONDS", "15"))
+        method = getattr(self, operation)
+        try:
+            return await asyncio.wait_for(
+                asyncio.to_thread(method, *args, **kwargs),
+                timeout=timeout,
+            )
+        except asyncio.TimeoutError:
+            logger.error("Razorpay operation %s exceeded %.1fs", operation, timeout)
+            return {
+                "success": False,
+                "error": f"Razorpay {operation} timed out after {timeout:.1f}s",
+            }
     @property
     def is_mock(self) -> bool:
         if self.environment_is_production:
@@ -110,6 +149,58 @@ class RazorpayService:
             logger.error(f"Failed to create Razorpay order: {str(e)}")
             return {"success": False, "error": str(e)}
 
+    def fetch_order(self, order_id: str) -> Dict:
+        """Fetch an order using the currently configured Razorpay account.
+
+        This is also an ownership check: an order made with an old/different
+        Razorpay key cannot be fetched by the current client and must not be
+        sent to Checkout with the current public key.
+        """
+        if self.is_mock:
+            return {
+                "success": True,
+                "order": {"id": order_id, "status": "created", "mock": True},
+            }
+
+        if not self.client:
+            return {"success": False, "error": "Razorpay live keys are not configured"}
+
+        last_error = None
+        for attempt in range(3):
+            try:
+                return {"success": True, "order": self.client.order.fetch(order_id)}
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "Unable to fetch Razorpay order %s (attempt %s/3): %s",
+                    order_id, attempt + 1, str(e),
+                )
+                if attempt < 2:
+                    time.sleep(0.25 * (2 ** attempt))
+        return {"success": False, "error": str(last_error)}
+
+    def fetch_order_payments(self, order_id: str) -> Dict:
+        """Fetch payments for an order, retrying transient Razorpay/network failures."""
+        if self.is_mock:
+            return {"success": True, "payments": []}
+        if not self.client:
+            return {"success": False, "error": "Razorpay live keys are not configured"}
+
+        last_error = None
+        for attempt in range(3):
+            try:
+                result = self.client.order.payments(order_id)
+                return {"success": True, "payments": (result or {}).get("items", [])}
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "Unable to fetch payments for Razorpay order %s (attempt %s/3): %s",
+                    order_id, attempt + 1, str(e),
+                )
+                if attempt < 2:
+                    time.sleep(0.25 * (2 ** attempt))
+        return {"success": False, "error": str(last_error)}
+
     # --------------- Verify ----------------
 
     def verify_payment_signature(
@@ -147,11 +238,20 @@ class RazorpayService:
         if not self.client:
             return {"success": False, "error": "Razorpay live keys are not configured"}
 
-        try:
-            return {"success": True, "payment": self.client.payment.fetch(razorpay_payment_id)}
-        except Exception as e:
-            logger.error(f"Failed to fetch Razorpay payment: {str(e)}")
-            return {"success": False, "error": str(e)}
+        last_error = None
+        for attempt in range(3):
+            try:
+                return {"success": True, "payment": self.client.payment.fetch(razorpay_payment_id)}
+            except Exception as e:
+                last_error = e
+                logger.warning(
+                    "Failed to fetch Razorpay payment %s (attempt %s/3): %s",
+                    razorpay_payment_id, attempt + 1, str(e),
+                )
+                if attempt < 2:
+                    time.sleep(0.25 * (2 ** attempt))
+        logger.error("Failed to fetch Razorpay payment %s after retries", razorpay_payment_id)
+        return {"success": False, "error": str(last_error)}
 
     # --------------- Mock helpers ----------------
 

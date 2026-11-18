@@ -206,12 +206,16 @@ def normalize_pan_number(value: Optional[str]) -> str:
     return pan
 
 class HostVerificationSubmit(BaseModel):
-    aadhar_card: str
+    aadhar_card: Optional[str] = None
     pan_number: str
     property_proof: str
-    cancelled_cheque: str
+    cancelled_cheque: Optional[str] = None
     society_noc: Optional[str] = None
-    shop_act: str
+    shop_act: Optional[str] = None
+    host_association_type: str = "property_owner"
+    authorization_letter: Optional[str] = None
+    owner_noc: Optional[str] = None
+    representative_kyc: Optional[str] = None
     gst_certificate: Optional[str] = None
     gst_number: Optional[str] = None
     agreement_owner_name: str
@@ -235,13 +239,53 @@ async def submit_host_verification(
 
     accepted_at = datetime.now(timezone.utc)
     pan_number = normalize_pan_number(payload.pan_number)
+    association_type = (payload.host_association_type or "property_owner").strip().lower()
+    valid_association_types = {"property_owner", "property_manager", "authorized_representative"}
+    if association_type not in valid_association_types:
+        raise HTTPException(400, detail="Invalid host association type")
+
+    required_by_association = {
+        "property_owner": {
+            "aadhar_card": payload.aadhar_card,
+            "property_proof": payload.property_proof,
+            "cancelled_cheque": payload.cancelled_cheque,
+        },
+        "property_manager": {
+            "property_proof": payload.property_proof,
+            "authorization_letter": payload.authorization_letter,
+            "representative_kyc": payload.representative_kyc,
+            "cancelled_cheque": payload.cancelled_cheque,
+        },
+        "authorized_representative": {
+            "property_proof": payload.property_proof,
+            "authorization_letter": payload.authorization_letter,
+            "owner_noc": payload.owner_noc,
+            "representative_kyc": payload.representative_kyc,
+        },
+    }
+    missing = [
+        key.replace("_", " ").title()
+        for key, value in required_by_association[association_type].items()
+        if not str(value or "").strip()
+    ]
+    if missing:
+        raise HTTPException(400, detail=f"Missing required documents: {', '.join(missing)}")
+
     docs = [
-        {"document_type": "aadhar_card", "document_url": payload.aadhar_card, "status": "pending", "uploaded_at": accepted_at.isoformat()},
         {"document_type": "pan_number", "text_value": pan_number, "status": "pending", "uploaded_at": accepted_at.isoformat()},
         {"document_type": "property_proof", "document_url": payload.property_proof, "status": "pending", "uploaded_at": accepted_at.isoformat()},
-        {"document_type": "cancelled_cheque", "document_url": payload.cancelled_cheque, "status": "pending", "uploaded_at": accepted_at.isoformat()},
-        {"document_type": "shop_act", "document_url": payload.shop_act, "status": "pending", "uploaded_at": accepted_at.isoformat()},
     ]
+    optional_file_docs = {
+        "aadhar_card": payload.aadhar_card,
+        "cancelled_cheque": payload.cancelled_cheque,
+        "shop_act": payload.shop_act,
+        "authorization_letter": payload.authorization_letter,
+        "owner_noc": payload.owner_noc,
+        "representative_kyc": payload.representative_kyc,
+    }
+    for doc_type, doc_url in optional_file_docs.items():
+        if doc_url:
+            docs.append({"document_type": doc_type, "document_url": doc_url, "status": "pending", "uploaded_at": accepted_at.isoformat()})
     if payload.society_noc:
         docs.append({"document_type": "society_noc", "document_url": payload.society_noc, "status": "pending", "uploaded_at": accepted_at.isoformat()})
     if payload.gst_certificate:
@@ -258,6 +302,7 @@ async def submit_host_verification(
                 "agreement_owner_name": payload.agreement_owner_name,
                 "agreement_owner_address": payload.agreement_owner_address,
                 "agreement_signature": payload.agreement_signature,
+                "host_association_type": association_type,
                 "pan_number": pan_number,
                 "gst_number": payload.gst_number.strip() if payload.gst_number else None,
                 "agreement_signed_at": accepted_at.isoformat(),
@@ -301,6 +346,7 @@ class HostDraftDocumentUpload(BaseModel):
     document_type: str
     document_url: Optional[str] = ""
     text_value: Optional[str] = ""
+    host_association_type: Optional[str] = None
 
 
 @router.patch("/kyc/documents/draft")
@@ -318,12 +364,18 @@ async def save_draft_document(
         "cheque": "cancelled_cheque",
         "society": "society_noc",
         "shop_act": "shop_act",
+        "authorization_letter": "authorization_letter",
+        "owner_noc": "owner_noc",
+        "representative_kyc": "representative_kyc",
         "gst": "gst_certificate",
         "gst_number": "gst_number",
         "pan_number": "pan_number",
         "pan": "pan_number"
     }
     mapped_type = mapping.get(doc_type, doc_type)
+    association_type = (payload.host_association_type or "").strip().lower()
+    if association_type and association_type not in {"property_owner", "property_manager", "authorized_representative"}:
+        raise HTTPException(400, detail="Invalid host association type")
     text_value = (payload.text_value or payload.document_url or "").strip()
     text_doc_types = {"gst_number", "pan_number"}
     if mapped_type not in text_doc_types and not payload.document_url:
@@ -370,6 +422,8 @@ async def save_draft_document(
         current_docs.append(new_doc)
 
     update_data = {"kyc_documents": current_docs, "updated_at": accepted_at}
+    if association_type:
+        update_data["host_association_type"] = association_type
     if mapped_type == "gst_number":
         update_data["gst_number"] = text_value
     if mapped_type == "pan_number":
@@ -395,6 +449,9 @@ async def delete_rejected_draft_document(
         "cheque": "cancelled_cheque",
         "society": "society_noc",
         "shop_act": "shop_act",
+        "authorization_letter": "authorization_letter",
+        "owner_noc": "owner_noc",
+        "representative_kyc": "representative_kyc",
         "gst": "gst_certificate",
         "gst_number": "gst_number",
         "pan_number": "pan_number",

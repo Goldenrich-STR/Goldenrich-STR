@@ -46,6 +46,8 @@ const ApprovalCenterAdmin = lazy(() => import("./pages/admin/ApprovalCenter"));
 const BrokerDashboard = lazy(() => import("./pages/BrokerDashboard"));
 const EmployeeDashboard = lazy(() => import("./pages/EmployeeDashboard"));
 const ManagingDirectorDashboard = lazy(() => import("./pages/ManagingDirectorDashboard"));
+const TelecallerDashboard = lazy(() => import("./pages/TelecallerDashboard"));
+const VideoVerificationRoom = lazy(() => import("./pages/VideoVerificationRoom"));
 const HostPayouts = lazy(() => import("./pages/HostPayouts"));
 const HostBookings = lazy(() => import("./pages/HostBookings"));
 const HostPerformance = lazy(() => import("./pages/HostPerformance"));
@@ -69,7 +71,16 @@ const ScreenLoading = () => (
 );
 
 // Protected Route Component
-const ProtectedRoute = ({ children, allowedRoles }) => {
+const normalizeRoleKey = (value) => String(value || '').toLowerCase().replace(/[\s-]+/g, '_');
+const isRoleKey = (user, keys = []) => {
+  const allowedKeys = keys.map(normalizeRoleKey);
+  const userRoleKeys = [user?.admin_role_key, user?.designation, user?.role]
+    .map(normalizeRoleKey)
+    .filter(Boolean);
+  return userRoleKeys.some((roleKey) => allowedKeys.includes(roleKey));
+};
+
+const ProtectedRoute = ({ children, allowedRoles, allowedRoleKeys }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
 
@@ -90,7 +101,9 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     return <Navigate to={`${loginPath}?next=${encodeURIComponent(next)}`} replace />;
   }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
+  const roleAllowed = !allowedRoles || allowedRoles.includes(user.role);
+  const roleKeyAllowed = allowedRoleKeys && isRoleKey(user, allowedRoleKeys);
+  if (!roleAllowed && !roleKeyAllowed) {
     return <Navigate to="/" replace />;
   }
 
@@ -156,7 +169,11 @@ const RoleBasedRedirect = () => {
     case "broker":
       return <Navigate to="/broker/dashboard" replace />;
     case "employee":
-      const adminRole = user?.admin_role_key;
+    case "telecaller":
+      const adminRole = normalizeRoleKey(user?.admin_role_key || user?.designation || user?.role);
+      if (adminRole === 'telecaller') {
+        return <Navigate to="/telecaller/dashboard" replace />;
+      }
       if (adminRole === 'rm' || adminRole === 'relationship_manager') {
         return <Navigate to="/broker/dashboard" replace />;
       }
@@ -165,6 +182,19 @@ const RoleBasedRedirect = () => {
     default:
       return <Navigate to="/guest/browse" replace />;
   }
+};
+
+const RoleAwareVideoVerificationRoom = () => {
+  const { user } = useAuth();
+  return <VideoVerificationRoom role={isRoleKey(user, ["telecaller"]) ? "telecaller" : "host"} />;
+};
+
+const EmployeeDashboardRoute = () => {
+  const { user } = useAuth();
+  if (isRoleKey(user, ["telecaller"])) {
+    return <Navigate to="/telecaller/dashboard" replace />;
+  }
+  return <EmployeeDashboard />;
 };
 
 const GlobalAlertDialog = () => {
@@ -220,9 +250,9 @@ function AppRoutes() {
   const location = useLocation();
 
   // Check if current route is an authentication page
-  const isAuthRoute = 
-    location.pathname === "/login" || 
-    location.pathname === "/register" || 
+  const isAuthRoute =
+    location.pathname === "/login" ||
+    location.pathname === "/register" ||
     location.pathname === "/register/host" ||
     location.pathname === "/host/register" ||
     location.pathname === "/admin/login" ||
@@ -369,18 +399,52 @@ function AppRoutes() {
         <Route
           path="/employee/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["employee"]}>
-              <EmployeeDashboard />
+
+            <ProtectedRoute allowedRoles={["employee"]} allowedRoleKeys={["telecaller"]}>
+              <EmployeeDashboardRoute />
             </ProtectedRoute>
           }
         />
-
         {/* Broker Routes */}
         <Route
           path="/broker/dashboard"
           element={
             <ProtectedRoute allowedRoles={["broker", "employee"]}>
               <BrokerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        {/* Telecaller Routes */}
+        <Route path="/telecalling/dashboard" element={<Navigate to="/telecaller/dashboard" replace />} />
+        <Route
+          path="/telecaller/dashboard"
+          element={
+            <ProtectedRoute allowedRoleKeys={["telecaller"]}>
+              <TelecallerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/telecaller/verification/:verificationId"
+          element={
+            <ProtectedRoute allowedRoleKeys={["telecaller"]}>
+              <TelecallerDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/verification/video/:verificationId"
+          element={
+            <ProtectedRoute allowedRoles={["host", "admin"]} allowedRoleKeys={["telecaller"]}>
+              <VideoVerificationRoom role="telecaller" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/host/properties/:propertyId/video-verification"
+          element={
+            <ProtectedRoute allowedRoles={["host", "admin"]} allowedRoleKeys={["telecaller"]}>
+              <RoleAwareVideoVerificationRoom />
             </ProtectedRoute>
           }
         />
@@ -405,13 +469,6 @@ function AppRoutes() {
           <Route path="hosts" element={<HostManagementAdmin />} />
           <Route path="properties" element={<PropertyOperationsAdmin />} />
           <Route path="subscriptions" element={<SubscriptionManagementAdmin />} />
-          <Route path="subscriptions/plans" element={<SubscriptionManagementAdmin />} />
-          <Route path="subscriptions/add-ons" element={<SubscriptionManagementAdmin />} />
-          <Route path="subscriptions/payment-history" element={<SubscriptionManagementAdmin />} />
-          <Route path="subscriptions/renewal-reminders" element={<SubscriptionManagementAdmin />} />
-          <Route path="subscriptions/trials" element={<SubscriptionManagementAdmin />} />
-          <Route path="subscriptions/active" element={<SubscriptionManagementAdmin />} />
-          <Route path="subscriptions/expired-cancelled" element={<SubscriptionManagementAdmin />} />
           <Route path="bookings" element={<BookingOperationsAdmin />} />
           <Route path="finance" element={<FinanceSettlementsAdmin />} />
           <Route path="crm" element={<SalesCrmAdmin />} />

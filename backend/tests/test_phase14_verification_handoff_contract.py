@@ -12,10 +12,14 @@ from models.verification import VerificationStatus
 
 
 def _registered_routes():
+    # FastAPI 0.141 keeps included routers as lazy _IncludedRouter entries in
+    # app.routes. The generated OpenAPI schema contains the fully expanded,
+    # effective paths and remains stable across eager and lazy router versions.
     return {
-        (method, route.path)
-        for route in app.routes
-        for method in getattr(route, "methods", set())
+        (method.upper(), path)
+        for path, operations in app.openapi()["paths"].items()
+        for method in operations
+        if method.lower() in {"get", "post", "put", "patch", "delete", "options", "head", "trace"}
     }
 
 

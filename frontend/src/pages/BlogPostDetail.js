@@ -230,7 +230,7 @@ const BlogPostDetail = () => {
         let autoFaqs = parsedContent.faqs.length
           ? parsedContent.faqs
           : (Array.isArray(post.faqs) && post.faqs.length ? post.faqs : []);
-        if (autoFaqs.length === 0) {
+        if (autoFaqs.length === 0 && post.source !== 'deylaxy') {
           const title = post.title || 'Short-Term Rental';
           autoFaqs = [
             {
@@ -253,15 +253,17 @@ const BlogPostDetail = () => {
           title: post.title || 'Untitled Article',
           excerpt: post.excerpt || '',
           content: parsedContent.content,
+          content_html: post.source === 'deylaxy' ? post.content_html : '',
+          source: post.source,
           date: post.date || 'September 2026',
           author: post.author || 'X-Space360 Desk',
-          read_time: post.read_time || '5 min read',
+          read_time: post.readTime || post.read_time || '5 min read',
           image_url: postImg,
           slug: post.slug || slugify(post.title || `post-${idx}`),
           faqs: autoFaqs,
           tableData: post.tableData,
-          metaTitle: post.metaTitle,
-          metaDescription: post.metaDescription
+          metaTitle: post.seoTitle || post.metaTitle,
+          metaDescription: post.seoDescription || post.metaDescription
         };
       });
     }
@@ -272,7 +274,7 @@ const BlogPostDetail = () => {
     if (!blogPosts.length) return null;
     if (!postSlug) return blogPosts[0];
     const match = blogPosts.find(p => p.slug === postSlug || slugify(p.title) === postSlug || String(p.id) === postSlug);
-    return match || blogPosts[0];
+    return match || null;
   }, [postSlug, blogPosts]);
 
   const otherPosts = useMemo(() => {
@@ -301,14 +303,14 @@ const BlogPostDetail = () => {
   };
 
   if (!currentPost) {
-    return null;
+    return <main className="p-8"><SEO title="Article unavailable" noIndex /><h1>Article unavailable</h1><Link to="/blog">Back to the blog</Link></main>;
   }
 
   return (
     <div className="min-h-screen bg-[#FBFBFA] font-sans text-charcoal flex flex-col justify-between">
       <SEO
-        title={currentPost.title}
-        description={currentPost.excerpt || "Read full article on X-Space360 Journal."}
+        title={currentPost.metaTitle || currentPost.title}
+        description={currentPost.metaDescription || currentPost.excerpt || "Read full article on X-Space360 Journal."}
         path={`/blog/${currentPost.slug}`}
         image={currentPost.image_url}
         type="article"
@@ -450,7 +452,7 @@ const BlogPostDetail = () => {
           </div>
 
           {/* Key Takeaways Box (Matching 2nd Image) */}
-          <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-6 md:p-8 space-y-4 shadow-sm">
+          {currentPost.source !== 'deylaxy' && <div className="bg-amber-50/70 border border-amber-200/80 rounded-2xl p-6 md:p-8 space-y-4 shadow-sm">
             <h3 className="text-xl font-extrabold text-gray-900 font-sans tracking-tight">
               Key takeaways:
             </h3>
@@ -463,6 +465,8 @@ const BlogPostDetail = () => {
             </ul>
           </div>
 
+          }
+
           {/* Main Body Markdown Content */}
           <div className="prose prose-lg max-w-none text-gray-800 font-normal leading-relaxed space-y-6 pt-4">
             {currentPost.content ? (
@@ -470,12 +474,12 @@ const BlogPostDetail = () => {
                 {formatContentWithBullets(currentPost.content)}
               </ReactMarkdown>
             ) : (
-              <p className="text-gray-500 italic">No full article body provided yet.</p>
+              currentPost.content_html ? <div dangerouslySetInnerHTML={{ __html: currentPost.content_html }} /> : <p className="text-gray-500 italic">No full article body provided yet.</p>
             )}
           </div>
 
           {/* Dedicated Table Section */}
-          {currentPost.tableData && currentPost.tableData.headers && currentPost.tableData.rows && (
+          {currentPost.tableData?.headers?.length > 0 && currentPost.tableData.rows && (
             <div className="mt-8 mb-4 overflow-hidden rounded-xl border border-gray-200 shadow-sm">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm md:text-base border-collapse">
