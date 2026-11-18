@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, ExternalLink, Image, Search, Trash2, UserCog, XCircle, Download } from 'lucide-react';
+import PropertyUnitsReview from '../../components/PropertyUnitsReview';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestChoice, requestInput, requestReason, showNotice, Pagination } from './shared';
 
@@ -541,6 +542,7 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal,
               ]} />
             </Panel>
           </div>
+          <PropertyUnitsReview property={property} />
           {!!images.length && (
             <SectionCard eyebrow="Photo Library" title="Uploaded Property Images">
               <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">

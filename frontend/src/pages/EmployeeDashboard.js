@@ -1,3 +1,4 @@
+import PropertyUnitsReview from '../components/PropertyUnitsReview';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -1192,6 +1193,9 @@ const VerificationReviewSection = () => {
                       </>
                     )}
                   </div>
+
+                  {/* Units: the reviewer must see every unit the host listed */}
+                  <PropertyUnitsReview property={selectedVerification.property_details} className="mt-3" />
 
                   {/* Detailed Description */}
                   {selectedVerification.property_details.description && (
@@ -2649,6 +2653,7 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
           <div className="p-10 text-center text-sm font-bold text-red-600 uppercase tracking-widest">Failed to load property details</div>
         ) : (
           <div className="p-5 md:p-7 space-y-5 overflow-y-auto max-h-[calc(92vh-106px)]">
+            <PropertyUnitsReview property={property} />
             <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.5fr] gap-5">
               <div className="bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden">
                 <img src={coverImage} alt={property.title || 'Property'} className="h-52 w-full object-cover bg-stone" />

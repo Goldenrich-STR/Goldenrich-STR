@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../shared/units_review_card.dart';
 import 'package:provider/provider.dart';
 import '../../config.dart';
 import '../../providers/verification_provider.dart';
@@ -503,6 +504,9 @@ class _VerificationReportScreenState extends State<VerificationReportScreen> {
                         _buildSpecsGrid(bhkType, category, areaSqft,
                             pricePerNight, propLoc),
 
+                        const SizedBox(height: 16),
+                        UnitsReviewCard.fromProperty(
+                            Map<String, dynamic>.from(prop as Map)),
                         const SizedBox(height: 16),
                         const Divider(color: Color(0xFFF2F2F2)),
                         const SizedBox(height: 8),

@@ -10,6 +10,8 @@ import '../../theme.dart';
 import '../shared/app_shell.dart';
 import '../../models/property_model.dart';
 import '../shared/app_logo.dart';
+import '../shared/units_review_card.dart';
+import 'broker_owner_kyc_screen.dart';
 
 class BrokerDashboardScreen extends StatefulWidget {
   final String initialTab;
@@ -142,6 +144,9 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
         final res = await _apiService.dio.get('/broker/commissions');
         if (res.statusCode == 200) {
           _commissionData = res.data['summary'];
+          if (res.data['payout_settings'] is Map) {
+            _fillPayout(Map<String, dynamic>.from(res.data['payout_settings']));
+          }
           _commissions = res.data['commissions'] ?? [];
         }
       }
@@ -1003,6 +1008,25 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                 onPressed: () => _showHostDocumentsSheet(
                                     context, owner, false),
                               ),
+                              if (!isKycApproved)
+                                TextButton.icon(
+                                  icon: const Icon(Icons.upload_file, size: 16),
+                                  label: const Text('UPLOAD KYC',
+                                      style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold)),
+                                  onPressed: () async {
+                                    final done = await Navigator.push<bool>(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => BrokerOwnerKycScreen(
+                                            owner: Map<String, dynamic>.from(
+                                                owner as Map)),
+                                      ),
+                                    );
+                                    if (done == true) _refreshData();
+                                  },
+                                ),
                               if (formattedDate.isNotEmpty)
                                 Text('Registered: $formattedDate',
                                     style: const TextStyle(
@@ -1138,6 +1162,36 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
                                     ),
                                   ],
                                 ),
+                                if (_propertyStatus(prop) == 'rejected')
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      icon: const Icon(Icons.replay, size: 16),
+                                      label: const Text('START REWORK',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold)),
+                                      onPressed: () => _propertyAction(
+                                          prop,
+                                          'start-rework',
+                                          'Moved back to draft for correction'),
+                                    ),
+                                  ),
+                                if (_propertyStatus(prop) == 'draft')
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      icon: const Icon(Icons.send, size: 16),
+                                      label: const Text('SUBMIT FOR VERIFICATION',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.bold)),
+                                      onPressed: () => _propertyAction(
+                                          prop,
+                                          'submit-verification',
+                                          'Submitted for verification'),
+                                    ),
+                                  ),
                               ],
                             ),
                           ),
@@ -1655,6 +1709,7 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
               fontWeight: FontWeight.w900,
               color: AppTheme.charcoal),
         ),
+        _payoutCard(),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -1766,6 +1821,140 @@ class _BrokerDashboardScreenState extends State<BrokerDashboardScreen> {
             value,
             style: TextStyle(
                 fontSize: 16, fontWeight: FontWeight.bold, color: color),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _propertyStatus(dynamic prop) =>
+      ((prop is Map ? prop['status'] : null) ?? '').toString().toLowerCase();
+
+  /// Start rework (rejected -> draft) or submit a draft for verification, the
+  /// same two actions the website's Property CRM has.
+  Future<void> _propertyAction(dynamic prop, String action, String done) async {
+    try {
+      await _apiService.dio
+          .post('/broker/properties/${prop['property_id']}/$action');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(done)));
+      _refreshData();
+    } catch (e) {
+      var msg = 'Action failed. Please try again.';
+      if (e is dio.DioException && e.response?.data is Map) {
+        msg = (e.response!.data['detail'] ?? msg).toString();
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
+  }
+
+  Map<String, dynamic> _payout = {};
+  String _payoutMethod = 'bank';
+  final _payHolder = TextEditingController();
+  final _payBank = TextEditingController();
+  final _payAccount = TextEditingController();
+  final _payIfsc = TextEditingController();
+  final _payUpi = TextEditingController();
+  bool _savingPayout = false;
+
+  void _fillPayout(Map<String, dynamic> p) {
+    _payout = p;
+    _payoutMethod = p['payout_method'] == 'upi' ? 'upi' : 'bank';
+    _payHolder.text = (p['account_holder_name'] ?? '').toString();
+    _payBank.text = (p['bank_name'] ?? '').toString();
+    _payAccount.text = (p['account_number'] ?? '').toString();
+    _payIfsc.text = (p['ifsc_code'] ?? '').toString();
+    _payUpi.text = (p['upi_id'] ?? '').toString();
+  }
+
+  Future<void> _savePayout() async {
+    setState(() => _savingPayout = true);
+    try {
+      final res = await _apiService.dio.put('/broker/commissions/payout-settings',
+          data: {
+            'payout_method': _payoutMethod,
+            'account_holder_name': _payHolder.text.trim(),
+            'bank_name': _payBank.text.trim(),
+            'account_number': _payAccount.text.trim(),
+            'ifsc_code': _payIfsc.text.trim().toUpperCase(),
+            'upi_id': _payUpi.text.trim(),
+          });
+      if (res.data is Map && res.data['payout_settings'] is Map) {
+        _fillPayout(Map<String, dynamic>.from(res.data['payout_settings']));
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Payout settings saved')));
+      }
+    } catch (e) {
+      var msg = 'Could not save payout settings';
+      if (e is dio.DioException && e.response?.data is Map) {
+        msg = (e.response!.data['detail'] ?? msg).toString();
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      }
+    }
+    if (mounted) setState(() => _savingPayout = false);
+  }
+
+  Widget _payoutCard() {
+    final ready = _payUpi.text.trim().isNotEmpty ||
+        (_payAccount.text.trim().isNotEmpty && _payIfsc.text.trim().isNotEmpty);
+    Widget field(TextEditingController c, String label) => Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: TextField(
+            controller: c,
+            decoration: InputDecoration(
+                labelText: label, border: const OutlineInputBorder(), isDense: true),
+          ),
+        );
+    return Container(
+      margin: const EdgeInsets.only(top: 18),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.stone),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            const Expanded(
+              child: Text('Payout settings',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+            ),
+            Text(ready ? 'READY' : 'NOT SET',
+                style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    color: ready ? Colors.green : Colors.orange.shade800)),
+          ]),
+          const SizedBox(height: 10),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(value: 'bank', label: Text('Bank')),
+              ButtonSegment(value: 'upi', label: Text('UPI')),
+            ],
+            selected: {_payoutMethod},
+            onSelectionChanged: (s) => setState(() => _payoutMethod = s.first),
+          ),
+          const SizedBox(height: 12),
+          if (_payoutMethod == 'bank') ...[
+            field(_payHolder, 'Account holder name'),
+            field(_payBank, 'Bank name'),
+            field(_payAccount, 'Account number'),
+            field(_payIfsc, 'IFSC code'),
+          ] else
+            field(_payUpi, 'UPI ID'),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: _savingPayout ? null : _savePayout,
+              child: Text(_savingPayout ? 'Saving...' : 'Save payout settings'),
+            ),
           ),
         ],
       ),
@@ -2470,6 +2659,24 @@ class _VerificationSubmissionSheetState
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // --- Units the host listed: check each one on the visit ---
+                  if (_property != null) ...[
+                    UnitsReviewCard(
+                      hasUnits: _property!.hasUnits,
+                      units: [
+                        for (final u in _property!.units)
+                          {
+                            'name': u.name,
+                            'tier': u.tier,
+                            'price_per_night': u.rawPrice,
+                            'max_guests': u.maxGuests,
+                            'bhk_type': u.bhkType,
+                            'area_sqft': u.areaSqft,
+                          }
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                  ],
                   // --- Property Details Section ---
                   Container(
                     padding: const EdgeInsets.all(16),

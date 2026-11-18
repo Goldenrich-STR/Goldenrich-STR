@@ -1,3 +1,4 @@
+import PropertyUnitsReview from '../components/PropertyUnitsReview';
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -2514,6 +2515,8 @@ const SubmitVerificationModal = ({ task, onClose, onSubmitted }) => {
         </div>
 
         <div className="p-6 space-y-6">
+          {/* Every unit the host listed has to be checked on the site visit */}
+          <PropertyUnitsReview property={task.property_details} />
           {/* Property Details & Images */}
           <div className="border border-gray-100 rounded-2xl p-4 bg-stone/50">
             <h4 className="font-bold text-charcoal mb-3">Property Details</h4>
@@ -3836,6 +3839,8 @@ const PropertyDetailsModal = ({ property, onClose }) => {
               </div>
             ))}
           </div>
+
+          <PropertyUnitsReview property={property} />
 
           {/* Photo Gallery */}
           {propertyImages.length > 0 && (

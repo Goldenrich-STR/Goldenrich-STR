@@ -826,6 +826,7 @@ PROPERTY_REVIEW_ITEMS = [
     ("location", "Location", ["address", "city", "state", "pin_code"]),
     ("pricing", "Pricing", ["price_per_night"]),
     ("amenities", "Amenities", ["amenities"]),
+    ("units", "Units & Pricing", []),
     ("photos", "Photos", ["images"]),
     ("subscription", "Subscription", ["subscription_status"]),
     ("host_kyc", "Host KYC", []),
@@ -860,6 +861,21 @@ def _normalise_property_review(prop: dict, owner: dict | None = None, verificati
         elif key == "assignment":
             auto_ready = bool(assignment["rm"]) and bool(assignment["broker"] or assignment["branch_manager"])
             details = f"Broker: {assignment['broker'] or '-'} / RM: {assignment['rm'] or '-'} / BM: {assignment['branch_manager'] or assignment['branch_manager_code'] or '-'}"
+        elif key == "units":
+            # Properties without units are unaffected. With units, every unit needs a name,
+            # a price and a guest count before the checklist can pass on its own.
+            units = prop.get("units") or []
+            if not prop.get("has_units") or not units:
+                auto_ready = not prop.get("has_units")
+                details = "Single property (no units)" if auto_ready else "Units are enabled but none are listed"
+            else:
+                bad = [
+                    str(unit.get("name") or unit.get("unit_id") or f"Unit {index + 1}")
+                    for index, unit in enumerate(units)
+                    if not (unit.get("name") and float(unit.get("price_per_night") or unit.get("price") or 0) > 0 and int(unit.get("max_guests") or 0) > 0)
+                ]
+                auto_ready = not bad
+                details = f"{len(units)} unit(s)" + (f" - incomplete: {', '.join(bad)}" if bad else "")
         elif key == "amenities":
             auto_ready = bool(prop.get("amenities"))
             details = f"{len(prop.get('amenities') or [])} amenities"
