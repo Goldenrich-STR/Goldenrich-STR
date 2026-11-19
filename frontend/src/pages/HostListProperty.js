@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, uploadAPI, couponAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
@@ -332,107 +333,131 @@ const EditableItemName = ({ initialName, onRename }) => {
   );
 };
 
-const TimePicker12h = ({ value, onChange }) => {
-  let hour = '';
-  let minute = '';
-  let period = '';
+/**
+ * One clear dropdown for a time of day ("9:00 AM", "9:30 AM", ... every 30 minutes).
+ * It replaces the three tiny hour / minute / AM-PM boxes that looked empty.
+ * format12: value is "09:30 AM" (venue timings). Otherwise "09:30" in 24-hour form (check-in / check-out).
+ */
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const h24 = Math.floor(index / 2);
+  const minute = index % 2 ? 30 : 0;
+  const period = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 || 12;
+  const mm = String(minute).padStart(2, '0');
+  return { v24: `${String(h24).padStart(2, '0')}:${mm}`, v12: `${String(h12).padStart(2, '0')}:${mm} ${period}`, label: `${h12}:${mm} ${period}` };
+});
 
-  if (value) {
-    const match12 = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (match12) {
-      hour = String(parseInt(match12[1], 10));
-      minute = match12[2];
-      period = match12[3].toUpperCase();
-    } else {
-      const match24 = value.match(/^(\d{1,2}):(\d{2})$/);
-      if (match24) {
-        let h24 = parseInt(match24[1], 10);
-        let p = 'AM';
-        if (h24 >= 12) {
-          p = 'PM';
-          if (h24 > 12) h24 -= 12;
-        }
-        if (h24 === 0) h24 = 12;
-        hour = String(h24);
-        minute = match24[2];
-        period = p;
-      }
-    }
+const timeTo24 = (value) => {
+  const text = String(value || '').trim();
+  const match12 = text.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10) % 12;
+    if (match12[3].toUpperCase() === 'PM') hours += 12;
+    return `${String(hours).padStart(2, '0')}:${match12[2]}`;
   }
+  const match24 = text.match(/^(\d{1,2}):(\d{2})/);
+  return match24 ? `${String(parseInt(match24[1], 10)).padStart(2, '0')}:${match24[2]}` : '';
+};
 
-  const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
-  const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-  
-  const handleSelectChange = (h, m, p) => {
-    if (!h || !m || !p) {
-      onChange('');
-    } else {
-      const paddedHour = h.padStart(2, '0');
-      onChange(`${paddedHour}:${m} ${p}`);
-    }
+const TimeSelect = ({ value, onChange, format12 = true, placeholder = 'Select time', className = '' }) => {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const buttonRef = useRef(null);
+  const listRef = useRef(null);
+  const current = timeTo24(value);
+  const options = current && !TIME_OPTIONS.some((option) => option.v24 === current)
+    ? [...TIME_OPTIONS, { v24: current, v12: value, label: value }].sort((a, b) => a.v24.localeCompare(b.v24))
+    : TIME_OPTIONS;
+  const selected = options.find((option) => option.v24 === current);
+
+  const openList = () => {
+    if (buttonRef.current) setRect(buttonRef.current.getBoundingClientRect());
+    setOpen(true);
   };
 
+  useEffect(() => {
+    if (!open) return undefined;
+    // a scroll inside the list itself must not close it; only the page scrolling or resizing does
+    const close = (event) => { if (event?.target instanceof Node && listRef.current?.contains(event.target)) return; setOpen(false); };
+    const onKey = (event) => { if (event.key === 'Escape') setOpen(false); };
+    const onPointer = (event) => {
+      if (buttonRef.current?.contains(event.target) || listRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onPointer);
+    // bring the chosen time (or 9 AM) into view
+    const target = listRef.current?.querySelector('[data-selected="true"]') || listRef.current?.querySelector('[data-default="true"]');
+    if (target && listRef.current) listRef.current.scrollTop = target.offsetTop - (listRef.current.clientHeight - target.clientHeight) / 2;
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onPointer);
+    };
+  }, [open]);
+
+  const pick = (option) => {
+    onChange(option ? (format12 ? option.v12 : option.v24) : '');
+    setOpen(false);
+  };
+
+  const listHeight = 240;
+  const spaceBelow = rect ? window.innerHeight - rect.bottom : 0;
+  const openUp = rect && spaceBelow < listHeight + 12 && rect.top > spaceBelow;
+  const panelStyle = rect ? {
+    position: 'fixed',
+    left: rect.left,
+    width: Math.max(rect.width, 150),
+    zIndex: 1000,
+    ...(openUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
+  } : null;
+
   return (
-    <div className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-2 py-1.5 shadow-sm transition-all duration-200 hover:border-slate-400 focus-within:border-slate-500 focus-within:ring-1 focus-within:ring-slate-200">
-      <Clock className="w-3.5 h-3.5 text-charcoal-light flex-shrink-0 mr-1" />
-      <div className="flex items-center space-x-0.5">
-        <select
-          value={hour}
-          onChange={(e) => handleSelectChange(e.target.value, minute || '00', period || 'AM')}
-          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold p-0 focus:ring-0 cursor-pointer outline-none text-center"
-          style={{ 
-            backgroundImage: 'none', 
-            paddingRight: 0, 
-            paddingLeft: 0, 
-            appearance: 'none', 
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            width: '32px'
-          }}
-        >
-          <option value="">--</option>
-          {hours.map(h => <option key={h} value={h}>{h}</option>)}
-        </select>
-        <span className="text-charcoal-light font-bold text-xs select-none">:</span>
-        <select
-          value={minute}
-          onChange={(e) => handleSelectChange(hour || '12', e.target.value, period || 'AM')}
-          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold p-0 focus:ring-0 cursor-pointer outline-none text-center"
-          style={{ 
-            backgroundImage: 'none', 
-            paddingRight: 0, 
-            paddingLeft: 0, 
-            appearance: 'none', 
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            width: '32px'
-          }}
-        >
-          <option value="">--</option>
-          {minutes.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <select
-          value={period}
-          onChange={(e) => handleSelectChange(hour || '12', minute || '00', e.target.value)}
-          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold tracking-tight p-0 focus:ring-0 cursor-pointer outline-none text-center ml-0.5"
-          style={{ 
-            backgroundImage: 'none', 
-            paddingRight: 0, 
-            paddingLeft: 0, 
-            appearance: 'none', 
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            width: '40px'
-          }}
-        >
-          <option value="">--</option>
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-        </select>
-      </div>
+    <div className={className}>
+      <button
+        type="button"
+        ref={buttonRef}
+        onClick={() => (open ? setOpen(false) : openList())}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex w-full items-center gap-2 rounded-xl border bg-white px-3 py-2.5 text-left shadow-sm outline-none transition ${open ? 'border-slate-700 ring-2 ring-slate-200' : 'border-gray-300 hover:border-slate-400 focus-visible:border-slate-700'}`}
+      >
+        <Clock className="h-4 w-4 flex-shrink-0 text-charcoal-light" />
+        <span className={`flex-1 truncate text-sm ${selected ? 'font-semibold text-charcoal' : 'text-charcoal-light'}`}>{selected ? selected.label : placeholder}</span>
+        <ChevronDown className={`h-4 w-4 flex-shrink-0 text-charcoal-light transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && panelStyle && createPortal(
+        <div ref={listRef} role="listbox" style={{ ...panelStyle, maxHeight: listHeight }} className="overflow-y-auto rounded-xl border border-gray-200 bg-white py-1.5 shadow-xl">
+          <button type="button" onClick={() => pick(null)} className="block w-full px-4 py-2 text-left text-sm text-charcoal-light hover:bg-gray-50">Clear</button>
+          {options.map((option) => {
+            const isSelected = option.v24 === current;
+            return (
+              <button
+                key={option.v24}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                data-selected={isSelected}
+                data-default={option.v24 === '09:00'}
+                onClick={() => pick(option)}
+                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition ${isSelected ? 'bg-slate-900 font-semibold text-white' : 'text-charcoal hover:bg-gray-100'}`}
+              >
+                <span>{option.label}</span>
+                {isSelected && <Check className="h-4 w-4" />}
+              </button>
+            );
+          })}
+        </div>,
+        document.body,
+      )}
     </div>
   );
 };
+
+const TimePicker12h = ({ value, onChange }) => <TimeSelect value={value} onChange={onChange} format12 />;
 
 export const UNIT_TIERS = [
   { value: 'standard', label: 'Standard' },
@@ -2586,21 +2611,11 @@ const HostListProperty = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Check-in Time</label>
-                        <input
-                          type="time"
-                          value={form.check_in_time || '12:00'}
-                          onChange={(e) => update({ check_in_time: e.target.value })}
-                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all [color-scheme:light] font-bold text-charcoal"
-                        />
+                        <TimeSelect format12={false} value={form.check_in_time || '12:00'} onChange={(val) => update({ check_in_time: val })} />
                       </div>
                       <div>
                         <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Check-out Time</label>
-                        <input
-                          type="time"
-                          value={form.check_out_time || '11:00'}
-                          onChange={(e) => update({ check_out_time: e.target.value })}
-                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all [color-scheme:light] font-bold text-charcoal"
-                        />
+                        <TimeSelect format12={false} value={form.check_out_time || '11:00'} onChange={(val) => update({ check_out_time: val })} />
                       </div>
                     </div>
                   </div>

@@ -4450,14 +4450,14 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              timeStr.isNotEmpty ? timeStr : '- : -',
-              style: const TextStyle(
-                  fontSize: 12,
-                  color: AppTheme.charcoal,
-                  fontWeight: FontWeight.bold),
+              timeStr.isNotEmpty ? timeStr : 'Select time',
+              style: TextStyle(
+                  fontSize: 13.5,
+                  color: timeStr.isNotEmpty ? AppTheme.charcoal : AppTheme.charcoalMuted,
+                  fontWeight: FontWeight.w600),
             ),
             const Icon(Icons.access_time,
-                size: 14, color: AppTheme.charcoalLight),
+                size: 17, color: AppTheme.charcoalLight),
           ],
         ),
       ),
