@@ -21,8 +21,6 @@ import ScrollReveal from '../components/ui/ScrollReveal';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import DownloadAppButton from '../components/ui/DownloadAppButton';
 import AppPromoSection from '../components/ui/AppPromoSection';
-import FestiveDiya from '../components/ui/FestiveDiya';
-import DiwaliFireworks from '../components/ui/DiwaliFireworks';
 import { formatContentWithBullets, markdownComponents } from '../lib/formatContent';
 import Footer from '../components/Footer';
 
@@ -2348,51 +2346,6 @@ const PREMIUM_COLLECTIONS = [
   }
 ];
 
-const DIWALI_BULBS = [
-  [42, 52], [112, 76], [185, 82], [255, 66], [318, 33],
-  [52, 127], [126, 109], [198, 80], [263, 43],
-  [1282, 33], [1345, 66], [1415, 82], [1488, 76], [1558, 52],
-  [1337, 43], [1402, 80], [1474, 109], [1548, 127],
-];
-
-const DiwaliStringLights = () => (
-  <div className="pointer-events-none absolute inset-x-0 top-0 z-0 h-[130px] overflow-hidden md:h-[155px]" aria-hidden="true">
-    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,211,120,0.24),transparent_68%)]" />
-    <svg viewBox="0 0 1600 150" preserveAspectRatio="none" className="absolute inset-0 h-full w-full overflow-visible">
-      <path d="M-20 24 C100 94 225 112 365 -18" fill="none" stroke="#d89b35" strokeWidth="1.8" opacity="0.82" />
-      <path d="M-20 142 C105 126 220 72 310 -18" fill="none" stroke="#e1a442" strokeWidth="1.5" opacity="0.72" />
-      <path d="M1235 -18 C1375 112 1500 94 1620 24" fill="none" stroke="#d89b35" strokeWidth="1.8" opacity="0.82" />
-      <path d="M1290 -18 C1380 72 1495 126 1620 142" fill="none" stroke="#e1a442" strokeWidth="1.5" opacity="0.72" />
-      {DIWALI_BULBS.map(([x, y], index) => (
-        <g key={`${x}-${y}`} className="diwali-garland-bulb" style={{ animationDelay: `${(index % 5) * 0.32}s` }}>
-          <rect x={x - 4} y={y - 8} width="8" height="7" rx="2" fill="#c68a2d" />
-          <circle cx={x} cy={y + 5} r="13" fill="#ffd66b" opacity="0.14" />
-          <circle cx={x} cy={y + 3} r="8" fill="#fff4bd" />
-          <circle cx={x - 2} cy={y} r="3" fill="#fffef0" />
-        </g>
-      ))}
-    </svg>
-  </div>
-);
-
-const AkashKandil = ({ className = '', style }) => (
-  <svg viewBox="0 0 72 112" className={className} style={style} aria-hidden="true">
-    <path d="M36 0v13" stroke="#d79a22" strokeWidth="1.8" />
-    <path d="M22 13h28l-5 7H27Z" fill="#ff4fa1" />
-    <path d="M20 22 36 14l16 8-5 28H25Z" fill="#ffc900" />
-    <path d="m20 22 16 14L25 50Z" fill="#ff7b00" />
-    <path d="m52 22-16 14 11 14Z" fill="#ff4f91" />
-    <path d="M20 22h32L36 36Z" fill="#18d7c2" />
-    <path d="M25 50h22l-4 7H29Z" fill="#8f4fff" />
-    <path d="M29 57v34M36 57v43M43 57v34" stroke="#ffad00" strokeWidth="2" strokeLinecap="round" />
-    <path d="m27 88 2 9 2-9m3 9 2 11 2-11m3-9 2 9 2-9" fill="#ff4f91" />
-    <circle cx="10" cy="24" r="2" fill="#22d3c5" />
-    <circle cx="61" cy="19" r="2" fill="#ff4f91" />
-    <circle cx="62" cy="39" r="1.8" fill="#ffc400" />
-    <path d="M11 39h6M14 36v6M56 29h7M59.5 25.5v7" stroke="#ffae00" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-);
-
 const STANDARD_FEATURES = [
   { label: 'Personalised Celebrations', icon: PartyPopper },
   { label: 'Caretaker Onsite', icon: UserCheck },
@@ -2476,7 +2429,6 @@ const CollectionsSection = ({
       <div className="relative z-10 mx-auto w-full max-w-[1216px] px-4 md:px-8">
         <ScrollReveal duration="duration-[800ms]">
           <div className="relative left-1/2 mb-10 w-screen -translate-x-1/2 overflow-hidden bg-[#F8F3E8] py-10 md:mb-12 md:py-12">
-            <DiwaliStringLights />
             <div className="relative z-10 mx-auto w-full max-w-[1216px] px-4 md:px-8">
             <div className="mb-6 flex items-end justify-between gap-4">
               <h2 className="font-serif-hero text-[20px] md:text-[28px] font-semibold text-[#1E1E1E]">
@@ -2776,6 +2728,7 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const exploreMenuCloseTimerRef = React.useRef(null);
+  const moreMenuCloseTimerRef = React.useRef(null);
   const landingSearchRef = React.useRef(null);
   const RECENT_LOCATION_STORAGE_KEY = 'xspace_recent_location_searches';
   const handleSignOut = () => {
@@ -2901,8 +2854,10 @@ const LandingPage = () => {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const [stickyPill, setStickyPill] = useState(false);
   const [isExploreMenuOpen, setIsExploreMenuOpen] = useState(false);
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
   const [activeExploreTab, setActiveExploreTab] = useState(EXPLORE_MENU_TABS[0]?.key || 'nashik');
   const [isMobileExploreOpen, setIsMobileExploreOpen] = useState(false);
+  const [isMobileMoreOpen, setIsMobileMoreOpen] = useState(false);
 
   const scrollToSlide = (containerId, index) => {
     const container = document.getElementById(containerId);
@@ -2957,6 +2912,33 @@ const LandingPage = () => {
       setIsExploreMenuOpen(false);
     }, 260);
   };
+
+  const openMoreMenu = () => {
+    if (moreMenuCloseTimerRef.current) {
+      clearTimeout(moreMenuCloseTimerRef.current);
+      moreMenuCloseTimerRef.current = null;
+    }
+    window.dispatchEvent(new CustomEvent('xs-nav-open', { detail: 'more' }));
+    setIsMoreMenuOpen(true);
+  };
+
+  const closeMoreMenuWithDelay = () => {
+    if (moreMenuCloseTimerRef.current) clearTimeout(moreMenuCloseTimerRef.current);
+    moreMenuCloseTimerRef.current = setTimeout(() => setIsMoreMenuOpen(false), 180);
+  };
+
+  useEffect(() => {
+    const closeWhenOtherOpens = (event) => {
+      if (event.detail === 'more') return;
+      if (moreMenuCloseTimerRef.current) clearTimeout(moreMenuCloseTimerRef.current);
+      setIsMoreMenuOpen(false);
+    };
+    window.addEventListener('xs-nav-open', closeWhenOtherOpens);
+    return () => {
+      window.removeEventListener('xs-nav-open', closeWhenOtherOpens);
+      if (moreMenuCloseTimerRef.current) clearTimeout(moreMenuCloseTimerRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -3770,12 +3752,6 @@ const LandingPage = () => {
             >
               Discover
             </Link>
-            <Link
-              to={user ? '/host/list-property' : '/list-your-property'}
-              className="rounded-xl px-2.5 py-2.5 leading-[21px] hover:text-terracotta transition-colors duration-200"
-            >
-              List your Property
-            </Link>
             <div
               className="relative"
               onMouseEnter={openExploreMenu}
@@ -3849,6 +3825,26 @@ const LandingPage = () => {
               )}
             </div>
             <LanguageSelector showPropertyTypes />
+            <div className="relative" onMouseEnter={openMoreMenu} onMouseLeave={closeMoreMenuWithDelay}>
+              <button
+                type="button"
+                onClick={() => isMoreMenuOpen ? setIsMoreMenuOpen(false) : openMoreMenu()}
+                className="flex items-center gap-1 rounded-xl px-2.5 py-2.5 leading-[21px] hover:text-terracotta transition-colors duration-200"
+                aria-haspopup="menu"
+                aria-expanded={isMoreMenuOpen}
+              >
+                <span>More</span>
+                <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isMoreMenuOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {isMoreMenuOpen && (
+              <div className="absolute left-1/2 top-full z-[999] mt-3 w-52 -translate-x-1/2 rounded-2xl border border-gray-200 bg-white p-2 text-gray-900 shadow-elevated ring-1 ring-black/5 animate-scale-up before:absolute before:inset-x-0 before:-top-4 before:h-4 before:content-['']" onMouseEnter={openMoreMenu} onMouseLeave={closeMoreMenuWithDelay}>
+                <Link to={user ? '/host/list-property' : '/list-your-property'} className="block rounded-xl px-3 py-2.5 text-[15px] font-medium text-gray-700 transition hover:bg-[#faf7f2] hover:text-terracotta">List Your Property</Link>
+                <Link to="/blog" className="block rounded-xl px-3 py-2.5 text-[15px] font-medium text-gray-700 transition hover:bg-[#faf7f2] hover:text-terracotta">Blogs</Link>
+                <Link to="/about-us" className="block rounded-xl px-3 py-2.5 text-[15px] font-medium text-gray-700 transition hover:bg-[#faf7f2] hover:text-terracotta">About Us</Link>
+                <Link to="/support" className="block rounded-xl px-3 py-2.5 text-[15px] font-medium text-gray-700 transition hover:bg-[#faf7f2] hover:text-terracotta">Help &amp; Support</Link>
+              </div>
+              )}
+            </div>
           </div>
 
           {/* Right Side Options */}
@@ -3899,18 +3895,6 @@ const LandingPage = () => {
             </button>
           </div>
         </div>
-        {isNavScrolled && (
-          <>
-            <AkashKandil
-              className="akash-kandil absolute top-full hidden h-[58px] w-[38px] sm:block sm:h-[76px] sm:w-[50px]"
-              style={{ left: 'max(12px, calc((100vw - 1440px) / 2 + 20px))' }}
-            />
-            <AkashKandil
-              className="akash-kandil akash-kandil-right absolute top-full hidden h-[58px] w-[38px] sm:block sm:h-[76px] sm:w-[50px]"
-              style={{ right: 'max(12px, calc((100vw - 1440px) / 2 + 20px))' }}
-            />
-          </>
-        )}
       </nav>
 
       {/* Phones: once the hero is scrolled away, the search pill stays pinned at the top */}
@@ -3946,7 +3930,6 @@ const LandingPage = () => {
 
             <nav className="flex-1 px-5 py-1 text-charcoal">
               <DrawerRow icon={Compass} label="Discover" onClick={() => { setIsMobileMenuOpen(false); navigate('/guest/browse'); }} />
-              <DrawerRow icon={Building2} label="List your Property" onClick={() => { setIsMobileMenuOpen(false); navigate(user ? '/host/list-property' : '/list-your-property'); }} />
 
               <div className="border-b border-gray-100">
                 <DrawerRow icon={MapPin} label="Explore" bare trailing={<ChevronDown className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${isMobileExploreOpen ? 'rotate-180' : ''}`} />} onClick={() => setIsMobileExploreOpen((prev) => !prev)} />
@@ -3983,6 +3966,18 @@ const LandingPage = () => {
               <div className="flex items-center gap-3 border-b border-gray-100 py-3.5">
                 <Home className="h-5 w-5 shrink-0 text-charcoal" />
                 <div className="min-w-0 flex-1"><LanguageSelector mode="inline" showPropertyTypes /></div>
+              </div>
+
+              <div className="border-b border-gray-100">
+                <DrawerRow icon={Menu} label="More" bare trailing={<ChevronDown className={`h-5 w-5 text-gray-500 transition-transform duration-200 ${isMobileMoreOpen ? 'rotate-180' : ''}`} />} onClick={() => setIsMobileMoreOpen((prev) => !prev)} />
+                {isMobileMoreOpen && (
+                  <div className="mb-3 space-y-1 rounded-[18px] border border-[#eee6d8] bg-[#faf7f2] p-2">
+                    <DrawerRow icon={Building2} label="List Your Property" onClick={() => { setIsMobileMenuOpen(false); setIsMobileMoreOpen(false); navigate(user ? '/host/list-property' : '/list-your-property'); }} />
+                    <DrawerRow icon={ClipboardList} label="Blogs" onClick={() => { setIsMobileMenuOpen(false); setIsMobileMoreOpen(false); navigate('/blog'); }} />
+                    <DrawerRow icon={UserCheck} label="About Us" onClick={() => { setIsMobileMenuOpen(false); setIsMobileMoreOpen(false); navigate('/about-us'); }} />
+                    <DrawerRow icon={Headphones} label="Help & Support" onClick={() => { setIsMobileMenuOpen(false); setIsMobileMoreOpen(false); navigate('/support'); }} />
+                  </div>
+                )}
               </div>
 
               <a
@@ -4042,8 +4037,6 @@ const LandingPage = () => {
           {/* ── 35% dark overlay ── */}
           <div className="absolute inset-0 bg-black/35 z-10 transition-opacity duration-1000" />
 
-          {/* ── Diwali Fireworks Animation ── */}
-          <DiwaliFireworks active={true} />
         </div>
 
         {/* ── Hero Slide Navigation Arrows (Floating Left & Right) ── */}
@@ -4112,8 +4105,6 @@ const LandingPage = () => {
                  <div className="absolute left-1/2 top-[95%] z-50 hidden lg:block w-[calc(100vw-2rem)] max-w-6xl -translate-x-1/2 -translate-y-1/2 text-left">
                     {/* Capsule Search Bar */}
                     <div ref={landingSearchRef} className="font-sans relative z-50 overflow-visible rounded-[28px] bg-white px-3 pt-3 pb-0">
-                      <FestiveDiya className="pointer-events-none absolute -left-[62px] top-[41px] z-[70] hidden h-14 w-14 -translate-y-1/2 drop-shadow-[0_5px_8px_rgba(0,0,0,0.55)] md:block" label="Left festive diya" />
-                      <FestiveDiya className="pointer-events-none absolute -right-[62px] top-[41px] z-[70] hidden h-14 w-14 -translate-y-1/2 drop-shadow-[0_5px_8px_rgba(0,0,0,0.55)] md:block" label="Right festive diya" />
                       <div className="grid grid-cols-2 lg:flex lg:flex-row items-stretch lg:items-center gap-2 lg:gap-3 w-full relative overflow-visible">
                         
                         {/* Search Input */}

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { bookingAPI, propertyAPI, couponAPI, loadRazorpaySdk } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { downloadCustomerBookingInvoice, getCustomerBookingAmounts } from '../utils/bookingInvoice';
+import BookedUnitPricing from '../components/BookedUnitPricing';
 import {
   CheckCircle2,
   Building2,
@@ -328,6 +329,9 @@ const BookingConfirmation = () => {
                <span className="text-sm font-bold tracking-tight text-charcoal">{property.title}</span>
             </div>
           )}
+          {(booking.unit_name || booking.unit_id) && (
+            <p className="mt-3 text-sm font-semibold text-charcoal">Booked unit: {booking.unit_name || booking.unit_id}</p>
+          )}
         </div>
 
         {!isConfirmed && !isExpired && lockExpiresAt && (
@@ -414,6 +418,7 @@ const BookingConfirmation = () => {
           </div>
           
           <div className="bg-stone/50 rounded-2xl p-6 space-y-4">
+            <BookedUnitPricing booking={booking} category={property?.category || booking.property?.category} />
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Booking Amount</span>
               <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(taxableBookingAmount).toLocaleString('en-IN')}</span>

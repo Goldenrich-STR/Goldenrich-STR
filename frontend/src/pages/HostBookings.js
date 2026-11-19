@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import HostSupportWidget from '../components/HostSupportWidget';
 import HostWorkspaceShell from '../components/HostWorkspaceShell';
+import BookedUnitPricing from '../components/BookedUnitPricing';
 
 const STATUS_BADGE = {
   confirmed: { label: 'Confirmed', cls: 'bg-green-50 text-green-700 border-green-200', Icon: CheckCircle2 },
@@ -468,6 +469,10 @@ const HostBookings = () => {
                                     </div>
 
                                     {/* Stay Schedule */}
+                                    {(b.unit_name || b.unit_id) && (
+                                      <p className="text-sm font-semibold text-charcoal">Booked unit: {b.unit_name || b.unit_id}</p>
+                                    )}
+                                    <BookedUnitPricing booking={b} category={b.property?.category} showTotals />
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                       <div className="flex items-center space-x-3 bg-stone/50 p-3 rounded-2xl border border-sand-150">
                                         <Calendar className="w-5 h-5 text-terracotta/70 shrink-0" />

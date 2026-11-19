@@ -1,4 +1,5 @@
 import { formatAddress } from '../lib/displayLabels';
+import { getBookedUnitPriceRows } from './bookedUnitPricing';
 
 const plainMoney = (value) => Math.round(Number(value || 0)).toLocaleString('en-IN');
 
@@ -273,6 +274,8 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   const customerEmail = userObj.email || booking.guest_email || booking.customer_email || booking.email || 'NA';
   const customerGst = userObj.gst_number || userObj.gst_no || booking.guest_gst_number || booking.customer_gst_number || booking.gst_number || '';
   const roomType = propObj.room_type || propObj.bhk_type || propObj.property_type || booking.room_type || booking.property_type || 'Standard';
+  const bookedUnit = booking.unit_name || booking.unit_id;
+  const unitPriceRows = getBookedUnitPriceRows(booking, propObj.category);
 
   const firstPresent = (...values) => values.find((value) => {
     const text = String(value ?? '').trim();
@@ -500,6 +503,8 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
               Property / Hotel- ${escapeHtml(propertyName)}<br />
               Booking Status - Booking Confirmed<br />
               Room Type - ${escapeHtml(roomType)}
+              ${bookedUnit ? `<br />Booked Unit - ${escapeHtml(bookedUnit)}` : ''}
+              ${unitPriceRows.map(([label, value]) => `<br />${escapeHtml(label)} - ${escapeHtml(value)}`).join('')}
             </td>
           </tr>
         </tbody>

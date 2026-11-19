@@ -373,6 +373,9 @@ const GuestBookings = () => {
                             >
                               {property.title || 'Property'}
                             </h3>
+                            {(b.unit_name || b.unit_id) && (
+                              <p className="mt-1 text-sm font-medium text-charcoal-muted">Booked unit: {b.unit_name || b.unit_id}</p>
+                            )}
                           </div>
                           <span className={`text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center space-x-1 px-3 py-1 border rounded-full ${
                             statusKey === 'confirmed' ? 'bg-green-50 text-green-700 border-green-200' :

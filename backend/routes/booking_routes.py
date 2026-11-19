@@ -1854,6 +1854,8 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
             "property_type": 1,
             "bhk_type": 1,
             "room_type": 1,
+            "units.unit_id": 1,
+            "units.name": 1,
             "category": 1,
             "booking_mode": 1,
             "instant_booking": 1,
@@ -1887,7 +1889,13 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
         },
     ).to_list(length=len(owner_ids) or 1)
     owner_map = {owner.get("user_id"): owner for owner in owners}
+    unit_names = {}
     for prop in props:
+        unit_names[prop["property_id"]] = {
+            unit["unit_id"]: unit.get("name")
+            for unit in (prop.pop("units", None) or [])
+            if isinstance(unit, dict) and unit.get("unit_id")
+        }
         owner = owner_map.get(prop.get("owner_id"))
         if owner:
             prop["host"] = owner
@@ -1895,6 +1903,8 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
     by_id = {p["property_id"]: p for p in props}
     for b in bookings:
         prop = by_id.get(b.get("property_id"))
+        if b.get("unit_id") and not b.get("unit_name"):
+            b["unit_name"] = unit_names.get(b.get("property_id"), {}).get(b["unit_id"]) or b["unit_id"]
         if prop and not b.get("booking_mode"):
             b["booking_mode"] = _normalize_booking_mode(prop)
         b["property"] = prop
