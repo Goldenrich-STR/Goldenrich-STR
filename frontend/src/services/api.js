@@ -147,14 +147,21 @@ export const getImageUrl = (url) => {
   return url;
 };
 
+// formats the server accepts as they are; anything else (AVIF, BMP, TIFF, HEIC...) is converted to JPEG here first
+const SERVER_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
 const compressImageForUpload = (file) => {
-  if (!file || !file.type?.startsWith('image/') || file.type === 'image/gif') {
+  if (!file) return Promise.resolve(file);
+  const extension = String(file.name || '').split('.').pop().toLowerCase();
+  const needsConversion = !SERVER_IMAGE_EXTENSIONS.includes(extension);
+  const looksLikeImage = file.type?.startsWith('image/') || needsConversion;
+  if (!looksLikeImage || (file.type === 'image/gif' && !needsConversion)) {
     return Promise.resolve(file);
   }
 
   const maxBytes = 3.5 * 1024 * 1024;
   const maxDimension = 2400;
-  if (file.size <= maxBytes) {
+  if (file.size <= maxBytes && !needsConversion) {
     return Promise.resolve(file);
   }
 

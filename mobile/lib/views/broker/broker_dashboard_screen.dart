@@ -2671,6 +2671,7 @@ class _VerificationSubmissionSheetState
                             'price_per_night': u.rawPrice,
                             'max_guests': u.maxGuests,
                             'bhk_type': u.bhkType,
+                            'images': u.images,
                             'area_sqft': u.areaSqft,
                           }
                       ],

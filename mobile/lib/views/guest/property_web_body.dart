@@ -611,8 +611,10 @@ class PropertyWebBodyState extends State<PropertyWebBody> {
   };
 
   Widget _tierRibbon(String tier) {
-    final c = _tierStyles[tier];
-    if (c == null) return const SizedBox.shrink();
+    if (tier.isEmpty) return const SizedBox.shrink();
+    // standard / deluxe / premium have their own colour; a typed class (Suite...) gets teal
+    final c = _tierStyles[tier] ??
+        const [Color(0xFF2FB59A), Color(0xFF1B8470), Color(0xFF0F5A4B)];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3.5),
       decoration: BoxDecoration(
@@ -635,6 +637,45 @@ class PropertyWebBodyState extends State<PropertyWebBody> {
                   color: Colors.white)),
         ],
       ),
+    );
+  }
+
+  /// All photos of one unit, swipeable, full screen.
+  void _openUnitGallery(PropertyUnit u) {
+    if (u.images.isEmpty) return;
+    showGeneralDialog<void>(
+      context: context,
+      barrierColor: Colors.black,
+      pageBuilder: (ctx, _, __) {
+        var index = 0;
+        return StatefulBuilder(
+          builder: (ctx, setLocal) => Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              backgroundColor: Colors.black,
+              foregroundColor: Colors.white,
+              title: Text('${u.name}  ${index + 1}/${u.images.length}',
+                  style: GoogleFonts.inter(fontSize: 15)),
+            ),
+            body: PageView.builder(
+              itemCount: u.images.length,
+              onPageChanged: (i) => setLocal(() => index = i),
+              itemBuilder: (_, i) => InteractiveViewer(
+                child: Center(
+                  child: Image.network(
+                    AppConfig.resolveImageUrl(u.images[i]),
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(
+                        Icons.broken_image_outlined,
+                        color: Colors.white54,
+                        size: 48),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -670,16 +711,61 @@ class PropertyWebBodyState extends State<PropertyWebBody> {
             ),
             child: Row(
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: const Color(0xFFD0D0D0)),
+                if (u.images.isNotEmpty)
+                  GestureDetector(
+                    onTap: () => _openUnitGallery(u),
+                    child: Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: Image.network(
+                            AppConfig.resolveImageUrl(u.images.first),
+                            width: 78,
+                            height: 62,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                                width: 78, height: 62, color: Colors.grey.shade200),
+                          ),
+                        ),
+                        Positioned(
+                          left: 4,
+                          bottom: 4,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.65),
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(LucideIcons.images,
+                                    size: 11, color: Colors.white),
+                                const SizedBox(width: 3),
+                                Text('${u.images.length}',
+                                    style: GoogleFonts.inter(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white)),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )
+                else
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.85),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: const Color(0xFFD0D0D0)),
+                    ),
+                    child: const Icon(LucideIcons.bedDouble, size: 19, color: _ink),
                   ),
-                  child: const Icon(LucideIcons.bedDouble, size: 19, color: _ink),
-                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(

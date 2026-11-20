@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlertCircle, Loader2, Video, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { uploadAPI, verificationAPI } from '../services/api';
+import { getImageUrl, uploadAPI, verificationAPI } from '../services/api';
 
 const CHECKLIST = [
   ['host_identity_confirmed', 'Host identity confirmed'],
@@ -354,9 +354,21 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
                 <p className="text-xs font-black text-slate-900">Units to verify on this call: {propertyUnits.length}</p>
                 <ul className="mt-1.5 space-y-1">
                   {propertyUnits.map((unit, index) => (
-                    <li key={unit.unit_id || index} className="flex items-center justify-between gap-2 text-[11px] font-semibold text-slate-700">
-                      <span className="truncate">{unit.name || `Unit ${index + 1}`}</span>
-                      <span className="shrink-0 text-slate-500">{[unit.tier, unit.max_guests ? `${unit.max_guests} guests` : '', unit.area_sqft ? `${unit.area_sqft} sq ft` : ''].filter(Boolean).join(' · ')}</span>
+                    <li key={unit.unit_id || index} className="text-[11px] font-semibold text-slate-700">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate">{unit.name || `Unit ${index + 1}`}</span>
+                        <span className="shrink-0 text-slate-500">{[unit.tier, unit.max_guests ? `${unit.max_guests} guests` : '', unit.area_sqft ? `${unit.area_sqft} sq ft` : ''].filter(Boolean).join(' · ')}</span>
+                      </div>
+                      {Array.isArray(unit.images) && unit.images.length > 0 && (
+                        <div className="mt-1 flex gap-1 overflow-x-auto">
+                          {unit.images.slice(0, 6).map((src, photoIndex) => (
+                            <a key={`${src}-${photoIndex}`} href={getImageUrl(String(src).split('#')[0])} target="_blank" rel="noreferrer" className="block h-9 w-12 shrink-0 overflow-hidden rounded border border-slate-200">
+                              <img src={getImageUrl(String(src).split('#')[0])} alt={`${unit.name} photo ${photoIndex + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                            </a>
+                          ))}
+                          {unit.images.length > 6 && <span className="grid h-9 w-12 shrink-0 place-items-center rounded bg-slate-100 text-[10px] font-black text-slate-600">+{unit.images.length - 6}</span>}
+                        </div>
+                      )}
                     </li>
                   ))}
                 </ul>

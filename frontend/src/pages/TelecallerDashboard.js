@@ -25,6 +25,7 @@ import {
   Video,
   XCircle,
 } from 'lucide-react';
+import PropertyUnitsReview from '../components/PropertyUnitsReview';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiErrorMessage, getImageUrl, uploadAPI, verificationAPI } from '../services/api';
 
@@ -2145,6 +2146,8 @@ function Lead360({ selected, activity, checklist, setChecklist, checklistDone, r
           <Info label="City" value={selected.property?.city || selected.host?.city || '-'} />
           <Info label="Next Step" value={nextAction(selected)} highlight />
         </div>
+        {/* units and each unit's photos, so the telecaller knows what to check on the video call */}
+        {selected.property && <PropertyUnitsReview property={selected.property} className="mt-3" />}
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-700">
           Property listing wizard can continue after BM approval. Current backend exposes listing data through the property profile.
         </p>

@@ -459,6 +459,132 @@ const TimeSelect = ({ value, onChange, format12 = true, placeholder = 'Select ti
 
 const TimePicker12h = ({ value, onChange }) => <TimeSelect value={value} onChange={onChange} format12 />;
 
+const MAX_UNIT_PHOTOS = 10;
+
+/**
+ * Class of a unit: Standard, Deluxe, Premium, every class you added before, and at the bottom
+ * "+ Add your own class" (type Gold or Suite, press Add). The class is saved as plain text on the unit.
+ */
+const UnitClassSelect = ({ value, onChange, customClasses = [], className = '', testid }) => {
+  const known = ['standard', 'deluxe', 'premium'];
+  const cap = (text) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : '');
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const buttonRef = useRef(null);
+  const listRef = useRef(null);
+  const options = [...known, ...customClasses.filter((c) => !known.includes(c.toLowerCase()))];
+
+  const close = () => { setOpen(false); setAdding(false); setDraft(''); };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onScroll = (event) => {
+      if (event.target instanceof Node && listRef.current?.contains(event.target)) return;
+      close();
+    };
+    const onKey = (event) => { if (event.key === 'Escape') close(); };
+    const onPointer = (event) => {
+      if (buttonRef.current?.contains(event.target) || listRef.current?.contains(event.target)) return;
+      close();
+    };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', close);
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onPointer);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onPointer);
+    };
+  }, [open]);
+
+  const pick = (next) => { onChange(next); close(); };
+  const addNew = () => {
+    const text = draft.trim().replace(/\s+/g, ' ').slice(0, 24);
+    if (!text) return;
+    const lower = text.toLowerCase();
+    if (known.includes(lower)) { pick(lower); return; }
+    pick(customClasses.find((c) => c.toLowerCase() === lower) || text);
+  };
+
+  const panelHeight = 260;
+  const spaceBelow = rect ? window.innerHeight - rect.bottom : 0;
+  const openUp = rect && spaceBelow < panelHeight + 12 && rect.top > spaceBelow;
+  const panelStyle = rect ? {
+    position: 'fixed',
+    left: rect.left,
+    width: Math.max(rect.width, 210),
+    zIndex: 1000,
+    ...(openUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
+  } : null;
+
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        ref={buttonRef}
+        onClick={() => {
+          if (open) { close(); return; }
+          if (buttonRef.current) setRect(buttonRef.current.getBoundingClientRect());
+          setOpen(true);
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        data-testid={testid}
+        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left text-sm font-semibold text-charcoal outline-none transition ${open ? 'border-slate-700 ring-2 ring-slate-200' : 'border-slate-300 hover:border-slate-400'}`}
+      >
+        <span className="truncate">{value ? cap(value) : 'Select class'}</span>
+        <ChevronDown className={`h-4 w-4 flex-shrink-0 text-charcoal-light transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && panelStyle && createPortal(
+        <div ref={listRef} role="listbox" style={{ ...panelStyle, maxHeight: panelHeight }} className="overflow-y-auto rounded-xl border border-gray-200 bg-white py-1.5 shadow-xl">
+          {options.map((option) => {
+            const selected = (value || '') === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => pick(option)}
+                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition ${selected ? 'bg-slate-900 font-semibold text-white' : 'text-charcoal hover:bg-gray-100'}`}
+              >
+                <span>{cap(option)}</span>
+                {selected && <Check className="h-4 w-4" />}
+              </button>
+            );
+          })}
+          <div className="mt-1 border-t border-gray-100 px-3 pb-2 pt-2">
+            {adding ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  autoFocus
+                  value={draft}
+                  maxLength={24}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNew(); } }}
+                  placeholder="e.g. Gold, Suite"
+                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm font-semibold text-charcoal outline-none focus:border-slate-600"
+                  aria-label="New class name"
+                />
+                <button type="button" onClick={addNew} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">Add</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setAdding(true)} className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left text-sm font-bold text-[#2563eb] hover:bg-blue-50">
+                <Plus className="h-4 w-4" /> Add your own class
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+};
+
 export const UNIT_TIERS = [
   { value: 'standard', label: 'Standard' },
   { value: 'deluxe', label: 'Deluxe' },
@@ -619,6 +745,7 @@ const HostListProperty = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [photoMode, setPhotoMode] = useState('property'); // 'property' | 'units'
   const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
   const [imageUrlDraft, setImageUrlDraft] = useState('');
   const [paying, setPaying] = useState(false);
@@ -802,6 +929,7 @@ const HostListProperty = () => {
               max_guests: u.max_guests !== null && u.max_guests !== undefined ? String(u.max_guests) : '2',
               bhk_type: u.bhk_type || '',
               tier: u.tier || '',
+              images: Array.isArray(u.images) ? u.images : [],
               price_per_night: u.price_per_night !== null && u.price_per_night !== undefined ? String(u.price_per_night) : '',
             })),
             price_per_night: p.price_per_night !== null && p.price_per_night !== undefined ? String(p.price_per_night) : '',
@@ -909,6 +1037,7 @@ const HostListProperty = () => {
       max_guests: '2',
       bhk_type: unitBhkOptions[0]?.value || '',
       tier: 'standard',
+      images: [...classPhotosOf('standard')],
       price_per_night: '',
     };
     update({ units: [...(form.units || []), next] });
@@ -918,13 +1047,75 @@ const HostListProperty = () => {
   const submitNewUnit = () => {
     if (!newUnit.name.trim()) { setError('Enter a name for the new unit'); return; }
     if (!Number(newUnit.price_per_night)) { setError('Enter a price for the new unit'); return; }
-    update({ units: [...(form.units || []), { unit_id: makeUnitId(), bhk_type: unitBhkOptions[0]?.value || '', ...newUnit, name: newUnit.name.trim() }] });
+    update({ units: [...(form.units || []), { unit_id: makeUnitId(), bhk_type: unitBhkOptions[0]?.value || '', ...newUnit, images: [...classPhotosOf(newUnit.tier)], name: newUnit.name.trim() }] });
     setNewUnit({ name: '', area_sqft: '', max_guests: '2', tier: 'standard', price_per_night: '' });
     setError('');
   };
 
   const updateUnit = (unitId, patch) => {
-    update({ units: (form.units || []).map((u) => (u.unit_id === unitId ? { ...u, ...patch } : u)) });
+    // moving a unit to another class gives it that class's photos
+    const others = (form.units || []).filter((u) => u.unit_id !== unitId);
+    const next = patch.tier !== undefined && !('images' in patch)
+      ? { ...patch, images: [...classPhotosOf(patch.tier, others)] }
+      : patch;
+    update({ units: (form.units || []).map((u) => (u.unit_id === unitId ? { ...u, ...next } : u)) });
+  };
+
+  // classes the host typed on any unit (beyond Standard / Deluxe / Premium), so every unit can reuse them
+  const customUnitClasses = useMemo(() => {
+    const known = UNIT_TIERS.map((t) => t.value);
+    return Array.from(new Set([...(form.units || []).map((u) => u.tier), newUnit.tier].filter((t) => t && !known.includes(t))));
+  }, [form.units, newUnit.tier]);
+
+  // Photos belong to a class (Deluxe, Premium...). Every unit of that class shows the same photos,
+  // so the host uploads them once. They are stored on each unit, so guests and reviewers read them unchanged.
+  const classKey = (tier) => tier || 'standard';
+  const classPhotosOf = (tier, units = form.units || []) => {
+    const holder = units.find((u) => classKey(u.tier) === classKey(tier) && Array.isArray(u.images) && u.images.length > 0);
+    return holder ? holder.images : [];
+  };
+  const setClassPhotos = (tier, images) => {
+    update({ units: (form.units || []).map((u) => (classKey(u.tier) === classKey(tier) ? { ...u, images } : u)) });
+  };
+  const unitClasses = useMemo(() => {
+    const order = ['standard', 'deluxe', 'premium'];
+    const keys = Array.from(new Set((form.units || []).map((u) => classKey(u.tier))));
+    keys.sort((x, y) => {
+      const ix = order.indexOf(x); const iy = order.indexOf(y);
+      return (ix === -1 ? 99 : ix) - (iy === -1 ? 99 : iy) || x.localeCompare(y);
+    });
+    return keys.map((key) => ({
+      key,
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      units: (form.units || []).filter((u) => classKey(u.tier) === key),
+    }));
+  }, [form.units]);
+
+  const [unitPhotoBusy, setUnitPhotoBusy] = useState('');
+  const handleClassPhotos = async (tier, fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const existing = classPhotosOf(tier);
+    const room = Math.max(0, MAX_UNIT_PHOTOS - existing.length);
+    if (room === 0) { setError(`Each class can have up to ${MAX_UNIT_PHOTOS} photos`); return; }
+    setUnitPhotoBusy(classKey(tier));
+    setError('');
+    const added = [];
+    try {
+      for (const file of files.slice(0, room)) {
+        const data = await uploadAPI.uploadImage(file);
+        if (data?.url && !existing.includes(data.url) && !added.includes(data.url)) added.push(data.url);
+      }
+      if (added.length) setClassPhotos(tier, [...existing, ...added]);
+      if (files.length > room) setError(`Only ${room} more photo(s) fit for this class (max ${MAX_UNIT_PHOTOS}).`);
+    } catch (err) {
+      setError(formatError(err, 'Photo upload failed'));
+    } finally {
+      setUnitPhotoBusy('');
+    }
+  };
+  const removeClassPhoto = (tier, index) => {
+    setClassPhotos(tier, classPhotosOf(tier).filter((_, i) => i !== index));
   };
 
   const removeUnit = (unitId) => {
@@ -1575,6 +1766,7 @@ const HostListProperty = () => {
           max_guests: Number(u.max_guests) || 1,
           bhk_type: u.bhk_type || null,
           tier: u.tier || null,
+          images: Array.isArray(u.images) && u.images.length ? u.images : classPhotosOf(u.tier),
           price_per_night: u.price_per_night ? Number(u.price_per_night) : null,
         }))
       : [];
@@ -2086,12 +2278,12 @@ const HostListProperty = () => {
                           placeholder="e.g. Deluxe Room 101"
                         />
                         <div className="mt-3">
-                          <Select
-                            label="Tier"
+                          <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-charcoal">Class</span>
+                          <UnitClassSelect
                             testid={`basics-unit-tier-${index}`}
                             value={unit.tier || 'standard'}
                             onChange={(v) => updateUnit(unit.unit_id, { tier: v })}
-                            options={UNIT_TIERS}
+                            customClasses={customUnitClasses}
                           />
                         </div>
                         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -2505,12 +2697,18 @@ const HostListProperty = () => {
                         {(form.units || []).map((unit, index) => (
                           <div key={unit.unit_id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-charcoal">{unit.name || `Unit ${index + 1}`}</p>
+                              <input
+                                type="text"
+                                value={unit.name || ""}
+                                onChange={(e) => updateUnit(unit.unit_id, { name: e.target.value })}
+                                placeholder={`Unit ${index + 1} name`}
+                                maxLength={60}
+                                aria-label={`Name of unit ${index + 1}`}
+                                data-testid={`pricing-unit-name-${index}`}
+                                className="w-full max-w-[320px] rounded-md border border-transparent bg-transparent px-1.5 py-0.5 -ml-1.5 text-sm font-bold text-charcoal outline-none transition hover:border-slate-300 focus:border-slate-500 focus:bg-white"
+                              />
                               <p className="text-[11px] font-semibold text-slate-500">{unit.area_sqft ? `${unit.area_sqft} sq.ft · ` : ''}{unit.max_guests} guests</p>
-                              <select value={unit.tier || ''} onChange={(e) => updateUnit(unit.unit_id, { tier: e.target.value })} className="mt-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-charcoal" aria-label="Unit tier" data-testid={`pricing-unit-tier-${index}`}>
-                                <option value="">No tier</option>
-                                {UNIT_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                              </select>
+                              <UnitClassSelect allowNone className="mt-1 !py-1 !text-[11px]" testid={`pricing-unit-tier-${index}`} value={unit.tier || ''} onChange={(v) => updateUnit(unit.unit_id, { tier: v })} customClasses={customUnitClasses} />
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-sm font-bold text-slate-500">₹</span>
@@ -2533,9 +2731,7 @@ const HostListProperty = () => {
                           <input value={newUnit.name} onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })} placeholder="Unit name" className="col-span-2 rounded-lg border px-3 py-2 text-sm" data-testid="new-unit-name" />
                           <input type="number" min="0" value={newUnit.area_sqft} onChange={(e) => setNewUnit({ ...newUnit, area_sqft: e.target.value })} placeholder="Area sq.ft" className="rounded-lg border px-3 py-2 text-sm" />
                           <input type="number" min="1" value={newUnit.max_guests} onChange={(e) => setNewUnit({ ...newUnit, max_guests: e.target.value })} placeholder="Guests" className="rounded-lg border px-3 py-2 text-sm" />
-                          <select value={newUnit.tier} onChange={(e) => setNewUnit({ ...newUnit, tier: e.target.value })} className="rounded-lg border px-3 py-2 text-sm" aria-label="Tier">
-                            {UNIT_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                          </select>
+                          <UnitClassSelect value={newUnit.tier} onChange={(v) => setNewUnit({ ...newUnit, tier: v })} customClasses={customUnitClasses} />
                           <input type="number" min="0" value={newUnit.price_per_night} onChange={(e) => setNewUnit({ ...newUnit, price_per_night: e.target.value })} placeholder="Price" className="rounded-lg border px-3 py-2 text-sm" data-testid="new-unit-price" />
                         </div>
                         <button type="button" onClick={submitNewUnit} className="mt-3 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white" data-testid="new-unit-add">Add unit</button>
@@ -3010,6 +3206,82 @@ const HostListProperty = () => {
           {currentStep === 'photos' && (
             <div className="space-y-4" data-testid="step-photos-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Add photos</h2>
+              {unitsActive && (form.units || []).length > 0 && (
+                <div className="mb-1 flex flex-wrap gap-2" role="tablist" aria-label="Photo type">
+                  {[
+                    ['property', 'Property photos', 'Shared by the whole property'],
+                    ['units', 'Room photos', 'One set of photos for each class (Deluxe, Premium...)'],
+                  ].map(([key, label, hint]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={photoMode === key}
+                      onClick={() => setPhotoMode(key)}
+                      className={`rounded-2xl border px-4 py-2.5 text-left transition ${photoMode === key ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-charcoal hover:border-slate-400'}`}
+                    >
+                      <span className="block text-sm font-bold">{label}</span>
+                      <span className={`block text-[11px] ${photoMode === key ? 'text-white/70' : 'text-charcoal-light'}`}>{hint}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {unitsActive && photoMode === 'units' && (form.units || []).length > 0 ? (
+                <div className="space-y-4" data-testid="unit-photos">
+                  <p className="text-sm text-charcoal-light">
+                    Add photos once for each class. Every room of that class shows the same photos, so Deluxe photos appear on all your Deluxe rooms. Up to {MAX_UNIT_PHOTOS} photos per class. Property photos stay in the other tab.
+                  </p>
+                  {unitClasses.map((group) => {
+                    const photos = classPhotosOf(group.key);
+                    const busy = unitPhotoBusy === group.key;
+                    return (
+                      <div key={group.key} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-charcoal">{group.label}</p>
+                            <p className="text-[11px] font-semibold text-charcoal-light">
+                              {group.units.length} room{group.units.length === 1 ? '' : 's'}: {group.units.map((u) => u.name || 'Unnamed').join(', ')} · {photos.length} photo{photos.length === 1 ? '' : 's'}
+                            </p>
+                          </div>
+                          <label className={`inline-flex cursor-pointer items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-black ${busy ? 'pointer-events-none opacity-60' : ''}`}>
+                            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            <span>{busy ? 'Uploading...' : `Add ${group.label} photos`}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              data-testid={`class-photo-input-${group.key}`}
+                              onChange={(e) => { handleClassPhotos(group.key, e.target.files); e.target.value = ''; }}
+                            />
+                          </label>
+                        </div>
+                        {photos.length > 0 ? (
+                          <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-5">
+                            {photos.map((src, photoIndex) => (
+                              <div key={src + photoIndex} className="group relative aspect-[4/3] overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                                <img src={getImageUrl(String(src).split('#')[0])} alt={`${group.label} photo ${photoIndex + 1}`} className="h-full w-full object-cover" />
+                                {photoIndex === 0 && <span className="absolute left-1 top-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">Cover</span>}
+                                <button
+                                  type="button"
+                                  onClick={() => removeClassPhoto(group.key, photoIndex)}
+                                  className="absolute right-1 top-1 rounded-full bg-white/90 p-1.5 text-red-600 shadow-sm hover:bg-red-50"
+                                  aria-label={`Remove photo ${photoIndex + 1} of ${group.label}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-3 rounded-lg border border-dashed border-gray-200 p-4 text-center text-xs text-charcoal-light">No {group.label} photos yet. Guests will see the property photos for these rooms.</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+              <>
               <p className="text-sm text-charcoal-light">
                 Upload device photos or paste image URLs. The first photo is your cover. Device uploads are automatically watermarked before they appear here, while pasted URLs display as provided.
               </p>
@@ -3272,6 +3544,8 @@ const HostListProperty = () => {
                   </div>
                 </div>
               </div>
+              </>
+              )}
             </div>
           )}
 

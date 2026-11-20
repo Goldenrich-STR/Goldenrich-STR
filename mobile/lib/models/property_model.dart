@@ -7,7 +7,8 @@ class PropertyUnit {
   final double? areaSqft;
   final int maxGuests;
   final String bhkType;
-  final String tier; // standard | deluxe | premium | ''
+  final String tier; // standard | deluxe | premium | a class the host typed | ''
+  final List<String> images; // this unit's own photos
   final double price; // what guests pay today (price rules included)
   final double rawPrice; // the price the host set; used when editing
 
@@ -20,6 +21,7 @@ class PropertyUnit {
     required this.tier,
     required this.price,
     double? rawPrice,
+    this.images = const [],
   }) : rawPrice = rawPrice ?? price;
 
   factory PropertyUnit.fromJson(Map<String, dynamic> json) {
@@ -30,6 +32,10 @@ class PropertyUnit {
       maxGuests: (json['max_guests'] as num?)?.toInt() ?? 2,
       bhkType: (json['bhk_type'] ?? '').toString(),
       tier: (json['tier'] ?? '').toString(),
+      images: ((json['images'] as List?) ?? const [])
+          .map((e) => e.toString().split('#').first)
+          .where((e) => e.trim().isNotEmpty)
+          .toList(),
       price: ((json['display_price_per_night'] ?? json['price_per_night'])
                   as num?)
               ?.toDouble() ??

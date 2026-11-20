@@ -1,4 +1,5 @@
 import React from 'react';
+import { getImageUrl } from '../services/api';
 
 /**
  * Units of a property, for the people who verify listings (broker, RM, branch manager, admin).
@@ -74,6 +75,25 @@ const PropertyUnitsReview = ({ property, className = '' }) => {
                     <div><dt className="font-bold uppercase text-slate-400">Configuration</dt><dd className="font-black text-slate-900">{unit.bhk_type ? String(unit.bhk_type).replace(/_/g, ' ') : '-'}</dd></div>
                     <div><dt className="font-bold uppercase text-slate-400">Area</dt><dd className="font-black text-slate-900">{Number(unit.area_sqft) > 0 ? `${unit.area_sqft} sq ft` : '-'}</dd></div>
                   </dl>
+                  {/* this unit's own photos: the reviewer checks the unit against them */}
+                  {Array.isArray(unit.images) && unit.images.length > 0 ? (
+                    <div className="mt-3">
+                      <p className="mb-1 text-[10px] font-bold uppercase text-slate-400">Unit photos ({unit.images.length})</p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {unit.images.slice(0, 8).map((src, photoIndex) => {
+                          const url = getImageUrl(String(src).split('#')[0]);
+                          return (
+                            <a key={`${src}-${photoIndex}`} href={url} target="_blank" rel="noreferrer" className="block h-14 w-[74px] overflow-hidden rounded-md border border-slate-200 bg-slate-50" title={`${unit.name} photo ${photoIndex + 1}`}>
+                              <img src={url} alt={`${unit.name} photo ${photoIndex + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                            </a>
+                          );
+                        })}
+                        {unit.images.length > 8 && <span className="grid h-14 w-[74px] place-items-center rounded-md bg-slate-100 text-[11px] font-black text-slate-600">+{unit.images.length - 8}</span>}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="mt-2 text-[11px] font-semibold text-slate-400">No separate photos for this unit.</p>
+                  )}
                 </div>
               );
             })}

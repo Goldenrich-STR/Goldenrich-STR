@@ -12,6 +12,8 @@ import '../../providers/property_provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme.dart';
 import '../../models/property_model.dart';
+import '../../config.dart';
+import '../../services/api_service.dart';
 
 class HostListPropertyScreen extends StatefulWidget {
   final PropertyModel? property;
@@ -619,6 +621,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                 'price': u.price.text,
                 'bhk': u.bhk,
                 'tier': u.tier,
+                'images': u.images,
               })
           .toList(),
       'hasCook': _hasCook,
@@ -706,6 +709,9 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                   price: (m['price'] ?? '').toString(),
                   bhk: (m['bhk'] ?? '').toString(),
                   tier: (m['tier'] ?? 'standard').toString(),
+                  images: ((m['images'] as List?) ?? const [])
+                      .map((e) => e.toString())
+                      .toList(),
                 )));
         }
         _hasCook = draft['hasCook'] ?? _hasCook;
@@ -1557,6 +1563,7 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
               'max_guests': int.tryParse(u.guests.text.trim()) ?? 1,
               'bhk_type': u.bhk.isEmpty ? null : u.bhk,
               'tier': u.tier.isEmpty ? null : u.tier,
+              'images': u.images,
               'price_per_night': double.tryParse(u.price.text.trim()),
             })
         .toList();
@@ -3643,9 +3650,13 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
           ),
           if (_hasUnits) ...[
             for (var i = 0; i < _units.length; i++) _buildUnitCard(i),
+            if (_units.isNotEmpty) _buildClassPhotos(),
             OutlinedButton.icon(
-              onPressed: () => setState(() => _units.add(
-                  _UnitDraft.blank(_bhkTypesByCategory[_category]?.first['value'] ?? ''))),
+              onPressed: () => setState(() {
+                final blank = _UnitDraft.blank(_bhkTypesByCategory[_category]?.first['value'] ?? '');
+                blank.images.addAll(_classPhotos('standard'));
+                _units.add(blank);
+              }),
               icon: const Icon(Icons.add, size: 18),
               label: const Text('Add a unit'),
               style: OutlinedButton.styleFrom(
@@ -3663,6 +3674,224 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
                     TextStyle(fontSize: 12, color: AppTheme.charcoalLight)),
           ],
         ],
+      ],
+    );
+  }
+
+  String _unitPhotoBusy = '';
+
+  /// Classes the host typed on any unit (beyond Standard / Deluxe / Premium).
+  List<String> _customUnitClasses() {
+    final out = <String>[];
+    for (final u in _units) {
+      if (u.tier.isNotEmpty && !_unitTiers.contains(u.tier) && !out.contains(u.tier)) {
+        out.add(u.tier);
+      }
+    }
+    return out;
+  }
+
+  Future<void> _addCustomUnitClass(_UnitDraft u) async {
+    final controller = TextEditingController();
+    final label = await showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Add your own class'),
+        content: TextField(
+          controller: controller,
+          maxLength: 24,
+          autofocus: true,
+          decoration: const InputDecoration(hintText: 'e.g. Suite, Villa wing'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, controller.text.trim()),
+              child: const Text('Add')),
+        ],
+      ),
+    );
+    if (label != null && label.isNotEmpty) setState(() => _moveUnitToClass(u, label));
+  }
+
+  // Photos belong to a class (Deluxe, Premium...): upload once, every unit of that class shows them.
+  String _classOf(_UnitDraft u) => u.tier.isEmpty ? 'standard' : u.tier;
+
+  List<String> _classPhotos(String cls) {
+    for (final u in _units) {
+      if (_classOf(u) == cls && u.images.isNotEmpty) return u.images;
+    }
+    return <String>[];
+  }
+
+  void _setClassPhotos(String cls, List<String> images) {
+    for (final u in _units) {
+      if (_classOf(u) == cls) {
+        u.images
+          ..clear()
+          ..addAll(images);
+      }
+    }
+  }
+
+  /// A unit moved to another class takes that class's photos.
+  void _moveUnitToClass(_UnitDraft u, String tier) {
+    u.tier = tier;
+    final others = _units.where((o) => !identical(o, u) && _classOf(o) == _classOf(u));
+    final source = others.where((o) => o.images.isNotEmpty);
+    u.images
+      ..clear()
+      ..addAll(source.isEmpty ? const <String>[] : source.first.images);
+  }
+
+  List<String> _unitClassKeys() {
+    const order = ['standard', 'deluxe', 'premium'];
+    final keys = <String>{for (final u in _units) _classOf(u)}.toList();
+    keys.sort((a, b) {
+      final ia = order.indexOf(a), ib = order.indexOf(b);
+      return (ia == -1 ? 99 : ia).compareTo(ib == -1 ? 99 : ib);
+    });
+    return keys;
+  }
+
+  /// Picks photos for one class and uploads them straight away (same endpoint the website uses).
+  Future<void> _pickClassPhotos(String cls) async {
+    final existing = List<String>.from(_classPhotos(cls));
+    final room = 10 - existing.length;
+    if (room <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Each class can have up to 10 photos')));
+      return;
+    }
+    final picked = await ImagePicker().pickMultiImage(imageQuality: 85);
+    if (picked.isEmpty) return;
+    setState(() => _unitPhotoBusy = cls);
+    try {
+      for (final file in picked.take(room)) {
+        final form = FormData.fromMap({
+          'file': MultipartFile.fromBytes(await file.readAsBytes(),
+              filename: file.name),
+        });
+        final res = await ApiService().dio.post('/upload/image', data: form);
+        final url = res.data['url']?.toString();
+        if (url != null && url.isNotEmpty && !existing.contains(url)) {
+          existing.add(url);
+        }
+      }
+      _setClassPhotos(cls, existing);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Photo upload failed. Please try again.')));
+      }
+    }
+    if (mounted) setState(() => _unitPhotoBusy = '');
+  }
+
+  /// "Room photos": one block per class, shared by every room of that class.
+  Widget _buildClassPhotos() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 16),
+        const Text('Room photos',
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 4),
+        const Text(
+            'Add photos once for each class. Every room of that class shows the same photos, so Deluxe photos appear on all your Deluxe rooms.',
+            style: TextStyle(fontSize: 12, color: AppTheme.charcoalLight)),
+        const SizedBox(height: 10),
+        for (final cls in _unitClassKeys())
+          Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    '${cls[0].toUpperCase()}${cls.substring(1)} · ${_units.where((u) => _classOf(u) == cls).length} room(s)',
+                    style: const TextStyle(
+                        fontSize: 13.5, fontWeight: FontWeight.w700)),
+                Text(
+                    _units
+                        .where((u) => _classOf(u) == cls)
+                        .map((u) => u.name.text.trim().isEmpty ? 'Unnamed' : u.name.text.trim())
+                        .join(', '),
+                    style: const TextStyle(
+                        fontSize: 11, color: AppTheme.charcoalLight)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: [
+                    for (var i = 0; i < _classPhotos(cls).length; i++)
+                      Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              AppConfig.resolveImageUrl(_classPhotos(cls)[i]),
+                              width: 66,
+                              height: 66,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                  width: 66,
+                                  height: 66,
+                                  color: Colors.grey.shade200),
+                            ),
+                          ),
+                          Positioned(
+                            top: 2,
+                            right: 2,
+                            child: GestureDetector(
+                              onTap: () => setState(() {
+                                final next = List<String>.from(_classPhotos(cls))
+                                  ..removeAt(i);
+                                _setClassPhotos(cls, next);
+                              }),
+                              child: Container(
+                                padding: const EdgeInsets.all(3),
+                                decoration: const BoxDecoration(
+                                    color: Colors.white, shape: BoxShape.circle),
+                                child: Icon(Icons.close,
+                                    size: 12, color: Colors.red.shade700),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    GestureDetector(
+                      onTap: _unitPhotoBusy == cls
+                          ? null
+                          : () => _pickClassPhotos(cls),
+                      child: Container(
+                        width: 66,
+                        height: 66,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppTheme.border),
+                          color: const Color(0xFFF7F7F7),
+                        ),
+                        child: _unitPhotoBusy == cls
+                            ? const Center(
+                                child: SizedBox(
+                                    width: 18,
+                                    height: 18,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2)))
+                            : const Icon(Icons.add_a_photo_outlined,
+                                color: AppTheme.charcoalLight),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
@@ -3742,39 +3971,50 @@ class _HostListPropertyScreenState extends State<HostListPropertyScreen> {
               onChanged: (v) => setState(() => u.bhk = v ?? ''),
             ),
           const SizedBox(height: 10),
-          const Text('Tier',
+          const Text('Class',
               style: TextStyle(fontSize: 11, color: AppTheme.charcoalLight)),
           const SizedBox(height: 6),
-          Row(
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
-              for (final t in _unitTiers)
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => u.tier = t),
-                    child: Container(
-                      margin: EdgeInsets.only(right: t == 'premium' ? 0 : 8),
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: u.tier == t
-                            ? const Color(0xFF1B1924)
-                            : Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(
-                            color: u.tier == t
-                                ? const Color(0xFF1B1924)
-                                : AppTheme.border),
-                      ),
-                      child: Text('${t[0].toUpperCase()}${t.substring(1)}',
-                          style: TextStyle(
-                              fontSize: 12.5,
-                              fontWeight: FontWeight.w600,
-                              color: u.tier == t
-                                  ? Colors.white
-                                  : AppTheme.charcoal)),
+              for (final t in [..._unitTiers, ..._customUnitClasses()])
+                GestureDetector(
+                  onTap: () => setState(() => _moveUnitToClass(u, t)),
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: u.tier == t ? const Color(0xFF1B1924) : Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: u.tier == t
+                              ? const Color(0xFF1B1924)
+                              : AppTheme.border),
                     ),
+                    child: Text('${t[0].toUpperCase()}${t.substring(1)}',
+                        style: TextStyle(
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w600,
+                            color: u.tier == t ? Colors.white : AppTheme.charcoal)),
                   ),
                 ),
+              GestureDetector(
+                onTap: () => _addCustomUnitClass(u),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: AppTheme.border),
+                  ),
+                  child: const Text('+ Your own class',
+                      style: TextStyle(
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.charcoal)),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -6386,6 +6626,7 @@ class _UnitDraft {
   final TextEditingController price;
   String bhk;
   String tier;
+  final List<String> images; // uploaded URLs of this unit's own photos
 
   _UnitDraft({
     required this.unitId,
@@ -6395,7 +6636,9 @@ class _UnitDraft {
     required String price,
     required this.bhk,
     required this.tier,
-  })  : name = TextEditingController(text: name),
+    List<String>? images,
+  })  : images = images ?? <String>[],
+        name = TextEditingController(text: name),
         area = TextEditingController(text: area),
         guests = TextEditingController(text: guests),
         price = TextEditingController(text: price);
@@ -6418,6 +6661,7 @@ class _UnitDraft {
         price: u.rawPrice.round().toString(),
         bhk: u.bhkType,
         tier: u.tier,
+        images: List<String>.from(u.images),
       );
 
   void dispose() {

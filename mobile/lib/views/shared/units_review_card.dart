@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../config.dart';
+
 /// Units of a property for the people who verify listings (broker, RM, branch
 /// manager). Read-only, same wording as the website review screens. Flags a
 /// unit that is missing a name, price or guest count.
@@ -153,6 +155,41 @@ class UnitsReviewCard extends StatelessWidget {
                               ? '${u['area_sqft']} sq ft'
                               : '-'),
                     ]),
+                    // this unit's own photos, so the reviewer checks the unit against them
+                    if (((u['images'] as List?) ?? const []).isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 54,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: [
+                            for (final img in (u['images'] as List).take(8))
+                              Container(
+                                margin: const EdgeInsets.only(right: 6),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Image.network(
+                                    AppConfig.resolveImageUrl(
+                                        img.toString().split('#').first),
+                                    width: 72,
+                                    height: 54,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => Container(
+                                        width: 72,
+                                        height: 54,
+                                        color: Colors.grey.shade200),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                    ] else
+                      Padding(
+                        padding: const EdgeInsets.only(top: 6),
+                        child: Text('No separate photos for this unit.',
+                            style: GoogleFonts.inter(fontSize: 11, color: _muted)),
+                      ),
                   ],
                 ),
               ),
