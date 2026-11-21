@@ -25,6 +25,7 @@ import {
   Video,
   XCircle,
 } from 'lucide-react';
+import PropertyUnitsReview from '../components/PropertyUnitsReview';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiErrorMessage, getImageUrl, uploadAPI, verificationAPI } from '../services/api';
 
@@ -60,6 +61,18 @@ const CHECKLIST = [
   ['bank_document_checked', 'Bank document checked'],
   ['video_completed', 'Video verification completed'],
 ];
+
+/** The call checklist for one lead: when the property has units, each unit gets its own line before "Video verification completed". */
+const checklistFor = (lead) => {
+  const property = lead?.property;
+  const units = property?.has_units && Array.isArray(property.units) ? property.units : [];
+  if (!units.length) return CHECKLIST;
+  const unitItems = units.map((unit, index) => [
+    `unit_${unit.unit_id || `unit_${index + 1}`}_verified`,
+    `Unit verified: ${unit.name || `Unit ${index + 1}`}`,
+  ]);
+  return [...CHECKLIST.slice(0, -1), ...unitItems, CHECKLIST[CHECKLIST.length - 1]];
+};
 
 const CALL_CHECKLISTS = {
   first_call: [
@@ -120,6 +133,8 @@ const leadPhone = (lead) => lead?.host?.phone || lead?.host?.mobile || lead?.hos
 const leadEmail = (lead) => lead?.host?.email || '-';
 const userPhone = (user) => user?.phone || user?.mobile || user?.phone_number || user?.registered_phone || user?.contact_number || '-';
 const propertyTitle = (lead) => lead?.property?.title || lead?.property?.property_name || 'No property yet';
+const unitCountOf = (lead) => (lead?.property?.has_units && Array.isArray(lead.property.units) ? lead.property.units.length : 0);
+const unitsLabel = (lead) => { const count = unitCountOf(lead); return count > 0 ? ` · ${count} unit${count === 1 ? '' : 's'}` : ''; };
 const caseOf = (lead) => lead?.verification_case || lead;
 const stageOf = (lead) => lead?.lead_stage || caseOf(lead)?.current_stage || 'HOST_REGISTERED';
 const isVideoVerifiedLead = (lead) => {
@@ -523,8 +538,9 @@ const TelecallerDashboard = () => {
 
   const selectedCase = caseOf(selected);
   const selectedCaseId = selectedCase?.verification_id;
-  const checklistDone = CHECKLIST.filter(([key]) => ['yes', 'true', true].includes(checklist[key])).length;
-  const canSubmitBm = selectedCaseId && checklistDone === CHECKLIST.length;
+  const activeChecklist = checklistFor(selected);
+  const checklistDone = activeChecklist.filter(([key]) => ['yes', 'true', true].includes(checklist[key])).length;
+  const canSubmitBm = selectedCaseId && checklistDone === activeChecklist.length;
   const activeCallChecklist = CALL_CHECKLISTS[callFlowType] || CALL_CHECKLISTS.first_call;
   const callChecklistDone = activeCallChecklist.filter(([key]) => callChecklist[key]).length;
   const callDuration = `${String(Math.floor(callSeconds / 60)).padStart(2, '0')}:${String(callSeconds % 60).padStart(2, '0')}`;
@@ -1012,7 +1028,7 @@ const TelecallerDashboard = () => {
       setNotice('This lead does not have a verification case yet.');
       return;
     }
-    const failedLabels = CHECKLIST
+    const failedLabels = checklistFor(videoCallLead)
       .filter(([key]) => !['yes', 'true', true].includes(checklist[key]))
       .map(([, label]) => label);
     const shouldReject = failedLabels.length > 6;
@@ -1329,7 +1345,7 @@ const TelecallerDashboard = () => {
                                   <button type="button" onClick={() => openLead(lead)} className="block max-w-full text-left">
                                     <p className="truncate font-black text-slate-950">{hostName(lead)}</p>
                                     <p className="truncate text-[11px] font-semibold text-slate-500">{c?.verification_id || lead.lead_id}</p>
-                                    <p className="truncate text-xs text-slate-400">{propertyTitle(lead)}</p>
+                                    <p className="truncate text-xs text-slate-400">{propertyTitle(lead)}{unitCountOf(lead) > 0 && <span className="ml-1 rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-black text-blue-700">{unitCountOf(lead)} unit{unitCountOf(lead) === 1 ? "" : "s"}</span>}</p>
                                     {compactTable && (
                                       <p className="mt-1 truncate text-[10px] font-black uppercase tracking-wider text-slate-400">
                                         {sourceRoleOf(lead)} / {sourceNameOf(lead)} / {sourceCodeOf(lead)}
@@ -1495,7 +1511,7 @@ const TelecallerDashboard = () => {
                 <div>
                   <p className="text-[11px] font-black uppercase tracking-widest text-blue-600">Video Verification</p>
                   <h2 className="mt-1 text-lg font-black">{hostName(videoModalLead)}</h2>
-                  <p className="text-xs font-semibold text-slate-500">{propertyTitle(videoModalLead)}</p>
+                  <p className="text-xs font-semibold text-slate-500">{propertyTitle(videoModalLead)}{unitsLabel(videoModalLead)}</p>
                 </div>
                 <button type="button" onClick={() => setVideoModalLead(null)} className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50">
                   <XCircle className="h-5 w-5" />
@@ -1573,7 +1589,7 @@ const TelecallerDashboard = () => {
                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
                     <div className="min-w-0">
                       <p className="text-sm font-black text-slate-900">Video Verification in Progress</p>
-                      <p className="truncate text-xs font-semibold text-slate-500">{hostName(videoCallLead)} / {propertyTitle(videoCallLead)}</p>
+                      <p className="truncate text-xs font-semibold text-slate-500">{hostName(videoCallLead)} / {propertyTitle(videoCallLead)}{unitsLabel(videoCallLead)}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
@@ -1640,11 +1656,11 @@ const TelecallerDashboard = () => {
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <div>
                     <p className="text-sm font-black text-slate-900">Verification Checklist</p>
-                    <p className="text-xs font-bold text-slate-500">{checklistDone}/{CHECKLIST.length}</p>
+                    <p className="text-xs font-bold text-slate-500">{checklistDone}/{activeChecklist.length}</p>
                   </div>
                 </div>
                 <div className="space-y-1.5">
-                  {CHECKLIST.map(([key, label]) => (
+                  {activeChecklist.map(([key, label]) => (
                     <label key={key} className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-700">
                       <input
                         type="checkbox"
@@ -1701,12 +1717,12 @@ const TelecallerDashboard = () => {
                     disabled={saving || !c?.verification_id}
                     onClick={completeVideoVerification}
                     className={`rounded-lg px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50 ${
-                      CHECKLIST.filter(([key]) => !['yes', 'true', true].includes(checklist[key])).length > 6
+                      activeChecklist.filter(([key]) => !['yes', 'true', true].includes(checklist[key])).length > 6
                         ? 'bg-red-600'
                         : 'bg-emerald-600'
                     }`}
                   >
-                    {CHECKLIST.filter(([key]) => !['yes', 'true', true].includes(checklist[key])).length > 6
+                    {activeChecklist.filter(([key]) => !['yes', 'true', true].includes(checklist[key])).length > 6
                       ? 'Reject Verification'
                       : 'Complete Verification'}
                   </button>
@@ -2107,9 +2123,9 @@ function Lead360({ selected, activity, checklist, setChecklist, checklistDone, r
         </div>
       </Panel>}
 
-      {showChecklist && <Panel title="Final Telecaller Checklist" subtitle={`${checklistDone}/${CHECKLIST.length} completed`}>
+      {showChecklist && <Panel title="Final Telecaller Checklist" subtitle={`${checklistDone}/${activeChecklist.length} completed`}>
         <div className="space-y-2">
-          {CHECKLIST.map(([key, label]) => (
+          {activeChecklist.map(([key, label]) => (
             <label key={key} className="flex items-center justify-between rounded-lg border border-slate-200 px-3 py-2">
               <span className="text-sm font-semibold">{label}</span>
               <input type="checkbox" checked={['yes', 'true', true].includes(checklist[key])} onChange={(e) => setChecklist({ ...checklist, [key]: e.target.checked ? 'yes' : 'no' })} className="h-4 w-4 accent-blue-600" />
@@ -2130,6 +2146,8 @@ function Lead360({ selected, activity, checklist, setChecklist, checklistDone, r
           <Info label="City" value={selected.property?.city || selected.host?.city || '-'} />
           <Info label="Next Step" value={nextAction(selected)} highlight />
         </div>
+        {/* units and each unit's photos, so the telecaller knows what to check on the video call */}
+        {selected.property && <PropertyUnitsReview property={selected.property} className="mt-3" />}
         <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs font-semibold text-amber-700">
           Property listing wizard can continue after BM approval. Current backend exposes listing data through the property profile.
         </p>

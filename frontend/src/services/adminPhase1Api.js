@@ -1,6 +1,10 @@
 import { apiClient } from './api';
 
 export const adminPhase1API = {
+  reconcileFinanceRefundQuote: (refundId, payload) => apiClient.post(`/admin/account/refunds/${refundId}/reconcile-quote`, payload),
+  resolveFinanceRefundReview: (refundId, payload) => apiClient.post(`/admin/account/refunds/${refundId}/review-decision`, payload),
+  subscriptionListingPolicy: () => apiClient.get('/subscriptions/listing-policy'),
+  updateSubscriptionListingPolicy: (payload) => apiClient.put('/subscriptions/admin/listing-policy', payload),
   bootstrap: () => apiClient.post('/admin/core/bootstrap'),
   dashboard: (params = {}) => apiClient.get('/admin/core/dashboard', { params }),
   users: (params = {}) => apiClient.get('/admin/core/users', { params }),

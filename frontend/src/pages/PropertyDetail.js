@@ -10,6 +10,7 @@ import { UnitCards, getPropertyUnits } from '../components/PropertyUnits';
 import LegalLinks from '../components/LegalLinks';
 import DateRangePicker from '../components/ui/DateRangePicker';
 import { buildStaySummary } from '../lib/staySummary';
+import { previewQuoteDates, eventVenuePricePerUnit } from '../utils/propertyPreviewPricing';
 import { formatCategoryLabel, formatPropertyTypeLabel, formatDisplayLabel, formatReadableText, formatPropertyDescription, formatAmenityLabel, getAmenityIcon, formatAddress } from '../lib/displayLabels';
 import { saveRecentlyVisitedProperty } from '../lib/recentlyVisitedProperties';
 import ShareDropdown from '../components/ShareDropdown';
@@ -1540,13 +1541,9 @@ const PropertyDetail = () => {
     let cancelled = false;
     const hostAmount = Number(baseAmount) || 0;
     
-    let effectiveCheckIn = checkIn || null;
-    let effectiveCheckOut = checkOut || null;
-    if (checkIn && (!checkOut || checkOut <= checkIn)) {
-      const nextDay = new Date(checkIn);
-      nextDay.setDate(nextDay.getDate() + 1);
-      effectiveCheckOut = toISO(nextDay);
-    }
+    const { checkIn: effectiveCheckIn, checkOut: effectiveCheckOut } = previewQuoteDates(
+      checkIn, checkOut, property?.category
+    );
 
     const effectiveHostAmount = hostAmount > 0
       ? hostAmount
@@ -1613,7 +1610,10 @@ const PropertyDetail = () => {
     : 50;
   const finalNightlyPrice = quoteNumber(bookingQuote?.final_nightly_price, displayPricePerNight);
   const selectedDatePriceReady = Boolean(checkIn && bookingQuote);
-  const shownNightlyPrice = selectedDatePriceReady ? finalNightlyPrice : displayPricePerNight;
+  const quotedVenueRate = eventVenuePricePerUnit(bookingQuote, displayPricePerNight, nights);
+  const shownNightlyPrice = property?.category === 'event_venue'
+    ? (selectedDatePriceReady ? quotedVenueRate : displayPricePerNight)
+    : (selectedDatePriceReady ? finalNightlyPrice : displayPricePerNight);
   const roundedDisplayPricePerNight = Math.round(shownNightlyPrice || 0);
   const dynamicSummary = property?.dynamic_pricing_summary || {};
   const selectedRuleNights = Array.isArray(bookingQuote?.nightly_prices)
@@ -1655,7 +1655,7 @@ const PropertyDetail = () => {
   }
   const roundedPerPersonPrice = Math.round(Number(property?.per_person_price || 0));
   const nightlySubtotal = Math.round(finalNightlyPrice * bookingUnits);
-  const eventVenueRate = displayPricePerNight;
+  const eventVenueRate = selectedDatePriceReady ? quotedVenueRate : displayPricePerNight;
   const eventVenueTotal = eventVenueRate * nights;
   const eventGuestCount = Math.max(0, Math.floor(Number(guests) || 0));
   const eventPlatePrice = Number(foodPreference === 'non_veg' ? property?.non_veg_price : property?.veg_price) || 0;

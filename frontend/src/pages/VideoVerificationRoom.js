@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { AlertCircle, Loader2, Video, XCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { uploadAPI, verificationAPI } from '../services/api';
+import { getImageUrl, uploadAPI, verificationAPI } from '../services/api';
 
 const CHECKLIST = [
   ['host_identity_confirmed', 'Host identity confirmed'],
@@ -68,6 +68,18 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
   const verificationId = routeVerificationId || searchParams.get('verificationId');
   const baseUrl = useMemo(() => String(verification?.jitsi_meet_base_url || 'https://meet.jit.si').replace(/\/$/, ''), [verification?.jitsi_meet_base_url]);
   const domain = useMemo(() => new URL(baseUrl).host, [baseUrl]);
+  // Units listed by the host: the telecaller confirms each one on the video call.
+  const propertyUnits = useMemo(
+    () => (verification?.property?.has_units ? (verification.property.units || []) : []),
+    [verification?.property],
+  );
+  const checklistItems = useMemo(() => {
+    const unitItems = propertyUnits.map((unit, index) => [
+      `unit_${unit.unit_id || `unit_${index + 1}`}_verified`,
+      `Unit verified: ${unit.name || `Unit ${index + 1}`}`,
+    ]);
+    return [...CHECKLIST.slice(0, -1), ...unitItems, CHECKLIST[CHECKLIST.length - 1]];
+  }, [propertyUnits]);
 
   useEffect(() => {
     let active = true;
@@ -215,7 +227,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
   };
 
   const recordingEnabled = effectiveRole === 'telecaller' && verification?.jitsi_recording_enabled;
-  const checklistDone = CHECKLIST.filter(([key]) => isChecked(checklist[key])).length;
+  const checklistDone = checklistItems.filter(([key]) => isChecked(checklist[key])).length;
   const secureRecordingAttached = Boolean(
     verification?.recording_object_key
     || verification?.recording_url
@@ -264,7 +276,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
 
   const submitToBranchManager = async () => {
     if (!verification?.verification_id) return;
-    if (checklistDone !== CHECKLIST.length) {
+    if (checklistDone !== checklistItems.length) {
       setChecklistNotice('Complete all checklist points before sending to Branch Manager.');
       return;
     }
@@ -337,8 +349,33 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
             {recordingEnabled && <div className="mt-2 flex flex-wrap items-center gap-3 rounded-lg border border-blue-200 bg-blue-50 p-3"><label className="flex max-w-xl items-start gap-2 text-xs font-semibold"><input type="checkbox" checked={consent} onChange={(event) => setConsent(event.target.checked)} />I confirm the host has been informed and consented to recording.</label><button type="button" disabled={recordingBusy || !joined || RECORDING_ACTIVE_STATUSES.includes(recordingStatus)} onClick={startRecording} className="rounded-lg bg-red-600 px-3 py-2 text-xs font-black uppercase text-white disabled:opacity-50">Start secure recording</button>{['START_REQUESTED', 'RECORDING'].includes(recordingStatus) && recordingRef.current && <button type="button" disabled={recordingBusy} onClick={stopRecording} className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-black uppercase text-red-700">Stop recording</button>}{recordingIsActive && !recordingRef.current && <button type="button" disabled={recordingBusy} onClick={resetIncompleteRecording} className="rounded-lg border border-amber-300 bg-white px-3 py-2 text-xs font-black uppercase text-amber-800">Clear stuck recording</button>}<span className="text-xs font-black text-blue-700">Recording: {recordingStatus.replace(/_/g, ' ')}</span><p className="w-full text-[11px] font-semibold text-blue-800">Camera access does not start recording. Secure recording starts only after you click Start secure recording.</p><p className="w-full text-[11px] font-semibold text-blue-800">Secure Jitsi/Jibri recordings are attached automatically after processing. Do not upload them manually.</p>{secureRecordingAttached && <p className="w-full text-xs font-black text-emerald-700">Secure recording attached automatically for BM review.</p>}{recordingStatus === 'STOP_REQUESTED' && <p className="w-full text-xs font-bold text-amber-700">Recording is processing. If this is an old/stuck attempt, clear it above. A separate manual upload remains attached.</p>}</div>}
             {error && <div className="mt-2 flex gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs font-semibold text-red-700"><AlertCircle className="h-4 w-4 shrink-0" />{error}</div>}</div>
           {effectiveRole === 'telecaller' && <aside className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm lg:max-h-[72vh] lg:overflow-y-auto">
-            <div className="mb-3 flex items-center justify-between gap-3"><p className="text-sm font-black">Verification Checklist</p><p className="text-xs font-bold text-slate-500">{checklistDone}/{CHECKLIST.length}</p></div>
-            <div className="space-y-1.5">{CHECKLIST.map(([key, label]) => <label key={key} className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={isChecked(checklist[key])} onChange={(event) => setChecklist((current) => ({ ...current, [key]: event.target.checked ? 'yes' : 'no' }))} className="h-3.5 w-3.5 accent-blue-600" /><span>{label}</span></label>)}</div>
+            {propertyUnits.length > 0 && (
+              <div className="mb-3 rounded-lg border border-blue-100 bg-blue-50/60 p-2.5">
+                <p className="text-xs font-black text-slate-900">Units to verify on this call: {propertyUnits.length}</p>
+                <ul className="mt-1.5 space-y-1">
+                  {propertyUnits.map((unit, index) => (
+                    <li key={unit.unit_id || index} className="text-[11px] font-semibold text-slate-700">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="truncate">{unit.name || `Unit ${index + 1}`}</span>
+                        <span className="shrink-0 text-slate-500">{[unit.tier, unit.max_guests ? `${unit.max_guests} guests` : '', unit.area_sqft ? `${unit.area_sqft} sq ft` : ''].filter(Boolean).join(' · ')}</span>
+                      </div>
+                      {Array.isArray(unit.images) && unit.images.length > 0 && (
+                        <div className="mt-1 flex gap-1 overflow-x-auto">
+                          {unit.images.slice(0, 6).map((src, photoIndex) => (
+                            <a key={`${src}-${photoIndex}`} href={getImageUrl(String(src).split('#')[0])} target="_blank" rel="noreferrer" className="block h-9 w-12 shrink-0 overflow-hidden rounded border border-slate-200">
+                              <img src={getImageUrl(String(src).split('#')[0])} alt={`${unit.name} photo ${photoIndex + 1}`} className="h-full w-full object-cover" loading="lazy" />
+                            </a>
+                          ))}
+                          {unit.images.length > 6 && <span className="grid h-9 w-12 shrink-0 place-items-center rounded bg-slate-100 text-[10px] font-black text-slate-600">+{unit.images.length - 6}</span>}
+                        </div>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            <div className="mb-3 flex items-center justify-between gap-3"><p className="text-sm font-black">Verification Checklist</p><p className="text-xs font-bold text-slate-500">{checklistDone}/{checklistItems.length}</p></div>
+            <div className="space-y-1.5">{checklistItems.map(([key, label]) => <label key={key} className="flex items-center gap-2 rounded-md border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-700"><input type="checkbox" checked={isChecked(checklist[key])} onChange={(event) => setChecklist((current) => ({ ...current, [key]: event.target.checked ? 'yes' : 'no' }))} className="h-3.5 w-3.5 accent-blue-600" /><span>{label}</span></label>)}</div>
             <div className="mt-3"><div className="mb-1 flex items-center justify-between"><p className="text-xs font-black">Telecaller Notes</p><p className="text-[10px] font-bold text-slate-400">{remarks.length}/500</p></div><textarea value={remarks} maxLength={500} onChange={(event) => setRemarks(event.target.value)} placeholder="Add your notes here..." className="min-h-[92px] w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold outline-none" /></div>
             <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3">
               <p className="text-xs font-black text-slate-900">Manual Video Upload (Optional)</p>
@@ -347,7 +384,7 @@ const VideoVerificationRoom = ({ role = 'host' }) => {
               {videoUploading ? <p className="mt-2 text-xs font-bold text-blue-700">Uploading video...</p> : uploadedVideoUrl ? <a href={uploadedVideoUrl} target="_blank" rel="noreferrer" className="mt-2 block truncate text-xs font-bold text-blue-700">Uploaded video attached</a> : null}
             </div>
             <button type="button" disabled={checklistSaving || videoUploading} onClick={saveChecklist} className="mt-3 w-full rounded-lg bg-blue-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{checklistSaving ? 'Saving...' : 'Save Checklist'}</button>
-            <button type="button" disabled={submittingToBm || videoUploading || recordingBlocksSubmission || checklistDone !== CHECKLIST.length || !remarks.trim()} onClick={submitToBranchManager} className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{submittingToBm ? 'Sending...' : recordingStatus === 'STOP_REQUESTED' && !canUseManualVideoForStoppedAttempt ? 'Waiting for recording...' : 'Save & Send to BM'}</button>
+            <button type="button" disabled={submittingToBm || videoUploading || recordingBlocksSubmission || checklistDone !== checklistItems.length || !remarks.trim()} onClick={submitToBranchManager} className="mt-2 w-full rounded-lg bg-emerald-600 px-3 py-2 text-xs font-black uppercase tracking-wider text-white disabled:opacity-50">{submittingToBm ? 'Sending...' : recordingStatus === 'STOP_REQUESTED' && !canUseManualVideoForStoppedAttempt ? 'Waiting for recording...' : 'Save & Send to BM'}</button>
             {checklistNotice && <p className="mt-2 text-xs font-bold text-blue-700">{checklistNotice}</p>}
           </aside>}
           </div></section>}

@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BadgeCheck, BedDouble, Briefcase, PartyPopper, X } from 'lucide-react';
+import { BadgeCheck, BedDouble, Briefcase, ChevronLeft, ChevronRight, Images, PartyPopper, X } from 'lucide-react';
+import { getImageUrl } from '../services/api';
 
 /**
  * Helpers + UI for properties that are split into bookable units
@@ -18,6 +19,7 @@ export const getPropertyUnits = (property) =>
 const formatPrice = (value) => `₹${value.toLocaleString('en-IN')}`;
 
 export const UNIT_TIER_LABELS = { standard: 'Standard', deluxe: 'Deluxe', premium: 'Premium' };
+const CUSTOM_TIER_RIBBON = { bar: 'from-[#2fb59a] to-[#1b8470]', fold: 'bg-[#0f5a4b]' };
 const TIER_RIBBON = {
   standard: { bar: 'from-[#9aa7b4] to-[#6b7a89]', fold: 'bg-[#3f4b57]' },
   deluxe: { bar: 'from-[#5aa9f5] to-[#2f6fd0]', fold: 'bg-[#1c4a94]' },
@@ -26,13 +28,14 @@ const TIER_RIBBON = {
 
 /** Tier ribbon in the same shape as the property-type ribbon, one colour per tier. */
 export const TierBadge = ({ tier, price }) => {
-  const look = TIER_RIBBON[tier];
-  if (!look) return null;
+  // standard / deluxe / premium have their own colour; a class the host typed (Suite, Villa wing...) gets a teal one
+  if (!tier) return null;
+  const look = TIER_RIBBON[tier] || CUSTOM_TIER_RIBBON;
   return (
     <div className="relative inline-block">
       <div className={`flex w-max items-center gap-1 rounded-r-full bg-gradient-to-b ${look.bar} py-[3px] pl-2 pr-2 text-[9px] font-bold leading-none text-white shadow-md`}>
         <BadgeCheck className="h-2.5 w-2.5 shrink-0" strokeWidth={2.25} />
-        {UNIT_TIER_LABELS[tier]}{price > 0 ? ` · ${formatPrice(price)}` : ''}
+        {UNIT_TIER_LABELS[tier] || tier}{price > 0 ? ` · ${formatPrice(price)}` : ''}
       </div>
       <span className={`absolute left-0 top-[calc(100%-1px)] h-[4px] w-1 ${look.fold} [clip-path:polygon(0_0,100%_0,100%_100%)]`} aria-hidden="true" />
     </div>
@@ -44,11 +47,13 @@ export const TierOverlay = ({ property, className = 'absolute left-3 top-12 z-30
   const units = getPropertyUnits(property);
   const lowest = {};
   units.forEach((unit) => {
-    if (!UNIT_TIER_LABELS[unit.tier]) return;
+    if (!unit.tier) return;
     const price = getUnitPrice(unit);
     if (!(unit.tier in lowest) || (price > 0 && price < lowest[unit.tier])) lowest[unit.tier] = price;
   });
-  const tiers = Object.keys(UNIT_TIER_LABELS).filter((t) => t in lowest);
+  const known = Object.keys(UNIT_TIER_LABELS).filter((t) => t in lowest);
+  const custom = Object.keys(lowest).filter((t) => !UNIT_TIER_LABELS[t]);
+  const tiers = [...known, ...custom].slice(0, 4);
   if (!tiers.length) return null;
   return (
     <div className={`pointer-events-none flex flex-col items-start gap-1.5 ${className}`}>
@@ -56,6 +61,7 @@ export const TierOverlay = ({ property, className = 'absolute left-3 top-12 z-30
     </div>
   );
 };
+
 
 
 /** Compact capsules for property cards: "Room 101 · ₹3,500". */
@@ -88,7 +94,60 @@ export const UnitChips = ({ property, max = 3, className = '' }) => {
   );
 };
 
+export const getUnitImages = (unit) =>
+  (Array.isArray(unit?.images) ? unit.images : []).map((src) => String(src || '').split('#')[0]).filter(Boolean);
+
+/** Full-screen photos of one unit, with arrows and thumbnails. */
+const UnitGallery = ({ unit, onClose }) => {
+  const images = getUnitImages(unit);
+  const [index, setIndex] = useState(0);
+  const go = (step) => setIndex((current) => (current + step + images.length) % images.length);
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.key === 'Escape') onClose();
+      if (event.key === 'ArrowRight') go(1);
+      if (event.key === 'ArrowLeft') go(-1);
+    };
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKey);
+    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = previous; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onClose, images.length]);
+
+  if (!images.length) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[140] flex flex-col bg-black/90" onClick={onClose} role="dialog" aria-label={`${unit.name} photos`}>
+      <div className="flex items-center justify-between px-5 py-4 text-white" onClick={(event) => event.stopPropagation()}>
+        <div>
+          <p className="text-[15px] font-semibold">{unit.name}</p>
+          <p className="text-xs text-white/70">{index + 1} / {images.length}</p>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Close photos" className="grid h-9 w-9 place-items-center rounded-full bg-white/15 hover:bg-white/25"><X className="h-4 w-4" /></button>
+      </div>
+      <div className="relative flex flex-1 items-center justify-center px-4" onClick={(event) => event.stopPropagation()}>
+        {images.length > 1 && <button type="button" onClick={() => go(-1)} aria-label="Previous photo" className="absolute left-3 grid h-10 w-10 place-items-center rounded-full bg-white/20 text-white hover:bg-white/30"><ChevronLeft className="h-5 w-5" /></button>}
+        <img src={getImageUrl(images[index])} alt={`${unit.name} photo ${index + 1}`} className="max-h-[70vh] max-w-full rounded-lg object-contain" />
+        {images.length > 1 && <button type="button" onClick={() => go(1)} aria-label="Next photo" className="absolute right-3 grid h-10 w-10 place-items-center rounded-full bg-white/20 text-white hover:bg-white/30"><ChevronRight className="h-5 w-5" /></button>}
+      </div>
+      {images.length > 1 && (
+        <div className="flex gap-2 overflow-x-auto px-5 py-4" onClick={(event) => event.stopPropagation()}>
+          {images.map((src, i) => (
+            <button key={src + i} type="button" onClick={() => setIndex(i)} className={`h-14 w-20 shrink-0 overflow-hidden rounded-md border-2 ${i === index ? 'border-white' : 'border-transparent opacity-70'}`}>
+              <img src={getImageUrl(src)} alt="" className="h-full w-full object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
+    </div>,
+    document.body,
+  );
+};
+
 const UnitCard = ({ unit, property, UnitIcon, priceSuffix, sizeLabel, selected, onSelect, attention, booked = false }) => {
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const photos = getUnitImages(unit);
   const price = getUnitPrice(unit);
   const details = [
     unit.area_sqft ? `${unit.area_sqft} sq.ft` : null,
@@ -97,18 +156,32 @@ const UnitCard = ({ unit, property, UnitIcon, priceSuffix, sizeLabel, selected, 
   ].filter(Boolean);
 
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={() => onSelect && onSelect(unit)}
+      onKeyDown={(event) => { if (onSelect && (event.key === 'Enter' || event.key === ' ')) { event.preventDefault(); onSelect(unit); } }}
       aria-pressed={selected}
       className={`relative flex w-full items-center justify-between gap-4 rounded-2xl border bg-gradient-to-br from-[#fbf1d6] via-[#fcf9ef] to-[#e1efe6] px-4 py-4 text-left transition ${
         selected ? 'border-charcoal ring-2 ring-charcoal/10' : 'border-gray-300 hover:border-charcoal'
       } ${onSelect ? 'cursor-pointer' : 'cursor-default'} ${attention && !selected ? 'unit-attention' : ''}`}
     >
       {unit.tier && <span className="absolute -left-1.5 top-1 z-10"><TierBadge tier={unit.tier} /></span>}
-      <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border bg-white/80 text-charcoal ${selected ? 'border-charcoal' : 'border-gray-300'}`}>
-        <UnitIcon className="h-5 w-5" strokeWidth={1.5} />
-      </span>
+      {photos.length > 0 ? (
+        <button
+          type="button"
+          onClick={(event) => { event.stopPropagation(); setGalleryOpen(true); }}
+          aria-label={`View ${photos.length} photos of ${unit.name}`}
+          className="relative h-[72px] w-[96px] shrink-0 overflow-hidden rounded-xl border border-gray-200 bg-white"
+        >
+          <img src={getImageUrl(photos[0])} alt={unit.name} className="h-full w-full object-cover" loading="lazy" />
+          <span className="absolute bottom-1 left-1 inline-flex items-center gap-1 rounded-full bg-black/65 px-1.5 py-0.5 text-[10px] font-semibold text-white"><Images className="h-3 w-3" />{photos.length}</span>
+        </button>
+      ) : (
+        <span className={`grid h-11 w-11 shrink-0 place-items-center rounded-full border bg-white/80 text-charcoal ${selected ? 'border-charcoal' : 'border-gray-300'}`}>
+          <UnitIcon className="h-5 w-5" strokeWidth={1.5} />
+        </span>
+      )}
       <div className="min-w-0 flex-1">
         <p className="flex items-start gap-2 text-[15px] font-semibold leading-snug text-charcoal">
           {selected && (
@@ -129,7 +202,8 @@ const UnitCard = ({ unit, property, UnitIcon, priceSuffix, sizeLabel, selected, 
           <span className="ml-1 text-[10px] font-semibold uppercase tracking-wider text-charcoal-muted">{priceSuffix}</span>
         </div>
       )}
-    </button>
+      {galleryOpen && <UnitGallery unit={unit} onClose={() => setGalleryOpen(false)} />}
+    </div>
   );
 };
 

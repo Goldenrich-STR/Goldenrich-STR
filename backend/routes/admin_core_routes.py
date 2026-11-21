@@ -21,6 +21,8 @@ from services.booking_calculation_service import (
     resolve_platform_fee_charge,
 )
 from services.permission_service import ensure_default_permissions
+from services.subscription_finance import subscription_collection_totals
+from services.finance_reporting import paid_booking_totals
 from services.tds_service import (
     calculate_host_payout_tds,
     get_active_tds_config,
@@ -826,6 +828,7 @@ PROPERTY_REVIEW_ITEMS = [
     ("location", "Location", ["address", "city", "state", "pin_code"]),
     ("pricing", "Pricing", ["price_per_night"]),
     ("amenities", "Amenities", ["amenities"]),
+    ("units", "Units & Pricing", []),
     ("photos", "Photos", ["images"]),
     ("subscription", "Subscription", ["subscription_status"]),
     ("host_kyc", "Host KYC", []),
@@ -860,6 +863,21 @@ def _normalise_property_review(prop: dict, owner: dict | None = None, verificati
         elif key == "assignment":
             auto_ready = bool(assignment["rm"]) and bool(assignment["broker"] or assignment["branch_manager"])
             details = f"Broker: {assignment['broker'] or '-'} / RM: {assignment['rm'] or '-'} / BM: {assignment['branch_manager'] or assignment['branch_manager_code'] or '-'}"
+        elif key == "units":
+            # Properties without units are unaffected. With units, every unit needs a name,
+            # a price and a guest count before the checklist can pass on its own.
+            units = prop.get("units") or []
+            if not prop.get("has_units") or not units:
+                auto_ready = not prop.get("has_units")
+                details = "Single property (no units)" if auto_ready else "Units are enabled but none are listed"
+            else:
+                bad = [
+                    str(unit.get("name") or unit.get("unit_id") or f"Unit {index + 1}")
+                    for index, unit in enumerate(units)
+                    if not (unit.get("name") and float(unit.get("price_per_night") or unit.get("price") or 0) > 0 and int(unit.get("max_guests") or 0) > 0)
+                ]
+                auto_ready = not bad
+                details = f"{len(units)} unit(s)" + (f" - incomplete: {', '.join(bad)}" if bad else "")
         elif key == "amenities":
             auto_ready = bool(prop.get("amenities"))
             details = f"{len(prop.get('amenities') or [])} amenities"
@@ -3599,6 +3617,13 @@ async def update_booking_operation_status(booking_id: str, payload: BookingStatu
         is_external = source not in {"direct", "website", "web", "mobile", "x-space360", "xspace360"}
         if payment_state not in {"paid", "partially_paid", "success", "captured", "completed"} and not is_external:
             raise HTTPException(status_code=400, detail="Direct bookings require verified payment before confirmation")
+    if payload.booking_status == 'cancelled' and booking.get('booking_status') != 'cancelled':
+        from services.refund_workflow import request_cancellation
+        try:
+            refund = await request_cancellation(db, booking, current_user, reason=payload.reason or 'Admin cancellation review')
+            return api_response('Cancellation submitted for finance confirmation', {'refund': refund})
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
     updates = {"admin_status_reason": payload.reason, "admin_status_updated_by": current_user["user_id"], "updated_at": _now()}
     if payload.booking_status:
         updates["booking_status"] = payload.booking_status
@@ -3620,9 +3645,9 @@ async def update_booking_operation_status(booking_id: str, payload: BookingStatu
 
 @router.get("/finance/tax-commission")
 async def finance_tax_commission(current_user: dict = Depends(require_admin), db: AsyncIOMotorDatabase = Depends(get_db)):
-    payouts = await db.payouts.find({}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(length=500)
+    payouts = await db.payouts.find({}, {"_id": 0}).sort("created_at", -1).to_list(length=None)
     booking_txns = await db.transactions.find({"type": "booking_payment", "status": "success"}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(length=500)
-    subscription_txns = await db.transactions.find({"type": "subscription", "status": "success"}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(length=500)
+    subscription_totals = await subscription_collection_totals(db)
     commissions = await db.commissions.find({}, {"_id": 0}).sort("created_at", -1).limit(500).to_list(length=500)
     employee_commissions = []
     existing_commission_bookings = {row.get("booking_id") for row in commissions if row.get("booking_id")}
@@ -3635,6 +3660,7 @@ async def finance_tax_commission(current_user: dict = Depends(require_admin), db
             {
                 "payment_status": {"$in": ["paid", "success", "captured", "completed"]},
                 "booking_status": "confirmed",
+                "cancellation_status": {"$ne": "requested"},
             },
             {"_id": 0},
         ).sort("created_at", -1).limit(500).to_list(length=500)
@@ -3749,6 +3775,7 @@ async def finance_tax_commission(current_user: dict = Depends(require_admin), db
             {
                 "payment_status": {"$in": ["paid", "success", "captured", "completed"]},
                 "booking_status": "confirmed",
+                "cancellation_status": {"$ne": "requested"},
             },
             {"_id": 0},
         ).sort("created_at", -1).limit(500).to_list(length=500)
@@ -3878,6 +3905,7 @@ async def finance_tax_commission(current_user: dict = Depends(require_admin), db
             "status": 1,
             "payment_status": 1,
             "cancelled_at": 1,
+            "cancellation_status": 1,
             "canceled_at": 1,
             "cancellation_date": 1,
             "property_id": 1,
@@ -3937,7 +3965,7 @@ async def finance_tax_commission(current_user: dict = Depends(require_admin), db
             row.get("canceled_at"),
             row.get("cancellation_date"),
         )
-        if cancelled_at or any(word in booking_status_text for word in ("cancelled", "canceled", "refund_initiated", "refunded")):
+        if booking.get("cancellation_status") == "requested" or cancelled_at or any(word in booking_status_text for word in ("cancelled", "canceled", "refund_initiated", "refunded")):
             continue
         explicit_context = str(_admin_first_present(
             row.get("platform_fee_context"),
@@ -3991,43 +4019,32 @@ async def finance_tax_commission(current_user: dict = Depends(require_admin), db
         active_commissions.append(row)
     commissions = active_commissions
 
-    booking_ids = [txn.get("booking_id") for txn in booking_txns if txn.get("booking_id")]
-    booking_docs = await db.bookings.find(
-        {"booking_id": {"$in": booking_ids}},
-        {"_id": 0, "booking_id": 1, "base_amount": 1, "taxes": 1, "tax_percent": 1},
-    ).to_list(length=len(booking_ids) or 1)
-    booking_map = {booking.get("booking_id"): booking for booking in booking_docs}
-    booking_taxable = 0.0
-    booking_tax = 0.0
-    legacy_booking_total = 0.0
-    for txn in booking_txns:
-        booking = booking_map.get(txn.get("booking_id"))
-        if booking:
-            booking_taxable += float(booking.get("base_amount") or 0)
-            booking_tax += float(booking.get("taxes") or 0)
-        else:
-            legacy_booking_total += float(txn.get("amount") or 0)
-    if legacy_booking_total:
-        # Legacy booking transactions did not store the applied slab.
-        # Do not infer a hardcoded booking GST rate for those records.
-        booking_taxable += legacy_booking_total
-    booking_tax_rate = round((booking_tax / booking_taxable) * 100, 2) if booking_taxable else 0
-    subscription_tax = sum(float(txn.get("amount") or 0) * 18 / 118 for txn in subscription_txns)
-    tds_hold = sum(float(payout.get("tds_amount") or 0) for payout in payouts)
-    platform_commission = sum(float(payout.get("platform_fee") or 0) for payout in payouts)
+    booking_totals = await paid_booking_totals(db)
+    booking_taxable = booking_totals["taxable_paise"] / 100
+    booking_tax = booking_totals["gst_paise"] / 100
+    booking_tax_rate = round(booking_tax / booking_taxable * 100, 2) if booking_taxable else 0
+    subscription_tax = subscription_totals["gst_paise"] / 100
+    subscription_taxable = subscription_totals["revenue_paise"] / 100
+    subscription_rate = round(subscription_tax / subscription_taxable * 100, 2) if subscription_taxable else 0
+    tds_hold = sum(float(payout.get("tds_amount") or 0) for payout in payouts) / 100
+    tds_base = sum(float(payout.get("gross_amount") or 0) for payout in payouts) / 100
+    tds_rate = round(tds_hold / tds_base * 100, 2) if tds_base else 0
+    platform_commission = sum(float(payout.get("platform_fee") or 0) for payout in payouts) / 100
     broker_commission_total = sum(float(row.get("net_amount") or 0) for row in commissions)
     broker_commission_paid = sum(float(row.get("net_amount") or 0) for row in commissions if row.get("payment_status") == "paid")
     tax_ledger = [
         {"tax_id": "TAX-GST-BOOKING", "tax_type": "GST on Booking Payments", "taxable_amount": booking_taxable, "tax_rate": booking_tax_rate, "tax_amount": booking_tax, "status": "payable"},
-        {"tax_id": "TAX-GST-SUBSCRIPTION", "tax_type": "GST on Subscriptions", "taxable_amount": sum(float(txn.get("amount") or 0) for txn in subscription_txns) - subscription_tax, "tax_rate": 18, "tax_amount": subscription_tax, "status": "payable"},
-        {"tax_id": "TAX-TDS-HOST", "tax_type": "Host TDS Hold", "taxable_amount": sum(float(payout.get("gross_amount") or 0) for payout in payouts), "tax_rate": 1, "tax_amount": tds_hold, "status": "withheld"},
+        {"tax_id": "TAX-GST-SUBSCRIPTION", "tax_type": "GST on Subscriptions", "taxable_amount": subscription_taxable, "tax_rate": subscription_rate, "tax_amount": subscription_tax, "status": "payable"},
+        {"tax_id": "TAX-TDS-HOST", "tax_type": "Host TDS Hold", "taxable_amount": tds_base, "tax_rate": tds_rate, "tax_amount": tds_hold, "status": "withheld"},
     ]
     return api_response("Tax and commission loaded", {
         "summary": {
-            "booking_gst": round(booking_tax),
-            "subscription_gst": round(subscription_tax),
-            "tds_hold": round(tds_hold),
-            "platform_commission": round(platform_commission),
+            "booking_gst": round(booking_tax, 2),
+            "subscription_gst": round(subscription_tax, 2),
+            "subscriptions_requiring_review": subscription_totals["review_count"],
+            "unclassified_subscription_receipts": subscription_totals["unclassified_paise"] / 100,
+            "tds_hold": round(tds_hold, 2),
+            "platform_commission": round(platform_commission, 2),
             "broker_commission_total": round(broker_commission_total),
             "broker_commission_paid": round(broker_commission_paid),
             "broker_commission_pending": round(broker_commission_total - broker_commission_paid),
@@ -4121,6 +4138,8 @@ async def crm_assignees(current_user: dict = Depends(require_admin), db: AsyncIO
         "role": "employee",
         "is_active": {"$ne": False},
         "$or": [
+            {"admin_role_key": {"$regex": "^(rm|relationship_manager)$", "$options": "i"}},
+            {"designation": {"$regex": "^rm$", "$options": "i"}},
             {"department": {"$regex": "sales|crm|relationship", "$options": "i"}},
             {"designation": {"$regex": "sales|crm|relationship|manager|lead", "$options": "i"}},
             {"team": {"$regex": "sales|crm|relationship", "$options": "i"}},

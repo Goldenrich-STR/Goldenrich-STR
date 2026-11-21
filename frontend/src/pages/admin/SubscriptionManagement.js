@@ -18,6 +18,27 @@ const SubscriptionManagement = () => {
   const [search, setSearch] = useState('');
   const [state, setState] = useState({ loading: true, error: '', subscriptions: [], plans: [], metrics: {} });
   const [page, setPage] = useState(1);
+  const [listingPolicy, setListingPolicy] = useState({ loading: true, enabled: true, saving: false, error: '' });
+  useEffect(() => {
+    adminPhase1API.subscriptionListingPolicy()
+      .then((res) => setListingPolicy({ loading: false, enabled: res.data.enabled, saving: false, error: '' }))
+      .catch(() => setListingPolicy((current) => ({ ...current, loading: false, error: 'Could not load subscription payment setting. Refresh to retry.' })));
+  }, []);
+
+  const toggleListingPayments = async () => {
+    const enabled = !listingPolicy.enabled;
+    const reason = await requestReason({ title: `${enabled ? 'Enable' : 'Disable'} listing subscription payments`,
+      description: 'Existing subscriptions, invoices and plan settings will stay unchanged. This controls payment for new listing submissions.',
+      minLength: 3 });
+    if (!reason) return;
+    setListingPolicy((current) => ({ ...current, saving: true }));
+    try {
+      const res = await adminPhase1API.updateSubscriptionListingPolicy({ enabled, reason });
+      setListingPolicy({ loading: false, enabled: res.data.enabled, saving: false, error: '' });
+    } catch (error) {
+      setListingPolicy((current) => ({ ...current, saving: false, error: error.response?.data?.detail || 'Could not save setting. Refresh before retrying.' }));
+    }
+  };
 
   useEffect(() => {
     setPage(1);
@@ -134,6 +155,19 @@ const SubscriptionManagement = () => {
 
   return (
     <div>
+      <Panel className="mb-5 p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div><h2 className="font-bold">Subscription payment for property listings</h2>
+            <p className="mt-1 text-sm text-slate-600">{listingPolicy.loading ? 'Loading setting…' : listingPolicy.error ? 'Setting unavailable' : listingPolicy.enabled ? 'Enabled: new listings require a subscription payment.' : 'Disabled: new listings can be submitted without subscription payment.'}</p>
+            <p className="mt-1 text-xs text-slate-500">Existing paid subscriptions and plan Active/Pause settings stay unchanged. Listings submitted free will not be charged retroactively.</p>
+          </div>
+          <button type="button" onClick={toggleListingPayments} disabled={listingPolicy.loading || listingPolicy.saving || !!listingPolicy.error}
+            className="rounded-xl bg-blue-600 px-4 py-3 font-bold text-white disabled:opacity-50">
+            {listingPolicy.saving ? 'Saving…' : listingPolicy.enabled ? 'Disable subscription payments' : 'Enable subscription payments'}
+          </button>
+        </div>
+        {listingPolicy.error && <p role="alert" className="mt-2 text-sm text-red-600">{listingPolicy.error}</p>}
+      </Panel>
       <PageHeader
         title="Subscription Management"
         description="Manage host plans, trial, active, expired and cancelled subscriptions with property status sync."

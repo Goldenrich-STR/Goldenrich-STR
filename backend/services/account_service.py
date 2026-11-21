@@ -267,6 +267,10 @@ def _financial_year_label(value: Optional[datetime] = None) -> str:
 
 async def _next_credit_note_number(db: AsyncIOMotorDatabase, value: Optional[datetime] = None) -> str:
     prefix = f"STRC/CN/{_financial_year_label(value)}/"
+    from services.refund_atomic import reserve_credit_note
+    reserved = await reserve_credit_note(db, prefix)
+    if reserved:
+        return reserved
     existing = await db.refunds.find({}, {"_id": 0, "credit_note_no": 1}).to_list(length=10000)
     max_sequence = 0
     for row in existing:
@@ -339,7 +343,7 @@ async def build_credit_note_refund_doc(db: AsyncIOMotorDatabase, refund: Refund,
     )
     room_type = booking.get("room_type") or property_doc.get("configuration") or property_doc.get("bhk") or property_doc.get("room_type")
     refund_doc.update({
-        "credit_note_no": await _next_credit_note_number(db, now),
+        "credit_note_no": refund_doc.get('credit_note_no') or await _next_credit_note_number(db, now),
         "credit_note_date": now,
         "credit_note_reason": refund.reason or "Booking cancellation refund",
         "original_invoice_no": _customer_tax_invoice_no(
@@ -406,6 +410,8 @@ async def record_transaction(
     payout_id: Optional[str] = None,
     refund_id: Optional[str] = None,
     notes: Optional[str] = None,
+    financial_snapshot: Optional[dict] = None,
+    parent_refund_id: Optional[str] = None,
     is_mock: bool = False,
 ) -> Transaction:
     """Create a ledger row. Idempotent on (type, booking_id, razorpay_payment_id)
@@ -448,6 +454,10 @@ async def record_transaction(
             existing.pop("_id", None)
             return Transaction(**existing)
 
+    if type == TransactionType.REFUND and refund_id:
+        existing = await db.transactions.find_one({'type': type.value, 'refund_id': refund_id})
+        if existing:
+            return Transaction(**{key: value for key, value in existing.items() if key in Transaction.model_fields})
     txn = Transaction(
         type=type,
         amount=amount,
@@ -465,8 +475,14 @@ async def record_transaction(
         payout_id=payout_id,
         refund_id=refund_id,
         notes=notes,
+        financial_snapshot=financial_snapshot,
+        parent_refund_id=parent_refund_id,
         is_mock=is_mock,
     )
+    if type == TransactionType.REFUND and refund_id:
+        from services.refund_atomic import insert_once
+        stored, _ = await insert_once(db.transactions, txn.model_dump())
+        return Transaction(**{key: value for key, value in stored.items() if key in Transaction.model_fields})
     await db.transactions.insert_one(txn.model_dump())
     return txn
 
@@ -479,7 +495,7 @@ def compute_refund_tier(
     booking: Optional[dict] = None,
     cancellation_at: Optional[datetime] = None,
 ) -> tuple[float, str]:
-    """Return (percent, tier_label) for the management refund policy."""
+    """Legacy tiers for historical repair; new requests use refund_policy_quote."""
     booking = booking or {}
     if _is_non_refundable_booking(booking):
         return 0.0, "non_refundable"
@@ -568,9 +584,11 @@ async def create_refund_request(
     initiated_by_role: str,
     override_amount: Optional[int] = None,
     override_percent: Optional[float] = None,
+    policy_quote: Optional[dict] = None,
+    request_refund_id: Optional[str] = None,
 ) -> dict:
     """Create an admin-reviewable refund request without processing money movement."""
-    amounts = _compute_refund_amounts(
+    amounts = policy_quote if policy_quote is not None else _compute_refund_amounts(
         booking,
         override_amount=override_amount,
         override_percent=override_percent,
@@ -591,17 +609,25 @@ async def create_refund_request(
         is_mock=razorpay_service.is_mock,
     )
     rfd.status = RefundStatus.PENDING
+    if request_refund_id:
+        rfd.refund_id = request_refund_id
     refund_doc = rfd.model_dump()
     refund_doc.update({
         **amounts,
-        "refund_policy_version": "management_refund_policy_2026",
-        "refund_requested_at": now,
+        "refund_policy_version": amounts.get("refund_policy_version", "management_refund_policy_2026"),
+        "refund_requested_at": amounts.get("refund_requested_at", now),
         "refund_initiated_at": None,
         "processed_at": None,
         "credit_note_no": None,
         "credit_note_date": None,
     })
-    await db.refunds.insert_one(refund_doc)
+    if request_refund_id:
+        from services.refund_atomic import insert_once
+        refund_doc, inserted = await insert_once(db.refunds, refund_doc)
+        if not inserted:
+            return refund_doc
+    else:
+        await db.refunds.insert_one(refund_doc)
     await db.bookings.update_one(
         {"booking_id": rfd.booking_id},
         {"$set": {"refund_status": "pending", "refund_amount": amounts["refund_amount"]}},
@@ -615,95 +641,11 @@ async def approve_refund_request(
     refund_id: str,
     approved_by: str,
     reason: Optional[str] = None,
+    override_percent: Optional[float] = None,
 ) -> dict:
     """Process a pending refund request and generate the credit note only after approval."""
-    refund_doc = await db.refunds.find_one({"refund_id": refund_id}, {"_id": 0})
-    if not refund_doc:
-        raise ValueError("Refund request not found")
-    if refund_doc.get("status") in APPROVED_REFUND_STATUSES:
-        return refund_doc
-    if refund_doc.get("status") not in (RefundStatus.PENDING.value, "initiated", "processing"):
-        raise ValueError("Only pending refund requests can be approved")
-
-    booking = await db.bookings.find_one({"booking_id": refund_doc.get("booking_id")}, {"_id": 0}) or {}
-    if not booking:
-        raise ValueError("Booking not found for refund request")
-
-    refund_paise = int(refund_doc.get("refund_amount") or 0)
-    rfd = Refund(**{
-        key: value for key, value in refund_doc.items()
-        if key in Refund.model_fields
-    })
-    rfd.status = RefundStatus.APPROVED
-    rfd.processed_at = datetime.now(timezone.utc)
-
-    if refund_paise and rfd.razorpay_payment_id:
-        result = await razorpay_service.call_async("create_refund",
-            payment_id=rfd.razorpay_payment_id,
-            amount=refund_paise,
-            notes={"booking_id": rfd.booking_id, "reason": (reason or rfd.reason or "")[:200]},
-        )
-        if result.get("success"):
-            rfd.razorpay_refund_id = result["refund"]["id"]
-        else:
-            await db.refunds.update_one(
-                {"refund_id": refund_id},
-                {"$set": {
-                    "status": RefundStatus.FAILED.value,
-                    "failure_reason": result.get("error", "unknown"),
-                    "approved_by": approved_by,
-                    "approved_at": datetime.now(timezone.utc),
-                }},
-            )
-            await db.bookings.update_one(
-                {"booking_id": rfd.booking_id},
-                {"$set": {"refund_status": RefundStatus.FAILED.value, "refund_amount": refund_paise}},
-            )
-            return await db.refunds.find_one({"refund_id": refund_id}, {"_id": 0})
-
-    credit_note_doc = await build_credit_note_refund_doc(db, rfd, booking)
-    credit_note_doc.update({
-        "approved_by": approved_by,
-        "approved_at": rfd.processed_at,
-        "approval_reason": reason,
-        "refund_requested_at": refund_doc.get("refund_requested_at") or refund_doc.get("created_at"),
-        "gross_receipt_amount": refund_doc.get("gross_receipt_amount") or credit_note_doc.get("gross_receipt_amount"),
-        "original_amount": refund_doc.get("original_amount") or credit_note_doc.get("original_amount"),
-        "refundable_base_amount": refund_doc.get("refundable_base_amount") or credit_note_doc.get("refundable_base_amount"),
-        "refund_base_amount": refund_doc.get("refund_base_amount") or credit_note_doc.get("refund_base_amount"),
-        "non_refundable_amount": refund_doc.get("non_refundable_amount") or credit_note_doc.get("non_refundable_amount"),
-        "cancellation_charges": refund_doc.get("cancellation_charges") or credit_note_doc.get("cancellation_charges"),
-        "net_taxable_value_credited": refund_paise,
-        "cgst_refund_amount": 0,
-        "sgst_refund_amount": 0,
-        "igst_refund_amount": 0,
-        "gst_refund_amount": 0,
-    })
-    await db.refunds.update_one({"refund_id": refund_id}, {"$set": credit_note_doc})
-    await record_transaction(
-        db,
-        type=TransactionType.REFUND,
-        amount=refund_paise,
-        status=TransactionStatus.SUCCESS,
-        razorpay_payment_id=rfd.razorpay_payment_id,
-        razorpay_refund_id=rfd.razorpay_refund_id,
-        user_id=rfd.guest_id,
-        host_id=rfd.host_id,
-        booking_id=rfd.booking_id,
-        refund_id=rfd.refund_id,
-        notes=f"[{rfd.policy_tier}] {reason or rfd.reason}",
-        is_mock=razorpay_service.is_mock,
-    )
-    await db.bookings.update_one(
-        {"booking_id": rfd.booking_id},
-        {"$set": {"refund_status": RefundStatus.APPROVED.value, "refund_amount": refund_paise}},
-    )
-    try:
-        from services.booking_notifications import notify_guest_refund_processed
-        await notify_guest_refund_processed(db, credit_note_doc)
-    except Exception as err:
-        logger.warning(f"Failed to start refund notification task: {err}")
-    return await db.refunds.find_one({"refund_id": refund_id}, {"_id": 0})
+    from services.refund_workflow import approve_request
+    return await approve_request(db, refund_id=refund_id, approved_by=approved_by, reason=reason, override_percent=override_percent)
 
 
 async def reject_refund_request(
@@ -713,166 +655,18 @@ async def reject_refund_request(
     rejected_by: str,
     reason: str,
 ) -> dict:
-    refund_doc = await db.refunds.find_one({"refund_id": refund_id}, {"_id": 0})
-    if not refund_doc:
-        raise ValueError("Refund request not found")
-    if refund_doc.get("status") in APPROVED_REFUND_STATUSES:
-        raise ValueError("Approved refunds cannot be rejected")
-    now = datetime.now(timezone.utc)
-    await db.refunds.update_one(
-        {"refund_id": refund_id},
-        {"$set": {
-            "status": RefundStatus.REJECTED.value,
-            "rejected_by": rejected_by,
-            "rejected_at": now,
-            "rejection_reason": reason,
-        }},
-    )
-    await db.bookings.update_one(
-        {"booking_id": refund_doc.get("booking_id")},
-        {"$set": {"refund_status": RefundStatus.REJECTED.value, "refund_amount": refund_doc.get("refund_amount") or 0}},
-    )
-    return await db.refunds.find_one({"refund_id": refund_id}, {"_id": 0})
+    from services.refund_workflow import reject_request
+    return await reject_request(db, refund_id=refund_id, rejected_by=rejected_by, reason=reason)
 
 
-async def initiate_refund(
-    db: AsyncIOMotorDatabase,
-    *,
-    booking: dict,
-    reason: str,
-    initiated_by: str,
-    initiated_by_role: str,
-    override_amount: Optional[int] = None,
-    override_percent: Optional[float] = None,
-) -> Refund:
-    """Initiate a refund. Writes Refund + Transaction rows, calls Razorpay."""
-    gross_receipt_paise = _booking_amount_to_paise(booking)
-    refundable_base_paise = _booking_refundable_base_to_paise(booking)
-
-    if override_amount is not None:
-        refund_paise = max(0, min(refundable_base_paise, int(override_amount)))
-        percent = round(100.0 * refund_paise / refundable_base_paise, 2) if refundable_base_paise else 0.0
-        tier = "admin_override"
-    elif override_percent is not None:
-        percent = max(0.0, min(100.0, float(override_percent)))
-        refund_paise = int(round(refundable_base_paise * percent / 100.0))
-        tier = "admin_override"
-    else:
-        percent, tier = compute_refund_tier(
-            _first_present(
-                booking.get("check_in_date"),
-                booking.get("checkin_date"),
-                booking.get("start_date"),
-            ),
-            booking=booking,
-        )
-        refund_paise = int(round(refundable_base_paise * percent / 100.0))
-
-    rfd = Refund(
-        booking_id=booking["booking_id"],
-        guest_id=booking["guest_id"],
-        host_id=booking["host_id"],
-        original_amount=gross_receipt_paise,
-        refund_amount=refund_paise,
-        refund_percent=percent,
-        policy_tier=tier,
-        reason=reason,
-        initiated_by=initiated_by,
-        initiated_by_role=initiated_by_role,
-        razorpay_payment_id=_booking_payment_reference(booking),
-        is_mock=razorpay_service.is_mock,
-    )
-
-    # Zero-value refund — just record it
-    if refund_paise == 0 or not rfd.razorpay_payment_id:
-        rfd.status = RefundStatus.PROCESSED
-        rfd.processed_at = datetime.now(timezone.utc)
-        refund_doc = await build_credit_note_refund_doc(db, rfd, booking)
-        refund_doc.update({
-            "refund_policy_version": "management_refund_policy_2026",
-            "gross_receipt_amount": gross_receipt_paise,
-            "refundable_base_amount": refundable_base_paise,
-            "refund_base_amount": refundable_base_paise,
-            "non_refundable_amount": max(0, gross_receipt_paise - refundable_base_paise),
-        })
-        await db.refunds.insert_one(refund_doc)
-        await record_transaction(
-            db,
-            type=TransactionType.REFUND,
-            amount=refund_paise,
-            status=TransactionStatus.SUCCESS,
-            razorpay_payment_id=rfd.razorpay_payment_id,
-            user_id=rfd.guest_id,
-            host_id=rfd.host_id,
-            booking_id=rfd.booking_id,
-            refund_id=rfd.refund_id,
-            notes=f"[{tier}] {reason}",
-            is_mock=razorpay_service.is_mock,
-        )
-        await db.bookings.update_one(
-            {"booking_id": rfd.booking_id},
-            {"$set": {"refund_status": "processed", "refund_amount": refund_paise}},
-        )
-        try:
-            from services.booking_notifications import notify_guest_refund_processed
-            await notify_guest_refund_processed(db, refund_doc)
-        except Exception as err:
-            logger.warning(f"Failed to start refund notification task: {err}")
-        return rfd
-
-    result = await razorpay_service.call_async("create_refund",
-        payment_id=rfd.razorpay_payment_id,
-        amount=refund_paise,
-        notes={"booking_id": rfd.booking_id, "reason": reason[:200]},
-    )
-
-    if result.get("success"):
-        rfd.razorpay_refund_id = result["refund"]["id"]
-        rfd.status = RefundStatus.PROCESSED
-        rfd.processed_at = datetime.now(timezone.utc)
-    else:
-        rfd.status = RefundStatus.FAILED
-        rfd.failure_reason = result.get("error", "unknown")
-
-    refund_doc = await build_credit_note_refund_doc(db, rfd, booking)
-    refund_doc.update({
-        "refund_policy_version": "management_refund_policy_2026",
-        "gross_receipt_amount": gross_receipt_paise,
-        "refundable_base_amount": refundable_base_paise,
-        "refund_base_amount": refundable_base_paise,
-        "non_refundable_amount": max(0, gross_receipt_paise - refundable_base_paise),
-    })
-    await db.refunds.insert_one(refund_doc)
-    await record_transaction(
-        db,
-        type=TransactionType.REFUND,
-        amount=refund_paise,
-        status=(
-            TransactionStatus.SUCCESS if rfd.status == RefundStatus.PROCESSED else TransactionStatus.FAILED
-        ),
-        razorpay_payment_id=rfd.razorpay_payment_id,
-        razorpay_refund_id=rfd.razorpay_refund_id,
-        user_id=rfd.guest_id,
-        host_id=rfd.host_id,
-        booking_id=rfd.booking_id,
-        refund_id=rfd.refund_id,
-        notes=f"[{tier}] {reason}",
-        is_mock=razorpay_service.is_mock,
-    )
-    await db.bookings.update_one(
-        {"booking_id": rfd.booking_id},
-        {"$set": {
-            "refund_status": rfd.status.value,
-            "refund_amount": refund_paise,
-        }},
-    )
-    if rfd.status == RefundStatus.PROCESSED:
-        try:
-            from services.booking_notifications import notify_guest_refund_processed
-            await notify_guest_refund_processed(db, refund_doc)
-        except Exception as err:
-            logger.warning(f"Failed to start refund notification task: {err}")
-    return rfd
+async def initiate_refund(db, *, booking, reason, initiated_by, initiated_by_role,
+                          override_amount=None, override_percent=None) -> Refund:
+    """Compatibility entry point: all new refunds require review, never send money here."""
+    from services.refund_workflow import request_cancellation
+    document = await request_cancellation(db, booking,
+        {'user_id': initiated_by, 'role': initiated_by_role}, reason=reason,
+        override_amount=override_amount, override_percent=override_percent)
+    return Refund(**{key: value for key, value in document.items() if key in Refund.model_fields})
 
 
 async def ensure_refund_for_cancelled_paid_booking(
@@ -1061,6 +855,8 @@ async def process_payout(
         return payout
 
     booking = await db.bookings.find_one({"booking_id": payout.booking_id}, {"_id": 0})
+    if booking and booking.get('cancellation_status') == 'requested':
+        raise ValueError('Cancellation review is pending; host payout is on hold')
     if booking and is_cancelled_booking(booking):
         payout.status = PayoutStatus.FAILED
         payout.failure_reason = "Booking is cancelled/refunded; payout is not payable"
@@ -1173,6 +969,8 @@ async def sweep_payout_eligibility(db: AsyncIOMotorDatabase) -> int:
         try:
             booking = await db.bookings.find_one({"booking_id": payout.get("booking_id")}, {"_id": 0})
             if not booking:
+                continue
+            if booking.get('cancellation_status') == 'requested':
                 continue
             if is_cancelled_booking(booking):
                 await db.payouts.update_one(

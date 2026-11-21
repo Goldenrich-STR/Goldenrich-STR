@@ -5,6 +5,7 @@ import io
 import logging
 import os
 import re
+from decimal import Decimal
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from pydantic import BaseModel
@@ -34,6 +35,8 @@ from services.account_service import (
 )
 from services.booking_calculation_service import extract_booking_pricing_snapshot
 from services.booking_calculation_service import calculate_host_payout_breakdown
+from services.subscription_finance import classify_subscription, subscription_collection_totals
+from services.finance_reporting import paid_booking_totals
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin/account", tags=["Admin Account"])
@@ -41,6 +44,7 @@ router = APIRouter(prefix="/admin/account", tags=["Admin Account"])
 
 class RefundDecisionRequest(BaseModel):
     reason: Optional[str] = None
+    override_percent: Optional[float] = None
 
 
 class PartnerSettlementDecisionRequest(BaseModel):
@@ -110,35 +114,32 @@ def _property_display_name(property_info: Optional[dict]) -> str:
 
 
 def _subscription_invoice_breakdown(transaction: dict) -> dict:
-    total = round((transaction.get("amount") or 0) / 100, 2)
     subscription = transaction.get("subscription") or {}
     plan = transaction.get("plan") or {}
-    tax_percent = float(plan.get("tax_percent") or 18)
-    tax_amount = round(total - (total / (1 + tax_percent / 100)), 2) if tax_percent else 0
-    taxable_after_discount = round(total - tax_amount, 2)
-
-    plan_fee = plan.get("price_monthly")
-    if subscription.get("billing_cycle") == "annual":
-        plan_fee = plan.get("price_annual", plan_fee)
-    plan_fee = round(float(plan_fee or 0), 2)
-    platform_fee = round(float(plan.get("platform_fee") or 0), 2)
-    taxable_before_discount = round(plan_fee + platform_fee, 2)
-    discount_amount = round(float(subscription.get("discount_amount") or 0), 2)
-    if discount_amount <= 0 and taxable_before_discount > taxable_after_discount:
-        discount_amount = round(taxable_before_discount - taxable_after_discount, 2)
-
+    result = classify_subscription(transaction, subscription, plan)
+    snapshot = result.get("snapshot") or {}
+    cycle_price = "price_annual" if subscription.get("billing_cycle") == "annual" else "price_monthly"
+    plan_fee = snapshot.get("plan_fee_paise")
+    plan_fee = float(Decimal(str(plan_fee)) / 100) if plan_fee is not None else float(plan.get(cycle_price) or 0)
+    platform_fee = snapshot.get("platform_fee_paise")
+    platform_fee = float(Decimal(str(platform_fee)) / 100) if platform_fee is not None else float(plan.get("platform_fee") or 0)
+    tax = result["gst_paise"]
+    igst = tax if snapshot.get("igst_applicable") else 0
+    cgst = 0 if igst else tax // 2
+    sgst = tax - igst - cgst
     return {
         "plan_fee": plan_fee,
         "platform_fee": platform_fee,
-        "tax_percent": tax_percent,
-        "taxable_before_discount": taxable_before_discount,
-        "discount_amount": discount_amount,
-        "taxable_amount": taxable_after_discount,
-        "cgst": round(tax_amount / 2, 2),
-        "sgst": round(tax_amount / 2, 2),
-        "igst": 0,
-        "total_amount": total,
+        "tax_percent": snapshot.get("tax_percent", subscription.get("tax_percent", plan.get("tax_percent"))),
+        "taxable_before_discount": round(plan_fee + platform_fee, 2),
+        "discount_amount": float(Decimal(str(snapshot.get("discount_paise", 0))) / 100) if snapshot else float(subscription.get("discount_amount") or 0),
+        "taxable_amount": result["revenue_paise"] / 100,
+        "cgst": cgst / 100, "sgst": sgst / 100, "igst": igst / 100,
+        "total_amount": result["gross_paise"] / 100,
         "coupon_code": subscription.get("coupon_code") or transaction.get("coupon_code"),
+        "classification_source": result["source"],
+        "requires_historical_review": result["needs_review"],
+        "unclassified_amount": result["unclassified_paise"] / 100,
     }
 
 
@@ -162,7 +163,10 @@ def _booking_invoice_breakdown(transaction: dict) -> dict:
     if extra_total <= 0:
         extra_total = _amount_rupees(sum(_amount_rupees(value) for value in extra_charges.values()))
     discount = _amount_rupees(snapshot.get("customer_discount_amount") or booking.get("discount_amount"))
-    taxable = max(0.0, round(host_actual + extra_total - discount, 2))
+    # host_actual already excludes the host-funded discount. Do not subtract it twice.
+    host_listed = _amount_rupees(snapshot.get("host_listed_value"))
+    host_discount = _amount_rupees(snapshot.get("host_discount_amount"))
+    taxable = max(0.0, round(host_actual + extra_total - max(0.0, discount - host_discount), 2))
     gst_amount = _amount_rupees(snapshot.get("gst_amount") or booking.get("taxes") or booking.get("tax_amount"))
     total = _amount_rupees(snapshot.get("customer_final_payable") or booking.get("total_amount") or ((transaction.get("amount") or 0) / 100))
     if total <= 0:
@@ -176,8 +180,9 @@ def _booking_invoice_breakdown(transaction: dict) -> dict:
     return {
         "plan_fee": host_actual,
         "platform_fee": _amount_rupees(extra_charges.get("platform_fee")),
-        "taxable_before_discount": round(host_actual + extra_total, 2),
-        "base_amount": host_actual,
+        "taxable_before_discount": round(host_listed + extra_total, 2),
+        "base_amount": host_listed,
+        "host_actual_value": host_actual,
         "gross": host_actual,
         "extra_charges_total": extra_total,
         "extra_charges": {key: _amount_rupees(value) for key, value in extra_charges.items()},
@@ -212,6 +217,7 @@ BOOKING_TRANSACTION_PROJECTION = {
     "number_of_guests": 1,
     "created_at": 1,
     "booking_status": 1,
+    "cancellation_status": 1,
     "payment_status": 1,
     "payment_method": 1,
     "payment_type": 1,
@@ -335,6 +341,28 @@ async def _find_booking_for_transaction(db: AsyncIOMotorDatabase, t: dict) -> Op
 
 # --------------- Overview ----------------
 
+def _payout_booking_context(booking: dict, payout: dict) -> dict:
+    """Retain the host and current payout identity during settlement refresh."""
+    return {
+        **booking,
+        "host_id": booking.get("host_id") or booking.get("owner_id") or booking.get("host_user_id") or payout.get("host_id"),
+        "payout_id": payout.get("payout_id"),
+    }
+
+async def _configured_platform_revenue_paise(
+    db: AsyncIOMotorDatabase,
+    *,
+    host_id: Optional[str] = None,
+) -> int:
+    """Sum the platform fees persisted on paid booking snapshots.
+
+    Platform revenue is not a percentage of GMV. Historical bookings with an
+    explicit zero fee must remain zero even if an admin enables a fee later.
+    """
+    totals = await paid_booking_totals(db, host_id=host_id)
+    return totals["platform_fee_paise"]
+
+
 @router.get("/overview")
 async def overview(
     current_user: dict = Depends(require_admin),
@@ -360,30 +388,34 @@ async def overview(
         refunds = agg.get(TransactionType.REFUND.value, {"amount_paise": 0, "count": 0})
         payouts = agg.get(TransactionType.PAYOUT.value, {"amount_paise": 0, "count": 0})
 
-        # Platform take = booking GMV * 10% (our margin)
-        platform_take = int(round(booking_rev["amount_paise"] * 0.10))
+        # Revenue comes only from the fee captured on each booking. Never
+        # infer a platform fee from GMV or from today's configuration.
+        booking_totals = await paid_booking_totals(db)
+        booking_platform_fees = booking_totals["platform_fee_paise"]
+        subscription_totals = await subscription_collection_totals(db)
+        platform_take = booking_platform_fees + subscription_totals["revenue_paise"]
 
         total_gross = (
             booking_rev["amount_paise"] + reg_rev["amount_paise"] + sub_rev["amount_paise"]
         )
         total_net = total_gross - refunds["amount_paise"] - payouts["amount_paise"]
 
-        # Pending payouts (eligible but not yet paid)
+        # All unsettled payout obligations, including those not yet eligible.
+        pending_query = {"status": {"$in": [
+            PayoutStatus.PENDING.value, PayoutStatus.ELIGIBLE.value,
+            PayoutStatus.NEEDS_DESTINATION.value, PayoutStatus.PROCESSING.value,
+            PayoutStatus.FAILED.value,
+        ]}}
         pending_payouts_count = await db.payouts.count_documents(
-            {"status": PayoutStatus.ELIGIBLE.value}
+            pending_query
         )
         pending_payouts_amount_cursor = db.payouts.aggregate([
-            {"$match": {"status": PayoutStatus.ELIGIBLE.value}},
+            {"$match": pending_query},
             {"$group": {"_id": None, "total": {"$sum": "$net_amount"}}},
         ])
         pending_rows = await pending_payouts_amount_cursor.to_list(length=1)
         pending_payouts_amount = pending_rows[0]["total"] if pending_rows else 0
-        booking_tax_cursor = db.bookings.aggregate([
-            {"$match": {"booking_status": {"$nin": ["cancelled", "failed"]}}},
-            {"$group": {"_id": None, "total": {"$sum": "$taxes"}}},
-        ])
-        booking_tax_rows = await booking_tax_cursor.to_list(length=1)
-        booking_tax_paise = int(round(float(booking_tax_rows[0]["total"] or 0) * 100)) if booking_tax_rows else 0
+        booking_tax_paise = booking_totals["gst_paise"]
 
         # MRR — sum of monthly-equivalent from active subscriptions
         mrr = await _compute_mrr(db)
@@ -393,12 +425,31 @@ async def overview(
                 "total_gross_paise": total_gross,
                 "total_net_paise": total_net,
                 "platform_take_paise": platform_take,
+                "platform_revenue_breakdown": {
+                    "booking_platform_fees_paise": booking_platform_fees,
+                    "subscription_revenue_paise": subscription_totals["revenue_paise"],
+                    "subscription_receipts_paise": subscription_totals["gross_paise"],
+                    "subscription_gst_paise": subscription_totals["gst_paise"],
+                    "unclassified_subscription_receipts_paise": subscription_totals["unclassified_paise"],
+                    "subscriptions_requiring_review": subscription_totals["review_count"],
+                    "total_paise": platform_take,
+                    "basis": "booking_fees_plus_subscription_revenue_excluding_gst",
+                },
                 "booking_payments_paise": booking_rev["amount_paise"],
                 "registration_fees_paise": reg_rev["amount_paise"],
                 "subscriptions_paise": sub_rev["amount_paise"],
                 "refunds_paise": refunds["amount_paise"],
                 "payouts_paid_paise": payouts["amount_paise"],
-                "total_tax_paise": booking_tax_paise,
+                "booking_gst_paise": booking_tax_paise,
+                "subscription_gst_paise": subscription_totals["gst_paise"],
+                "total_tax_paise": booking_tax_paise + subscription_totals["gst_paise"],
+                "tax_breakdown": {
+                    "booking_gst_paise": booking_tax_paise,
+                    "subscription_gst_paise": subscription_totals["gst_paise"],
+                    "total_gst_paise": booking_tax_paise + subscription_totals["gst_paise"],
+                    "subscriptions_requiring_review": subscription_totals["review_count"],
+                    "unclassified_subscription_receipts_paise": subscription_totals["unclassified_paise"],
+                },
             },
             "counts": {
                 "booking_payments": booking_rev["count"],
@@ -540,7 +591,7 @@ async def top_hosts(
             "city": host.get("city"),
             "gross_paise": r["gross_paise"],
             "bookings": r["bookings"],
-            "platform_take_paise": int(round(r["gross_paise"] * 0.10)),
+            "platform_take_paise": await _configured_platform_revenue_paise(db, host_id=r["_id"]),
         })
     return {"hosts": out, "total": len(out)}
 
@@ -1831,7 +1882,11 @@ async def list_payouts(
             {
                 "_id": 0,
                 "booking_id": 1,
+                "host_id": 1,
+                "owner_id": 1,
+                "host_user_id": 1,
                 "booking_status": 1,
+    "cancellation_status": 1,
                 "status": 1,
                 "payment_status": 1,
                 "refund_status": 1,
@@ -1997,45 +2052,53 @@ async def list_payouts(
             "extra_guest_fee": _rupees_to_paise(extra_charges.get("extra_guest_fee")),
             "customer_gst": _rupees_to_paise(pricing_snapshot.get("gst_amount")),
         }
-        p["customer_charge_breakdown"] = {
-            "platform_fee": _first_paise(snapshot_charge_breakdown.get("platform_fee"), existing_charge_breakdown.get("platform_fee"), p.get("platform_fee")),
-            "gateway_charge": _first_paise(snapshot_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("payment_gateway_charge"), p.get("gateway_charge")),
-            "convenience_fee": _first_paise(snapshot_charge_breakdown.get("convenience_fee"), existing_charge_breakdown.get("convenience_fee")),
-            "insurance_fee": _first_paise(snapshot_charge_breakdown.get("insurance_fee"), existing_charge_breakdown.get("insurance_fee")),
-            "cleaning_fee": _first_paise(snapshot_charge_breakdown.get("cleaning_fee"), existing_charge_breakdown.get("cleaning_fee")),
-            "extra_guest_fee": _first_paise(snapshot_charge_breakdown.get("extra_guest_fee"), existing_charge_breakdown.get("extra_guest_fee")),
-            "customer_gst": _first_paise(snapshot_charge_breakdown.get("customer_gst"), existing_charge_breakdown.get("customer_gst")),
+        # The booking snapshot is authoritative, including explicit zeroes.
+        # Falling back to today's finance configuration corrupts historical
+        # bookings that were created before a charge was enabled.
+        p["customer_charge_breakdown"] = snapshot_charge_breakdown if booking else {
+            "platform_fee": _first_paise(existing_charge_breakdown.get("platform_fee"), p.get("platform_fee")),
+            "gateway_charge": _first_paise(existing_charge_breakdown.get("gateway_charge"), existing_charge_breakdown.get("payment_gateway_charge"), p.get("gateway_charge")),
+            "convenience_fee": _paise(existing_charge_breakdown.get("convenience_fee")),
+            "insurance_fee": _paise(existing_charge_breakdown.get("insurance_fee")),
+            "cleaning_fee": _paise(existing_charge_breakdown.get("cleaning_fee")),
+            "extra_guest_fee": _paise(existing_charge_breakdown.get("extra_guest_fee")),
+            "customer_gst": _paise(existing_charge_breakdown.get("customer_gst")),
         }
-        host_actual_amount = _first_paise(
-            p.get("host_actual_value_amount"),
-            _rupees_to_paise(pricing_snapshot.get("host_actual_value")),
-            p.get("gross_amount"),
+        host_actual_amount = (
+            _rupees_to_paise(pricing_snapshot.get("host_actual_value"))
+            if booking else _first_paise(p.get("host_actual_value_amount"), p.get("gross_amount"))
         )
         p["host_actual_value_amount"] = host_actual_amount
         p["gross_amount"] = host_actual_amount
-        p["total_extra_charges_amount"] = _first_paise(
-            p.get("total_extra_charges_amount"),
-            _rupees_to_paise(pricing_snapshot.get("total_extra_charges")),
-            sum(p["customer_charge_breakdown"].get(k, 0) for k in (
+        p["total_extra_charges_amount"] = (
+            _rupees_to_paise(pricing_snapshot.get("total_extra_charges"))
+            if booking else _first_paise(
+                p.get("total_extra_charges_amount"),
+                sum(p["customer_charge_breakdown"].get(k, 0) for k in (
                 "platform_fee",
                 "gateway_charge",
                 "convenience_fee",
                 "insurance_fee",
                 "cleaning_fee",
                 "extra_guest_fee",
-            )),
+                )),
+            )
         )
-        p["customer_final_payable_amount"] = _first_paise(
-            p.get("customer_final_payable_amount"),
-            _rupees_to_paise(pricing_snapshot.get("customer_final_payable")),
+        p["customer_final_payable_amount"] = (
+            _rupees_to_paise(pricing_snapshot.get("customer_final_payable"))
+            if booking else _paise(p.get("customer_final_payable_amount"))
         )
-        p["platform_fee"] = p["customer_charge_breakdown"].get("platform_fee") or p.get("platform_fee") or 0
-        p["gateway_charge"] = p["customer_charge_breakdown"].get("gateway_charge") or p.get("gateway_charge") or 0
+        p["platform_fee"] = p["customer_charge_breakdown"].get("platform_fee", 0)
+        p["gateway_charge"] = p["customer_charge_breakdown"].get("gateway_charge", 0)
         p.pop("company_charge", None)
 
-        if booking and p.get("status") not in {"paid", "processed", "completed"}:
+        if booking and p.get("status") in {
+            PayoutStatus.PENDING.value, PayoutStatus.ELIGIBLE.value,
+            PayoutStatus.NEEDS_DESTINATION.value, PayoutStatus.FAILED.value,
+        }:
             try:
-                payout_breakdown = await calculate_host_payout_breakdown(db, booking=booking)
+                calculation_booking = _payout_booking_context(booking, p)
+                payout_breakdown = await calculate_host_payout_breakdown(db, booking=calculation_booking)
                 refreshed_tds = payout_breakdown.get("tds_breakdown") or {}
                 p["tds_amount"] = payout_breakdown.get("tds_amount", p.get("tds_amount", 0))
                 p["net_amount"] = payout_breakdown.get("net_amount", p.get("net_amount", 0))
@@ -2051,6 +2114,13 @@ async def list_payouts(
                 await db.payouts.update_one(
                     {"payout_id": p.get("payout_id")},
                     {"$set": {
+                        "gross_amount": payout_breakdown.get("gross_amount", p["gross_amount"]),
+                        "host_actual_value_amount": payout_breakdown.get("host_actual_value_amount", p["host_actual_value_amount"]),
+                        "platform_fee": payout_breakdown.get("platform_fee", p["platform_fee"]),
+                        "gateway_charge": payout_breakdown.get("gateway_charge", p["gateway_charge"]),
+                        "customer_charge_breakdown": payout_breakdown.get("customer_charge_breakdown") or p["customer_charge_breakdown"],
+                        "total_extra_charges_amount": payout_breakdown.get("total_extra_charges_amount", p["total_extra_charges_amount"]),
+                        "customer_final_payable_amount": payout_breakdown.get("customer_final_payable_amount", p["customer_final_payable_amount"]),
                         "tds_amount": p["tds_amount"],
                         "net_amount": p["net_amount"],
                         "deductions": p["deductions"],
@@ -2107,6 +2177,12 @@ async def save_partner_settlement_decision(
     settlement_id = str(payload.settlement_id or "").strip()
     if not settlement_id:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Settlement ID is required")
+    if status_value == 'approved':
+        if not payload.booking_id:
+            raise HTTPException(400, 'A booking ID is required before approving a partner settlement')
+        source_booking = await db.bookings.find_one({'booking_id': payload.booking_id}, {'_id': 0}) or {}
+        if not source_booking or source_booking.get('cancellation_status') in {'requested', 'approved'} or source_booking.get('booking_status') == 'cancelled':
+            raise HTTPException(400, 'Cancelled bookings and pending cancellations cannot be approved for partner payout')
     now = datetime.now(timezone.utc)
     doc = {
         "settlement_id": settlement_id,
@@ -2385,9 +2461,12 @@ async def _enrich_refund_for_credit_note(db: AsyncIOMotorDatabase, refund: dict)
         booking.get("extra_guest_fee_host_amount"),
     ))
     gross_receipt = int(refund.get("gross_receipt_amount") or refund.get("original_amount") or (float(booking.get("total_amount") or 0) * 100) or 0)
+    if refund.get('refund_policy_version') == 'management_refund_20261120':
+        frozen_receipt = refund.get('gross_receipt_amount')
+        gross_receipt = int(frozen_receipt if frozen_receipt is not None else refund.get('original_amount') or 0)
     stored_refundable_base = int(refund.get("refundable_base_amount") or refund.get("refund_base_amount") or 0)
     computed_refundable_base = host_actual_paise + host_extra_guest_paise
-    refundable_base = max(stored_refundable_base, computed_refundable_base, host_actual_paise)
+    refundable_base = stored_refundable_base if refund.get("refund_policy_version") == "management_refund_20261120" else max(stored_refundable_base, computed_refundable_base, host_actual_paise)
     refund_total = int(refund.get("refund_amount") or 0)
     cancellation = int(refund.get("cancellation_charges") or max(0, refundable_base - refund_total))
     taxable = int(refund.get("net_taxable_value_credited") or refund_total)
@@ -2532,15 +2611,13 @@ async def create_refund(
     if dup:
         raise HTTPException(400, detail="Refund request already exists for this booking")
 
-    refund_doc = await create_refund_request(
-        db,
-        booking=booking,
-        reason=payload.reason,
-        initiated_by=current_user["user_id"],
-        initiated_by_role="admin",
-        override_amount=payload.override_amount,
-        override_percent=payload.override_percent,
-    )
+    from services.refund_workflow import request_cancellation
+    try:
+        refund_doc = await request_cancellation(db, booking, current_user, reason=payload.reason,
+            cancellation_type=payload.cancellation_type,
+            override_amount=payload.override_amount, override_percent=payload.override_percent)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     return {
         "message": "Refund request created for admin approval",
         "refund": _strip(refund_doc),
@@ -2560,10 +2637,11 @@ async def approve_refund(
             refund_id=refund_id,
             approved_by=current_user["user_id"],
             reason=payload.reason,
+            override_percent=payload.override_percent,
         )
     except ValueError as err:
         raise HTTPException(400, detail=str(err))
-    return {"message": "Refund approved and processed", "refund": _strip(refund_doc or {})}
+    return {"message": "Refund review updated. Check gateway status for completion.", "refund": _strip(refund_doc or {})}
 
 
 @router.post("/refunds/{refund_id}/reject")
@@ -2588,22 +2666,54 @@ async def reject_refund(
     return {"message": "Refund request rejected", "refund": _strip(refund_doc or {})}
 
 
+@router.post('/refunds/{refund_id}/reconcile-quote')
+async def reconcile_refund_quote(refund_id: str, payload: RefundDecisionRequest,
+                                 current_user: dict = Depends(require_admin), db=Depends(get_db)):
+    from services.refund_workflow import reconcile_pending_quote
+    try:
+        return {'refund': await reconcile_pending_quote(db, refund_id, current_user, payload.reason)}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
 # --------------- Refund policy preview ----------------
 
 @router.get("/refunds/policy-preview")
-async def refund_policy_preview(
-    check_in_date: str,
-    total_amount: float,
-    current_user: dict = Depends(require_admin),
-    db: AsyncIOMotorDatabase = Depends(get_db),
-):
-    from services.account_service import compute_refund_tier
-    pct, tier = compute_refund_tier(check_in_date)
-    refund_paise = int(round(float(total_amount) * 100 * pct / 100))
-    return {
-        "check_in_date": check_in_date,
-        "percent": pct,
-        "tier": tier,
-        "refund_paise": refund_paise,
-        "refund_inr": round(refund_paise / 100, 2),
-    }
+async def refund_policy_preview(booking_id: Optional[str] = None,
+                                check_in_date: Optional[str] = None, total_amount: Optional[float] = None,
+                                current_user: dict = Depends(require_admin), db=Depends(get_db)):
+    from services.refund_policy_quote import quote_refund
+    if not booking_id:
+        raise HTTPException(400, 'Booking ID is required for an accurate cooling-off and eligible-amount preview')
+    booking = await db.bookings.find_one({'booking_id': booking_id}, {'_id': 0})
+    if not booking:
+        raise HTTPException(404, 'Booking not found')
+    property_row = await db.properties.find_one({'property_id': booking.get('property_id')}, {'_id': 0}) or {}
+    try:
+        quote = quote_refund(booking, property_row)
+        return {**quote, 'percent': quote['refund_percent'], 'tier': quote['policy_tier'],
+                'refund_paise': quote['refund_amount'], 'refund_inr': quote['refund_amount'] / 100}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+class RefundReviewDecision(BaseModel):
+    decision: str
+    reason: str
+
+
+@router.post('/refunds/{refund_id}/review-decision')
+async def resolve_refund_review(refund_id: str, payload: RefundReviewDecision,
+                                 current_user: dict = Depends(require_admin), db=Depends(get_db)):
+    if payload.decision not in {'upheld', 'escalated'} or len(payload.reason.strip()) < 3:
+        raise HTTPException(400, 'Choose upheld or escalated and provide a reason')
+    refund = await db.refunds.find_one({'refund_id': refund_id}, {'_id': 0})
+    if not refund or refund.get('review_status') != 'requested':
+        raise HTTPException(400, 'No pending review request')
+    await db.refunds.update_one({'refund_id': refund_id}, {'$set': {
+        'review_status': payload.decision, 'review_decision_reason': payload.reason.strip(),
+        'review_decided_at': datetime.now(timezone.utc), 'review_decided_by': current_user['user_id']}})
+    from services.audit_service import write_audit_log
+    await write_audit_log(db, user_id=current_user['user_id'], role='admin', module='refunds',
+        action='refund_review_decided', record_id=refund_id, reason=payload.reason, new_value={'decision': payload.decision})
+    return {'message': 'Review decision recorded. Any monetary correction requires separate reconciliation.'}

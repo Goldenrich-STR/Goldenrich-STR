@@ -1,3 +1,4 @@
+import PropertyUnitsReview from '../components/PropertyUnitsReview';
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -534,6 +535,28 @@ const BM_APPROVAL_CHECKLIST_LABELS = {
   property_details_reviewed: 'Property details, address and listing info reviewed',
 };
 
+/** Branch Manager checklist for one case: when the property has units, every unit must be reviewed too. */
+const bmUnitsOf = (property) => (property?.has_units && Array.isArray(property.units) ? property.units : []);
+const bmUnitKey = (unit, index) => `unit_${unit.unit_id || `unit_${index + 1}`}_reviewed`;
+const bmChecklistKeysFor = (property) => [...BM_APPROVAL_CHECKLIST, ...bmUnitsOf(property).map(bmUnitKey)];
+const bmChecklistLabelFor = (key, property) => {
+  const units = bmUnitsOf(property);
+  const index = units.findIndex((unit, i) => bmUnitKey(unit, i) === key);
+  if (index >= 0) return `Unit reviewed: ${units[index].name || `Unit ${index + 1}`} (price, guests, tier)`;
+  return BM_APPROVAL_CHECKLIST_LABELS[key] || formatDisplayLabel(key);
+};
+
+/** Readable label for a checklist key. Unit lines (unit_<id>_verified) show the unit's real name. */
+const checklistKeyLabel = (key, property) => {
+  const match = /^unit_(.+)_(verified|reviewed)$/.exec(String(key));
+  if (match) {
+    const units = bmUnitsOf(property);
+    const index = units.findIndex((unit, i) => (unit.unit_id || `unit_${i + 1}`) === match[1]);
+    if (index >= 0) return `Unit ${match[2]}: ${units[index].name || `Unit ${index + 1}`}`;
+  }
+  return formatDisplayLabel(key);
+};
+
 const normalizeVerificationCaseForReview = (item = {}) => ({
   ...item,
   review_stage: 'branch_manager',
@@ -671,7 +694,7 @@ const VerificationReviewSection = () => {
           setApproving(false);
           return;
         }
-        const checklist = BM_APPROVAL_CHECKLIST.reduce((acc, key) => ({ ...acc, [key]: true }), {});
+        const checklist = bmChecklistKeysFor(selectedVerification.property_details).reduce((acc, key) => ({ ...acc, [key]: true }), {});
         await verificationAPI.saveBmChecklist(selectedVerification.verification_id, {
           checklist,
           remarks: approveRemarks.trim(),
@@ -815,7 +838,7 @@ const VerificationReviewSection = () => {
                             ) : (
                               <XCircle className="w-3.5 h-3.5 flex-shrink-0" />
                             )}
-                            <span>{formatDisplayLabel(key)}</span>
+                            <span>{checklistKeyLabel(key, verification.property_details)}</span>
                           </div>
                         ))}
                       </div>
@@ -834,7 +857,7 @@ const VerificationReviewSection = () => {
                       {Object.entries(verification.checklist || {}).map(([key, value]) => (
                         <div key={key} className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-xs font-bold ${value ? 'bg-sage/10 border-sage/20 text-sage-dark' : 'bg-red-50 border-red-100 text-red-600'}`}>
                           {value ? <CheckCircle className="w-3.5 h-3.5 flex-shrink-0" /> : <XCircle className="w-3.5 h-3.5 flex-shrink-0" />}
-                          <span className="truncate">{formatDisplayLabel(key)}</span>
+                          <span className="truncate">{checklistKeyLabel(key, verification.property_details)}</span>
                         </div>
                       ))}
                     </div>
@@ -1193,6 +1216,9 @@ const VerificationReviewSection = () => {
                     )}
                   </div>
 
+                  {/* Units: the reviewer must see every unit the host listed */}
+                  <PropertyUnitsReview property={selectedVerification.property_details} className="mt-3" />
+
                   {/* Detailed Description */}
                   {selectedVerification.property_details.description && (
                     <div className="pt-2">
@@ -1237,11 +1263,11 @@ const VerificationReviewSection = () => {
                       <p className="text-xs text-charcoal-light mt-1">Complete these checks before approving the case for admin final approval.</p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">
-                      {BM_APPROVAL_CHECKLIST.filter((key) => bmChecklist[key]).length}/{BM_APPROVAL_CHECKLIST.length} done
+                      {bmChecklistKeysFor(selectedVerification.property_details).filter((key) => bmChecklist[key]).length}/{bmChecklistKeysFor(selectedVerification.property_details).length} done
                     </span>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    {BM_APPROVAL_CHECKLIST.map((key) => (
+                    {bmChecklistKeysFor(selectedVerification.property_details).map((key) => (
                       <label key={key} className={`flex items-center gap-3 rounded-xl border p-4 cursor-pointer transition ${bmChecklist[key] ? 'border-green-200 bg-green-50' : 'border-slate-200 bg-slate-50 hover:bg-white'}`}>
                         <input
                           type="checkbox"
@@ -1250,7 +1276,7 @@ const VerificationReviewSection = () => {
                           className="w-4 h-4 accent-green-600"
                           disabled={!canReviewVerification(selectedVerification)}
                         />
-                        <span className="text-sm font-bold text-charcoal">{BM_APPROVAL_CHECKLIST_LABELS[key] || formatDisplayLabel(key)}</span>
+                        <span className="text-sm font-bold text-charcoal">{bmChecklistLabelFor(key, selectedVerification.property_details)}</span>
                       </label>
                     ))}
                   </div>
@@ -1262,7 +1288,7 @@ const VerificationReviewSection = () => {
                     {Object.entries(selectedVerification.checklist || {}).map(([key, value]) => (
                       <div key={key} className="flex flex-col p-4 bg-white border border-gray-100 rounded-2xl hover:shadow-subtle transition">
                         <div className="flex items-center justify-between mb-3">
-                          <span className="text-sm font-bold text-charcoal">{formatDisplayLabel(key)}</span>
+                          <span className="text-sm font-bold text-charcoal">{checklistKeyLabel(key, selectedVerification.property_details)}</span>
                           {value ? (
                             <div className="flex items-center space-x-1 text-green-600">
                               <CheckCircle className="w-3 h-3" />
@@ -1287,7 +1313,7 @@ const VerificationReviewSection = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {Object.entries(selectedVerification.checklist || {}).map(([key, value]) => (
                       <div key={key} className="flex items-center justify-between gap-3 rounded-xl bg-white border border-green-100 p-3">
-                        <span className="text-xs font-bold text-charcoal">{formatDisplayLabel(key)}</span>
+                        <span className="text-xs font-bold text-charcoal">{checklistKeyLabel(key, selectedVerification.property_details)}</span>
                         <span className={`text-[10px] font-black uppercase ${value ? 'text-green-700' : 'text-red-600'}`}>{value ? 'Verified' : 'Not verified'}</span>
                       </div>
                     ))}
@@ -2649,6 +2675,7 @@ const RMPropertyDetailsModal = ({ data, loading, formatMoney, formatDate, onClos
           <div className="p-10 text-center text-sm font-bold text-red-600 uppercase tracking-widest">Failed to load property details</div>
         ) : (
           <div className="p-5 md:p-7 space-y-5 overflow-y-auto max-h-[calc(92vh-106px)]">
+            <PropertyUnitsReview property={property} />
             <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_1.5fr] gap-5">
               <div className="bg-white rounded-3xl border border-gray-100 shadow-premium overflow-hidden">
                 <img src={coverImage} alt={property.title || 'Property'} className="h-52 w-full object-cover bg-stone" />

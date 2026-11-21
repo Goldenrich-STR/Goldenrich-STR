@@ -164,6 +164,7 @@ const PromptDialog = ({
   confirmLabel = 'Save',
   cancelLabel = 'Cancel',
   inputType = 'text',
+  selectOptions,
   allowEmpty = false,
   minLength = 1,
   eyebrow = 'Input Required',
@@ -177,6 +178,7 @@ const PromptDialog = ({
   const submit = () => {
     setTouched(true);
     if (!allowEmpty && trimmed.length < minLength) return;
+    if (selectOptions && !selectOptions.some((option) => option.value === value)) return;
     onResolve(inputType === 'text' || inputType === 'textarea' ? (allowEmpty ? String(value ?? '') : trimmed) : String(value ?? ''));
   };
 
@@ -206,7 +208,15 @@ const PromptDialog = ({
     >
       <label className="block">
         <span className="mb-2 block text-xs font-black uppercase tracking-wider text-slate-500">{label}</span>
-        {inputType === 'textarea' ? (
+        {selectOptions ? (
+          <select autoFocus className={inputClass} value={value}
+            onChange={(event) => setValue(event.target.value)}>
+            <option value="" disabled>{placeholder || 'Select a team member'}</option>
+            {selectOptions.map((option) => (
+              <option key={option.value} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+        ) : inputType === 'textarea' ? (
           <textarea
             autoFocus
             className={`${inputClass} min-h-28 resize-y`}

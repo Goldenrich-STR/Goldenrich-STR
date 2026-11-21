@@ -1,6 +1,7 @@
 import { formatAddress } from '../lib/displayLabels';
+import { getBookedUnitPriceRows } from './bookedUnitPricing';
 
-const plainMoney = (value) => Math.round(Number(value || 0)).toLocaleString('en-IN');
+const plainMoney = (value) => Number(value || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const usefulInvoiceText = (...values) => {
   for (const value of values) {
@@ -137,18 +138,27 @@ const EXTRA_CHARGE_LABELS = {
 
 const getExtraChargeEntries = (booking = {}, totalExtraCharges = 0) => {
   const source = booking.extra_charges || booking.customer_charge_breakdown || booking.charge_breakdown || booking.applied_charges || {};
-  const amountFor = (...keys) => keys.reduce((sum, key) => (
-    sum + Number(source[key] ?? booking[key] ?? 0)
-  ), 0);
+  // These keys are aliases for one charge, not separate charges. Prefer the
+  // saved breakdown, including an explicit zero, before legacy booking fields.
+  const amountFor = (...keys) => {
+    for (const record of [source, booking]) {
+      for (const key of keys) {
+        const value = record[key];
+        if (value === undefined || value === null || value === '') continue;
+        const amount = Number(value);
+        if (Number.isFinite(amount)) return amount;
+      }
+    }
+    return 0;
+  };
   const platformAmount = amountFor('platform_fee', 'platform_charge', 'service_fee');
   const gatewayAmount = amountFor('payment_gateway_charge', 'gateway_charge', 'payment_gateway_fee', 'gateway_fee');
   const convenienceAmount = amountFor('convenience_fee', 'convenience_charge');
   const insuranceAmount = amountFor('insurance_fee', 'insurance_charge');
   const explicitCleaningAmount = amountFor('cleaning_fee');
   const extraGuestAmount = amountFor('extra_guest_fee', 'host_extra_guest_fee', 'extra_person_fee', 'extra_person_charge');
-  const knownWithoutCleaning = platformAmount + gatewayAmount + convenienceAmount + insuranceAmount + extraGuestAmount;
-  const residualCleaningAmount = Math.max(0, Number(totalExtraCharges || 0) - knownWithoutCleaning);
-  const cleaningAmount = explicitCleaningAmount > 0 ? explicitCleaningAmount : residualCleaningAmount;
+  // Unexplained legacy totals are not evidence of an actual cleaning charge.
+  const cleaningAmount = explicitCleaningAmount;
 
   return [
     {
@@ -191,7 +201,7 @@ const daysBetween = (start, end) => {
   return Math.max(1, Math.round((b - a) / (1000 * 60 * 60 * 24)));
 };
 
-const numberToWords = (amount) => {
+const integerNumberToWords = (amount) => {
   const n = Math.round(Number(amount || 0));
   if (n === 0) return 'Zero';
   const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -210,21 +220,26 @@ const numberToWords = (amount) => {
   ].filter(Boolean).join(' ');
 };
 
+const numberToWords = (amount) => {
+  const paise = Math.round(Number(amount || 0) * 100);
+  const rupees = Math.floor(paise / 100);
+  const fraction = paise % 100;
+  return `${integerNumberToWords(rupees)}${fraction ? ` and ${integerNumberToWords(fraction)} Paise` : ''}`;
+};
+
 const importantConditions = [
-  'Cancellation, modification, and refund charges are subject to the respective Host\'s policy.',
-  'Quote your X-Space360 Booking ID for all booking-related communication.',
-  'X-Space360 is not liable for cancellations or delays caused by Force Majeure events.',
-  'Refunds will be processed only after confirmation from the respective Property Host.',
-  'Refund timelines depend on banks and payment gateways.',
-  'Your X-Space360 Booking ID is the official booking confirmation.',
-  'Carry a digital or printed copy of your Booking Confirmation during check-in.',
-  'A valid Government-issued Photo ID is mandatory for all guests at check-in.',
-  'Additional charges (Security Deposit, Extra Guest Fees, Parking, etc.) must be paid directly to the Host, if applicable.',
-  'Guests must comply with the property\'s House Rules, Check-in/Check-out timings, and Occupancy Policy.',
-  'Any complaint must be reported to X-Space360 within 24 hours of check-in.',
-  'X-Space360 acts only as a booking platform; the Host is responsible for the property and services.',
-  'X-Space360 reserves the right to cancel bookings involving fraud, misuse, or policy violations.',
-  'By confirming the booking, the Guest agrees to the X-Space360 Terms & Conditions, Refund Policy, and Privacy Policy.',
+  "This booking is made through X-Space360 and is identified by the unique X-Space360 Booking ID.",
+  "Guests must carry valid government-issued photo identification as required for check-in and applicable property rules.",
+  "Cancellation, refund and modification will be governed by the X-Space360-approved policy applicable to the booking and captured at the time of booking.",
+  "The X-Space360 Booking ID must be quoted for booking-related communication.",
+  "Force Majeure will be dealt with under the applicable X-Space360 Force Majeure/Exception Policy and applicable law.",
+  "Eligible refunds will be processed according to the X-Space360 Refund Policy.",
+  "X-Space360 will initiate eligible refunds within the approved processing period. Actual credit time may depend on the payment gateway/bank.",
+  "The X-Space360 Booking ID/Booking Confirmation is the official booking reference.",
+  "Guest should retain a digital or printed copy of the booking confirmation.",
+  "Valid government-issued photo ID may be required at check-in, subject to applicable law and property requirements.",
+  "Safety, fraud, serious service failures and statutory matters may be reported outside this period where appropriate.",
+  "The exact legal wording will be finalized by Legal."
 ];
 
 export const getCustomerBookingAmounts = (booking = {}) => {
@@ -273,6 +288,8 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   const customerEmail = userObj.email || booking.guest_email || booking.customer_email || booking.email || 'NA';
   const customerGst = userObj.gst_number || userObj.gst_no || booking.guest_gst_number || booking.customer_gst_number || booking.gst_number || '';
   const roomType = propObj.room_type || propObj.bhk_type || propObj.property_type || booking.room_type || booking.property_type || 'Standard';
+  const bookedUnit = booking.unit_name || booking.unit_id;
+  const unitPriceRows = getBookedUnitPriceRows(booking, propObj.category);
 
   const firstPresent = (...values) => values.find((value) => {
     const text = String(value ?? '').trim();
@@ -355,26 +372,7 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
   const publicAccommodationAmount = options.showExtraChargeBreakdown ? amounts.base : taxableValue;
   const accommodationDescription = `Accommodation / Property Booking – ${propertyName}<br />Stay: ${escapeHtml(nights)} Night | Room: ${escapeHtml(roomType)}`;
 
-  const termsList = [
-    'This ticket is booked through X-Space360.',
-    'Carry any valid photo ID during check-in. Modification and cancellation are subject to the refund policy below.',
-    'Local destination check-in and check-out timings are maintained by the property.',
-    'Additional services, damages, penalties, or property-level charges may be collected directly by the property, if applicable.',
-    'Cancellation, modification, and refund charges are subject to the respective Host\'s policy.',
-    'Quote your X-Space360 Booking ID for all booking-related communication.',
-    'X-Space360 is not liable for cancellations or delays caused by Force Majeure events.',
-    'Refunds will be processed only after confirmation from the respective Property Host.',
-    'Refund timelines depend on banks and payment gateways.',
-    'Your X-Space360 Booking ID is the official booking confirmation.',
-    'Carry a digital or printed copy of your Booking Confirmation during check-in.',
-    'A valid Government-issued Photo ID is mandatory for all guests at check-in.',
-    'Additional charges (Security Deposit, Extra Guest Fees, Parking, etc.) must be paid directly to the Host, if applicable.',
-    'Guests must comply with the property\'s House Rules, Check-in/Check-out timings, and Occupancy Policy.',
-    'Any complaint must be reported to X-Space360 within 24 hours of check-in.',
-    'X-Space360 acts only as a booking platform; the Host is responsible for the property and services.',
-    'X-Space360 reserves the right to cancel bookings involving fraud, misuse, or policy violations.',
-    'By confirming the booking, the Guest agrees to the X-Space360 Terms & Conditions, Refund Policy, and Privacy Policy.',
-  ];
+  const termsList = importantConditions;
 
   return `<!doctype html>
 <html>
@@ -500,6 +498,8 @@ export const buildCustomerBookingInvoiceHtml = (booking = {}, property = {}, use
               Property / Hotel- ${escapeHtml(propertyName)}<br />
               Booking Status - Booking Confirmed<br />
               Room Type - ${escapeHtml(roomType)}
+              ${bookedUnit ? `<br />Booked Unit - ${escapeHtml(bookedUnit)}` : ''}
+              ${unitPriceRows.map(([label, value]) => `<br />${escapeHtml(label)} - ${escapeHtml(value)}`).join('')}
             </td>
           </tr>
         </tbody>

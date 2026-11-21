@@ -71,7 +71,8 @@ class PropertyUnit(BaseModel):
     max_guests: int = 2
     bhk_type: Optional[str] = None
     price_per_night: Optional[float] = None
-    tier: Optional[str] = None  # standard | deluxe | premium
+    tier: Optional[str] = None  # standard | deluxe | premium, or a class the host typed (e.g. "Suite")
+    images: List[str] = []  # this unit's own photos (the property's shared photos stay in Property.images)
 
 class Property(BaseModel):
     property_id: str = Field(default_factory=lambda: f"prop_{uuid4().hex[:14]}")

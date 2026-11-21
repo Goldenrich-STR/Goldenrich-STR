@@ -203,6 +203,14 @@ async def resolve_verification_telecaller(db, prop: dict, host: dict | None = No
             "source": "host_document_queue",
         }
 
+    # Telecaller chosen by the host in the registration form (older hosts only have telecaller_id).
+    host_selected_telecaller = host.get("telecaller_id")
+    if host_selected_telecaller:
+        return host_selected_telecaller, {
+            "policy": "host_selected_at_registration",
+            "source": "host_registration",
+        }
+
     prop_verification_telecaller = prop.get("verification_telecaller_id")
     if prop_verification_telecaller:
         return prop_verification_telecaller, {

@@ -510,7 +510,7 @@ function AppRoutes() {
 
       {/* Render AuthPage as a modal overlay on top of the background route */}
       {isAuthRoute && (
-        <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[9999] bg-black/40 backdrop-blur-md flex items-end justify-center p-0 md:items-center md:p-4">
           <AuthPage isAdminLogin={location.pathname.startsWith("/admin") || location.pathname.startsWith("/md")} isMdLogin={location.pathname.startsWith("/md")} />
         </div>
       )}
@@ -520,9 +520,9 @@ function AppRoutes() {
 
 function App() {
   const location = useLocation();
-  // Host/admin workspaces have their own contextual support control. Keeping
-  // the public WhatsApp + chatbot launcher there covers form actions on small screens.
-  const isWorkspaceRoute = /^\/(host|admin|md)(?:\/|$)/.test(location.pathname);
+  // Keep the public floating launchers on the landing page only. Other pages,
+  // especially property details, have their own fixed booking actions.
+  const isLandingPage = location.pathname === "/";
 
   return (
     <div className="App">
@@ -531,7 +531,7 @@ function App() {
         <Suspense fallback={<ScreenLoading />}>
           <AppRoutes />
         </Suspense>
-        {!isWorkspaceRoute && <ChatbotWidget />}
+        {isLandingPage && <ChatbotWidget />}
       </AuthProvider>
     </div>
   );

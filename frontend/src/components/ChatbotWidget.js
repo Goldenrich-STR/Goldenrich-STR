@@ -1,3 +1,4 @@
+import { REFUND_POLICY_TEXT, REFUND_POLICY_SUMMARY } from '../utils/refundPolicyContent';
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowUp, Plus, RotateCcw, X, Star, MapPin, Phone, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -112,7 +113,7 @@ const FLOWS = {
     ]
   },
   guest_refunds: {
-    message: "### **Payments & Refunds**\nAll payments are processed securely through Razorpay. Refunds go back to the **original payment method** only.\n\n* **Guest cancellation**:\n  * **100% refund**: 7 or more days before check-in (and within 24 hours of booking when check-in is more than 7 days away)\n  * **50% refund**: 3 to 6 days before check-in\n  * **No refund**: less than 72 hours before check-in, on check-in day, or for a no-show\n* **If the host cancels**: you get a 100% refund or alternative accommodation, subject to availability.\n* **Non-refundable**: platform convenience fee, payment gateway charges and some taxes, unless approved otherwise.\n* **Timeline**: refunds are verified within 24-48 working hours; banks, cards and UPI can take 8-10 business days to credit.\n\nThe cancellation setting of each property is shown before you book.",
+    message: REFUND_POLICY_SUMMARY,
     options: [
       { label: "How to claim a refund?", next: "guest_refund_claim" },
       { label: "Security Deposit refunds", next: "guest_security_refund" },
@@ -120,7 +121,7 @@ const FLOWS = {
     ]
   },
   guest_refund_claim: {
-    message: "### **How to Claim Your Refund**\n1. Go to **My Bookings** and open the booking.\n2. Choose **Cancel Booking**, or contact customer support. A cancellation is valid once X-Space360 confirms it (within 24-48 hours).\n3. The refund percentage follows the cancellation window above.\n4. Disagree with a decision? Submit a **refund review request within 7 days** of the cancellation and we will review it and share our final decision.",
+    message: "### **How to Claim Your Refund**\n1. Go to **My Bookings** and open the booking.\n2. Choose **Cancel Booking**, or contact customer support. A cancellation is valid once X-Space360 confirms it (within 24-48 working hours).\n3. The refund percentage follows the cancellation window above.\n4. Disagree with a decision? Submit a **refund review request within 7 days** of the cancellation and we will review it and share our final decision.",
     options: [
       { label: "Security Deposit refunds", next: "guest_security_refund" },
       { label: "Back to Guest Menu", next: "guest_main" }
@@ -522,7 +523,7 @@ const INFO = [
   { id: 'info-booking-status', label: 'Booking statuses', words: ['booking status', 'status of booking', 'pending booking', 'awaiting approval', 'booking rejected', 'booking confirmed', 'booking completed', 'my bookings'], link: null,
     text: "A booking moves through these statuses:\n\n* **Pending / Awaiting host approval:** your request is with the host (they have 24 hours)\n* **Confirmed:** approved and paid\n* **Completed:** the stay is over\n* **Rejected:** the host declined\n* **Cancelled:** cancelled by the guest or host\n\nYou can follow all of them under **My Bookings**." },
   { id: 'info-cancel-policy-types', label: 'Flexible, moderate and strict policies', words: ['flexible policy', 'moderate policy', 'strict policy', 'cancellation type', 'cancellation types', 'which cancellation'], link: { label: 'Read the full Refund Policy', href: '/refund-policy' },
-    text: "Each property shows its own cancellation setting (**Flexible, Moderate or Strict**) before you book. The platform refund rules, such as 100% refund 7 or more days before check-in, 50% for 3 to 6 days and none inside 72 hours, are in the Cancellation and Refund Policy." },
+    text: REFUND_POLICY_SUMMARY },
   { id: 'info-notifications', label: 'Notifications and alerts', words: ['notification', 'notifications', 'alerts', 'sms', 'whatsapp updates', 'email updates', 'booking updates', 'otp'], link: null,
     text: "You get booking updates, verification messages and support replies in the **notification centre** inside the app. OTPs and important alerts also reach you by **SMS, WhatsApp and email** through our messaging partner MSG91." },
   { id: 'info-app', label: 'Mobile app', words: ['mobile app', 'android app', 'play store', 'google play', 'download app', 'ios app', 'iphone app', 'app download', 'qr code'], link: { label: 'Get the app', href: 'https://play.google.com/store/apps/details?id=com.xspace360.app&pcampaignid=web_share' },
@@ -606,7 +607,7 @@ const loadKb = async () => {
   try {
     const res = await cmsAPI.getLandingPage();
     const legal = res.data?.legal_terms || {};
-    const docs = { refund: legal.refund_text, terms: legal.terms_text, privacy: legal.privacy_text };
+    const docs = { refund: REFUND_POLICY_TEXT, terms: legal.terms_text, privacy: legal.privacy_text };
     Object.entries(docs).forEach(([source, raw]) => {
       if (!raw) return;
       const text = String(raw).replace(/\r\n/g, '\n');

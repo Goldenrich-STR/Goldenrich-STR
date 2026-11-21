@@ -990,6 +990,12 @@ async def create_booking(
         booking_dict["check_in_date"] = booking_dict["check_in_date"].isoformat()
         booking_dict["check_out_date"] = booking_dict["check_out_date"].isoformat()
         booking_dict["currency"] = "INR"
+        from services.refund_policy_timing import POLICY_VERSION
+        booking_dict['refund_policy_context'] = {
+            'version': POLICY_VERSION, 'timezone': property_dict.get('timezone') or 'Asia/Kolkata',
+            'check_in_time': (booking_data.start_time if is_hourly else None) or property_dict.get('check_in_time') or '12:00',
+        }
+        booking_dict['cancellation_policy'] = str(property_dict.get('cancellation_policy') or 'standard')
         booking_dict["service_fee_percent"] = service_fee_percent
         booking_dict["tax_percent"] = tax_rate
         booking_dict["tax_slab_id"] = tax_slab_id
@@ -1279,6 +1285,8 @@ async def retry_booking_payment(
     booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not booking_dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if booking_dict.get('cancellation_status') in {'requested', 'approved'}:
+        raise HTTPException(409, 'Payment is unavailable while this booking is being cancelled')
     if booking_dict.get("guest_id") != current_user.get("user_id"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
@@ -1351,6 +1359,8 @@ async def create_remaining_payment_order(
     booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
     if not booking_dict:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+    if booking_dict.get('cancellation_status') in {'requested', 'approved'}:
+        raise HTTPException(409, 'Payment is unavailable while this booking is being cancelled')
     if booking_dict.get("guest_id") != current_user.get("user_id"):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
 
@@ -1854,6 +1864,8 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
             "property_type": 1,
             "bhk_type": 1,
             "room_type": 1,
+            "units.unit_id": 1,
+            "units.name": 1,
             "category": 1,
             "booking_mode": 1,
             "instant_booking": 1,
@@ -1887,7 +1899,13 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
         },
     ).to_list(length=len(owner_ids) or 1)
     owner_map = {owner.get("user_id"): owner for owner in owners}
+    unit_names = {}
     for prop in props:
+        unit_names[prop["property_id"]] = {
+            unit["unit_id"]: unit.get("name")
+            for unit in (prop.pop("units", None) or [])
+            if isinstance(unit, dict) and unit.get("unit_id")
+        }
         owner = owner_map.get(prop.get("owner_id"))
         if owner:
             prop["host"] = owner
@@ -1895,6 +1913,8 @@ async def _attach_property_info(db: AsyncIOMotorDatabase, bookings: list) -> lis
     by_id = {p["property_id"]: p for p in props}
     for b in bookings:
         prop = by_id.get(b.get("property_id"))
+        if b.get("unit_id") and not b.get("unit_name"):
+            b["unit_name"] = unit_names.get(b.get("property_id"), {}).get(b["unit_id"]) or b["unit_id"]
         if prop and not b.get("booking_mode"):
             b["booking_mode"] = _normalize_booking_mode(prop)
         b["property"] = prop
@@ -1926,7 +1946,9 @@ def _canonical_booking_lifecycle(booking: dict) -> dict:
     refund = booking.get("refund") or {}
     refund_status = (refund.get("status") or "").lower() if isinstance(refund, dict) else ""
 
-    if refund_status in {"processed", "completed", "refunded", "success"}:
+    if booking.get("cancellation_status") == "requested":
+        status_code = "CANCELLATION_REQUESTED"
+    elif refund_status in {"processed", "completed", "refunded", "success"} and int(refund.get("refund_amount") or 0) > 0:
         status_code = "REFUNDED"
     elif refund_status in {"pending", "initiated", "processing"}:
         status_code = "REFUND_INITIATED"
@@ -1957,6 +1979,7 @@ def _canonical_booking_lifecycle(booking: dict) -> dict:
         "UPCOMING": ("Upcoming", "Your booking is coming up."),
         "CHECKED_IN": ("Checked-in", "Your booking is currently active."),
         "COMPLETED": ("Completed", "This booking is completed."),
+        "CANCELLATION_REQUESTED": ("Cancellation Requested", "Awaiting X-Space360 confirmation within 24-48 working hours."),
         "CANCELLED": ("Cancelled", "This booking has been cancelled."),
         "REFUND_INITIATED": ("Refund Initiated", "Your refund has been initiated."),
         "REFUNDED": ("Refunded", "Your refund has been completed."),
@@ -1995,8 +2018,8 @@ async def get_guest_bookings(
         bookings = await _promote_paid_legacy_bookings(db, bookings)
         bookings = await _attach_property_info(db, bookings)
         for b in bookings:
-            if b.get("booking_status") == "cancelled":
-                rfd = await db.refunds.find_one({"booking_id": b["booking_id"]}, {"_id": 0})
+            if b.get("booking_status") == "cancelled" or b.get("cancellation_request_id"):
+                rfd = await db.refunds.find_one({"refund_id": b["cancellation_request_id"]} if b.get("cancellation_request_id") else {"booking_id": b["booking_id"]}, {"_id": 0})
                 b["refund"] = rfd
         bookings = _attach_lifecycle_status(bookings)
 
@@ -2071,6 +2094,8 @@ async def approve_host_approval_booking(
     db: AsyncIOMotorDatabase = Depends(get_db),
 ):
     booking = await _get_host_owned_booking(db, booking_id, current_user)
+    if booking.get('cancellation_status') in {'requested', 'approved'}:
+        raise HTTPException(409, 'Cancellation is under review; booking approval is on hold')
     current_status = booking.get("booking_status")
     if current_status == BookingStatus.CONFIRMED.value:
         return {"message": "Booking already approved", "booking_id": booking_id, "booking_status": current_status, "idempotent": True}
@@ -2121,6 +2146,16 @@ async def reject_host_approval_booking(
     if current_status != BookingStatus.AWAITING_HOST_APPROVAL.value:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Only bookings awaiting host approval can be rejected")
 
+    if booking.get('payment_status') in {'paid', 'partially_paid', 'captured', 'success', 'completed'}:
+        from services.refund_workflow import request_cancellation
+        try:
+            refund = await request_cancellation(db, booking, current_user,
+                reason=(payload.reason if payload else None) or 'Host rejected booking request', cancellation_type='host')
+            return {'message': 'Host cancellation submitted for admin confirmation', 'booking_id': booking_id,
+                    'booking_status': current_status, 'cancellation_status': 'requested', 'refund': refund}
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
+
     now_utc = datetime.now(timezone.utc)
     reason = (payload.reason if payload else None) or "Rejected by host"
     result = await db.bookings.update_one(
@@ -2129,26 +2164,6 @@ async def reject_host_approval_booking(
     )
     if result.modified_count == 0:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Booking request was already processed")
-
-    if booking.get("payment_status") in {"paid", "partially_paid"} and booking.get("razorpay_payment_id"):
-        try:
-            ensure_table = getattr(db, "ensure_table", None)
-            if ensure_table:
-                await ensure_table("refunds")
-            await db.refunds.update_one(
-                {"booking_id": booking_id},
-                {"$set": {
-                    "booking_id": booking_id,
-                    "payment_id": booking.get("razorpay_payment_id"),
-                    "amount": int(round(float(booking.get("paid_amount") or booking.get("total_amount") or 0) * 100)),
-                    "status": "initiated",
-                    "reason": "Host rejected booking request",
-                    "updated_at": now_utc,
-                }, "$setOnInsert": {"refund_id": f"refund_{booking_id}", "created_at": now_utc}},
-                upsert=True,
-            )
-        except Exception as refund_err:
-            logger.warning("Failed to create refund intent for rejected booking %s: %s", booking_id, refund_err)
 
     return {"message": "Booking rejected", "booking_id": booking_id, "booking_status": BookingStatus.REJECTED.value, "refund_status": "initiated" if booking.get("payment_status") in {"paid", "partially_paid"} else None}
 
@@ -2186,8 +2201,8 @@ async def get_booking_details(
             if isinstance(ts, datetime) and ts.tzinfo is None:
                 booking_dict[ts_field] = ts.replace(tzinfo=timezone.utc)
 
-        if booking_dict.get("booking_status") == "cancelled":
-            rfd = await db.refunds.find_one({"booking_id": booking_dict["booking_id"]}, {"_id": 0})
+        if booking_dict.get("booking_status") == "cancelled" or booking_dict.get("cancellation_request_id"):
+            rfd = await db.refunds.find_one({"refund_id": booking_dict["cancellation_request_id"]} if booking_dict.get("cancellation_request_id") else {"booking_id": booking_dict["booking_id"]}, {"_id": 0})
             booking_dict["refund"] = rfd
         booking_dict.update(_booking_payment_progress(booking_dict))
         enriched = await _attach_property_info(db, [booking_dict])
@@ -2208,106 +2223,85 @@ async def get_booking_details(
         )
 
 
-@router.post("/{booking_id}/cancel")
-async def cancel_booking(
-    booking_id: str,
-    current_user: dict = Depends(get_current_user),
-    db: AsyncIOMotorDatabase = Depends(get_db),
-):
-    """Cancel a booking. Guest can cancel their own soft_lock or confirmed bookings."""
+class CancellationRequest(BaseModel):
+    reason: str = "Guest cancellation"
+
+
+@router.get("/{booking_id}/cancellation-preview")
+async def cancellation_preview(booking_id: str, current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    from services.refund_policy_quote import quote_refund
+    booking = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
+    if not booking:
+        raise HTTPException(404, "Booking not found")
+    if current_user.get('role') != 'admin' and current_user['user_id'] not in {booking.get('guest_id'), booking.get('host_id')}:
+        raise HTTPException(403, "Not authorized")
+    property_row = await db.properties.find_one({'property_id': booking.get('property_id')}, {'_id': 0}) or {}
+    kind = 'host' if current_user['user_id'] == booking.get('host_id') else 'guest'
     try:
-        booking_dict = await db.bookings.find_one({"booking_id": booking_id}, {"_id": 0})
-        if not booking_dict:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
-        if booking_dict["guest_id"] != current_user["user_id"]:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not authorized")
+        return quote_refund(booking, property_row, cancellation_type=kind)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
-        current_status = booking_dict.get("booking_status")
-        if current_status == BookingStatus.CANCELLED.value:
-            from services.account_service import ensure_refund_for_cancelled_paid_booking
-            refund_info = await ensure_refund_for_cancelled_paid_booking(
-                db,
-                booking_dict,
-                reason="Guest cancellation",
-                initiated_by=current_user["user_id"],
-                initiated_by_role="guest",
-            )
-            return {"message": "Booking already cancelled", "booking_id": booking_id, "refund": refund_info}
-        if current_status not in (BookingStatus.SOFT_LOCK.value, BookingStatus.CONFIRMED.value):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Cannot cancel a booking in '{current_status}' state",
-            )
 
-        # Past check-in: block cancellation (in real app you'd allow with penalty)
-        if booking_dict.get("check_in_date") and booking_dict["check_in_date"] < datetime.now(timezone.utc).date().isoformat():
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Cannot cancel a booking whose check-in has already passed",
-            )
+@router.post("/{booking_id}/cancel")
+async def cancel_booking(booking_id: str, payload: Optional[CancellationRequest] = None,
+                         current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    from services.refund_workflow import request_cancellation
+    booking = await db.bookings.find_one({'booking_id': booking_id}, {'_id': 0})
+    if not booking:
+        raise HTTPException(404, 'Booking not found')
+    if booking.get('guest_id') != current_user['user_id']:
+        raise HTTPException(403, 'Not authorized')
+    if booking.get('booking_status') == 'cancelled':
+        refund = await db.refunds.find_one({'booking_id': booking_id}, {'_id': 0})
+        return {'message': 'Booking already cancelled', 'booking_id': booking_id, 'refund': refund}
+    try:
+        refund = await request_cancellation(db, booking, current_user, reason=(payload.reason if payload else 'Guest cancellation'))
+        return {'message': 'Cancellation requested. X-Space360 will confirm within 24-48 working hours.',
+                'booking_id': booking_id, 'cancellation_status': 'requested', 'refund': refund}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
-        await db.bookings.update_one(
-            {"booking_id": booking_id},
-            {
-                "$set": {
-                    "booking_status": BookingStatus.CANCELLED.value,
-                    "cancelled_at": datetime.now(timezone.utc),
-                    "updated_at": datetime.now(timezone.utc),
-                }
-            },
-        )
 
-        # Free up the dates: remove booking-source blocked-date entry if present
-        try:
-            await db.blocked_dates.delete_many(
-                {"source": "booking", "source_id": booking_id}
-            )
-        except Exception as block_err:
-            logger.warning(f"Failed to remove booking blocked-date entry: {block_err}")
+@router.post("/{booking_id}/host-cancel")
+async def host_cancel_booking(booking_id: str, payload: CancellationRequest,
+                              current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    from services.refund_workflow import request_cancellation
+    booking = await db.bookings.find_one({'booking_id': booking_id}, {'_id': 0})
+    if not booking:
+        raise HTTPException(404, 'Booking not found')
+    if booking.get('host_id') != current_user['user_id']:
+        raise HTTPException(403, 'Not authorized')
+    try:
+        refund = await request_cancellation(db, booking, current_user, reason=payload.reason, cancellation_type='host')
+        return {'message': 'Host cancellation submitted for admin confirmation', 'refund': refund}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
-        # Phase 15 â€” auto-refund on cancel of a confirmed booking, per policy tier
-        refund_info = None
-        if current_status == BookingStatus.CONFIRMED.value:
-            try:
-                from services.account_service import ensure_refund_for_cancelled_paid_booking
-                refund_doc = await ensure_refund_for_cancelled_paid_booking(
-                    db,
-                    {**booking_dict, "booking_status": BookingStatus.CANCELLED.value},
-                    reason="Guest cancellation",
-                    initiated_by=current_user["user_id"],
-                    initiated_by_role="guest",
-                )
-                if refund_doc:
-                    refund_info = {
-                        "refund_id": refund_doc.get("refund_id"),
-                        "tier": refund_doc.get("policy_tier"),
-                        "percent": refund_doc.get("refund_percent"),
-                        "refund_paise": refund_doc.get("refund_amount"),
-                        "status": refund_doc.get("status"),
-                    }
-            except Exception as rf_err:
-                logger.warning(f"Refund creation on cancel failed: {rf_err}")
-        try:
-            from services.booking_notifications import notify_booking_cancelled
-            await notify_booking_cancelled(db, booking_dict, reason="Guest cancellation")
-        except Exception as notify_err:
-            logger.warning(f"Booking cancellation notification failed: {notify_err}")
 
-        logger.info(f"Booking cancelled: {booking_id} by guest {current_user['user_id']}")
-        return {
-            "message": "Booking cancelled",
-            "booking_id": booking_id,
-            "refund": refund_info,
-        }
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error cancelling booking: {str(e)}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to cancel booking",
-        )
+@router.post("/{booking_id}/refund-review")
+async def request_refund_review(booking_id: str, payload: CancellationRequest,
+                                current_user: dict = Depends(get_current_user), db=Depends(get_db)):
+    from services.refund_policy_quote import aware
+    booking = await db.bookings.find_one({'booking_id': booking_id}, {'_id': 0})
+    if not booking or booking.get('guest_id') != current_user['user_id']:
+        raise HTTPException(404, 'Booking not found')
+    refund = await db.refunds.find_one({'refund_id': booking['cancellation_request_id']} if booking.get('cancellation_request_id') else {'booking_id': booking_id}, {'_id': 0})
+    if not refund:
+        raise HTTPException(400, 'No refund decision to review')
+    if refund.get('status') == 'pending' and booking.get('cancellation_status') == 'requested':
+        raise HTTPException(400, 'Wait for the cancellation/refund decision before requesting a review')
+    start = booking.get('cancelled_at') or booking.get('cancellation_requested_at')
+    if not start or datetime.now(timezone.utc) > aware(start) + timedelta(days=7):
+        raise HTTPException(400, 'The 7-day refund review window has expired')
+    if len(payload.reason.strip()) < 3:
+        raise HTTPException(400, 'Please provide a review reason')
+    if refund.get('review_status') == 'requested':
+        return {'message': 'Your review request is already pending'}
+    await db.refunds.update_one({'refund_id': refund['refund_id']}, {'$set': {
+        'review_status': 'requested', 'review_reason': payload.reason.strip(), 'review_requested_at': datetime.now(timezone.utc)}})
+    await write_audit_log(db, user_id=current_user['user_id'], role='guest', module='refunds', action='refund_review_requested', record_id=refund['refund_id'], reason=payload.reason)
+    return {'message': 'Refund review requested. X-Space360 will communicate its decision.'}
 
 
 class ApplyCouponRequest(BaseModel):

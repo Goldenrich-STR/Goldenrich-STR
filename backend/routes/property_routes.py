@@ -4,6 +4,7 @@ from typing import List, Optional
 from pydantic import BaseModel
 from models.property import Property, PropertyCreate, PropertyUpdate, PropertyStatus, PropertyCategory
 from models.subscription import SubscriptionStatus
+from services.subscription_listing_policy import listing_submission_fields
 from models.user import UserRole
 from models.notification import NotificationChannel, NotificationType
 from middleware.auth_middleware import get_current_user, require_role
@@ -1593,10 +1594,12 @@ async def submit_for_verification(
                 detail="Not authorized"
             )
         
+        policy_fields = await listing_submission_fields(db, property_dict, current_user)
         # Update status to pending verification
         await db.properties.update_one(
             {"property_id": property_id},
             {"$set": {
+                **policy_fields,
                 "status": PropertyStatus.PENDING_VERIFICATION.value,
                 "submitted_at": datetime.now(timezone.utc),
                 "updated_at": datetime.now(timezone.utc)

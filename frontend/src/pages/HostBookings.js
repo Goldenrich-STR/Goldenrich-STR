@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import HostSupportWidget from '../components/HostSupportWidget';
 import HostWorkspaceShell from '../components/HostWorkspaceShell';
+import BookedUnitPricing from '../components/BookedUnitPricing';
 
 const STATUS_BADGE = {
   confirmed: { label: 'Confirmed', cls: 'bg-green-50 text-green-700 border-green-200', Icon: CheckCircle2 },
@@ -76,6 +77,15 @@ const HostBookings = () => {
     } catch (e) {
       console.error('Failed to fetch AI calls', e);
     }
+  };
+
+  const requestHostCancellation = async (booking) => {
+    const reason = window.prompt('Why can you not honour this booking? Cancellation requires admin confirmation. Host recoverable costs are reviewed separately.');
+    if (!reason || reason.trim().length < 3) return;
+    try {
+      await bookingAPI.hostCancelBooking(booking.booking_id, reason);
+      await fetchBookings();
+    } catch (error) { setError(error.response?.data?.detail || 'Could not request host cancellation'); }
   };
 
   const fetchBookings = async () => {
@@ -468,6 +478,10 @@ const HostBookings = () => {
                                     </div>
 
                                     {/* Stay Schedule */}
+                                    {(b.unit_name || b.unit_id) && (
+                                      <p className="text-sm font-semibold text-charcoal">Booked unit: {b.unit_name || b.unit_id}</p>
+                                    )}
+                                    <BookedUnitPricing booking={b} category={b.property?.category} showTotals />
                                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                                       <div className="flex items-center space-x-3 bg-stone/50 p-3 rounded-2xl border border-sand-150">
                                         <Calendar className="w-5 h-5 text-terracotta/70 shrink-0" />
@@ -560,6 +574,7 @@ const HostBookings = () => {
                                       </div>
                                     </div>
 
+                                    {b.booking_status === 'confirmed' && <button disabled={b.cancellation_status === 'requested'} onClick={() => requestHostCancellation(b)} className="mt-3 rounded-xl border border-red-200 px-3 py-2 text-xs font-bold text-red-700 disabled:opacity-50">{b.cancellation_status === 'requested' ? 'Cancellation under review' : 'Request host cancellation'}</button>}
                                     <div className="mt-4 pt-3 border-t border-gray-100/60 flex items-center justify-between">
                                       <div>
                                         <span className="text-[9px] font-bold tracking-tight text-charcoal-light uppercase tracking-wider block">Payment Type</span>

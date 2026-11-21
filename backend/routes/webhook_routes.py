@@ -88,6 +88,37 @@ async def razorpay_webhook(
     logger.info(f"Received Razorpay webhook event: {event_type}")
 
     event_data = payload.get("payload", {})
+    if event_type in {'refund.processed', 'refund.failed', 'refund.created'}:
+        if not webhook_secret or not signature:
+            raise HTTPException(400, 'A verified signature is required for refund events')
+        from services.refund_workflow import process_original_sources, apply_gateway_result
+        entity = event_data.get('refund', {}).get('entity', {})
+        refund_id = (entity.get('notes') or {}).get('refund_id')
+        refund = await db.refunds.find_one({'refund_id': refund_id}, {'_id': 0}) if refund_id else None
+        if not refund:
+            refund = await db.refunds.find_one({'razorpay_refund_id': entity.get('id')}, {'_id': 0}) if entity.get('id') else None
+        if not refund or not refund.get('approved_by'):
+            return {'status': 'ignored', 'reason': 'No approved refund request matches this event'}
+        booking = await db.bookings.find_one({'booking_id': refund['booking_id']}, {'_id': 0})
+        if not booking:
+            raise HTTPException(400, 'Refund booking not found')
+        try:
+            if refund.get('gateway_allocations'):
+                allocation = next((item for item in refund['gateway_allocations'] if item.get('payment_id') == entity.get('payment_id') and item.get('amount') == entity.get('amount')), None)
+                if not allocation or allocation.get('refund_id') not in (None, entity.get('id')):
+                    raise ValueError('Refund event does not match an original payment allocation')
+                # Fetch provider state rather than trusting an event's ordering.
+                allocation['refund_id'] = entity['id']
+                from services.refund_workflow import merge_gateway_allocations
+                await merge_gateway_allocations(db, refund['refund_id'], refund['gateway_allocations'])
+                await process_original_sources(db, refund, booking, fetch_only=True)
+            else:
+                if refund.get('razorpay_refund_id') and refund['razorpay_refund_id'] != entity.get('id'):
+                    raise ValueError('Gateway refund identifier does not match the approved request')
+                await apply_gateway_result(db, refund, booking, {'success': True, 'refund': entity})
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
+        return {'status': 'ok'}
     payment_entity = event_data.get("payment", {}).get("entity", {})
     order_entity = event_data.get("order", {}).get("entity", {}) or {}
 

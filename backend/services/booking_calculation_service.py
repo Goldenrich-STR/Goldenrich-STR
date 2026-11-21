@@ -122,7 +122,7 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
         booking.get("host_price_per_night"),
         booking.get("price_per_night"),
     )
-    host_actual = _first_money(
+    host_listed_value = _first_money(
         pricing.get("host_actual_value"),
         pricing.get("host_amount"),
         pricing.get("host_base_amount"),
@@ -130,13 +130,13 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
         booking.get("host_amount"),
         booking.get("host_base_amount"),
     )
-    if host_actual == Decimal("0.00") and unit_host_price != Decimal("0.00"):
-        host_actual = unit_host_price * units
-    if host_actual == Decimal("0.00"):
+    if host_listed_value == Decimal("0.00") and unit_host_price != Decimal("0.00"):
+        host_listed_value = unit_host_price * units
+    if host_listed_value == Decimal("0.00"):
         # Last-resort fallback for legacy rows only. New code must persist
         # host_amount/host_actual_value so customer subtotal is not mistaken
         # for the host base value.
-        host_actual = money(booking.get("base_amount") or 0)
+        host_listed_value = money(booking.get("base_amount") or 0)
 
     def charge_amount(key: str, *aliases: str) -> Decimal:
         names = (key, *aliases)
@@ -154,9 +154,10 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
                     continue
                 charge_key = str(_nested_first(charge, "key", "code", "name", "slug") or "").strip()
                 if charge_key in names:
-                    amount = _charge_map_amount(charge)
-                    if amount != Decimal("0.00"):
-                        return amount
+                    if charge.get("enabled") is False:
+                        return Decimal("0.00")
+                    if any(field in charge for field in ("amount", "amount_rupees", "applied_amount", "total")):
+                        return _charge_map_amount(charge)
 
         nested_maps = (
             pricing.get("extra_charges"),
@@ -173,9 +174,7 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
                 continue
             for name in names:
                 if name in charge_map:
-                    amount = _charge_map_amount(charge_map.get(name))
-                    if amount != Decimal("0.00"):
-                        return amount
+                    return _charge_map_amount(charge_map.get(name))
 
         amount_suffixes = (
             "_amount",
@@ -231,16 +230,32 @@ def extract_booking_pricing_snapshot(booking: Dict[str, Any]) -> Dict[str, Any]:
         booking.get("total_amount"),
     )
     if total_extra_charges == Decimal("0.00") and customer_final != Decimal("0.00"):
-        derived_extra_charges = customer_final - host_actual - gst_amount + discount_amount
+        derived_extra_charges = customer_final - host_listed_value - gst_amount + discount_amount
         if derived_extra_charges > Decimal("0.00"):
             total_extra_charges = derived_extra_charges
             if not any(value > Decimal("0.00") for value in extra_charges.values()):
                 extra_charges["company_charge"] = derived_extra_charges
     if customer_final == Decimal("0.00"):
-        customer_final = host_actual + total_extra_charges + gst_amount - discount_amount
+        customer_final = host_listed_value + total_extra_charges + gst_amount - discount_amount
+
+    # A booking coupon reduces the taxable supply that funded the host payout.
+    # Settlements must therefore use the discounted, GST-excluded host value,
+    # never the property's original/listed value. Customer-side charges retain
+    # their persisted values; the discount is applied against the host portion
+    # first, matching booking checkout's subtotal-minus-discount calculation.
+    # Explicit actual-value snapshots already contain the settled host supply.
+    # Do not subtract the same coupon from that amount a second time.
+    actual_snapshot = pricing.get("host_actual_value")
+    if actual_snapshot is None:
+        actual_snapshot = booking.get("host_actual_value")
+    has_actual_snapshot = actual_snapshot is not None
+    host_discount_amount = Decimal("0.00") if has_actual_snapshot else min(host_listed_value, discount_amount)
+    host_actual = max(Decimal("0.00"), money(actual_snapshot) if has_actual_snapshot else host_listed_value - host_discount_amount)
 
     return {
         "host_actual_value": as_float(host_actual),
+        "host_listed_value": as_float(host_listed_value),
+        "host_discount_amount": as_float(host_discount_amount),
         "extra_charges": {key: as_float(value) for key, value in extra_charges.items()},
         "total_extra_charges": as_float(total_extra_charges),
         "gst_amount": as_float(gst_amount),
@@ -315,7 +330,7 @@ def _sanitize_platform_fee_overrides(raw: Optional[Dict[str, Any]], platform_fee
             "enabled": True,
             "charge_type": PERCENTAGE,
             "value": base_value,
-            "label": "RM Mapped Platform Fee",
+            "label": "RM, Telecaller & Other Platform Fee",
         },
     }
     overrides: Dict[str, Dict[str, Any]] = {}
@@ -466,8 +481,14 @@ def calculate_configured_charge(base: Decimal, config: Dict[str, Any]) -> Decima
 def resolve_platform_fee_charge(config: Dict[str, Any], context: Optional[str] = None) -> Dict[str, Any]:
     charge_config = dict(config["charges"]["platform_fee"])
     context = context if context in PLATFORM_FEE_CONTEXTS else PLATFORM_FEE_CONTEXT_DEFAULT
+    # There are exactly two configurable platform-fee buckets. Preserve the
+    # legacy rm_mapped storage key for existing settings, but route every
+    # non-broker source (RM, telecaller, employee, self-listed host, admin or
+    # any future role) through that bucket.
+    if context != PLATFORM_FEE_CONTEXT_BROKER:
+        context = PLATFORM_FEE_CONTEXT_RM
     override = dict((config.get("platform_fee_overrides") or {}).get(context) or {})
-    if context != PLATFORM_FEE_CONTEXT_DEFAULT and override.get("enabled"):
+    if override.get("enabled"):
         charge_config.update({
             "enabled": True,
             "charge_type": PERCENTAGE,

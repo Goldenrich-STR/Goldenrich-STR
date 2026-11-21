@@ -32,6 +32,19 @@ const apiClient = axios.create({
   },
 });
 
+// The FastAPI application exposes its routers below `/api`.  Keep the base
+// URL as the server origin because a few legacy calls already include `/api`,
+// then normalize every other request here.  Without this, calls such as
+// `/properties/search` go to `http://localhost:8001/properties/search` and
+// receive a 404 even though the data exists at `/api/properties/search`.
+apiClient.interceptors.request.use((config) => {
+  const url = config.url || '';
+  if (typeof url === 'string' && url.startsWith('/') && !url.startsWith('/api/')) {
+    config.url = `/api${url}`;
+  }
+  return config;
+});
+
 export const getApiErrorMessage = (error, fallback = 'Something went wrong') => {
   if (error?.code === 'ECONNABORTED') {
     return 'Request timed out. Please try again.';
@@ -134,14 +147,21 @@ export const getImageUrl = (url) => {
   return url;
 };
 
+// formats the server accepts as they are; anything else (AVIF, BMP, TIFF, HEIC...) is converted to JPEG here first
+const SERVER_IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+
 const compressImageForUpload = (file) => {
-  if (!file || !file.type?.startsWith('image/') || file.type === 'image/gif') {
+  if (!file) return Promise.resolve(file);
+  const extension = String(file.name || '').split('.').pop().toLowerCase();
+  const needsConversion = !SERVER_IMAGE_EXTENSIONS.includes(extension);
+  const looksLikeImage = file.type?.startsWith('image/') || needsConversion;
+  if (!looksLikeImage || (file.type === 'image/gif' && !needsConversion)) {
     return Promise.resolve(file);
   }
 
   const maxBytes = 3.5 * 1024 * 1024;
   const maxDimension = 2400;
-  if (file.size <= maxBytes) {
+  if (file.size <= maxBytes && !needsConversion) {
     return Promise.resolve(file);
   }
 
@@ -254,7 +274,7 @@ export const propertyAPI = {
     apiClient.get('/properties/public-stats'),
 
   searchProperties: (params) =>
-    apiClient.get('/properties/search', { params }),
+    apiClient.get('/api/properties/search', { params }),
   
   getProperty: (propertyId) =>
     apiClient.get(`/properties/${propertyId}`),
@@ -292,6 +312,7 @@ export const propertyAPI = {
 
 // Subscription API
 export const subscriptionAPI = {
+  getListingPolicy: () => apiClient.get('/subscriptions/listing-policy'),
   getPlans: (params = {}) =>
     apiClient.get('/subscriptions/plans', { params: typeof params === 'string' ? { plan_type: params } : params }),
 
@@ -435,8 +456,11 @@ export const bookingAPI = {
   getBookingDetails: (bookingId) =>
     apiClient.get(`/bookings/${bookingId}`),
 
-  cancelBooking: (bookingId) =>
-    apiClient.post(`/bookings/${bookingId}/cancel`),
+  cancelBooking: (bookingId, reason) =>
+    apiClient.post(`/bookings/${bookingId}/cancel`, { reason: reason || 'Guest cancellation' }),
+  cancellationPreview: (bookingId) => apiClient.get(`/bookings/${bookingId}/cancellation-preview`),
+  hostCancelBooking: (bookingId, reason) => apiClient.post(`/bookings/${bookingId}/host-cancel`, { reason }),
+  requestRefundReview: (bookingId, reason) => apiClient.post(`/bookings/${bookingId}/refund-review`, { reason }),
 
   adminGetBookings: (params = {}) =>
     apiClient.get('/admin/bookings', { params }),

@@ -29,6 +29,7 @@ const TABS = [
 ];
 
 const STATUS_BADGE = {
+  cancellation_requested: { label: 'Cancellation requested', cls: 'bg-amber-100 text-amber-700', Icon: Clock },
   confirmed: { label: 'Confirmed', cls: 'bg-green-100 text-green-700', Icon: CheckCircle2 },
   soft_lock: { label: 'Pending payment', cls: 'bg-amber-100 text-amber-700', Icon: Clock },
   cancelled: { label: 'Cancelled', cls: 'bg-red-100 text-red-700', Icon: XCircle },
@@ -67,6 +68,7 @@ const GuestBookings = () => {
   const [cancelling, setCancelling] = useState(null);
   const [cancellingBooking, setCancellingBooking] = useState(null);
   const [cancelReason, setCancelReason] = useState('');
+  const [cancelPreview, setCancelPreview] = useState({ loading: false, error: '', data: null });
   const [successNotification, setSuccessNotification] = useState(null);
   const [reviewBooking, setReviewBooking] = useState(null);
   const [reviewedIds, setReviewedIds] = useState(new Set());
@@ -156,39 +158,44 @@ const GuestBookings = () => {
     };
   }, [fetchAiCalls, fetchBookings, fetchMyReviews]);
 
-  const handleCancel = (booking) => {
+  const handleCancel = async (booking) => {
     setCancelReason('');
     setCancellingBooking(booking);
+    setCancelPreview({ loading: true, error: '', data: null });
+    try {
+      const res = await bookingAPI.cancellationPreview(booking.booking_id);
+      setCancelPreview({ loading: false, error: '', data: res.data });
+    } catch (error) {
+      setCancelPreview({ loading: false, error: error.response?.data?.detail || 'Could not load cancellation eligibility', data: null });
+    }
   };
 
   const confirmCancel = async () => {
     if (!cancellingBooking) return;
     const bookingId = cancellingBooking.booking_id;
-    setCancellingBooking(null);
     setCancelling(bookingId);
     try {
-      await bookingAPI.cancelBooking(bookingId);
+      const response = await bookingAPI.cancelBooking(bookingId, cancelReason);
+      setCancellingBooking(null);
       setCancelReason('');
-      const list = await fetchBookings({ showLoader: false });
-      const cancelledB = list.find(b => b.booking_id === bookingId);
-      if (cancelledB && cancelledB.booking_status === 'cancelled') {
-        const refundAmt = cancelledB.refund?.refund_amount 
-          ? Math.round(cancelledB.refund.refund_amount / 100) 
-          : 0;
-        setSuccessNotification({
-          title: "Refund Initiated",
-          message: refundAmt > 0
-            ? `Your booking was cancelled successfully. Your refund of ₹${refundAmt.toLocaleString('en-IN')} will be credited to your account within 24 hours.`
-            : `Your booking was cancelled successfully. Any applicable refund will be credited to your account within 24 hours.`,
-          refundAmount: refundAmt,
-          policy: cancelledB.refund?.policy_tier
-        });
-      }
-    } catch (e) {
-      setError(e.response?.data?.detail || 'Failed to cancel booking');
-    } finally {
-      setCancelling(null);
-    }
+      await fetchBookings({ showLoader: false });
+      setSuccessNotification({ title: 'Cancellation requested',
+        message: 'X-Space360 will confirm your cancellation within 24-48 working hours. Any approved refund is sent only to your original payment source. Banks may take 8-10 business days after processing.',
+        refundAmount: Number(response.data.refund?.refund_amount || 0) / 100,
+        policy: response.data.refund?.policy_tier });
+    } catch (error) {
+      setError(error.response?.data?.detail || 'Failed to request cancellation');
+    } finally { setCancelling(null); }
+  };
+
+  const requestReview = async (booking) => {
+    const reason = window.prompt('Explain why you want this refund decision reviewed (within 7 days of cancellation).');
+    if (!reason || reason.trim().length < 3) return;
+    try {
+      const res = await bookingAPI.requestRefundReview(booking.booking_id, reason);
+      setSuccessNotification({ title: 'Refund review', message: res.data.message });
+      await fetchBookings({ showLoader: false });
+    } catch (error) { setError(error.response?.data?.detail || 'Could not request refund review'); }
   };
 
   const today = todayISO();
@@ -335,7 +342,7 @@ const GuestBookings = () => {
           <>
             <div className="space-y-6" data-testid="bookings-list">
               {paginatedBookings.map((b, idx) => {
-                const statusKey = b.booking_status === 'confirmed' && b.check_out_date < today
+                const statusKey = b.cancellation_status === 'requested' ? 'cancellation_requested' : b.booking_status === 'confirmed' && b.check_out_date < today
                   ? 'completed'
                   : b.booking_status;
                 const badge = STATUS_BADGE[statusKey] || STATUS_BADGE.confirmed;
@@ -373,6 +380,9 @@ const GuestBookings = () => {
                             >
                               {property.title || 'Property'}
                             </h3>
+                            {(b.unit_name || b.unit_id) && (
+                              <p className="mt-1 text-sm font-medium text-charcoal-muted">Booked unit: {b.unit_name || b.unit_id}</p>
+                            )}
                           </div>
                           <span className={`text-[10px] font-bold tracking-tight uppercase tracking-widest flex items-center space-x-1 px-3 py-1 border rounded-full ${
                             statusKey === 'confirmed' ? 'bg-green-50 text-green-700 border-green-200' :
@@ -438,7 +448,7 @@ const GuestBookings = () => {
                         })()}
 
                         {/* Premium Refund Status Details */}
-                        {b.booking_status === 'cancelled' && (
+                        {(b.booking_status === 'cancelled' || ['requested', 'rejected'].includes(b.cancellation_status)) && (
                           <div className="mt-4 bg-stone border border-gray-100/60 rounded-2xl p-4 text-xs space-y-2">
                             <div className="flex items-center justify-between">
                               <span className="font-bold text-charcoal-muted uppercase tracking-wider text-[10px]">Refund Status</span>
@@ -461,11 +471,12 @@ const GuestBookings = () => {
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
-                                  <span>Refund amount:</span>
+                                  <span>{b.refund.status === 'pending' ? 'Estimated refund:' : 'Approved refund:'}</span>
                                   <span className="font-bold text-charcoal text-sm">
-                                    ₹{Math.round(b.refund.refund_amount / 100).toLocaleString('en-IN')}
+                                    ₹{(Number(b.refund.refund_amount || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                   </span>
                                 </div>
+                                {b.refund.refunded_amount_processed !== undefined && <p className="text-xs">Gateway processed so far: Rs. {(Number(b.refund.refunded_amount_processed) / 100).toFixed(2)}</p>}{b.refund.rejection_reason && <p className="mt-2 text-xs">Cancellation decision: {b.refund.rejection_reason}</p>}{b.refund.review_decision_reason && <p className="mt-2 text-xs">Refund review decision: {b.refund.review_decision_reason}</p>}
                                 {b.refund.razorpay_refund_id && (
                                   <div className="flex justify-between text-[10px] font-mono">
                                     <span>Refund ID:</span>
@@ -523,7 +534,7 @@ const GuestBookings = () => {
                               <span>Invoice</span>
                             </button>
                           )}
-                          {(isSoftLock || isUpcoming) && (
+                          {(isSoftLock || isUpcoming) && b.cancellation_status !== 'requested' && (
                             <button
                               onClick={() => handleCancel(b)}
                               disabled={cancelling === b.booking_id}
@@ -533,6 +544,7 @@ const GuestBookings = () => {
                               {cancelling === b.booking_id ? 'Cancelling…' : 'Cancel'}
                             </button>
                           )}
+                          {b.refund && b.cancellation_status !== 'requested' && <button onClick={() => requestReview(b)} className="rounded-xl border px-3 py-2 text-xs font-bold">Request refund review</button>}
                           {tab === 'past' && (
                             <>
                               {reviewedIds.has(b.booking_id) ? (
@@ -654,9 +666,16 @@ const GuestBookings = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-charcoal/40 backdrop-blur-sm" data-testid="cancel-confirm-modal">
           <div className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-premium border border-gray-100">
             <h3 className="text-lg font-bold tracking-tight text-charcoal text-center mb-4 uppercase tracking-wide leading-tight">
-              Are you sure you want to cancel?
+              Request cancellation?
             </h3>
 
+            {cancelPreview.loading ? <p className="mb-3 text-sm">Loading refund estimate?</p> : cancelPreview.error ? <p role="alert" className="mb-3 text-sm text-red-600">{cancelPreview.error}</p> : cancelPreview.data && <div className="mb-4 rounded-xl bg-slate-50 p-3 text-sm">
+              <p>Eligible booking value: ₹{(cancelPreview.data.refundable_base_amount / 100).toFixed(2)}</p>
+              <p>Non-refundable charges retained: ₹{(cancelPreview.data.non_refundable_amount / 100).toFixed(2)}</p>
+              <p>Estimated refund: ₹{(cancelPreview.data.refund_amount / 100).toFixed(2)} ({cancelPreview.data.refund_percent}%)</p>
+              <p className="mt-2 text-xs">Subject to admin confirmation. Eligibility is calculated when you submit. Non-refundable charges are excluded in every case.</p>
+              {cancelPreview.data.cooling_off_deadline && <p className="mt-1 text-xs">Cooling-off ends: {new Date(cancelPreview.data.cooling_off_deadline).toLocaleString()}</p>}
+            </div>}
             {/* Cancellation reason input */}
             <div className="mb-4">
               <label className="block text-[10px] font-bold tracking-tight text-charcoal-muted uppercase tracking-wider mb-2">
@@ -674,11 +693,11 @@ const GuestBookings = () => {
             <div className="flex gap-3 mb-4">
               <button
                 onClick={confirmCancel}
-                disabled={!cancelReason.trim()}
+                disabled={cancelReason.trim().length < 3 || cancelPreview.loading || !!cancelPreview.error || cancelPreview.data?.cancellation_allowed === false || !!cancelling}
                 className="flex-1 py-3 bg-red-600 hover:bg-red-700 disabled:bg-red-400 disabled:cursor-not-allowed text-white font-bold tracking-tight text-xs uppercase tracking-widest rounded-xl transition shadow-sm cursor-pointer"
                 data-testid="confirm-cancel-yes"
               >
-                Yes
+                Submit request
               </button>
               <button
                 onClick={() => { setCancellingBooking(null); setCancelReason(''); }}

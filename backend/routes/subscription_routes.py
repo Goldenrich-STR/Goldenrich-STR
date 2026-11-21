@@ -1,12 +1,15 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Response
 from motor.motor_asyncio import AsyncIOMotorDatabase
-from pydantic import BaseModel
+from pydantic import BaseModel, StrictBool, Field
+from services.subscription_listing_policy import get_listing_policy, POLICY_KEY
+from services.audit_service import write_audit_log
 from typing import List, Optional
 from models.subscription import SubscriptionPlan, Subscription, SubscriptionCreate, SubscriptionPlanType, SubscriptionStatus
 from models.property import PropertyStatus
 from models.user import UserRole
 from middleware.auth_middleware import get_current_user
 from services.razorpay_service import razorpay_service
+from services.subscription_finance import checkout_snapshot, classify_subscription
 from datetime import datetime, timedelta, date, timezone
 import logging
 import os
@@ -14,6 +17,41 @@ import re
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
+
+
+async def get_db():
+    from server import db_instance
+    return db_instance
+
+
+class ListingPolicyUpdate(BaseModel):
+    enabled: StrictBool
+    reason: str = Field(min_length=3, max_length=500)
+
+
+@router.get("/listing-policy")
+async def listing_policy(response: Response, db: AsyncIOMotorDatabase = Depends(get_db)):
+    response.headers["Cache-Control"] = "no-store"
+    return await get_listing_policy(db)
+
+
+@router.put("/admin/listing-policy")
+async def update_listing_policy(payload: ListingPolicyUpdate,
+                                current_user: dict = Depends(get_current_user),
+                                db: AsyncIOMotorDatabase = Depends(get_db)):
+    if current_user.get("role") != UserRole.ADMIN.value:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    if len(payload.reason.strip()) < 3:
+        raise HTTPException(status_code=400, detail="A reason of at least 3 characters is required")
+    old = await get_listing_policy(db)
+    await db.platform_settings.update_one({"key": POLICY_KEY}, {"$set": {
+        "key": POLICY_KEY, "enabled": payload.enabled,
+        "updated_at": datetime.now(timezone.utc), "updated_by": current_user["user_id"],
+    }}, upsert=True)
+    await write_audit_log(db, user_id=current_user["user_id"], role=current_user["role"],
+                          module="subscriptions", action="listing_policy_changed", record_id=POLICY_KEY,
+                          old_value=old, new_value={"enabled": payload.enabled}, reason=payload.reason.strip())
+    return {"enabled": payload.enabled}
 
 
 class ConfirmRegistrationFeeRequest(BaseModel):
@@ -26,10 +64,6 @@ class ConfirmSubscriptionUpiRequest(BaseModel):
     subscription_id: str
     upi_transaction_id: str
     razorpay_order_id: Optional[str] = None
-
-async def get_db():
-    from server import db_instance
-    return db_instance
 
 async def _send_subscription_email(db: AsyncIOMotorDatabase, user_id: str, template: str, subscription: dict, extra: Optional[dict] = None) -> None:
     try:
@@ -120,6 +154,10 @@ async def _activate_property_after_subscription_payment(
         "subscription_status": SubscriptionStatus.ACTIVE.value,
         "updated_at": now,
     }
+    if property_doc.get("subscription_listing_exempt") is True:
+        # A previously opened checkout can finish after the switch is disabled.
+        # That captured paid contract must retain its normal expiry lifecycle.
+        set_fields["subscription_listing_exempt"] = False
     if property_doc.get("status") == PropertyStatus.DRAFT.value:
         set_fields.update({
             "status": PropertyStatus.PENDING_VERIFICATION.value,
@@ -174,6 +212,7 @@ async def _record_subscription_transaction(
         upi_transaction_id=resolved_payment_id if is_upi else None,
         user_id=subscription.get("user_id"),
         subscription_id=subscription_id,
+        financial_snapshot=subscription.get("financial_snapshot"),
         notes="Host subscription paid by UPI QR" if is_upi else None,
         is_mock=razorpay_service.is_mock,
     )
@@ -181,7 +220,17 @@ async def _record_subscription_transaction(
 
 
 def _subscription_checkout_payload(subscription: dict, plan: dict, amount_breakdown: dict, coupon_code: Optional[str], already_active: bool = False) -> dict:
-    amount = float(subscription.get("amount") or amount_breakdown.get("total_amount") or 0)
+    amount = float(subscription["amount"] if subscription.get("amount") is not None else amount_breakdown.get("total_amount") or 0)
+    classification = classify_subscription({"amount": int(round(amount * 100))}, subscription)
+    if classification["source"] == "checkout_snapshot":
+        saved = classification["snapshot"]
+        amount_breakdown = {
+            "plan_fee": saved["plan_fee_paise"] / 100,
+            "platform_fee": saved["platform_fee_paise"] / 100,
+            "tax_percent": saved["tax_percent"],
+            "tax_amount": saved["gst_paise"] / 100,
+            "discount_amount": saved["discount_paise"] / 100,
+        }
     return {
         "subscription_id": subscription["subscription_id"],
         "razorpay_order_id": subscription.get("razorpay_order_id"),
@@ -209,7 +258,9 @@ REGISTRATION_FEE_AMOUNT = int(os.getenv("REGISTRATION_FEE_AMOUNT", "50000"))  # 
 def _subscription_amount_breakdown(plan: dict, billing_cycle: str = "monthly") -> dict:
     plan_fee = float(plan.get("price_monthly") if billing_cycle == "monthly" else plan.get("price_annual") or 0)
     platform_fee = float(plan.get("platform_fee") or 0)
-    tax_percent = float(plan.get("tax_percent", 18.0) if plan.get("tax_percent") is not None else 18.0)
+    if plan.get("tax_percent") is None:
+        raise HTTPException(status_code=400, detail="Configure the subscription plan tax percentage before checkout")
+    tax_percent = float(plan["tax_percent"])
     taxable_amount = plan_fee + platform_fee
     tax_amount = round(taxable_amount * (tax_percent / 100), 2)
     total_amount = round(taxable_amount + tax_amount, 2)
@@ -463,6 +514,8 @@ async def create_subscription(
 ):
     """Create a new subscription for user."""
     try:
+        if not (await get_listing_policy(db))["enabled"]:
+            raise HTTPException(status_code=409, detail="Subscription checkout is disabled. Refresh your listing to submit without payment.")
         # Get plan details
         plan = await db.subscription_plans.find_one(
             {"plan_id": subscription_data.plan_id, "is_deleted": {"$ne": True}},
@@ -526,6 +579,7 @@ async def create_subscription(
                     detail="This coupon is not valid for the selected subscription plan"
                 )
         amount_breakdown = _subscription_coupon_breakdown(plan, coupon, subscription_data.billing_cycle)
+        financial_snapshot = checkout_snapshot(amount_breakdown)
         discount_amount = amount_breakdown["discount_amount"]
         amount = amount_breakdown["total_amount"]
 
@@ -672,6 +726,7 @@ async def create_subscription(
         
         # Store subscription
         subscription_dict = subscription.model_dump()
+        subscription_dict["financial_snapshot"] = financial_snapshot
         subscription_dict["start_date"] = subscription_dict["start_date"].isoformat()
         subscription_dict["end_date"] = subscription_dict["end_date"].isoformat()
         if subscription_dict["trial_end_date"]:

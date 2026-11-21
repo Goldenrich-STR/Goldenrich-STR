@@ -221,6 +221,8 @@ if "*" in _cors_origins:
         "http://localhost:3000",
         "http://localhost:3001",
         "http://localhost:3002",
+        "http://localhost:3005",
+        "http://127.0.0.1:3005",
         "http://10.0.2.2:3000",
         "http://10.0.2.2:3001",
         "http://localhost:8001",
@@ -228,6 +230,22 @@ if "*" in _cors_origins:
         "http://127.0.0.1:3001",
         "http://127.0.0.1:8001",
     ]
+else:
+    # Keep local development usable when the frontend runs on a non-default
+    # CRA/CRACO port (this project uses 3005 locally).  Without this entry the
+    # backend still logs a 200 response, but the browser blocks it by CORS and
+    # the landing-page property sliders remain empty.
+    for _local_origin in ("http://localhost:3005", "http://127.0.0.1:3005"):
+        if _local_origin not in _cors_origins:
+            _cors_origins.append(_local_origin)
+
+
+# Local development only: Flutter web (and other dev servers) run on a random localhost port.
+_LOCAL_ORIGIN_REGEX = (
+    r"https?://(localhost|127\.0\.0\.1)(:\d+)?"
+    if os.environ.get("ENVIRONMENT", "development").lower() != "production"
+    else None
+)
 
 
 # Local development only: Flutter web (and other dev servers) run on a random localhost port.

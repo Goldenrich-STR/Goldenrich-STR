@@ -94,6 +94,44 @@ TELECALLER_VISIBLE_CHECKLIST = [
 ]
 
 
+def _unit_checklist_items(prop: dict) -> list[tuple[str, str]]:
+    """One extra checklist line per unit, so the telecaller confirms each unit on the video call."""
+    units = (prop or {}).get("units") or []
+    if not (prop or {}).get("has_units") or not units:
+        return []
+    items = []
+    for index, unit in enumerate(units):
+        unit_id = str(unit.get("unit_id") or f"unit_{index + 1}")
+        name = str(unit.get("name") or f"Unit {index + 1}")
+        items.append((f"unit_{unit_id}_verified", f"Unit verified: {name}"))
+    return items
+
+
+async def _bm_checklist_keys(db, case: dict) -> list[str]:
+    """Branch Manager keys: the fixed list, plus one `unit_<id>_reviewed` per unit of the property."""
+    prop = await db.properties.find_one(
+        {"property_id": case.get("property_id")}, {"_id": 0, "units": 1, "has_units": 1}
+    ) or {}
+    keys = list(BM_CHECKLIST_KEYS)
+    if prop.get("has_units"):
+        for index, unit in enumerate(prop.get("units") or []):
+            keys.append(f"unit_{unit.get('unit_id') or f'unit_{index + 1}'}_reviewed")
+    return keys
+
+
+async def _telecaller_checklist_items(db, case: dict) -> list[tuple[str, str]]:
+    prop = await db.properties.find_one(
+        {"property_id": case.get("property_id")}, {"_id": 0, "units": 1, "has_units": 1}
+    ) or {}
+    items = list(TELECALLER_VISIBLE_CHECKLIST)
+    # the "video completed" line stays last; the unit lines go before it
+    units = _unit_checklist_items(prop)
+    if units:
+        items = items[:-1] + units + items[-1:]
+    return items
+
+
+
 class DocumentDecisionPayload(BaseModel):
     result: str
     remarks: str = ""
@@ -1115,6 +1153,15 @@ async def _assign_host_document_telecallers(db):
             continue
         existing_assignment = host.get("verification_telecaller_id") or host.get("document_telecaller_id")
         if existing_assignment:
+            continue
+        if host.get("telecaller_id"):
+            # The host picked this telecaller while registering: honour it, no batch/admin step.
+            await _sync_host_telecaller_assignment(db, host, host["telecaller_id"], {
+                "policy": "host_selected_at_registration",
+                "source": "host_registration",
+                "telecaller_name": host.get("telecaller_name") or "",
+                "telecaller_code": host.get("telecaller_code") or "",
+            })
             continue
         host_created_at = _parse_case_dt(host.get("created_at") or host.get("timestamp") or host.get("createdAt"))
         eligible_telecallers = []
@@ -2566,7 +2613,8 @@ async def save_telecaller_checklist(verification_id: str, payload: ChecklistPayl
         }},
     )
     await _history(db, case, current_user, "TELECALLER_CHECKLIST_UPDATED")
-    return {"message": "Checklist saved", "complete": all_required_done(payload.checklist, [key for key, _ in TELECALLER_VISIBLE_CHECKLIST])}
+    checklist_items = await _telecaller_checklist_items(db, case)
+    return {"message": "Checklist saved", "complete": all_required_done(payload.checklist, [key for key, _ in checklist_items])}
 
 
 @router.post("/{verification_id}/telecaller-decision")
@@ -2578,8 +2626,9 @@ async def telecaller_decision(verification_id: str, payload: DecisionPayload, cu
     case = await _case_or_404(db, verification_id)
     result = payload.result.upper()
     checklist = case.get("telecaller_checklist") or {}
+    checklist_items = await _telecaller_checklist_items(db, case)
     failed_checks = [
-        label for key, label in TELECALLER_VISIBLE_CHECKLIST
+        label for key, label in checklist_items
         if checklist.get(key) not in {"yes", "true", True}
     ]
     if result == "VERIFIED" and len(failed_checks) > 6:
@@ -2676,7 +2725,7 @@ async def save_bm_checklist(verification_id: str, payload: ChecklistPayload, cur
         {"$set": {"bm_checklist": payload.checklist, "bm_remarks": payload.remarks or "", "current_stage": BM_REVIEW_IN_PROGRESS, "workflow_status": BM_REVIEW_IN_PROGRESS, "updated_at": now_utc()}},
     )
     await _history(db, case, current_user, "BM_CHECKLIST_UPDATED")
-    return {"message": "BM checklist saved", "complete": all_required_done(payload.checklist, BM_CHECKLIST_KEYS)}
+    return {"message": "BM checklist saved", "complete": all_required_done(payload.checklist, await _bm_checklist_keys(db, case))}
 
 
 @router.post("/{verification_id}/bm-decision")
@@ -2688,7 +2737,7 @@ async def bm_decision(verification_id: str, payload: DecisionPayload, current_us
     case = await _case_or_404(db, verification_id)
     result = payload.result.upper()
     checklist = case.get("bm_checklist") or {}
-    if result == "APPROVE" and not all_required_done(checklist, BM_CHECKLIST_KEYS):
+    if result == "APPROVE" and not all_required_done(checklist, await _bm_checklist_keys(db, case)):
         raise HTTPException(status_code=400, detail="Complete mandatory BM checklist before approval")
     next_stage = ADMIN_REVIEW_PENDING if result == "APPROVE" else TELECALLER_REWORK_REQUIRED
     updates = {

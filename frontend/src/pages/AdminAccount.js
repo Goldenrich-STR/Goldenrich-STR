@@ -4359,7 +4359,8 @@ const InvoiceModal = ({ transaction, onClose }) => {
     const bookingBaseAmount = Number(invoiceBreakdown.base_amount ?? invoiceBreakdown.gross ?? invoiceBreakdown.plan_fee ?? baseAmount);
     const bookingTaxableAmount = Number(invoiceBreakdown.taxable_amount ?? Math.max(0, amountINR - Number(invoiceBreakdown.gst_amount || 0)));
     const derivedExtraTotal = Math.max(0, bookingTaxableAmount - bookingBaseAmount + discountAmount);
-    const bookingExtraTotal = Math.max(Number(invoiceBreakdown.extra_charges_total || 0), derivedExtraTotal);
+    // A saved zero is authoritative; do not invent extra charges to balance a legacy display.
+    const bookingExtraTotal = Number(invoiceBreakdown.extra_charges_total ?? invoiceBreakdown.total_extra_charges ?? bookingObj.extra_charges_total ?? bookingObj.total_extra_charges ?? derivedExtraTotal);
     const bookingExtraCharges = {
       ...(bookingObj.extra_charges || {}),
       ...(invoiceBreakdown.extra_charges || {}),

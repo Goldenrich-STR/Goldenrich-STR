@@ -1,3 +1,4 @@
+import { REFUND_POLICY_TEXT } from '../utils/refundPolicyContent';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
@@ -123,13 +124,13 @@ const LegalPage = () => {
         text: legalData.privacy_text,
         status: 'Active',
       } : null,
-      legalData.refund_text ? {
+      {
         id: 'refund-policy',
         type: 'policy',
         title: legalData.refund_label || 'Cancellation & Refund Policy',
-        text: legalData.refund_text,
+        text: REFUND_POLICY_TEXT,
         status: 'Active',
-      } : null,
+      },
     ].filter(Boolean);
 
     const customDocs = Array.isArray(legalData.custom_policies)

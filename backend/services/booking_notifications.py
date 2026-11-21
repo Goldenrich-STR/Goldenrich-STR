@@ -552,9 +552,9 @@ async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: d
             logger.warning(f"Guest not found for refund notification: {refund_dict.get('refund_id')}")
             return
 
-        refund_amt_inr = round(refund_dict.get("refund_amount", 0) / 100)
+        refund_amt_inr = refund_dict.get("refund_amount", 0) / 100
         message = (
-            f"X-Space360: Your refund of ₹{refund_amt_inr:,} has been successfully received/processed. "
+            f"X-Space360: Your refund of ₹{refund_amt_inr:,.2f} has been processed to your original payment source. Bank credit may take 8-10 business days. "
             f"Booking ID: {refund_dict['booking_id']}."
         )
 
@@ -581,7 +581,7 @@ async def notify_guest_refund_processed(db: AsyncIOMotorDatabase, refund_dict: d
             db=db,
             user_id=refund_dict["guest_id"],
             notification_type=NotificationType.REFUND_RECEIVED,
-            title="Refund Received",
+            title="Refund Processed",
             message=message,
             channels=channels,
             data={

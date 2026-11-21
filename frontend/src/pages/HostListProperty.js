@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { propertyAPI, subscriptionAPI, uploadAPI, couponAPI, getImageUrl, loadRazorpaySdk } from '../services/api';
 import { Dialog, DialogContent, DialogTitle } from '../components/ui/dialog';
 import { getAmenityIcon, formatAmenityLabel, formatAddress } from '../lib/displayLabels';
+import { listingWizardNavigation } from '../utils/listingWizardSteps';
 import {
   Building2,
   ArrowLeft,
@@ -332,104 +334,254 @@ const EditableItemName = ({ initialName, onRename }) => {
   );
 };
 
-const TimePicker12h = ({ value, onChange }) => {
-  let hour = '';
-  let minute = '';
-  let period = '';
+/**
+ * One clear dropdown for a time of day ("9:00 AM", "9:30 AM", ... every 30 minutes).
+ * It replaces the three tiny hour / minute / AM-PM boxes that looked empty.
+ * format12: value is "09:30 AM" (venue timings). Otherwise "09:30" in 24-hour form (check-in / check-out).
+ */
+const TIME_OPTIONS = Array.from({ length: 48 }, (_, index) => {
+  const h24 = Math.floor(index / 2);
+  const minute = index % 2 ? 30 : 0;
+  const period = h24 >= 12 ? 'PM' : 'AM';
+  const h12 = h24 % 12 || 12;
+  const mm = String(minute).padStart(2, '0');
+  return { v24: `${String(h24).padStart(2, '0')}:${mm}`, v12: `${String(h12).padStart(2, '0')}:${mm} ${period}`, label: `${h12}:${mm} ${period}` };
+});
 
-  if (value) {
-    const match12 = value.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-    if (match12) {
-      hour = String(parseInt(match12[1], 10));
-      minute = match12[2];
-      period = match12[3].toUpperCase();
-    } else {
-      const match24 = value.match(/^(\d{1,2}):(\d{2})$/);
-      if (match24) {
-        let h24 = parseInt(match24[1], 10);
-        let p = 'AM';
-        if (h24 >= 12) {
-          p = 'PM';
-          if (h24 > 12) h24 -= 12;
-        }
-        if (h24 === 0) h24 = 12;
-        hour = String(h24);
-        minute = match24[2];
-        period = p;
-      }
-    }
+const timeTo24 = (value) => {
+  const text = String(value || '').trim();
+  const match12 = text.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (match12) {
+    let hours = parseInt(match12[1], 10) % 12;
+    if (match12[3].toUpperCase() === 'PM') hours += 12;
+    return `${String(hours).padStart(2, '0')}:${match12[2]}`;
   }
+  const match24 = text.match(/^(\d{1,2}):(\d{2})/);
+  return match24 ? `${String(parseInt(match24[1], 10)).padStart(2, '0')}:${match24[2]}` : '';
+};
 
-  const hours = Array.from({ length: 12 }, (_, i) => String(i + 1));
-  const minutes = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0'));
-  
-  const handleSelectChange = (h, m, p) => {
-    if (!h || !m || !p) {
-      onChange('');
-    } else {
-      const paddedHour = h.padStart(2, '0');
-      onChange(`${paddedHour}:${m} ${p}`);
-    }
+const TimeSelect = ({ value, onChange, format12 = true, placeholder = 'Select time', className = '' }) => {
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const buttonRef = useRef(null);
+  const listRef = useRef(null);
+  const current = timeTo24(value);
+  const options = current && !TIME_OPTIONS.some((option) => option.v24 === current)
+    ? [...TIME_OPTIONS, { v24: current, v12: value, label: value }].sort((a, b) => a.v24.localeCompare(b.v24))
+    : TIME_OPTIONS;
+  const selected = options.find((option) => option.v24 === current);
+
+  const openList = () => {
+    if (buttonRef.current) setRect(buttonRef.current.getBoundingClientRect());
+    setOpen(true);
   };
 
+  useEffect(() => {
+    if (!open) return undefined;
+    // a scroll inside the list itself must not close it; only the page scrolling or resizing does
+    const close = (event) => { if (event?.target instanceof Node && listRef.current?.contains(event.target)) return; setOpen(false); };
+    const onKey = (event) => { if (event.key === 'Escape') setOpen(false); };
+    const onPointer = (event) => {
+      if (buttonRef.current?.contains(event.target) || listRef.current?.contains(event.target)) return;
+      setOpen(false);
+    };
+    window.addEventListener('scroll', close, true);
+    window.addEventListener('resize', close);
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onPointer);
+    // bring the chosen time (or 9 AM) into view
+    const target = listRef.current?.querySelector('[data-selected="true"]') || listRef.current?.querySelector('[data-default="true"]');
+    if (target && listRef.current) listRef.current.scrollTop = target.offsetTop - (listRef.current.clientHeight - target.clientHeight) / 2;
+    return () => {
+      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onPointer);
+    };
+  }, [open]);
+
+  const pick = (option) => {
+    onChange(option ? (format12 ? option.v12 : option.v24) : '');
+    setOpen(false);
+  };
+
+  const listHeight = 240;
+  const spaceBelow = rect ? window.innerHeight - rect.bottom : 0;
+  const openUp = rect && spaceBelow < listHeight + 12 && rect.top > spaceBelow;
+  const panelStyle = rect ? {
+    position: 'fixed',
+    left: rect.left,
+    width: Math.max(rect.width, 150),
+    zIndex: 1000,
+    ...(openUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
+  } : null;
+
   return (
-    <div className="inline-flex items-center rounded-xl border border-gray-200 bg-white px-2 py-1.5 shadow-sm transition-all duration-200 hover:border-slate-400 focus-within:border-slate-500 focus-within:ring-1 focus-within:ring-slate-200">
-      <Clock className="w-3.5 h-3.5 text-charcoal-light flex-shrink-0 mr-1" />
-      <div className="flex items-center space-x-0.5">
-        <select
-          value={hour}
-          onChange={(e) => handleSelectChange(e.target.value, minute || '00', period || 'AM')}
-          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold p-0 focus:ring-0 cursor-pointer outline-none text-center"
-          style={{ 
-            backgroundImage: 'none', 
-            paddingRight: 0, 
-            paddingLeft: 0, 
-            appearance: 'none', 
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            width: '32px'
-          }}
-        >
-          <option value="">--</option>
-          {hours.map(h => <option key={h} value={h}>{h}</option>)}
-        </select>
-        <span className="text-charcoal-light font-bold text-xs select-none">:</span>
-        <select
-          value={minute}
-          onChange={(e) => handleSelectChange(hour || '12', e.target.value, period || 'AM')}
-          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold p-0 focus:ring-0 cursor-pointer outline-none text-center"
-          style={{ 
-            backgroundImage: 'none', 
-            paddingRight: 0, 
-            paddingLeft: 0, 
-            appearance: 'none', 
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            width: '32px'
-          }}
-        >
-          <option value="">--</option>
-          {minutes.map(m => <option key={m} value={m}>{m}</option>)}
-        </select>
-        <select
-          value={period}
-          onChange={(e) => handleSelectChange(hour || '12', minute || '00', e.target.value)}
-          className="appearance-none bg-none bg-transparent border-none text-xs text-charcoal font-bold tracking-tight p-0 focus:ring-0 cursor-pointer outline-none text-center ml-0.5"
-          style={{ 
-            backgroundImage: 'none', 
-            paddingRight: 0, 
-            paddingLeft: 0, 
-            appearance: 'none', 
-            WebkitAppearance: 'none',
-            MozAppearance: 'none',
-            width: '40px'
-          }}
-        >
-          <option value="">--</option>
-          <option value="AM">AM</option>
-          <option value="PM">PM</option>
-        </select>
-      </div>
+    <div className={className}>
+      <button
+        type="button"
+        ref={buttonRef}
+        onClick={() => (open ? setOpen(false) : openList())}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex w-full items-center gap-2 rounded-xl border bg-white px-3 py-2.5 text-left shadow-sm outline-none transition ${open ? 'border-slate-700 ring-2 ring-slate-200' : 'border-gray-300 hover:border-slate-400 focus-visible:border-slate-700'}`}
+      >
+        <Clock className="h-4 w-4 flex-shrink-0 text-charcoal-light" />
+        <span className={`flex-1 truncate text-sm ${selected ? 'font-semibold text-charcoal' : 'text-charcoal-light'}`}>{selected ? selected.label : placeholder}</span>
+        <ChevronDown className={`h-4 w-4 flex-shrink-0 text-charcoal-light transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && panelStyle && createPortal(
+        <div ref={listRef} role="listbox" style={{ ...panelStyle, maxHeight: listHeight }} className="overflow-y-auto rounded-xl border border-gray-200 bg-white py-1.5 shadow-xl">
+          <button type="button" onClick={() => pick(null)} className="block w-full px-4 py-2 text-left text-sm text-charcoal-light hover:bg-gray-50">Clear</button>
+          {options.map((option) => {
+            const isSelected = option.v24 === current;
+            return (
+              <button
+                key={option.v24}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                data-selected={isSelected}
+                data-default={option.v24 === '09:00'}
+                onClick={() => pick(option)}
+                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition ${isSelected ? 'bg-slate-900 font-semibold text-white' : 'text-charcoal hover:bg-gray-100'}`}
+              >
+                <span>{option.label}</span>
+                {isSelected && <Check className="h-4 w-4" />}
+              </button>
+            );
+          })}
+        </div>,
+        document.body,
+      )}
+    </div>
+  );
+};
+
+const TimePicker12h = ({ value, onChange }) => <TimeSelect value={value} onChange={onChange} format12 />;
+
+const MAX_UNIT_PHOTOS = 10;
+
+/**
+ * Class of a unit: Standard, Deluxe, Premium, every class you added before, and at the bottom
+ * "+ Add your own class" (type Gold or Suite, press Add). The class is saved as plain text on the unit.
+ */
+const UnitClassSelect = ({ value, onChange, customClasses = [], className = '', testid }) => {
+  const known = ['standard', 'deluxe', 'premium'];
+  const cap = (text) => (text ? text.charAt(0).toUpperCase() + text.slice(1) : '');
+  const [open, setOpen] = useState(false);
+  const [rect, setRect] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [draft, setDraft] = useState('');
+  const buttonRef = useRef(null);
+  const listRef = useRef(null);
+  const options = [...known, ...customClasses.filter((c) => !known.includes(c.toLowerCase()))];
+
+  const close = () => { setOpen(false); setAdding(false); setDraft(''); };
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onScroll = (event) => {
+      if (event.target instanceof Node && listRef.current?.contains(event.target)) return;
+      close();
+    };
+    const onKey = (event) => { if (event.key === 'Escape') close(); };
+    const onPointer = (event) => {
+      if (buttonRef.current?.contains(event.target) || listRef.current?.contains(event.target)) return;
+      close();
+    };
+    window.addEventListener('scroll', onScroll, true);
+    window.addEventListener('resize', close);
+    window.addEventListener('keydown', onKey);
+    document.addEventListener('mousedown', onPointer);
+    return () => {
+      window.removeEventListener('scroll', onScroll, true);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('keydown', onKey);
+      document.removeEventListener('mousedown', onPointer);
+    };
+  }, [open]);
+
+  const pick = (next) => { onChange(next); close(); };
+  const addNew = () => {
+    const text = draft.trim().replace(/\s+/g, ' ').slice(0, 24);
+    if (!text) return;
+    const lower = text.toLowerCase();
+    if (known.includes(lower)) { pick(lower); return; }
+    pick(customClasses.find((c) => c.toLowerCase() === lower) || text);
+  };
+
+  const panelHeight = 260;
+  const spaceBelow = rect ? window.innerHeight - rect.bottom : 0;
+  const openUp = rect && spaceBelow < panelHeight + 12 && rect.top > spaceBelow;
+  const panelStyle = rect ? {
+    position: 'fixed',
+    left: rect.left,
+    width: Math.max(rect.width, 210),
+    zIndex: 1000,
+    ...(openUp ? { bottom: window.innerHeight - rect.top + 6 } : { top: rect.bottom + 6 }),
+  } : null;
+
+  return (
+    <div className={className}>
+      <button
+        type="button"
+        ref={buttonRef}
+        onClick={() => {
+          if (open) { close(); return; }
+          if (buttonRef.current) setRect(buttonRef.current.getBoundingClientRect());
+          setOpen(true);
+        }}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        data-testid={testid}
+        className={`flex w-full items-center justify-between gap-2 rounded-lg border bg-white px-3 py-2 text-left text-sm font-semibold text-charcoal outline-none transition ${open ? 'border-slate-700 ring-2 ring-slate-200' : 'border-slate-300 hover:border-slate-400'}`}
+      >
+        <span className="truncate">{value ? cap(value) : 'Select class'}</span>
+        <ChevronDown className={`h-4 w-4 flex-shrink-0 text-charcoal-light transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && panelStyle && createPortal(
+        <div ref={listRef} role="listbox" style={{ ...panelStyle, maxHeight: panelHeight }} className="overflow-y-auto rounded-xl border border-gray-200 bg-white py-1.5 shadow-xl">
+          {options.map((option) => {
+            const selected = (value || '') === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => pick(option)}
+                className={`flex w-full items-center justify-between px-4 py-2 text-left text-sm transition ${selected ? 'bg-slate-900 font-semibold text-white' : 'text-charcoal hover:bg-gray-100'}`}
+              >
+                <span>{cap(option)}</span>
+                {selected && <Check className="h-4 w-4" />}
+              </button>
+            );
+          })}
+          <div className="mt-1 border-t border-gray-100 px-3 pb-2 pt-2">
+            {adding ? (
+              <div className="flex items-center gap-1.5">
+                <input
+                  autoFocus
+                  value={draft}
+                  maxLength={24}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addNew(); } }}
+                  placeholder="e.g. Gold, Suite"
+                  className="w-full min-w-0 rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm font-semibold text-charcoal outline-none focus:border-slate-600"
+                  aria-label="New class name"
+                />
+                <button type="button" onClick={addNew} className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-bold text-white">Add</button>
+              </div>
+            ) : (
+              <button type="button" onClick={() => setAdding(true)} className="flex w-full items-center gap-2 rounded-lg px-1 py-1.5 text-left text-sm font-bold text-[#2563eb] hover:bg-blue-50">
+                <Plus className="h-4 w-4" /> Add your own class
+              </button>
+            )}
+          </div>
+        </div>,
+        document.body,
+      )}
     </div>
   );
 };
@@ -594,11 +746,22 @@ const HostListProperty = () => {
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
   const [previewImage, setPreviewImage] = useState(null);
+  const [photoMode, setPhotoMode] = useState('property'); // 'property' | 'units'
   const [isImageUrlDialogOpen, setIsImageUrlDialogOpen] = useState(false);
   const [imageUrlDraft, setImageUrlDraft] = useState('');
   const [paying, setPaying] = useState(false);
   const [success, setSuccess] = useState(false);
   const [hasActiveSubscription, setHasActiveSubscription] = useState(false);
+  const [listingExempt, setListingExempt] = useState(false);
+  const [listingPolicy, setListingPolicy] = useState({ loading: true, enabled: true, error: '' });
+  const subscriptionRequired = listingPolicy.enabled && !listingExempt;
+  const wizardNavigation = listingWizardNavigation(STEPS, step, listingPolicy.loading || listingPolicy.enabled);
+  const { visibleSteps, currentIndex: currentStepIndex, position: visibleStepIndex } = wizardNavigation;
+  useEffect(() => {
+    subscriptionAPI.getListingPolicy()
+      .then((res) => setListingPolicy({ loading: false, enabled: res.data.enabled !== false, error: '' }))
+      .catch(() => setListingPolicy({ loading: false, enabled: true, error: 'Could not load listing payment settings. Refresh and try again.' }));
+  }, []);
   const [editingPropertyStatus, setEditingPropertyStatus] = useState('');
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [fetchingPincode, setFetchingPincode] = useState(false);
@@ -722,6 +885,7 @@ const HostListProperty = () => {
         const subscriptionStatus = String(property.subscription_status || '').toLowerCase();
         const propertyStatus = String(property.status || '').toLowerCase();
         setHasActiveSubscription(subscriptionStatus === 'active');
+        setListingExempt(property.subscription_listing_exempt === true);
         if (['pending_verification', 'live'].includes(propertyStatus) && subscriptionStatus === 'active') {
           localStorage.removeItem(`list_property_form_${draftStorageId}`);
           localStorage.removeItem(`list_property_step_${draftStorageId}`);
@@ -753,6 +917,7 @@ const HostListProperty = () => {
           }
           const subscriptionStatus = String(p.subscription_status || '').toLowerCase();
           setHasActiveSubscription(subscriptionStatus === 'active' || !!(p.subscription_id && subscriptionStatus === 'active'));
+          setListingExempt(p.subscription_listing_exempt === true);
           const backendForm = {
             title: p.title || '',
             description: p.description || '',
@@ -777,6 +942,7 @@ const HostListProperty = () => {
               max_guests: u.max_guests !== null && u.max_guests !== undefined ? String(u.max_guests) : '2',
               bhk_type: u.bhk_type || '',
               tier: u.tier || '',
+              images: Array.isArray(u.images) ? u.images : [],
               price_per_night: u.price_per_night !== null && u.price_per_night !== undefined ? String(u.price_per_night) : '',
             })),
             price_per_night: p.price_per_night !== null && p.price_per_night !== undefined ? String(p.price_per_night) : '',
@@ -884,6 +1050,7 @@ const HostListProperty = () => {
       max_guests: '2',
       bhk_type: unitBhkOptions[0]?.value || '',
       tier: 'standard',
+      images: [...classPhotosOf('standard')],
       price_per_night: '',
     };
     update({ units: [...(form.units || []), next] });
@@ -893,13 +1060,75 @@ const HostListProperty = () => {
   const submitNewUnit = () => {
     if (!newUnit.name.trim()) { setError('Enter a name for the new unit'); return; }
     if (!Number(newUnit.price_per_night)) { setError('Enter a price for the new unit'); return; }
-    update({ units: [...(form.units || []), { unit_id: makeUnitId(), bhk_type: unitBhkOptions[0]?.value || '', ...newUnit, name: newUnit.name.trim() }] });
+    update({ units: [...(form.units || []), { unit_id: makeUnitId(), bhk_type: unitBhkOptions[0]?.value || '', ...newUnit, images: [...classPhotosOf(newUnit.tier)], name: newUnit.name.trim() }] });
     setNewUnit({ name: '', area_sqft: '', max_guests: '2', tier: 'standard', price_per_night: '' });
     setError('');
   };
 
   const updateUnit = (unitId, patch) => {
-    update({ units: (form.units || []).map((u) => (u.unit_id === unitId ? { ...u, ...patch } : u)) });
+    // moving a unit to another class gives it that class's photos
+    const others = (form.units || []).filter((u) => u.unit_id !== unitId);
+    const next = patch.tier !== undefined && !('images' in patch)
+      ? { ...patch, images: [...classPhotosOf(patch.tier, others)] }
+      : patch;
+    update({ units: (form.units || []).map((u) => (u.unit_id === unitId ? { ...u, ...next } : u)) });
+  };
+
+  // classes the host typed on any unit (beyond Standard / Deluxe / Premium), so every unit can reuse them
+  const customUnitClasses = useMemo(() => {
+    const known = UNIT_TIERS.map((t) => t.value);
+    return Array.from(new Set([...(form.units || []).map((u) => u.tier), newUnit.tier].filter((t) => t && !known.includes(t))));
+  }, [form.units, newUnit.tier]);
+
+  // Photos belong to a class (Deluxe, Premium...). Every unit of that class shows the same photos,
+  // so the host uploads them once. They are stored on each unit, so guests and reviewers read them unchanged.
+  const classKey = (tier) => tier || 'standard';
+  const classPhotosOf = (tier, units = form.units || []) => {
+    const holder = units.find((u) => classKey(u.tier) === classKey(tier) && Array.isArray(u.images) && u.images.length > 0);
+    return holder ? holder.images : [];
+  };
+  const setClassPhotos = (tier, images) => {
+    update({ units: (form.units || []).map((u) => (classKey(u.tier) === classKey(tier) ? { ...u, images } : u)) });
+  };
+  const unitClasses = useMemo(() => {
+    const order = ['standard', 'deluxe', 'premium'];
+    const keys = Array.from(new Set((form.units || []).map((u) => classKey(u.tier))));
+    keys.sort((x, y) => {
+      const ix = order.indexOf(x); const iy = order.indexOf(y);
+      return (ix === -1 ? 99 : ix) - (iy === -1 ? 99 : iy) || x.localeCompare(y);
+    });
+    return keys.map((key) => ({
+      key,
+      label: key.charAt(0).toUpperCase() + key.slice(1),
+      units: (form.units || []).filter((u) => classKey(u.tier) === key),
+    }));
+  }, [form.units]);
+
+  const [unitPhotoBusy, setUnitPhotoBusy] = useState('');
+  const handleClassPhotos = async (tier, fileList) => {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const existing = classPhotosOf(tier);
+    const room = Math.max(0, MAX_UNIT_PHOTOS - existing.length);
+    if (room === 0) { setError(`Each class can have up to ${MAX_UNIT_PHOTOS} photos`); return; }
+    setUnitPhotoBusy(classKey(tier));
+    setError('');
+    const added = [];
+    try {
+      for (const file of files.slice(0, room)) {
+        const data = await uploadAPI.uploadImage(file);
+        if (data?.url && !existing.includes(data.url) && !added.includes(data.url)) added.push(data.url);
+      }
+      if (added.length) setClassPhotos(tier, [...existing, ...added]);
+      if (files.length > room) setError(`Only ${room} more photo(s) fit for this class (max ${MAX_UNIT_PHOTOS}).`);
+    } catch (err) {
+      setError(formatError(err, 'Photo upload failed'));
+    } finally {
+      setUnitPhotoBusy('');
+    }
+  };
+  const removeClassPhoto = (tier, index) => {
+    setClassPhotos(tier, classPhotosOf(tier).filter((_, i) => i !== index));
   };
 
   const removeUnit = (unitId) => {
@@ -913,8 +1142,8 @@ const HostListProperty = () => {
     update({ units: units.map((u) => ({ ...u, price_per_night: firstPrice })) });
   };
 
-  const canEditCurrentStep = !isHostManageMode || HOST_MANAGE_EDITABLE_STEP_KEYS.includes(STEPS[step]?.key);
-  const isLastAllowedStep = step >= lastManageStep;
+  const canEditCurrentStep = !isHostManageMode || HOST_MANAGE_EDITABLE_STEP_KEYS.includes(STEPS[currentStepIndex]?.key);
+  const isLastAllowedStep = currentStepIndex >= lastManageStep;
 
   const getPackageValue = (type, item) => {
     const typePkg = (form.packages || []).find((p) => p.type === type);
@@ -1198,7 +1427,7 @@ const HostListProperty = () => {
 
   const validateStep = () => {
     setError('');
-    const k = STEPS[step].key;
+    const k = STEPS[currentStepIndex].key;
     if (isHostManageMode && !HOST_MANAGE_EDITABLE_STEP_KEYS.includes(k)) {
       return '';
     }
@@ -1284,7 +1513,8 @@ const HostListProperty = () => {
         return 'Duplicate images detected. Please remove them.';
       }
     }
-    if (k === 'subscription' && !form.subscription_plan_id && !hasActiveSubscription && user?.role !== 'admin') {
+    if (k === 'subscription' && user?.role !== 'admin' && (listingPolicy.loading || listingPolicy.error)) return listingPolicy.error || 'Loading subscription setting. Please wait.';
+    if (k === 'subscription' && subscriptionRequired && !form.subscription_plan_id && !hasActiveSubscription && user?.role !== 'admin') {
       return 'Select a subscription plan';
     }
     return '';
@@ -1296,12 +1526,12 @@ const HostListProperty = () => {
       setError(err);
       return;
     }
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep(wizardNavigation.nextIndex);
   };
 
   const prev = () => {
     setError('');
-    setStep((s) => Math.max(s - 1, 0));
+    setStep(wizardNavigation.previousIndex);
   };
 
   const toggleAmenity = (a) => {
@@ -1550,6 +1780,7 @@ const HostListProperty = () => {
           max_guests: Number(u.max_guests) || 1,
           bhk_type: u.bhk_type || null,
           tier: u.tier || null,
+          images: Array.isArray(u.images) && u.images.length ? u.images : classPhotosOf(u.tier),
           price_per_night: u.price_per_night ? Number(u.price_per_night) : null,
         }))
       : [];
@@ -1587,7 +1818,7 @@ const HostListProperty = () => {
       pet_friendly: form.pet_friendly,
       smoking_allowed: form.smoking_allowed,
       instant_booking: form.instant_booking,
-      subscription_id: form.subscription_plan_id,
+      ...(subscriptionRequired ? { subscription_id: form.subscription_plan_id } : {}),
       has_cook: form.category === 'event_venue' ? false : form.has_cook,
       cook_price: form.category === 'event_venue' ? null : (form.cook_price ? Number(form.cook_price) : null),
       has_self_cook: form.category === 'event_venue' ? false : form.has_self_cook,
@@ -1764,7 +1995,7 @@ const HostListProperty = () => {
     setError('');
     update({ subscription_plan_id: pricingSummaryPlan.plan_id });
     setPricingSummaryPlan(null);
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep(wizardNavigation.nextIndex);
   };
 
   const submitListing = async () => {
@@ -1798,19 +2029,29 @@ const HostListProperty = () => {
         return;
       }
 
+      // Re-read policy before checkout so a stale browser cannot start payment
+      // after management disables it. Server also enforces the current policy.
+      const freshPolicy = await subscriptionAPI.getListingPolicy();
+      const requiresPayment = freshPolicy.data.enabled !== false && !listingExempt;
+      setListingPolicy({ loading: false, enabled: freshPolicy.data.enabled !== false, error: '' });
+      if (requiresPayment && !hasActiveSubscription && !form.subscription_plan_id) {
+        throw new Error('Subscription payments are enabled. Return to the Subscription step and select a plan.');
+      }
+      const listingPayload = buildPropertyPayload();
+      if (!requiresPayment) delete listingPayload.subscription_id;
       // 1. Create or update the property as DRAFT
       let propertyId = createdPropertyId;
       if (!propertyId) {
-        const propRes = await propertyAPI.createProperty(buildPropertyPayload());
+        const propRes = await propertyAPI.createProperty(listingPayload);
         propertyId = propRes.data.property_id;
         setCreatedPropertyId(propertyId);
         localStorage.setItem(createdPropertyStorageKey, propertyId);
       } else {
-        await propertyAPI.updateProperty(propertyId, buildPropertyPayload());
+        await propertyAPI.updateProperty(propertyId, listingPayload);
       }
 
       // 2. Pay the subscription fee (Registration fee skipped)
-      if (form.subscription_plan_id && !hasActiveSubscription) {
+      if (requiresPayment && form.subscription_plan_id && !hasActiveSubscription) {
         setPaying(true);
         await processSubscriptionPayment(form.subscription_plan_id, propertyId);
         setHasActiveSubscription(true);
@@ -1901,7 +2142,7 @@ const HostListProperty = () => {
     );
   }
 
-  const currentStep = STEPS[step].key;
+  const currentStep = STEPS[currentStepIndex].key;
 
   return (
     <HostWorkspaceShell
@@ -1909,11 +2150,11 @@ const HostListProperty = () => {
       sidebarTitle="Listing Wizard"
       sidebarDescription="Create a new property with the same host workspace experience and keep the onboarding flow organized."
       heroTitle="List your property"
-      heroDescription={`${step + 1} of ${STEPS.length} steps`}
+      heroDescription={`${visibleStepIndex + 1} of ${visibleSteps.length} steps`}
       sidebarSnapshot={[
         ['Host', user?.full_name || 'Host'],
         ['Category', form.category || 'residential'],
-        ['Step', `${step + 1}/${STEPS.length}`],
+        ['Step', `${visibleStepIndex + 1}/${visibleSteps.length}`],
         ['Mode', isHostManageMode ? 'manage' : 'new'],
       ]}
     >
@@ -1922,14 +2163,14 @@ const HostListProperty = () => {
           List your property
         </h1>
         <p className="text-charcoal-light text-sm mb-6">
-          {step + 1} of {STEPS.length} · {STEPS[step].label}
+          {visibleStepIndex + 1} of {visibleSteps.length} · {STEPS[currentStepIndex].label}
         </p>
 
         {/* Progress bar */}
         <div className="mb-8 flex items-center overflow-x-auto rounded-[28px] border border-slate-200 bg-white px-5 py-5 shadow-[0_16px_36px_rgba(15,23,42,0.04)]" data-testid="step-indicator">
-          {STEPS.map((s, idx) => {
-            const done = idx < step;
-            const active = idx === step;
+          {visibleSteps.map((s, idx) => {
+            const done = idx < visibleStepIndex;
+            const active = idx === visibleStepIndex;
             const lockedInManage = isHostManageMode && !HOST_MANAGE_EDITABLE_STEP_KEYS.includes(s.key);
             return (
               <React.Fragment key={s.key}>
@@ -1950,7 +2191,7 @@ const HostListProperty = () => {
                     {s.label}
                   </span>
                 </div>
-                {idx < STEPS.length - 1 && (
+                {idx < visibleSteps.length - 1 && (
                   <div className={`flex-1 h-0.5 mx-2 ${done ? 'bg-slate-900' : 'bg-slate-200'}`} />
                 )}
               </React.Fragment>
@@ -2061,12 +2302,12 @@ const HostListProperty = () => {
                           placeholder="e.g. Deluxe Room 101"
                         />
                         <div className="mt-3">
-                          <Select
-                            label="Tier"
+                          <span className="mb-1 block text-xs font-bold uppercase tracking-wide text-charcoal">Class</span>
+                          <UnitClassSelect
                             testid={`basics-unit-tier-${index}`}
                             value={unit.tier || 'standard'}
                             onChange={(v) => updateUnit(unit.unit_id, { tier: v })}
-                            options={UNIT_TIERS}
+                            customClasses={customUnitClasses}
                           />
                         </div>
                         <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-3">
@@ -2480,12 +2721,18 @@ const HostListProperty = () => {
                         {(form.units || []).map((unit, index) => (
                           <div key={unit.unit_id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-bold text-charcoal">{unit.name || `Unit ${index + 1}`}</p>
+                              <input
+                                type="text"
+                                value={unit.name || ""}
+                                onChange={(e) => updateUnit(unit.unit_id, { name: e.target.value })}
+                                placeholder={`Unit ${index + 1} name`}
+                                maxLength={60}
+                                aria-label={`Name of unit ${index + 1}`}
+                                data-testid={`pricing-unit-name-${index}`}
+                                className="w-full max-w-[320px] rounded-md border border-transparent bg-transparent px-1.5 py-0.5 -ml-1.5 text-sm font-bold text-charcoal outline-none transition hover:border-slate-300 focus:border-slate-500 focus:bg-white"
+                              />
                               <p className="text-[11px] font-semibold text-slate-500">{unit.area_sqft ? `${unit.area_sqft} sq.ft · ` : ''}{unit.max_guests} guests</p>
-                              <select value={unit.tier || ''} onChange={(e) => updateUnit(unit.unit_id, { tier: e.target.value })} className="mt-1 rounded-md border border-slate-300 bg-white px-2 py-1 text-[11px] font-semibold text-charcoal" aria-label="Unit tier" data-testid={`pricing-unit-tier-${index}`}>
-                                <option value="">No tier</option>
-                                {UNIT_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                              </select>
+                              <UnitClassSelect allowNone className="mt-1 !py-1 !text-[11px]" testid={`pricing-unit-tier-${index}`} value={unit.tier || ''} onChange={(v) => updateUnit(unit.unit_id, { tier: v })} customClasses={customUnitClasses} />
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="text-sm font-bold text-slate-500">₹</span>
@@ -2508,9 +2755,7 @@ const HostListProperty = () => {
                           <input value={newUnit.name} onChange={(e) => setNewUnit({ ...newUnit, name: e.target.value })} placeholder="Unit name" className="col-span-2 rounded-lg border px-3 py-2 text-sm" data-testid="new-unit-name" />
                           <input type="number" min="0" value={newUnit.area_sqft} onChange={(e) => setNewUnit({ ...newUnit, area_sqft: e.target.value })} placeholder="Area sq.ft" className="rounded-lg border px-3 py-2 text-sm" />
                           <input type="number" min="1" value={newUnit.max_guests} onChange={(e) => setNewUnit({ ...newUnit, max_guests: e.target.value })} placeholder="Guests" className="rounded-lg border px-3 py-2 text-sm" />
-                          <select value={newUnit.tier} onChange={(e) => setNewUnit({ ...newUnit, tier: e.target.value })} className="rounded-lg border px-3 py-2 text-sm" aria-label="Tier">
-                            {UNIT_TIERS.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                          </select>
+                          <UnitClassSelect value={newUnit.tier} onChange={(v) => setNewUnit({ ...newUnit, tier: v })} customClasses={customUnitClasses} />
                           <input type="number" min="0" value={newUnit.price_per_night} onChange={(e) => setNewUnit({ ...newUnit, price_per_night: e.target.value })} placeholder="Price" className="rounded-lg border px-3 py-2 text-sm" data-testid="new-unit-price" />
                         </div>
                         <button type="button" onClick={submitNewUnit} className="mt-3 rounded-lg bg-charcoal px-4 py-2 text-sm font-bold text-white" data-testid="new-unit-add">Add unit</button>
@@ -2586,21 +2831,11 @@ const HostListProperty = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Check-in Time</label>
-                        <input
-                          type="time"
-                          value={form.check_in_time || '12:00'}
-                          onChange={(e) => update({ check_in_time: e.target.value })}
-                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all [color-scheme:light] font-bold text-charcoal"
-                        />
+                        <TimeSelect format12={false} value={form.check_in_time || '12:00'} onChange={(val) => update({ check_in_time: val })} />
                       </div>
                       <div>
                         <label className="text-[10px] font-bold tracking-tight uppercase tracking-wider text-charcoal-light block mb-2">Check-out Time</label>
-                        <input
-                          type="time"
-                          value={form.check_out_time || '11:00'}
-                          onChange={(e) => update({ check_out_time: e.target.value })}
-                          className="w-full bg-white border border-gray-200 rounded-xl px-4 py-3 text-sm outline-none focus:border-terracotta transition-all [color-scheme:light] font-bold text-charcoal"
-                        />
+                        <TimeSelect format12={false} value={form.check_out_time || '11:00'} onChange={(val) => update({ check_out_time: val })} />
                       </div>
                     </div>
                   </div>
@@ -2995,6 +3230,82 @@ const HostListProperty = () => {
           {currentStep === 'photos' && (
             <div className="space-y-4" data-testid="step-photos-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Add photos</h2>
+              {unitsActive && (form.units || []).length > 0 && (
+                <div className="mb-1 flex flex-wrap gap-2" role="tablist" aria-label="Photo type">
+                  {[
+                    ['property', 'Property photos', 'Shared by the whole property'],
+                    ['units', 'Room photos', 'One set of photos for each class (Deluxe, Premium...)'],
+                  ].map(([key, label, hint]) => (
+                    <button
+                      key={key}
+                      type="button"
+                      role="tab"
+                      aria-selected={photoMode === key}
+                      onClick={() => setPhotoMode(key)}
+                      className={`rounded-2xl border px-4 py-2.5 text-left transition ${photoMode === key ? 'border-slate-900 bg-slate-900 text-white' : 'border-slate-200 bg-white text-charcoal hover:border-slate-400'}`}
+                    >
+                      <span className="block text-sm font-bold">{label}</span>
+                      <span className={`block text-[11px] ${photoMode === key ? 'text-white/70' : 'text-charcoal-light'}`}>{hint}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {unitsActive && photoMode === 'units' && (form.units || []).length > 0 ? (
+                <div className="space-y-4" data-testid="unit-photos">
+                  <p className="text-sm text-charcoal-light">
+                    Add photos once for each class. Every room of that class shows the same photos, so Deluxe photos appear on all your Deluxe rooms. Up to {MAX_UNIT_PHOTOS} photos per class. Property photos stay in the other tab.
+                  </p>
+                  {unitClasses.map((group) => {
+                    const photos = classPhotosOf(group.key);
+                    const busy = unitPhotoBusy === group.key;
+                    return (
+                      <div key={group.key} className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-charcoal">{group.label}</p>
+                            <p className="text-[11px] font-semibold text-charcoal-light">
+                              {group.units.length} room{group.units.length === 1 ? '' : 's'}: {group.units.map((u) => u.name || 'Unnamed').join(', ')} · {photos.length} photo{photos.length === 1 ? '' : 's'}
+                            </p>
+                          </div>
+                          <label className={`inline-flex cursor-pointer items-center gap-2 rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white transition hover:bg-black ${busy ? 'pointer-events-none opacity-60' : ''}`}>
+                            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                            <span>{busy ? 'Uploading...' : `Add ${group.label} photos`}</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              data-testid={`class-photo-input-${group.key}`}
+                              onChange={(e) => { handleClassPhotos(group.key, e.target.files); e.target.value = ''; }}
+                            />
+                          </label>
+                        </div>
+                        {photos.length > 0 ? (
+                          <div className="mt-3 grid grid-cols-3 gap-2 md:grid-cols-5">
+                            {photos.map((src, photoIndex) => (
+                              <div key={src + photoIndex} className="group relative aspect-[4/3] overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                                <img src={getImageUrl(String(src).split('#')[0])} alt={`${group.label} photo ${photoIndex + 1}`} className="h-full w-full object-cover" />
+                                {photoIndex === 0 && <span className="absolute left-1 top-1 rounded-full bg-slate-900 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">Cover</span>}
+                                <button
+                                  type="button"
+                                  onClick={() => removeClassPhoto(group.key, photoIndex)}
+                                  className="absolute right-1 top-1 rounded-full bg-white/90 p-1.5 text-red-600 shadow-sm hover:bg-red-50"
+                                  aria-label={`Remove photo ${photoIndex + 1} of ${group.label}`}
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-3 rounded-lg border border-dashed border-gray-200 p-4 text-center text-xs text-charcoal-light">No {group.label} photos yet. Guests will see the property photos for these rooms.</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+              <>
               <p className="text-sm text-charcoal-light">
                 Upload device photos or paste image URLs. The first photo is your cover. Device uploads are automatically watermarked before they appear here, while pasted URLs display as provided.
               </p>
@@ -3257,13 +3568,22 @@ const HostListProperty = () => {
                   </div>
                 </div>
               </div>
+              </>
+              )}
             </div>
           )}
 
           {currentStep === 'subscription' && (
             <div className="space-y-4" data-testid="step-subscription-content">
               <h2 className="text-xl font-bold text-charcoal mb-2">Choose your subscription</h2>
-              {hasActiveSubscription ? (
+              {listingPolicy.loading || listingPolicy.error ? (
+                <p role="status">{listingPolicy.error || 'Loading subscription setting…'}</p>
+              ) : !subscriptionRequired && !hasActiveSubscription ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-6">
+                  <h3 className="font-bold">No subscription payment required</h3>
+                  <p className="mt-2 text-sm">Continue to review and submit your property for verification. Existing paid subscriptions remain unchanged.</p>
+                </div>
+              ) : hasActiveSubscription ? (
                 <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-6 text-center">
                   <CheckCircle2 className="mx-auto h-12 w-12 text-slate-900" />
                   <h3 className="font-bold text-charcoal text-lg">Active Subscription Found</h3>
@@ -3364,6 +3684,7 @@ const HostListProperty = () => {
                 label="Selected Plan" 
                 value={
                   (() => {
+                    if (!subscriptionRequired && !hasActiveSubscription) return 'No subscription payment required';
                     const selectedPlan = plans.find((p) => p.plan_id === form.subscription_plan_id);
                     if (selectedPlan) {
                       return `${selectedPlan.plan_name} (₹${selectedPlan.price_monthly || 0}/month)${hasActiveSubscription ? ' - Paid & Active' : ''}`;
@@ -3438,7 +3759,7 @@ const HostListProperty = () => {
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-[24px] border border-slate-200 bg-white px-5 py-4 shadow-[0_16px_36px_rgba(15,23,42,0.04)]">
           <button
             onClick={prev}
-            disabled={step === 0}
+            disabled={visibleStepIndex === 0}
             className="inline-flex min-h-[48px] items-center space-x-2 rounded-2xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:opacity-50"
             data-testid="prev-btn"
           >
@@ -3458,7 +3779,7 @@ const HostListProperty = () => {
                 <span>{submitting ? 'Saving...' : 'Save changes'}</span>
               </button>
             )}
-            {step < STEPS.length - 1 && (
+            {visibleStepIndex < visibleSteps.length - 1 && (
               <button
                 onClick={next}
                 className="flex min-h-[48px] items-center space-x-2 rounded-2xl bg-slate-950 px-5 py-3 text-sm font-bold text-white transition hover:bg-black"

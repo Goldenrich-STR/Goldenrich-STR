@@ -282,10 +282,12 @@ class RazorpayService:
         payment_id: str,
         amount: int,
         notes: Optional[Dict] = None,
+        idempotency_key: Optional[str] = None,
+        receipt: Optional[str] = None,
     ) -> Dict:
         """Initiate a refund against a payment. Falls back to deterministic mock in DEMO."""
         if self.is_mock:
-            refund_id = f"rfnd_mock_{uuid.uuid4().hex[:20]}"
+            refund_id = f"rfnd_mock_{hashlib.sha256(idempotency_key.encode()).hexdigest()[:20]}" if idempotency_key else f"rfnd_mock_{uuid.uuid4().hex[:20]}"
             logger.info(f"[MOCK] Razorpay refund created: {refund_id} for {payment_id} amount={amount}")
             return {
                 "success": True,
@@ -302,12 +304,23 @@ class RazorpayService:
             payload = {"amount": amount}
             if notes:
                 payload["notes"] = notes
-            refund = self.client.payment.refund(payment_id, payload)
+            if receipt:
+                payload['receipt'] = receipt
+            options = {'headers': {'X-Refund-Idempotency': idempotency_key}} if idempotency_key else {}
+            refund = self.client.payment.refund(payment_id, payload, **options)
             logger.info(f"Razorpay refund created: {refund.get('id')}")
             return {"success": True, "refund": refund}
         except Exception as e:
             logger.error(f"Razorpay refund failed: {str(e)}")
             return {"success": False, "error": str(e)}
+
+    def fetch_refund(self, refund_id: str) -> Dict:
+        if self.is_mock:
+            return {'success': False, 'error': 'Mock refunds complete synchronously; no provider fetch is available'}
+        try:
+            return {'success': True, 'refund': self.client.refund.fetch(refund_id)}
+        except Exception as exc:
+            return {'success': False, 'error': str(exc)}
 
     # --------------- Payouts (RazorpayX) ----------------
 

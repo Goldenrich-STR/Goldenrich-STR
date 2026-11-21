@@ -969,6 +969,17 @@ async def register(user_data: UserCreate, db: AsyncIOMotorDatabase = Depends(get
         user_dict = user.model_dump()
         if telecaller_name:
             user_dict["telecaller_name"] = telecaller_name
+        if telecaller_id:
+            # The telecaller the host picked at registration owns this host from day one;
+            # an admin does not have to assign again.
+            user_dict["verification_telecaller_id"] = telecaller_id
+            user_dict["document_telecaller_id"] = telecaller_id
+            user_dict["document_telecaller_assignment_policy"] = {
+                "policy": "host_selected_at_registration",
+                "source": "host_registration",
+                "telecaller_name": telecaller_name or "",
+                "telecaller_code": telecaller_code or "",
+            }
         await db.users.insert_one(user_dict)
 
         try:

@@ -1,8 +1,10 @@
+import { REFUND_POLICY_SUMMARY } from '../utils/refundPolicyContent';
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { bookingAPI, propertyAPI, couponAPI, loadRazorpaySdk } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { downloadCustomerBookingInvoice, getCustomerBookingAmounts } from '../utils/bookingInvoice';
+import BookedUnitPricing from '../components/BookedUnitPricing';
 import {
   CheckCircle2,
   Building2,
@@ -328,6 +330,9 @@ const BookingConfirmation = () => {
                <span className="text-sm font-bold tracking-tight text-charcoal">{property.title}</span>
             </div>
           )}
+          {(booking.unit_name || booking.unit_id) && (
+            <p className="mt-3 text-sm font-semibold text-charcoal">Booked unit: {booking.unit_name || booking.unit_id}</p>
+          )}
         </div>
 
         {!isConfirmed && !isExpired && lockExpiresAt && (
@@ -414,6 +419,7 @@ const BookingConfirmation = () => {
           </div>
           
           <div className="bg-stone/50 rounded-2xl p-6 space-y-4">
+            <BookedUnitPricing booking={booking} category={property?.category || booking.property?.category} />
             <div className="flex justify-between items-center">
               <span className="text-xs font-bold text-charcoal-muted uppercase tracking-widest">Booking Amount</span>
               <span className="text-sm font-bold tracking-tight text-charcoal">Rs. {Math.round(taxableBookingAmount).toLocaleString('en-IN')}</span>
@@ -544,6 +550,11 @@ const BookingConfirmation = () => {
           </div>
         )}
 
+        <details open className="mb-6 rounded-2xl border border-slate-200 bg-white p-4" data-testid="booking-refund-policy">
+          <summary className="cursor-pointer font-bold">Cancellation and refund policy</summary>
+          <p className="mt-3 whitespace-pre-line text-sm">{REFUND_POLICY_SUMMARY}</p>
+          <a href="/refund-policy" target="_blank" rel="noreferrer" className="mt-3 inline-block text-sm underline">Read the full policy</a>
+        </details>
         {/* Payment Action Section */}
         {!isConfirmed && !isExpired && (
           <div className="bg-charcoal rounded-3xl p-8 shadow-elevated mb-8 animate-slide-up" style={{ animationDelay: '400ms' }} data-testid="payment-section">

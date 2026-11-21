@@ -41,6 +41,8 @@ class PayoutStatus(str, Enum):
 
 class RefundStatus(str, Enum):
     PENDING = "pending"
+    PROCESSING = "processing"
+    FINALIZING = "finalizing"
     APPROVED = "approved"
     PROCESSED = "processed"
     FAILED = "failed"
@@ -98,8 +100,10 @@ class Transaction(BaseModel):
     subscription_id: Optional[str] = None
     payout_id: Optional[str] = None
     refund_id: Optional[str] = None
+    parent_refund_id: Optional[str] = None
 
     notes: Optional[str] = None
+    financial_snapshot: Optional[dict] = None
     is_mock: bool = False
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -178,6 +182,7 @@ class Refund(BaseModel):
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     processed_at: Optional[datetime] = None
+    credit_note_no: Optional[str] = None
 
 
 # --------------- Request/response DTOs ----------------
@@ -186,6 +191,7 @@ class InitiateRefundRequest(BaseModel):
     reason: str
     override_amount: Optional[int] = None    # if set, skips policy tier
     override_percent: Optional[float] = None  # alternative to amount
+    cancellation_type: str = "guest"
 
 
 class ProcessPayoutRequest(BaseModel):

@@ -1,8 +1,8 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, CreditCard, FileText, PlayCircle, RefreshCcw, Search, TrendingUp, WalletCards, Download, Users, CalendarCheck, IndianRupee, ReceiptText, Hourglass, ShieldCheck, Wallet, Ban } from 'lucide-react';
 import { adminPhase1API } from '../../services/adminPhase1Api';
-import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestReason, showNotice, Pagination } from './shared';
+import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestInput, requestChoice, requestReason, showNotice, Pagination } from './shared';
 import { AdminAccountTransactionsTab } from '../AdminAccount';
 import { openBrokerSettlementInvoice, openHostSettlementInvoice } from '../../utils/brokerSettlementInvoice';
 
@@ -25,7 +25,7 @@ const workspaceTabs = [
   ['reports_config', 'Invoices & Config'],
 ];
 
-const paiseToMoney = (value) => formatMoney(Number(value || 0) / 100);
+const paiseToMoney = (value) => `Rs. ${(Number(value || 0) / 100).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const paiseToRoundedMoney = (value) => formatMoney(Math.round(Number(value || 0) / 100));
 const formatRoundedMoney = (value) => formatMoney(Math.round(Number(value || 0)));
 const entityName = (entity, fallback = 'NA') => entity?.full_name || entity?.name || entity?.user_id || entity?.uid || fallback;
@@ -615,16 +615,27 @@ const firstChargeRupees = (source, keys, referenceAmount = 0) => {
   return 0;
 };
 const settlementChargeBreakdown = (payout = {}, paymentConfig = {}) => {
-  const basePaise = toPaiseAmount(firstPresent(payout.gross_amount, payout.tds_base_amount, payout.booking?.host_base_amount, payout.booking?.base_amount, 0));
-  const explicitPlatform = firstChargeRupees(payout, ['platform_fee', 'platform_charge', 'platform_fee_amount', 'platform_charge_amount', 'platformFee', 'platformFeeAmount', 'platformCharge', 'platformChargeAmount'], basePaise);
-  return {
-    platform_fee: explicitPlatform || (platformFeePaiseFromTransaction(payout, basePaise, paymentConfig) / 100),
-    payment_gateway_charge: firstChargeRupees(payout, ['payment_gateway_charge', 'payment_gateway_fee', 'gateway_charge', 'gateway_fee', 'paymentGatewayCharge', 'paymentGatewayFee', 'gatewayCharge', 'gatewayFee'], basePaise) || (configuredChargePaise(paymentConfig, 'payment_gateway_charge', basePaise) / 100),
-    convenience_fee: firstChargeRupees(payout, ['convenience_fee', 'convenience_charge', 'convenienceFee', 'convenienceCharge'], basePaise) || (configuredChargePaise(paymentConfig, 'convenience_fee', basePaise) / 100),
-    insurance_fee: firstChargeRupees(payout, ['insurance_fee', 'insurance_charge', 'insuranceFee', 'insuranceCharge', 'protection_fee', 'protectionFee'], basePaise) || (configuredChargePaise(paymentConfig, 'insurance_fee', basePaise) / 100),
-    cleaning_fee: firstChargeRupees(payout, ['cleaning_fee', 'cleaning_charge', 'cleaningFee', 'cleaningCharge'], basePaise) || (configuredChargePaise(paymentConfig, 'cleaning_fee', basePaise) / 100),
-    extra_guest_fee: firstChargeRupees(payout, ['extra_guest_fee', 'extra_guest_charge', 'extra_person_fee', 'extra_person_charge', 'extraGuestFee', 'extraGuestCharge', 'extraPersonFee', 'extraPersonCharge'], basePaise) || (configuredChargePaise(paymentConfig, 'extra_guest_fee', basePaise) / 100),
-  };
+  // Canonical payout amounts are paise and include authoritative zeroes.
+  const saved = payout.customer_charge_breakdown;
+  if (saved && typeof saved === 'object') {
+    const amount = (...keys) => {
+      for (const key of keys) {
+        if (saved[key] !== undefined && saved[key] !== null && saved[key] !== '') {
+          const value = Number(saved[key]);
+          return Number.isFinite(value) ? value / 100 : 0;
+        }
+      }
+      return 0;
+    };
+    return { platform_fee: amount('platform_fee'), payment_gateway_charge: amount('gateway_charge', 'payment_gateway_charge'),
+      convenience_fee: amount('convenience_fee'), insurance_fee: amount('insurance_fee'),
+      cleaning_fee: amount('cleaning_fee'), extra_guest_fee: amount('extra_guest_fee') };
+  }
+  // Legacy displays may use stored charge amounts, never today's charge configuration.
+  const base = toPaiseAmount(firstPresent(payout.gross_amount, payout.tds_base_amount, 0));
+  return Object.fromEntries(hostSettlementChargeColumns.map(([key]) => [key,
+    firstChargeRupees(payout, key === 'platform_fee' ? ['platform_fee', 'platform_fee_amount']
+      : key === 'payment_gateway_charge' ? ['gateway_charge', 'payment_gateway_charge'] : [key], base)]));
 };
 const settlementChargeBreakdownTotal = (payout = {}, paymentConfig = {}) =>
   Object.values(settlementChargeBreakdown(payout, paymentConfig)).reduce((total, value) => total + Number(value || 0), 0);
@@ -675,6 +686,26 @@ const FinanceSettlements = () => {
   const [refundStatus, setRefundStatus] = useState('');
   const [busy, setBusy] = useState('');
   const [policyPreview, setPolicyPreview] = useState(null);
+  const [revenueOpen, setRevenueOpen] = useState(false);
+  const revenueDialog = useRef(null);
+  const revenueTrigger = useRef(null);
+  const taxTrigger = useRef(null);
+  useEffect(() => {
+    if (!revenueOpen) return undefined;
+    const previousFocus = (revenueOpen === 'tax' ? taxTrigger.current : revenueTrigger.current) || document.activeElement;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setRevenueOpen(false);
+      if (event.key === 'Tab') {
+        event.preventDefault();
+        revenueDialog.current?.querySelector('button')?.focus();
+      }
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      window.removeEventListener('keydown', closeOnEscape);
+      previousFocus?.focus?.();
+    };
+  }, [revenueOpen]);
   const setActiveTab = (id) => {
     setActive(id);
     setSearchParams(id === 'overview' ? {} : { tab: id });
@@ -689,13 +720,14 @@ const FinanceSettlements = () => {
         limit: transactionLimit,
         ...(active === 'broker_employee_settlements' ? { type: 'booking_payment' } : {}),
       };
-      const [overview, transactions, payouts, refunds, autoStatus, taxCommission, paymentConfig, tdsConfig] = await Promise.all([
+      // Refresh unpaid settlement snapshots before reading the KPI totals.
+      const payouts = await adminPhase1API.financePayouts({
+        status: active === 'broker_employee_settlements' ? '' : payoutStatus,
+        limit: ['settlements', 'broker_employee_settlements'].includes(active) ? 500 : 8,
+      });
+      const [overview, transactions, refunds, autoStatus, taxCommission, paymentConfig, tdsConfig] = await Promise.all([
         adminPhase1API.financeOverview(),
         adminPhase1API.financeTransactions(transactionParams),
-        adminPhase1API.financePayouts({
-          status: active === 'broker_employee_settlements' ? '' : payoutStatus,
-          limit: ['settlements', 'broker_employee_settlements'].includes(active) ? 500 : 8,
-        }),
         adminPhase1API.financeRefunds({ status: refundStatus, limit: active === 'refunds' ? 100 : 8 }),
         adminPhase1API.financePayoutAutoStatus(),
         adminPhase1API.financeTaxCommission(),
@@ -732,10 +764,10 @@ const FinanceSettlements = () => {
     const pending = state.overview?.pending_payouts || {};
     return [
       ['Gross Booking Value', paiseToMoney(revenue.booking_payments_paise), TrendingUp, 'Booking payments collected'],
-      ['Platform Revenue', paiseToMoney(revenue.platform_take_paise), CreditCard, 'Estimated platform take'],
+      ['Platform Revenue', paiseToMoney(revenue.platform_take_paise), CreditCard, 'Booking + subscription revenue, excluding GST · View breakdown'],
       ['Pending Payout', paiseToMoney(pending.amount_paise), WalletCards, `${pending.count || 0} host payouts pending`],
       ['Refund Amount', paiseToMoney(revenue.refunds_paise), RefreshCcw, `${state.overview?.counts?.refunds || 0} refunds issued`],
-      ['Tax Liability', paiseToMoney(revenue.total_tax_paise), FileText, 'Estimated tax reserve'],
+      ['Tax Liability', paiseToMoney(revenue.total_tax_paise), FileText, `Booking GST ${paiseToMoney(revenue.booking_gst_paise)} + subscription GST ${paiseToMoney(revenue.subscription_gst_paise)}; TDS separate`],
     ];
   }, [state.overview]);
 
@@ -797,6 +829,12 @@ const FinanceSettlements = () => {
       confirmLabel: 'Continue',
     });
     if (!bookingId) return;
+    const cancellationType = await requestChoice({ title: 'Cancellation source', description: 'Choose the verified reason. Non-refundable charges are retained in every case.', choices: [
+      { value: 'guest', label: 'Guest cancellation' }, { value: 'host', label: 'Host cancellation' },
+      { value: 'property_unavailable', label: 'Property unavailable' }, { value: 'force_majeure', label: 'Force majeure review' },
+      { value: 'early_checkout', label: 'Early check-out review' }, { value: 'no_show', label: 'Verified no-show' }, { value: 'fraud', label: 'Verified fraudulent booking' },
+    ] });
+    if (!cancellationType) return;
     const reason = await requestReason({ title: 'Refund Reason', description: `Initiating refund for booking ${bookingId}.`, placeholder: 'Add refund reason.', minLength: 3 });
     if (!reason) return;
     const overridePercentRaw = await requestInput({
@@ -819,7 +857,7 @@ const FinanceSettlements = () => {
       allowEmpty: true,
     }) : '';
     if (overrideAmountRaw === null) return;
-    const payload = { reason };
+    const payload = { reason, cancellation_type: cancellationType };
     if (overridePercentRaw) payload.override_percent = Number(overridePercentRaw);
     if (overrideAmountRaw) payload.override_amount = Math.round(Number(overrideAmountRaw) * 100);
     try {
@@ -835,12 +873,25 @@ const FinanceSettlements = () => {
 
   const approveRefund = async (refund) => {
     if (!refund?.refund_id) return;
-    const confirmed = window.confirm(`Approve and process refund ${refund.refund_id}?`);
-    if (!confirmed) return;
+    const reason = await requestReason({ title: refund.status === 'pending' ? 'Confirm cancellation and refund' : 'Reconcile refund status',
+      description: `Refund ${refund.refund_id}: ${paiseToMoney(refund.refund_amount)}. Non-refundable charges will remain excluded.`, minLength: 3 });
+    if (!reason) return;
+    let overridePercent;
+    if (refund.status === 'pending' && refund.manual_review) {
+      const entered = await requestInput({ title: 'Approved exception percentage', label: 'Percentage of eligible booking value',
+        description: 'Leave blank to keep the calculated result. Never includes non-refundable charges.', allowEmpty: true, inputType: 'number' });
+      if (entered === null) return;
+      if (String(entered).trim()) {
+        overridePercent = Number(entered);
+        if (!Number.isFinite(overridePercent) || overridePercent < 0 || overridePercent > 100) {
+          await showNotice({ title: 'Invalid percentage', description: 'Enter a value from 0 to 100.' }); return;
+        }
+      }
+    }
     try {
       setBusy(`approve-refund-${refund.refund_id}`);
       await adminPhase1API.approveFinanceRefund(refund.refund_id, {
-        reason: 'Approved from Finance Refund Queue',
+        reason, ...(overridePercent !== undefined ? { override_percent: overridePercent } : {}),
       });
       await load();
     } catch (error) {
@@ -853,8 +904,8 @@ const FinanceSettlements = () => {
   const rejectRefund = async (refund) => {
     if (!refund?.refund_id) return;
     const reason = await requestReason({
-      title: 'Reject Refund',
-      description: `Reject refund request ${refund.refund_id}.`,
+      title: refund.cancellation_confirmation_required ? 'Reject cancellation request' : 'Reject Refund',
+      description: refund.cancellation_confirmation_required ? 'The booking and reserved dates will remain in place. Explain the decision to the guest.' : `Reject refund request ${refund.refund_id}.`,
       placeholder: 'Add rejection reason.',
       minLength: 3,
     });
@@ -870,26 +921,30 @@ const FinanceSettlements = () => {
     }
   };
 
+  const reconcileRefundQuote = async (refund) => {
+    const reason = await requestReason({ title: 'Reconcile pending payment changes', description: 'Refresh captured-payment amounts using the original cancellation time. Non-refundable charges stay excluded.', minLength: 3 });
+    if (!reason) return;
+    try { await adminPhase1API.reconcileFinanceRefundQuote(refund.refund_id, { reason }); await load(); }
+    catch (error) { await showNotice({ title: 'Reconciliation failed', description: error.response?.data?.detail || 'Could not reconcile the request' }); }
+  };
+
+  const resolveRefundReview = async (refund) => {
+    const decision = await requestChoice({ title: 'Refund review decision', choices: [
+      { value: 'upheld', label: 'Uphold original decision' }, { value: 'escalated', label: 'Escalate for reconciliation' },
+    ] });
+    if (!decision) return;
+    const reason = await requestReason({ title: 'Communicate the review decision', minLength: 3 });
+    if (!reason) return;
+    try { await adminPhase1API.resolveFinanceRefundReview(refund.refund_id, { decision, reason }); await load(); }
+    catch (error) { await showNotice({ title: 'Review update failed', description: error.response?.data?.detail || 'Could not record review decision' }); }
+  };
+
   const previewRefundPolicy = async () => {
-    const check_in_date = await requestInput({
-      title: 'Refund Policy Preview',
-      description: 'Enter the check-in date to preview refund policy.',
-      label: 'Check-in Date',
-      placeholder: 'YYYY-MM-DD',
-      confirmLabel: 'Continue',
-    });
-    if (!check_in_date) return;
-    const totalAmount = await requestInput({
-      title: 'Refund Policy Preview',
-      description: 'Enter the total booking amount in INR.',
-      label: 'Total Amount (INR)',
-      placeholder: 'e.g. 18500',
-      confirmLabel: 'Preview Policy',
-      inputType: 'number',
-    });
-    if (!totalAmount) return;
+    const bookingId = await requestInput({ title: 'Refund Policy Preview', label: 'Booking ID',
+      description: 'Use the original booking to include its saved charges, check-in time and cooling-off window.' });
+    if (!bookingId) return;
     try {
-      const res = await adminPhase1API.financeRefundPolicyPreview({ check_in_date, total_amount: totalAmount });
+      const res = await adminPhase1API.financeRefundPolicyPreview({ booking_id: bookingId });
       setPolicyPreview(res.data);
     } catch (error) {
       await showNotice({ title: 'Preview Failed', description: error.response?.data?.detail || 'Failed to preview refund policy', eyebrow: 'Action Failed' });
@@ -1082,16 +1137,53 @@ const FinanceSettlements = () => {
       </Panel>
       {state.loading ? <LoadingState /> : state.error ? <ErrorState message={state.error} /> : (
         <div className="space-y-5">
+          {Number(state.overview?.revenue?.platform_revenue_breakdown?.subscriptions_requiring_review || 0) > 0 && (
+            <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+              Some older subscriptions have no saved checkout tax snapshot. Their split uses the explicitly configured plan rate where available and needs invoice verification. Unclassified receipts: {paiseToMoney(state.overview.revenue.platform_revenue_breakdown.unclassified_subscription_receipts_paise)}. Historical amounts are not silently rewritten.
+            </div>
+          )}
           {!['refunds', 'broker_employee_settlements'].includes(active) && (
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
               {cards.map(([label, value, Icon, sub]) => (
-                <Panel key={label} className="p-5">
+                <Panel key={label} className="relative p-5">
                   <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-[#eef5ff] text-[#2f6df6]"><Icon className="h-5 w-5" /></div>
                   <p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p>
-                  <p className="mt-2 text-[18px] font-black text-slate-950 md:text-[20px]">{value}</p>
+                  {label === 'Platform Revenue' || label === 'Tax Liability' ? (
+                    <button ref={label === 'Tax Liability' ? taxTrigger : revenueTrigger} type="button" onClick={() => setRevenueOpen(label === 'Tax Liability' ? 'tax' : 'revenue')} aria-haspopup="dialog" className="mt-2 text-left text-[18px] font-black text-blue-700 underline decoration-dotted underline-offset-4 after:absolute after:inset-0 after:rounded-2xl md:text-[20px]">
+                      <span className="sr-only">{label} breakdown: </span>{value}
+                    </button>
+                  ) : <p className="mt-2 text-[18px] font-black text-slate-950 md:text-[20px]">{value}</p>}
                   <p className="mt-1 text-xs text-slate-500">{sub}</p>
                 </Panel>
               ))}
+            </div>
+          )}
+          {revenueOpen && (
+            <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/50 p-4" onClick={() => setRevenueOpen(false)}>
+              <section ref={revenueDialog} role="dialog" aria-modal="true" aria-labelledby="platform-revenue-title" className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl" onClick={(event) => event.stopPropagation()}>
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <h2 id="platform-revenue-title" className="text-lg font-bold">{revenueOpen === 'tax' ? 'Tax Liability Breakdown' : 'Platform Revenue Breakdown'}</h2>
+                  <button type="button" autoFocus onClick={() => setRevenueOpen(false)} className="rounded-lg border px-3 py-2 text-sm font-semibold">Close</button>
+                </div>
+                {revenueOpen === 'tax' ? <>
+                  {state.overview?.revenue?.tax_breakdown ? <dl className="space-y-3">
+                    <div className="flex justify-between gap-4"><dt>Booking GST</dt><dd>{paiseToMoney(state.overview.revenue.tax_breakdown.booking_gst_paise)}</dd></div>
+                    <div className="flex justify-between gap-4"><dt>Subscription GST</dt><dd>{paiseToMoney(state.overview.revenue.tax_breakdown.subscription_gst_paise)}</dd></div>
+                    <div className="flex justify-between gap-4 border-t pt-3 font-bold"><dt>Total GST collected</dt><dd>{paiseToMoney(state.overview.revenue.tax_breakdown.total_gst_paise)}</dd></div>
+                    {Number(state.overview.revenue.tax_breakdown.subscriptions_requiring_review || 0) > 0 && <div className="rounded-lg bg-amber-50 p-3 text-sm text-amber-900">{state.overview.revenue.tax_breakdown.subscriptions_requiring_review} subscription payment(s) require historical tax verification. Unclassified receipts: {paiseToMoney(state.overview.revenue.tax_breakdown.unclassified_subscription_receipts_paise)}.</div>}
+                  </dl> : <p>Tax breakdown is unavailable. Refresh after the backend update.</p>}
+                  <p className="mt-4 text-xs text-slate-600">GST collected from bookings and subscriptions. GST is excluded from platform revenue. TDS is separate. This total does not deduct refunds, tax remittances or input tax credits.</p>
+                </> : <>
+                {state.overview?.revenue?.platform_revenue_breakdown ? <dl className="space-y-3">
+                  <div className="flex justify-between gap-4"><dt>Booking platform fees</dt><dd>{paiseToMoney(state.overview.revenue.platform_revenue_breakdown.booking_platform_fees_paise)}</dd></div>
+                  <div className="flex justify-between gap-4"><dt>Subscription revenue (excluding GST)</dt><dd>{paiseToMoney(state.overview.revenue.platform_revenue_breakdown.subscription_revenue_paise)}</dd></div>
+                  <div className="flex justify-between gap-4 border-t pt-3 font-bold"><dt>Total</dt><dd>{paiseToMoney(state.overview.revenue.platform_revenue_breakdown.total_paise)}</dd></div>
+                  <div className="flex justify-between gap-4 border-t pt-3 text-sm"><dt>Subscription GST (not revenue)</dt><dd>{paiseToMoney(state.overview.revenue.platform_revenue_breakdown.subscription_gst_paise)}</dd></div>
+                  <div className="flex justify-between gap-4 text-sm"><dt>Subscription receipts including GST</dt><dd>{paiseToMoney(state.overview.revenue.platform_revenue_breakdown.subscription_receipts_paise)}</dd></div>
+                </dl> : <p>Revenue breakdown is unavailable. Refresh after the backend update.</p>}
+                <p className="mt-4 text-xs text-slate-600">All-time revenue excludes GST, which is shown separately in Tax Liability. This is revenue before operating expenses, not profit. Registration collections remain separate. Refunds and tax remittances must be reconciled separately.</p>
+                </>}
+              </section>
             </div>
           )}
           {active === 'overview' ? <div className="space-y-4">
@@ -1114,7 +1206,7 @@ const FinanceSettlements = () => {
                 </div>
               </Panel>
             </div>
-          </div> : active === 'settlements' ? <SettlementWorkspace payouts={state.payouts} totals={settlementTotals} payoutStatus={payoutStatus} setPayoutStatus={setPayoutStatus} autoStatus={state.autoStatus} busy={busy} onProcess={processOne} onAction={runPayoutAction} paymentConfig={state.paymentConfig} /> : active === 'broker_employee_settlements' ? <BrokerEmployeeSettlementWorkspace data={state.taxCommission} transactions={state.transactions} payouts={state.payouts} tdsConfig={state.tdsConfig} paymentConfig={state.paymentConfig} /> : active === 'refunds' ? <RefundWorkspace refunds={state.refunds} refundStatus={refundStatus} setRefundStatus={setRefundStatus} busy={busy} onInitiate={initiateRefund} onPreview={previewRefundPolicy} policyPreview={policyPreview} onApproveRefund={approveRefund} onRejectRefund={rejectRefund} paymentConfig={state.paymentConfig} /> : active === 'tax_commission' ? <TaxesWorkspace data={state.taxCommission} /> : active === 'commissions' ? <CommissionWorkspace data={state.taxCommission} payouts={state.payouts} busy={busy} onProcessHost={processOne} /> : active === 'transactions_ledger' ? <AdminAccountTransactionsTab /> : <ReportsConfigWorkspace transactions={state.transactions} paymentConfig={state.paymentConfig} autoStatus={state.autoStatus} onExport={exportTransactions} onShare={shareInvoice} onSavePaymentConfig={savePaymentConfig} />}
+          </div> : active === 'settlements' ? <SettlementWorkspace payouts={state.payouts} totals={settlementTotals} payoutStatus={payoutStatus} setPayoutStatus={setPayoutStatus} autoStatus={state.autoStatus} busy={busy} onProcess={processOne} onAction={runPayoutAction} paymentConfig={state.paymentConfig} /> : active === 'broker_employee_settlements' ? <BrokerEmployeeSettlementWorkspace data={state.taxCommission} transactions={state.transactions} payouts={state.payouts} tdsConfig={state.tdsConfig} paymentConfig={state.paymentConfig} /> : active === 'refunds' ? <RefundWorkspace refunds={state.refunds} refundStatus={refundStatus} setRefundStatus={setRefundStatus} busy={busy} onInitiate={initiateRefund} onPreview={previewRefundPolicy} policyPreview={policyPreview} onApproveRefund={approveRefund} onRejectRefund={rejectRefund} onResolveReview={resolveRefundReview} onReconcileQuote={reconcileRefundQuote} paymentConfig={state.paymentConfig} /> : active === 'tax_commission' ? <TaxesWorkspace data={state.taxCommission} /> : active === 'commissions' ? <CommissionWorkspace data={state.taxCommission} payouts={state.payouts} busy={busy} onProcessHost={processOne} /> : active === 'transactions_ledger' ? <AdminAccountTransactionsTab /> : <ReportsConfigWorkspace transactions={state.transactions} paymentConfig={state.paymentConfig} autoStatus={state.autoStatus} onExport={exportTransactions} onShare={shareInvoice} onSavePaymentConfig={savePaymentConfig} />}
           {!['transactions_ledger', 'settlements', 'broker_employee_settlements'].includes(active) && (
             <div className="grid gap-4 lg:grid-cols-2">
               <QueuePanel title="Payout Queue" rows={state.payouts} idKey="payout_id" amountKey="net_amount" />
@@ -1472,7 +1564,7 @@ const SettlementWorkspace = ({ payouts, totals, payoutStatus, setPayoutStatus, a
   );
 };
 
-const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onInitiate, onPreview, policyPreview, onApproveRefund, onRejectRefund, paymentConfig = {} }) => {
+const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onInitiate, onPreview, policyPreview, onApproveRefund, onRejectRefund, onResolveReview, onReconcileQuote, paymentConfig = {} }) => {
   const [page, setPage] = useState(1);
   const [dateFilters, setDateFilters] = useState({ from: '', to: '' });
   const displayValue = (value) => firstPresent(value, 'NA');
@@ -1500,8 +1592,8 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
     refund.penalty_percent,
     refund.refund_percent !== undefined && refund.refund_percent !== null ? Math.max(0, 100 - Number(refund.refund_percent || 0)) : undefined
   );
-  const roundedPaiseToMoney = (value) => formatMoney(Math.round(Number(value || 0) / 100));
-  const roundedRupeesValue = (value) => Math.round(Number(value || 0) / 100);
+  const roundedPaiseToMoney = (value) => paiseToMoney(value);
+  const roundedRupeesValue = (value) => Number(value || 0) / 100;
   const normaliseChargeToPaise = (value, grossReceipt = 0) => {
     const amount = Number(value || 0);
     if (!Number.isFinite(amount) || amount <= 0) return 0;
@@ -1787,7 +1879,9 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
   };
   const refundStatusLabel = (status) => {
     const value = String(status || '').toLowerCase();
-    if (['approved', 'processed', 'completed', 'success', 'refunded'].includes(value)) return 'Approved';
+    if (['processed', 'completed', 'success', 'refunded'].includes(value)) return 'Processed';
+    if (value === 'approved') return 'Approved';
+    if (['processing', 'finalizing'].includes(value)) return 'Processing';
     if (value === 'rejected') return 'Rejected';
     if (value === 'failed') return 'Failed';
     if (['pending', 'initiated', 'processing'].includes(value)) return 'Pending';
@@ -1879,10 +1973,13 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
         </div>
         {policyPreview && (
           <div className="mt-4 grid gap-2 text-sm md:grid-cols-4">
-            <Info label="Check-in" value={policyPreview.check_in_date} />
+            <Info label="Check-in" value={policyPreview.check_in_at || policyPreview.check_in_date} />
             <Info label="Policy Tier" value={policyPreview.tier} />
             <Info label="Refund %" value={`${policyPreview.percent}%`} />
             <Info label="Refund" value={paiseToMoney(policyPreview.refund_paise || 0)} />
+            <Info label="Eligible value" value={paiseToMoney(policyPreview.refundable_base_amount)} />
+            <Info label="Non-refundable charges retained" value={paiseToMoney(policyPreview.non_refundable_amount)} />
+            <Info label="Cooling-off deadline" value={policyPreview.cooling_off_deadline || 'Not applicable'} />
           </div>
         )}
       </Panel>
@@ -1901,7 +1998,10 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
             <select value={refundStatus} onChange={(event) => setRefundStatus(event.target.value)} className="h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm">
               <option value="">All Status</option>
               <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
+              <option value="approved">Approved (legacy)</option>
+              <option value="processing">Gateway processing</option>
+              <option value="processed">Processed</option>
+              <option value="finalizing">Finalizing ledger</option>
               <option value="failed">Failed</option>
               <option value="rejected">Rejected</option>
             </select>
@@ -1917,11 +2017,11 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
                 const refundableBase = refundAmountValue(refund, ['refundable_base_amount', 'refund_base_amount', 'taxable_refund_amount'], Math.max(0, Number(refund.refund_amount || 0) + Number(cancellationChargesAmount(refund) || 0)));
                 const grossReceipt = refundAmountValue(refund, ['gross_receipt_amount', 'original_amount_paid', 'original_amount'], 0);
                 const charges = refundChargeBreakdown(refund, grossReceipt, refundableBase, paymentConfig);
-                const canReviewRefund = ['pending', 'initiated', 'processing'].includes(String(refund.status || '').toLowerCase());
+                const canReviewRefund = ['pending', 'initiated', 'processing', 'finalizing', 'failed'].includes(String(refund.status || '').toLowerCase());
                 const invoice = refund.invoice || refund.original_invoice || refund.booking?.invoice || refund.transaction?.invoice || {};
                 return (
                   <tr key={refund.refund_id}>
-                    <td className="px-4 py-3 font-mono text-xs font-bold">{displayValue(refund.refund_id)}</td>
+                    <td className="px-4 py-3 text-xs"><p className="font-mono font-bold">{displayValue(refund.refund_id)}</p><p>{refund.reason}</p><p>{accountingDate(refund.refund_requested_at || refund.created_at)}</p></td>
                     <td className="px-4 py-3 font-mono text-xs">{displayValue(refund.booking_id)}</td>
                     <td className="px-4 py-3">
                       <p className="font-bold">{displayValue(refund.customer_name || refund.guest?.full_name || refund.guest_name || refund.guest_id)}</p>
@@ -1946,12 +2046,14 @@ const RefundWorkspace = ({ refunds, refundStatus, setRefundStatus, busy, onIniti
                     <td className="px-4 py-3 font-mono text-xs">{refundReferenceForDisplay(refund)}</td>
                     <td className="px-4 py-3">{displayDate(refund.refund_requested_at || refund.created_at)}</td>
                     <td className="px-4 py-3">{refundSettlementDateForDisplay(refund)}</td>
-                    <td className="px-4 py-3"><StatusBadge value={refundStatusLabel(refund.status)} />{refund.failure_reason && <p className="mt-1 text-xs font-semibold text-red-700">{refund.failure_reason}</p>}</td>
+                    <td className="px-4 py-3"><StatusBadge value={refundStatusLabel(refund.status)} /><p className="mt-1 text-xs">{refund.policy_tier} | {refund.refund_percent}% of eligible value</p>{refund.cancellation_status === 'requested' && <p className="text-xs text-amber-700">Cancellation awaiting confirmation</p>}{refund.host_cost_recovery_status === 'requires_separate_review' && <p className="text-xs text-amber-700">Host cost recovery requires separate review</p>}{refund.settlement_recovery_items?.length > 0 && <p className="text-xs text-amber-700">{refund.settlement_recovery_items.length} paid settlement(s) need recovery reconciliation</p>}{refund.review_status && <p className="text-xs">Review: {refund.review_status} - {refund.review_reason}</p>}{refund.refunded_amount_processed !== undefined && <p className="text-xs">Gateway processed so far: {paiseToMoney(refund.refunded_amount_processed)}</p>}{refund.failure_reason && <p className="mt-1 text-xs font-semibold text-red-700">{refund.failure_reason}</p>}</td>
                     <td className="px-4 py-3">
+                      {refund.status === 'pending' && refund.refund_policy_version === 'management_refund_20261120' && <button type="button" onClick={() => onReconcileQuote(refund)} className="mb-2 rounded-xl border px-3 py-2 text-xs font-bold">Reconcile quote</button>}
+                      {refund.review_status === 'requested' && <button type="button" onClick={() => onResolveReview(refund)} className="mb-2 rounded-xl border px-3 py-2 text-xs font-bold">Resolve review</button>}
                       {canReviewRefund ? (
                         <div className="flex flex-wrap gap-2">
-                          <button type="button" disabled={busy === `approve-refund-${refund.refund_id}`} onClick={() => onApproveRefund(refund)} className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-black text-white disabled:opacity-50">Approve</button>
-                          <button type="button" disabled={busy === `reject-refund-${refund.refund_id}`} onClick={() => onRejectRefund(refund)} className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-black text-red-700 disabled:opacity-50">Reject</button>
+                          <button type="button" disabled={busy === `approve-refund-${refund.refund_id}`} onClick={() => onApproveRefund(refund)} className="rounded-xl bg-emerald-600 px-3 py-1.5 text-xs font-black text-white disabled:opacity-50">{refund.status === 'pending' ? 'Confirm cancellation & refund' : 'Check / retry'}</button>
+                          <button type="button" disabled={refund.status !== 'pending' || busy === `reject-refund-${refund.refund_id}`} onClick={() => onRejectRefund(refund)} className="rounded-xl bg-red-50 px-3 py-1.5 text-xs font-black text-red-700 disabled:opacity-50">Reject</button>
                         </div>
                       ) : '-'}
                     </td>
@@ -2145,7 +2247,7 @@ const isCancelledSettlementSource = (source = {}) => {
     source.booking?.refund_initiated_at,
     source.booking?.refunded_at
   );
-  return Boolean(cancelledAt) || ['cancelled', 'canceled', 'refund_initiated', 'refunded'].some((status) => statusText.includes(status));
+  return source.cancellation_status === 'requested' || source.booking?.cancellation_status === 'requested' || Boolean(cancelledAt) || ['cancelled', 'canceled', 'refund_initiated', 'refunded'].some((status) => statusText.includes(status));
 };
 
 const buildPartnerSettlementRows = (data, transactions = [], tdsConfig, paymentConfig = {}, payouts = []) => {
@@ -3037,6 +3139,7 @@ const BrokerEmployeeSettlementWorkspace = ({ data, transactions, payouts, tdsCon
 
 const TaxesWorkspace = ({ data }) => {
   const summary = data?.summary || {};
+  const formatTaxMoney = (value) => paiseToMoney(Math.round(Number(value || 0) * 100));
   const taxLedger = data?.tax_ledger || [];
   const [page, setPage] = useState(1);
   useEffect(() => { setPage(1); }, [taxLedger.length]);
@@ -3045,22 +3148,22 @@ const TaxesWorkspace = ({ data }) => {
     <div className="space-y-4">
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         {[
-          ['Booking GST', formatMoney(summary.booking_gst || 0)],
-          ['Subscription GST', formatMoney(summary.subscription_gst || 0)],
-          ['Host TDS Hold', formatMoney(summary.tds_hold || 0)],
-        ['Total Tax Reserve', formatMoney((summary.booking_gst || 0) + (summary.subscription_gst || 0) + (summary.tds_hold || 0))],
+          ['Booking GST', formatTaxMoney(summary.booking_gst || 0)],
+          ['Subscription GST', formatTaxMoney(summary.subscription_gst || 0)],
+          ['Host TDS Hold', formatTaxMoney(summary.tds_hold || 0)],
+        ['Total Tax Reserve', formatTaxMoney((summary.booking_gst || 0) + (summary.subscription_gst || 0) + (summary.tds_hold || 0))],
       ].map(([label, value]) => <Panel key={label} className="p-5"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-slate-400">{label}</p><p className="mt-2 text-[20px] font-black text-slate-950">{value}</p></Panel>)}
       </div>
       <Panel className="overflow-hidden">
           <div className="border-b border-slate-200 p-4">
             <h2 className="font-black">Tax Ledger</h2>
-            <p className="text-xs text-slate-500">GST and TDS reserve calculated from existing successful transactions and payout holds.</p>
+            <p className="text-xs text-slate-500">Booking and subscription GST use the same finance sources as the overview. TDS is separate. Displayed rates are effective averages; tax remittances are not deducted here.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
               <thead className="bg-slate-50 text-xs uppercase text-slate-500"><tr>{['Tax ID', 'Type', 'Taxable Amount', 'Rate', 'Tax Amount', 'Status'].map((h) => <th key={h} className="px-4 py-3">{h}</th>)}</tr></thead>
               <tbody className="divide-y divide-slate-100">
-                {rows.map((row) => <tr key={row.tax_id}><td className="px-4 py-3 font-mono text-xs font-bold">{row.tax_id}</td><td className="px-4 py-3">{row.tax_type}</td><td className="px-4 py-3">{formatMoney(row.taxable_amount || 0)}</td><td className="px-4 py-3">{row.tax_rate}%</td><td className="px-4 py-3 font-black">{formatMoney(row.tax_amount || 0)}</td><td className="px-4 py-3"><StatusBadge value={row.status} /></td></tr>)}
+                {rows.map((row) => <tr key={row.tax_id}><td className="px-4 py-3 font-mono text-xs font-bold">{row.tax_id}</td><td className="px-4 py-3">{row.tax_type}</td><td className="px-4 py-3">{formatTaxMoney(row.taxable_amount || 0)}</td><td className="px-4 py-3">{row.tax_rate}%</td><td className="px-4 py-3 font-black">{formatTaxMoney(row.tax_amount || 0)}</td><td className="px-4 py-3"><StatusBadge value={row.status} /></td></tr>)}
               </tbody>
             </table>
           </div>

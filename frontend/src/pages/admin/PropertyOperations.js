@@ -1,8 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, CheckCircle2, ExternalLink, Image, Search, Trash2, UserCog, XCircle, Download } from 'lucide-react';
+import PropertyUnitsReview from '../../components/PropertyUnitsReview';
 import { adminPhase1API } from '../../services/adminPhase1Api';
 import { ErrorState, LoadingState, PageHeader, Panel, StatusBadge, formatMoney, requestChoice, requestInput, requestReason, showNotice, Pagination } from './shared';
+
+// Free listings retain legacy model defaults in storage; display their waiver
+// without rewriting subscription contracts or hiding a later active payment.
+export const propertySubscriptionLabel = (property = {}) => {
+  if (property.subscription_listing_exempt === true && property.subscription_status !== 'active') return '-';
+  return property.subscription_status || '-';
+};
 
 const tabs = [
   ['all', 'All Properties'],
@@ -98,12 +106,33 @@ const PropertyOperations = () => {
       rm: property.assigned_rm || '',
       telecaller: property.telecaller_id || '',
     };
+    let options;
+    try {
+      const response = await adminPhase1API.crmAssignees();
+      const data = response.data?.data || {};
+      const key = { broker: 'brokers', rm: 'relationship_managers', telecaller: 'telecallers' }[assignmentType];
+      const users = (data[key] || []).filter((user) => user.user_id);
+      options = users.map((user) => ({
+        value: user.user_id,
+        label: `${user.full_name || user.name || user.user_id} — ${user.employee_code || user.broker_code || user.user_id}`,
+      }));
+      const currentUser = users.find((user) => [user.user_id, user.employee_code, user.broker_code].includes(currentValues[assignmentType]));
+      currentValues[assignmentType] = currentUser?.user_id || '';
+    } catch (error) {
+      await showNotice({ title: 'Could not load team members', description: error.response?.data?.detail || 'Please try again. No assignment was changed.' });
+      return;
+    }
+    if (!options.length) {
+      await showNotice({ title: `No ${labels[assignmentType]} available`, description: 'No active team members are available for this assignment type.' });
+      return;
+    }
     const assigneeId = await requestInput({
       title: `Assign ${labels[assignmentType]}`,
-      description: `Enter the ${labels[assignmentType]} user ID or code for ${property.title || property.property_id}.`,
-      label: `${labels[assignmentType]} User ID / Code`,
+      description: `Choose the ${labels[assignmentType]} for ${property.title || property.property_id}.`,
+      label: labels[assignmentType],
       defaultValue: currentValues[assignmentType],
-      placeholder: `Enter ${labels[assignmentType]} user ID or code`,
+      placeholder: `Select ${labels[assignmentType]}`,
+      selectOptions: options,
       confirmLabel: 'Continue',
     });
     if (assigneeId === null) return;
@@ -114,8 +143,12 @@ const PropertyOperations = () => {
       minLength: 3,
     });
     if (!reason) return;
-    await adminPhase1API.assignPropertyTeam(property.property_id, { [`${assignmentType}_id`]: assigneeId, reason });
-    load();
+    try {
+      await adminPhase1API.assignPropertyTeam(property.property_id, { [`${assignmentType}_id`]: assigneeId, reason });
+      load();
+    } catch (error) {
+      await showNotice({ title: 'Assignment failed', description: error.response?.data?.detail || 'Could not save the assignment. Please try again.' });
+    }
   };
   const changeStatus = async (property, status) => {
     const reason = await requestReason({
@@ -260,7 +293,7 @@ const PropertyOperations = () => {
         property.branch_manager_code || property.assigned_branch_manager || '',
         property.status || '',
         property.workflow_stage || '',
-        property.subscription_status || '',
+        propertySubscriptionLabel(property),
         property.price_per_night || 0,
       ]);
 
@@ -332,7 +365,7 @@ const PropertyOperations = () => {
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[1360px] text-left text-sm">
               <thead className="bg-[#f8fafc] text-[11px] uppercase tracking-[0.16em] text-slate-400"><tr>{['Property', 'Host Name', 'Property Type', 'Category', 'City', 'Broker Name', 'RM Name', 'Telecaller', 'Branch Manager', 'Stage', 'Subscription', 'Price', 'Actions'].map((h) => <th key={h} className="px-4 py-4 font-bold">{h}</th>)}</tr></thead>
-              <tbody className="divide-y divide-slate-100">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.telecaller_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.telecaller_code || property.telecaller_id || '-'}</p><p className="mt-1 text-[10px] font-black uppercase tracking-wide text-[#2f6df6]">{String(property.telecaller_stage || property.telecaller_result || '-').replace(/_/g, ' ')}</p></td><td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{property.subscription_status || '-'}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td></tr>)}</tbody>
+              <tbody className="divide-y divide-slate-100">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <tr key={property.property_id} className="transition hover:bg-slate-50/70"><td className="px-4 py-4"><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="font-mono text-xs text-slate-500">{property.property_id}</p></td><td className="px-4 py-4"><p className="font-bold">{property.host_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.owner_id}</p></td><td className="px-4 py-4 capitalize">{String(property.property_type || property.bhk_type || '-').replace(/_/g, ' ')}</td><td className="px-4 py-4 capitalize">{property.category}</td><td className="px-4 py-4">{property.city}</td><td className="px-4 py-4"><p className="font-bold">{property.broker_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.broker_code || property.assigned_broker || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.rm_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.rm_code || property.assigned_rm || '-'}</p></td><td className="px-4 py-4"><p className="font-bold">{property.telecaller_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.telecaller_code || property.telecaller_id || '-'}</p><p className="mt-1 text-[10px] font-black uppercase tracking-wide text-[#2f6df6]">{String(property.telecaller_stage || property.telecaller_result || '-').replace(/_/g, ' ')}</p></td><td className="px-4 py-4"><p className="font-bold">{property.branch_manager_name || '-'}</p><p className="font-mono text-xs text-slate-500">{property.branch_manager_code || property.assigned_branch_manager || '-'}</p></td><td className="px-4 py-4"><StatusBadge value={property.status} /></td><td className="px-4 py-4">{propertySubscriptionLabel(property)}</td><td className="px-4 py-4">{formatMoney(property.price_per_night || 0)}</td><td className="px-4 py-4"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></td></tr>)}</tbody>
             </table>
           </div>
           <div className="grid gap-3 p-4 md:hidden">{state.properties.slice((page - 1) * 10, page * 10).map((property) => <Panel key={property.property_id} className="p-4"><div className="flex items-start justify-between gap-3"><div><div className="flex items-center gap-1.5"><p className="font-black">{property.title}</p>{property.is_boosted && <span className="inline-flex items-center rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-black text-amber-700 ring-1 ring-inset ring-amber-600/20">⚡ BOOSTED #{property.boost_rank || '1'}</span>}</div><p className="text-xs text-slate-500">{property.property_id}</p></div><StatusBadge value={property.status} /></div><p className="mt-2 text-sm">{property.city} / {property.category}</p><div className="mt-3 grid gap-1 text-xs text-slate-500"><p><b>Broker:</b> {property.broker_name || '-'} / {property.broker_code || '-'}</p><p><b>RM:</b> {property.rm_name || '-'} / {property.rm_code || '-'}</p><p><b>Telecaller:</b> {property.telecaller_name || '-'} / {property.telecaller_code || property.telecaller_id || '-'}</p><p><b>Telecaller Stage:</b> {String(property.telecaller_stage || property.telecaller_result || '-').replace(/_/g, ' ')}</p><p><b>BM:</b> {property.branch_manager_name || '-'} / {property.branch_manager_code || '-'}</p></div><div className="mt-3"><PropertyActions property={property} tab={tab} onReview={openProperty} onAssign={assignTeam} onStatus={changeStatus} onDelete={deleteRejectedProperty} onEdit={editProperty} onBoost={setBoostProperty} /></div></Panel>)}</div>
@@ -535,12 +568,13 @@ const PropertyReviewPanel = ({ selected, onClose, onChecklist, onStage, onFinal,
                 ['Telecaller', `${property.telecaller_name || '-'} / ${property.telecaller_code || property.telecaller_id || '-'}`],
                 ['Telecaller Stage', String(property.telecaller_stage || property.telecaller_result || '-').replace(/_/g, ' ')],
                 ['Branch Manager', `${property.branch_manager_name || '-'} / ${property.branch_manager_code || property.assigned_branch_manager || '-'}`],
-                ['Subscription', property.subscription_status || '-'],
+                ['Subscription', propertySubscriptionLabel(property)],
                 ['Verification Status', cleanLabel(property.status)],
                 ['Area', property.area_sqft ? `${property.area_sqft} sq ft` : '-'],
               ]} />
             </Panel>
           </div>
+          <PropertyUnitsReview property={property} />
           {!!images.length && (
             <SectionCard eyebrow="Photo Library" title="Uploaded Property Images">
               <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-6">
